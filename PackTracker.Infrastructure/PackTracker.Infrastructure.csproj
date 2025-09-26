@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PackTracker.Application\PackTracker.Application.csproj" />
+    <ProjectReference Include="..\PackTracker.Domain\PackTracker.Domain.csproj" />
+    <ProjectReference Include="..\PackTracker.Shared\PackTracker.Shared.csproj" />
+    <ProjectReference Include="..\PackTracker.Logging\PackTracker.Logging.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
