@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PackTracker.Domain\PackTracker.Domain.csproj" />
-    <ProjectReference Include="..\PackTracker.Shared\PackTracker.Shared.csproj" />
+    <ProjectReference Include="..\PackTracker.Common\PackTracker.Common.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
