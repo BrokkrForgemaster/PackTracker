@@ -8,13 +8,18 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PackTracker.Application\PackTracker.Application.csproj" />
     <ProjectReference Include="..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
-    <ProjectReference Include="..\PackTracker.Shared\PackTracker.Shared.csproj" />
-    <ProjectReference Include="..\PackTracker.Logging\PackTracker.Logging.csproj" />
+    <ProjectReference Include="..\PackTracker.Common\PackTracker.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Logs\packtracker-20250926.json" />
   </ItemGroup>
 
 </Project>

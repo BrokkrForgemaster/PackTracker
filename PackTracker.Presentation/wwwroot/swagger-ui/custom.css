@@ -1,0 +1,84 @@
+/* ====== GLOBAL ====== */
+.swagger-ui {
+    background-color: #1E1E1E; /* neutral dark */
+    color: #F2E8DC;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ====== TOP BAR ====== */
+.swagger-ui .topbar {
+    background-color: #470000 !important; /* wolf red */
+    border-bottom: 3px solid #CC5500;
+}
+
+.swagger-ui .topbar-wrapper .link span {
+    display: none; /* hide default Swagger text */
+}
+
+.swagger-ui .topbar-wrapper .link:before {
+    content: "";
+    display: inline-block;
+    width: 180px; height: 40px;
+    margin-right: 12px;
+    background: url("HWiconnew.png") no-repeat center center;
+    background-size: contain;
+}
+
+/* ====== TITLES & TEXT ====== */
+.swagger-ui .info h2,
+.swagger-ui .info hgroup.main a,
+.swagger-ui .info p,
+.swagger-ui .markdown p,
+.swagger-ui .opblock-summary-description {
+    color: #F2E8DC !important;
+}
+
+.swagger-ui a {
+    color: #CC5500 !important;
+}
+.swagger-ui a:hover {
+    color: #FFD580 !important;
+}
+
+/* ====== TAGS ====== */
+.swagger-ui .opblock-tag {
+    background-color: #2C2C2C !important;
+    color: #FFD580 !important;
+    border-left: 5px solid #CC5500;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 1.05em;
+}
+
+/* ====== OPERATION BLOCKS ====== */
+.swagger-ui .opblock {
+    background-color: #2C2C2C !important;
+    border: 1px solid #470000 !important;
+    border-radius: 6px;
+}
+
+/* ====== BUTTONS ====== */
+.swagger-ui .btn {
+    background-color: #CC5500 !important;
+    border: none !important;
+    color: #F2E8DC !important;
+    font-weight: bold;
+}
+
+.swagger-ui .btn:hover {
+    background-color: #FFD580 !important;
+    color: #470000 !important;
+}
+
+/* ====== RESPONSE TABLE ====== */
+.swagger-ui table {
+    background-color: #1E1E1E;
+    color: #F2E8DC;
+}
+.swagger-ui table thead tr th {
+    background-color: #470000;
+    color: #FFD580;
+}
+.swagger-ui table tbody tr td {
+    border: 1px solid #2C2C2C;
+}
