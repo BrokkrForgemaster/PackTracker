@@ -1,16 +1,15 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 
 namespace PackTracker.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/auth")]
+[Route("api/v1/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly IConfiguration _config;
@@ -20,13 +19,48 @@ public class AuthController : ControllerBase
         _config = config;
     }
 
-    /// <summary>
-    /// Redirect to Discord login.
-    /// </summary>
     [HttpGet("login")]
     public IActionResult Login()
     {
+        // This triggers Discord OAuth challenge
         return Challenge(new AuthenticationProperties { RedirectUri = "/swagger" }, "Discord");
+    }
+
+    [Authorize(AuthenticationSchemes = "Cookies")]
+    [HttpGet("token")]
+    public IActionResult GetToken()
+    {
+        var key = _config["Jwt:Key"];
+        if (string.IsNullOrEmpty(key))
+        {
+            return Problem("JWT signing key not configured.");
+        }
+
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? ""),
+            new Claim(JwtRegisteredClaimNames.UniqueName, User.Identity?.Name ?? ""),
+            new Claim(ClaimTypes.Role, "HouseWolfMember")
+        };
+
+        var creds = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+            SecurityAlgorithms.HmacSha256
+        );
+
+        var token = new JwtSecurityToken(
+            issuer: _config["Jwt:Issuer"],
+            audience: _config["Jwt:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: creds
+        );
+
+        return Ok(new
+        {
+            access_token = new JwtSecurityTokenHandler().WriteToken(token),
+            expires_in = 3600
+        });
     }
 
     /// <summary>
@@ -43,40 +77,7 @@ public class AuthController : ControllerBase
             Claims = claims
         });
     }
-
-    /// <summary>
-    /// Issue a PackTracker JWT for API calls.
-    /// </summary>
-    [Authorize]
-    [HttpGet("token")]
-    public IActionResult GetToken()
-    {
-        var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty),
-            new Claim(JwtRegisteredClaimNames.UniqueName, User.Identity?.Name ?? string.Empty)
-        };
-
-        // include all original claims (roles, avatar, etc.)
-        claims.AddRange(User.Claims.Where(c =>
-            c.Type != ClaimTypes.NameIdentifier &&
-            c.Type != ClaimTypes.Name));
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var jwt = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
-            signingCredentials: creds);
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(jwt);
-
-        return Ok(new { token = tokenString });
-    }
-
+    
     /// <summary>
     /// Logout and clear local cookies.
     /// </summary>

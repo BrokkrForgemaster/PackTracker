@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using PackTracker.Api.Middleware;
-using PackTracker.Common.Abstractions;
+using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Logging;
+using PackTracker.Infrastructure.Persistence;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,9 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 // 🔹 Serilog pipeline
 builder.Host.UsePackTrackerSerilog();
 
-// 🔹 Register application infrastructure
+var cs =
+    Environment.GetEnvironmentVariable("ConnectionStrings:DefaultConnection");
 var configuration = builder.Configuration;
-
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseNpgsql(cs);
+});
 builder.Services.AddInfrastructure(configuration);
 
 builder.Services.AddControllers();

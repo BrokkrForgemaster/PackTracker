@@ -1,4 +1,4 @@
-namespace PackTracker.Common.Abstractions;
+namespace PackTracker.Application.Interfaces;
 
 public interface ILoggingService<T>
 {

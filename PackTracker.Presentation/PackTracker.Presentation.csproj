@@ -3,7 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PackTracker.Api\PackTracker.Api.csproj" />
     <ProjectReference Include="..\PackTracker.Application\PackTracker.Application.csproj" />
-    <ProjectReference Include="..\PackTracker.Common\PackTracker.Common.csproj" />
     <ProjectReference Include="..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
   </ItemGroup>
 
@@ -29,6 +28,7 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
     <PackageReference Include="System.Net.Http.Json" Version="9.0.9" />
   </ItemGroup>

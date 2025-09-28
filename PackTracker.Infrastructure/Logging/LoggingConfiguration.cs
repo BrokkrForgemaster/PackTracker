@@ -15,14 +15,10 @@ public static class LoggingConfiguration
         {
             cfg.ReadFrom.Configuration(context.Configuration)
                 .Enrich.WithExceptionDetails()
-                .Enrich.WithEnvironmentName()
-                .Enrich.WithProcessId()
-                .Enrich.WithThreadId()
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Application", "PackTracker")
-                // 🔹 add correlation id enrichment (reads from CorrelationId middleware/accessor)
-                .Enrich.WithCorrelationId()                 // property name "CorrelationId"
-                .WriteTo.Async(a => a.Console());
+                .Enrich.WithCorrelationId();
+
         });
 
     public static IServiceCollection AddPackTrackerLogging(this IServiceCollection services, IConfiguration configuration)
@@ -30,14 +26,10 @@ public static class LoggingConfiguration
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .Enrich.WithExceptionDetails()
-            .Enrich.WithEnvironmentName()
-            .Enrich.WithProcessId()
-            .Enrich.WithThreadId()
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Application", "PackTracker")
-            // 🔹 add correlation id enrichment here as well (for non-host usage)
             .Enrich.WithCorrelationId()
-            .WriteTo.Async(a => a.Console())
+            .WriteTo.File( "Logs/PackTracker.log", rollingInterval: RollingInterval.Day)
             .CreateLogger();
 
         services.AddLogging(b =>

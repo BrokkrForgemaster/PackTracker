@@ -19,6 +19,10 @@ using PackTracker.Domain.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.OpenApi.Models;
+using PackTracker.Application.Options;
+using PackTracker.Infrastructure.Logging;
+using Serilog;
 
 
 namespace PackTracker.Presentation;
@@ -33,16 +37,24 @@ public class ApiHostedService : IHostedService
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseUrls("http://localhost:5001");
+                
 
                 webBuilder.ConfigureServices((context, services) =>
                 {
                     context.Configuration = new ConfigurationBuilder()
                         .AddConfiguration(context.Configuration)
-                        .AddUserSecrets<ApiHostedService>(optional: true)
+                        .AddUserSecrets<ApiHostedService>()
                         .Build();
 
+                    services.AddPackTrackerLogging(context.Configuration);
                     services.AddInfrastructure(context.Configuration);
-                    services.AddAuthorization();
+                    services.Configure<RegolithOptions>(
+                        context.Configuration.GetSection("Regolith"));
+                    services.AddAuthorization(options =>
+                    {
+                        options.AddPolicy("HouseWolfOnly", policy =>
+                            policy.RequireClaim(ClaimTypes.Role, "HouseWolfMember"));
+                    });
 
                     services.AddHttpContextAccessor();
                     services.AddAuthentication(options =>
@@ -70,8 +82,7 @@ public class ApiHostedService : IHostedService
                             options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
                             options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
                             options.ClaimActions.MapJsonKey("urn:discord:avatar:url", "avatar");
-
-                            // 🔹 Restrict login to your org's guild
+                            
                             options.Events.OnCreatingTicket = async ctx =>
                             {
                                 var config = ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
@@ -80,8 +91,7 @@ public class ApiHostedService : IHostedService
                                 var accessToken = ctx.AccessToken!;
                                 using var client = new HttpClient();
                                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
-
-                                // Get user guilds
+                                
                                 var guildsResponse = await client.GetAsync("https://discord.com/api/users/@me/guilds");
                                 guildsResponse.EnsureSuccessStatusCode();
 
@@ -99,12 +109,10 @@ public class ApiHostedService : IHostedService
                                 {
                                     throw new Exception("User is not a member of the House Wolf server.");
                                 }
-
-                                // ✅ Add custom claim
+                                
                                 var identity = (ClaimsIdentity)ctx.Principal!.Identity!;
                                 identity.AddClaim(new Claim(ClaimTypes.Role, "HouseWolfMember"));
-
-                                // ✅ Upsert into DB
+                                
                                 var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
                                 var discordId = ctx.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)!;
                                 var username = ctx.Principal!.FindFirstValue(ClaimTypes.Name)!;
@@ -190,9 +198,30 @@ public class ApiHostedService : IHostedService
                         if (File.Exists(xmlPath))
                         {
                             c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
-                        }
+                        }c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                        {
+                            In = ParameterLocation.Header,
+                            Description = "JWT Authorization header using the Bearer scheme.",
+                            Name = "Authorization",
+                            Type = SecuritySchemeType.ApiKey,
+                            Scheme = "Bearer"
+                        });
+                        
+                        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                        {
+                            {
+                                new OpenApiSecurityScheme
+                                {
+                                    Reference = new OpenApiReference
+                                    {
+                                        Type = ReferenceType.SecurityScheme,
+                                        Id = "Bearer"
+                                    }
+                                },
+                                Array.Empty<string>()
+                            }
+                        });
                     });
-
                     services.AddHealthChecks();
                 });
 

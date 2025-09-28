@@ -16,7 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PackTracker.Application\PackTracker.Application.csproj" />
     <ProjectReference Include="..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
-    <ProjectReference Include="..\PackTracker.Common\PackTracker.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
