@@ -20,7 +20,8 @@ public partial class App : System.Windows.Application
             .UsePackTrackerSerilog()
             .ConfigureServices((context, services) =>
             {
-                services.AddInfrastructure();   // ✅ registers ILoggingService<>
+                var configuration = context.Configuration;
+                services.AddInfrastructure(configuration);   // ✅ registers ILoggingService<>
                 services.AddSingleton<MainWindow>();
                 services.AddHostedService<ApiHostedService>();
             })

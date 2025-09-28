@@ -10,7 +10,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UsePackTrackerSerilog();
 
 // 🔹 Register application infrastructure
-builder.Services.AddInfrastructure();
+var configuration = builder.Configuration;
+
+builder.Services.AddInfrastructure(configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
