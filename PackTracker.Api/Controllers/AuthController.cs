@@ -5,6 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
+using PackTracker.Infrastructure.Security;
+using PackTracker.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace PackTracker.Api.Controllers;
 
@@ -13,22 +16,25 @@ namespace PackTracker.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IConfiguration _config;
+    private readonly JwtTokenService _jwt;
+    private readonly AppDbContext _db;
 
-    public AuthController(IConfiguration config)
+    public AuthController(IConfiguration config, JwtTokenService jwt, AppDbContext db)
     {
         _config = config;
+        _jwt = jwt;
+        _db = db;
     }
 
     [HttpGet("login")]
     public IActionResult Login()
     {
-        // This triggers Discord OAuth challenge
         return Challenge(new AuthenticationProperties { RedirectUri = "/swagger" }, "Discord");
     }
 
     [Authorize(AuthenticationSchemes = "Cookies")]
     [HttpGet("token")]
-    public IActionResult GetToken()
+    public async Task<IActionResult> GetToken(CancellationToken ct)
     {
         var key = _config["Jwt:Key"];
         if (string.IsNullOrEmpty(key))
@@ -36,36 +42,51 @@ public class AuthController : ControllerBase
             return Problem("JWT signing key not configured.");
         }
 
-        var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? ""),
-            new Claim(JwtRegisteredClaimNames.UniqueName, User.Identity?.Name ?? ""),
-            new Claim(ClaimTypes.Role, "HouseWolfMember")
-        };
+        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+        var username = User.Identity?.Name ?? "";
 
-        var creds = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
-            SecurityAlgorithms.HmacSha256
-        );
+        var user = await _db.Profiles.FirstOrDefaultAsync(p => p.DiscordId == discordId, ct);
+        if (user == null) return Unauthorized();
 
-        var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: creds
-        );
+        var accessToken = _jwt.GenerateAccessToken(user);
+        var refreshToken = await _jwt.GenerateRefreshTokenAsync(user.Id, ct);
 
         return Ok(new
         {
-            access_token = new JwtSecurityTokenHandler().WriteToken(token),
+            access_token = accessToken,
+            refresh_token = refreshToken.Token,
             expires_in = 3600
         });
     }
 
-    /// <summary>
-    /// Get the current authenticated user’s claims.
-    /// </summary>
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] string refreshToken, CancellationToken ct)
+    {
+        var user = await _jwt.ValidateRefreshTokenAsync(refreshToken, ct);
+        if (user == null) return Unauthorized();
+
+        var accessToken = _jwt.GenerateAccessToken(user);
+        var newRefresh = await _jwt.GenerateRefreshTokenAsync(user.Id, ct);
+
+        // revoke old refresh
+        await _jwt.RevokeRefreshTokenAsync(refreshToken, ct);
+
+        return Ok(new
+        {
+            access_token = accessToken,
+            refresh_token = newRefresh.Token,
+            expires_in = 3600
+        });
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] string refreshToken, CancellationToken ct)
+    {
+        await _jwt.RevokeRefreshTokenAsync(refreshToken, ct);
+        return Ok(new { message = "Logged out and refresh token revoked" });
+    }
+
     [Authorize]
     [HttpGet("me")]
     public IActionResult Me()
@@ -76,16 +97,5 @@ public class AuthController : ControllerBase
             User.Identity?.Name,
             Claims = claims
         });
-    }
-    
-    /// <summary>
-    /// Logout and clear local cookies.
-    /// </summary>
-    [Authorize]
-    [HttpPost("logout")]
-    public IActionResult Logout()
-    {
-        return SignOut(new AuthenticationProperties { RedirectUri = "/" },
-            new[] { "Cookies", "Discord" });
     }
 }

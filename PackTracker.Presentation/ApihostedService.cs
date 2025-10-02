@@ -20,7 +20,6 @@ using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
-using Serilog;
 using CorrelationId;
 using CorrelationId.DependencyInjection;
 
@@ -39,24 +38,20 @@ public class ApiHostedService : IHostedService
 
                 webBuilder.ConfigureServices((context, services) =>
                 {
-                    // ✅ Proper config build (preserve defaults, add secrets + env vars)
+                 
                     var config = new ConfigurationBuilder()
                         .AddConfiguration(context.Configuration) // keep appsettings.json & env
                         .AddUserSecrets<ApiHostedService>(optional: true)
                         .AddEnvironmentVariables()
                         .Build();
 
-                    // 🔍 Debug logging
                     Console.WriteLine($"[DEBUG] Jwt:Key loaded? {!string.IsNullOrEmpty(config["Jwt:Key"])}");
 
-                    // Logging + infra
                     services.AddPackTrackerLogging(config);
                     services.AddInfrastructure(config);
 
-                    // Options
                     services.Configure<RegolithOptions>(config.GetSection("Regolith"));
-
-                    // AuthZ policy
+                    
                     services.AddAuthorization(options =>
                     {
                         options.AddPolicy("HouseWolfOnly", policy =>
@@ -65,7 +60,6 @@ public class ApiHostedService : IHostedService
 
                     services.AddHttpContextAccessor();
 
-                    // OAuth2 + Discord + Cookies
                     services.AddAuthentication(options =>
                         {
                             options.DefaultScheme = "Cookies";
@@ -168,8 +162,7 @@ public class ApiHostedService : IHostedService
                                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
                             };
                         });
-
-                    // Correlation ID
+                    
                     services.AddDefaultCorrelationId(options =>
                     {
                         options.IncludeInResponse = true;
@@ -178,12 +171,10 @@ public class ApiHostedService : IHostedService
                         options.ResponseHeader = "X-Correlation-ID";
                         options.AddToLoggingScope = true;
                     });
-
-                    // EF DbContext
+                    
                     services.AddDbContext<AppDbContext>(options =>
                         options.UseNpgsql(config.GetConnectionString("DefaultConnection")));
-
-                    // MVC + Swagger
+                    
                     services.AddControllers()
                         .AddApplicationPart(typeof(ProfilesController).Assembly);
 

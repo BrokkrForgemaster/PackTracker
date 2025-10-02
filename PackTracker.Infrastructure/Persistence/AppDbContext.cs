@@ -9,7 +9,11 @@ namespace PackTracker.Infrastructure.Persistence;
 /// </summary>
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<RegolithProfile> RegolithProfiles => Set<RegolithProfile>();
     public DbSet<RegolithRefineryJob> RegolithRefineryJobs => Set<RegolithRefineryJob>();
@@ -22,7 +26,8 @@ public class AppDbContext : DbContext
                 // Pipe EF logs into Serilog
                 .LogTo(Console.WriteLine, LogLevel.Information)
                 .EnableDetailedErrors()
-                .EnableSensitiveDataLogging(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+                .EnableSensitiveDataLogging(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ==
+                                            "Development")
                 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
                 .EnableServiceProviderCaching();
         }
@@ -30,6 +35,14 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(rt => rt.Id);
+            entity.HasIndex(rt => rt.Token).IsUnique();
+            entity.HasIndex(rt => rt.UserId);
+            entity.Property(rt => rt.Token).HasMaxLength(256).IsRequired();
+        });
+        
         modelBuilder.Entity<Profile>(entity =>
         {
             entity.HasKey(p => p.Id);
@@ -38,13 +51,13 @@ public class AppDbContext : DbContext
             entity.HasIndex(p => p.Username);
 
             entity.Property(p => p.Username)
-                  .HasMaxLength(100)
-                  .IsRequired();
+                .HasMaxLength(100)
+                .IsRequired();
 
             entity.Property(p => p.AvatarUrl)
-                  .HasMaxLength(512);
+                .HasMaxLength(512);
         });
-        
+
         modelBuilder.Entity<RegolithProfile>(entity =>
         {
             entity.HasKey(r => r.Id);
@@ -52,25 +65,25 @@ public class AppDbContext : DbContext
             entity.HasIndex(r => r.UserId).IsUnique();
 
             entity.Property(r => r.ScName)
-                  .HasMaxLength(100)
-                  .IsRequired();
+                .HasMaxLength(100)
+                .IsRequired();
 
             entity.Property(r => r.AvatarUrl)
-                  .HasMaxLength(512);
+                .HasMaxLength(512);
 
             entity.Property(r => r.CreatedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                  .IsRequired();
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .IsRequired();
 
             entity.Property(r => r.UpdatedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                  .IsRequired();
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .IsRequired();
 
             entity.Property(r => r.SyncedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                  .IsRequired();
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .IsRequired();
         });
-        
+
         modelBuilder.Entity<RegolithRefineryJob>(entity =>
         {
             entity.HasKey(r => r.Id);
@@ -78,27 +91,27 @@ public class AppDbContext : DbContext
             entity.HasIndex(r => r.JobId).IsUnique();
 
             entity.Property(r => r.Location)
-                  .HasMaxLength(200)
-                  .IsRequired();
+                .HasMaxLength(200)
+                .IsRequired();
 
             entity.Property(r => r.Material)
-                  .HasMaxLength(200)
-                  .IsRequired();
+                .HasMaxLength(200)
+                .IsRequired();
 
             entity.Property(r => r.Quantity)
-                  .IsRequired();
+                .IsRequired();
 
             entity.Property(r => r.Status)
-                  .HasMaxLength(50)
-                  .IsRequired();
+                .HasMaxLength(50)
+                .IsRequired();
 
             entity.Property(r => r.SubmittedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                  .IsRequired();
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .IsRequired();
 
             entity.Property(r => r.SyncedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                  .IsRequired();
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .IsRequired();
         });
     }
 }
