@@ -17,6 +17,10 @@ public class AppDbContext : DbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<RegolithProfile> RegolithProfiles => Set<RegolithProfile>();
     public DbSet<RegolithRefineryJob> RegolithRefineryJobs => Set<RegolithRefineryJob>();
+    public DbSet<Commodity> Commodities => Set<Commodity>();
+    public DbSet<CommodityPrice> CommodityPrices => Set<CommodityPrice>();
+    
+    public DbSet<Kill> KillEntries { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -112,6 +116,53 @@ public class AppDbContext : DbContext
             entity.Property(r => r.SyncedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .IsRequired();
+        });
+        
+        modelBuilder.Entity<Commodity>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+
+            entity.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            entity.Property(c => c.Code).HasMaxLength(50).IsRequired();
+            entity.Property(c => c.Slug).HasMaxLength(100).IsRequired();
+
+            entity.HasMany(c => c.Prices)
+                .WithOne(p => p.Commodity)
+                .HasForeignKey(p => p.CommodityId);
+        });
+
+        modelBuilder.Entity<CommodityPrice>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+
+            entity.Property(p => p.TerminalName).HasMaxLength(200).IsRequired();
+            entity.Property(p => p.TerminalCode).HasMaxLength(50).IsRequired();
+            entity.Property(p => p.TerminalSlug).HasMaxLength(100).IsRequired();
+
+            entity.Property(p => p.PriceBuy).HasPrecision(18, 2);
+            entity.Property(p => p.PriceSell).HasPrecision(18, 2);
+
+            entity.Property(p => p.DateAdded).IsRequired();
+            entity.Property(p => p.DateModified).IsRequired();
+        });
+        
+        modelBuilder.Entity<Kill>(entity =>
+        {
+            entity.ToTable("KillEntries", schema: "public");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Attacker).HasMaxLength(100);
+            entity.Property(e => e.Target).HasMaxLength(100);
+            entity.Property(e => e.Weapon).HasMaxLength(100);
+            entity.Property(e => e.Timestamp).IsRequired();
+            entity.Property(e => e.Type).HasMaxLength(50);
+            entity.Property(e => e.Location).HasMaxLength(200);
+            entity.Property(e => e.Summary).HasMaxLength(500);
+            entity.Property(e => e.IsSynced).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.SyncedAt).IsRequired(false);
+
+            entity.HasIndex(e => new { e.Attacker, e.Target, e.Timestamp })
+                .IsUnique();
         });
     }
 }

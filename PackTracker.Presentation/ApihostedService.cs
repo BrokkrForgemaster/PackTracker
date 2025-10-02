@@ -1,5 +1,4 @@
 using System.IO;
-using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
@@ -8,22 +7,18 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using PackTracker.Api.Controllers;
 using PackTracker.Api.Middleware;
+using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
-using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
-using CorrelationId;
-using CorrelationId.DependencyInjection;
-
-namespace PackTracker.Presentation;
+using PackTracker.Infrastructure.Services;
 
 public class ApiHostedService : IHostedService
 {
@@ -38,198 +33,94 @@ public class ApiHostedService : IHostedService
 
                 webBuilder.ConfigureServices((context, services) =>
                 {
-                 
-                    var config = new ConfigurationBuilder()
-                        .AddConfiguration(context.Configuration) // keep appsettings.json & env
-                        .AddUserSecrets<ApiHostedService>(optional: true)
-                        .AddEnvironmentVariables()
-                        .Build();
-
-                    Console.WriteLine($"[DEBUG] Jwt:Key loaded? {!string.IsNullOrEmpty(config["Jwt:Key"])}");
-
-                    services.AddPackTrackerLogging(config);
-                    services.AddInfrastructure(config);
-
-                    services.Configure<RegolithOptions>(config.GetSection("Regolith"));
-                    
-                    services.AddAuthorization(options =>
+                    // ---- SettingsService (single instance for all)
+                    services.AddSingleton<ISettingsService>(sp =>
                     {
-                        options.AddPolicy("HouseWolfOnly", policy =>
-                            policy.RequireClaim(ClaimTypes.Role, "HouseWolfMember"));
+                        var logger = sp.GetRequiredService<ILogger<SettingsService>>();
+                        var defaultConfigPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+                        return new SettingsService(logger, defaultConfigPath);
                     });
 
-                    services.AddHttpContextAccessor();
+                    // Get settings ONCE from DI
+                    using var provider = services.BuildServiceProvider();
+                    var settingsService = provider.GetRequiredService<ISettingsService>();
+                    var settings = settingsService.GetSettings();
 
-                    services.AddAuthentication(options =>
-                        {
-                            options.DefaultScheme = "Cookies";
-                            options.DefaultChallengeScheme = "Discord";
-                        })
-                        .AddCookie("Cookies", options =>
-                        {
-                            options.Cookie.SameSite = SameSiteMode.Lax;
-                            options.Cookie.SecurePolicy = CookieSecurePolicy.None; // local http
-                        })
-                        .AddDiscord("Discord", options =>
-                        {
-                            options.ClientId = config["Authentication:Discord:ClientId"]!;
-                            options.ClientSecret = config["Authentication:Discord:ClientSecret"]!;
-                            options.CallbackPath = config["Authentication:Discord:CallbackPath"] ?? "/signin-discord";
+                    // ---- Logging
+                    services.AddPackTrackerLogging(settingsService);
 
-                            options.SaveTokens = true;
-                            options.Scope.Add("identify");
-                            options.Scope.Add("guilds");
-
-                            options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-                            options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
-                            options.ClaimActions.MapJsonKey("urn:discord:avatar:url", "avatar");
-
-                            options.Events.OnCreatingTicket = async ctx =>
-                            {
-                                var requiredGuildId = config["Authentication:Discord:RequiredGuildId"];
-                                var accessToken = ctx.AccessToken!;
-
-                                using var client = new HttpClient();
-                                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
-
-                                var guildsResponse = await client.GetAsync("https://discord.com/api/users/@me/guilds");
-                                guildsResponse.EnsureSuccessStatusCode();
-
-                                var guildsJson = await guildsResponse.Content.ReadAsStringAsync();
-                                var guilds = System.Text.Json.JsonDocument.Parse(guildsJson).RootElement;
-                                var guildIds = guilds.EnumerateArray()
-                                    .Select(g => g.GetProperty("id").GetString())
-                                    .ToList();
-
-                                Console.WriteLine($"[Discord Login] User {ctx.Principal?.Identity?.Name} guilds: {string.Join(",", guildIds)}");
-
-                                bool isMember = guilds.EnumerateArray()
-                                    .Any(g => g.GetProperty("id").GetString() == requiredGuildId);
-
-                                if (!isMember)
-                                {
-                                    throw new Exception("User is not a member of the House Wolf server.");
-                                }
-
-                                var identity = (ClaimsIdentity)ctx.Principal!.Identity!;
-                                identity.AddClaim(new Claim(ClaimTypes.Role, "HouseWolfMember"));
-
-                                var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                                var discordId = ctx.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                                var username = ctx.Principal!.FindFirstValue(ClaimTypes.Name)!;
-                                var avatarUrl = ctx.Principal!.FindFirst("urn:discord:avatar:url")?.Value;
-
-                                var profile = await db.Profiles.SingleOrDefaultAsync(p => p.DiscordId == discordId);
-
-                                if (profile == null)
-                                {
-                                    profile = new Profile
-                                    {
-                                        Id = Guid.NewGuid(),
-                                        DiscordId = discordId,
-                                        Username = username,
-                                        AvatarUrl = avatarUrl,
-                                        CreatedAt = DateTime.UtcNow,
-                                        LastLogin = DateTime.UtcNow
-                                    };
-                                    db.Profiles.Add(profile);
-                                }
-                                else
-                                {
-                                    profile.Username = username;
-                                    profile.AvatarUrl = avatarUrl;
-                                    profile.LastLogin = DateTime.UtcNow;
-                                    db.Profiles.Update(profile);
-                                }
-
-                                await db.SaveChangesAsync();
-                            };
-                        })
-                        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-                        {
-                            var jwtKey = config["Jwt:Key"];
-                            if (string.IsNullOrEmpty(jwtKey))
-                                throw new InvalidOperationException("Jwt:Key is not configured.");
-
-                            options.TokenValidationParameters = new TokenValidationParameters
-                            {
-                                ValidateIssuer = true,
-                                ValidateAudience = true,
-                                ValidateLifetime = true,
-                                ValidateIssuerSigningKey = true,
-                                ValidIssuer = config["Jwt:Issuer"],
-                                ValidAudience = config["Jwt:Audience"],
-                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-                            };
-                        });
-                    
-                    services.AddDefaultCorrelationId(options =>
-                    {
-                        options.IncludeInResponse = true;
-                        options.UpdateTraceIdentifier = true;
-                        options.RequestHeader = "X-Correlation-ID";
-                        options.ResponseHeader = "X-Correlation-ID";
-                        options.AddToLoggingScope = true;
-                    });
-                    
+                    // ---- DbContext
                     services.AddDbContext<AppDbContext>(options =>
-                        options.UseNpgsql(config.GetConnectionString("DefaultConnection")));
-                    
+                        options.UseNpgsql(settings.ConnectionString));
+
+                    // ---- Infrastructure
+                    services.AddInfrastructure(settingsService);
+
+                    // ---- Options objects (Regolith, UEX)
+                    services.Configure<RegolithOptions>(opts =>
+                    {
+                        opts.ApiKey = settings.RegolithApiKey;
+                        opts.BaseUrl = settings.RegolithBaseUrl;
+                    });
+
+                    services.Configure<UexOptions>(opts =>
+                    {
+                        opts.ApiKey = settings.UexCorpApiKey;
+                        opts.BaseUrl = settings.UexBaseUrl;
+                    });
+
+                    // ---- Auth + JWT
+                    services.AddAuthentication(options =>
+                    {
+                        options.DefaultScheme = "Cookies";
+                        options.DefaultChallengeScheme = "Discord";
+                    })
+                    .AddCookie("Cookies", options =>
+                    {
+                        options.Cookie.SameSite = SameSiteMode.Lax;
+                        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+                    })
+                    .AddDiscord("Discord", options =>
+                    {
+                        options.ClientId = settings.DiscordClientId;
+                        options.ClientSecret = settings.DiscordClientSecret;
+                        options.CallbackPath = settings.DiscordCallbackPath ?? "/signin-discord";
+
+                        options.SaveTokens = true;
+                        options.Scope.Add("identify");
+                        options.Scope.Add("guilds");
+
+                        options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+                        options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+                        options.ClaimActions.MapJsonKey("urn:discord:avatar:url", "avatar");
+                    })
+                    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+                    {
+                        if (string.IsNullOrEmpty(settings.JwtKey))
+                            throw new InvalidOperationException("Jwt:Key is not configured.");
+
+                        options.TokenValidationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuer = true,
+                            ValidateAudience = true,
+                            ValidateLifetime = true,
+                            ValidateIssuerSigningKey = true,
+                            ValidIssuer = settings.JwtIssuer,
+                            ValidAudience = settings.JwtAudience,
+                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.JwtKey))
+                        };
+                    });
+
+                    // ---- API controllers
                     services.AddControllers()
                         .AddApplicationPart(typeof(ProfilesController).Assembly);
 
-                    services.AddEndpointsApiExplorer();
-                    services.AddSwaggerGen(c =>
-                    {
-                        c.SwaggerDoc("v1", new OpenApiInfo
-                        {
-                            Title = "🐺 PackTracker API",
-                            Version = "v1",
-                            Description = "API powering PackTracker — House Wolf’s system for Star Citizen logistics, ops, and data.",
-                            Contact = new OpenApiContact
-                            {
-                                Name = "House Wolf",
-                                Url = new Uri("https://housewolf.co")
-                            }
-                        });
-
-                        var asmName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-                        var xmlPath = Path.Combine(AppContext.BaseDirectory, $"{asmName}.xml");
-                        if (File.Exists(xmlPath))
-                            c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
-
-                        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                        {
-                            In = ParameterLocation.Header,
-                            Description = "JWT Authorization header using the Bearer scheme.",
-                            Name = "Authorization",
-                            Type = SecuritySchemeType.ApiKey,
-                            Scheme = "Bearer"
-                        });
-                        c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                        {
-                            {
-                                new OpenApiSecurityScheme
-                                {
-                                    Reference = new OpenApiReference
-                                    {
-                                        Type = ReferenceType.SecurityScheme,
-                                        Id = "Bearer"
-                                    }
-                                },
-                                Array.Empty<string>()
-                            }
-                        });
-                    });
-
+                    services.AddSwaggerGen();
                     services.AddHealthChecks();
                 });
 
                 webBuilder.Configure(app =>
                 {
-                    app.UseStaticFiles();
-                    app.UseCorrelationId();
-
                     app.UseRouting();
                     app.UseAuthentication();
                     app.UseAuthorization();
@@ -238,22 +129,7 @@ public class ApiHostedService : IHostedService
                     app.UseMiddleware<ExceptionHandlingMiddleware>();
 
                     app.UseSwagger();
-                    app.UseSwaggerUI(c =>
-                    {
-                        c.SwaggerEndpoint("/swagger/v1/swagger.json", "PackTracker API v1");
-                        c.RoutePrefix = "swagger";
-                        c.DocumentTitle = "🐺 PackTracker API Docs";
-                        c.InjectStylesheet("/swagger-ui/custom.css");
-                        c.InjectJavascript("/swagger-ui/custom.js");
-                    });
-
-                    app.UseHttpsRedirection();
-
-                    app.UseEndpoints(c =>
-                    {
-                        c.MapControllers();
-                        c.MapHealthChecks("/health");
-                    });
+                    app.UseSwaggerUI();
                 });
             })
             .Build();

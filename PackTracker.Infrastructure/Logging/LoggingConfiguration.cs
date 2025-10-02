@@ -4,6 +4,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using PackTracker.Application.Interfaces;
+using Serilog.Events;
 
 namespace PackTracker.Infrastructure.Logging;
 
@@ -13,42 +15,50 @@ namespace PackTracker.Infrastructure.Logging;
 /// </summary>
 public static class LoggingConfiguration
 {
+    
     public static IHostBuilder UsePackTrackerSerilog(this IHostBuilder hostBuilder) =>
         hostBuilder.UseSerilog((context, services, cfg) =>
         {
             cfg.ReadFrom.Configuration(context.Configuration)
-               .Enrich.WithExceptionDetails()
-               .Enrich.FromLogContext()
-               .Enrich.WithProperty("Application", "PackTracker")
-               .Enrich.WithMachineName()
-               .Enrich.WithProcessId()
-               .Enrich.WithThreadId()
-               .Enrich.WithCorrelationId()
-               .WriteTo.Async(wt =>
-               {
-                   wt.Console();
-                   wt.File("Logs/PackTracker-.log",
-                           rollingInterval: RollingInterval.Day,
-                           retainedFileCountLimit: 14,
-                           fileSizeLimitBytes: 32 * 1024 * 1024,
-                           rollOnFileSizeLimit: true,
-                           shared: true);
-               });
+                .Enrich.WithExceptionDetails()
+                .Enrich.FromLogContext()
+                .Enrich.WithProperty("Application", "PackTracker")
+                .Enrich.WithMachineName()
+                .Enrich.WithProcessId()
+                .Enrich.WithThreadId()
+                .Enrich.WithCorrelationId();
         });
 
-    public static IServiceCollection AddPackTrackerLogging(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddPackTrackerLogging(
+        this IServiceCollection services,
+        ISettingsService? settingsService)
     {
-        // Ensure logger initialized from configuration
+        var s = settingsService.GetSettings();
+
+        // You can make these come from AppSettings (add properties if you like)
+        var logPath = string.IsNullOrWhiteSpace(s.GameLogFilePath)
+            ? "Logs/packtracker-.log"
+            : s.GameLogFilePath; // or add AppSettings.LogFilePath
+
         Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(configuration)
-            .Enrich.WithExceptionDetails()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("Application", "PackTracker")
-            .Enrich.WithMachineName()
-            .Enrich.WithProcessId()
-            .Enrich.WithThreadId()
-            .Enrich.WithCorrelationId()
-            .WriteTo.Async(a => a.File("Logs/PackTracker-.log", rollingInterval: RollingInterval.Day))
+            .WriteTo.Async(wt =>
+            {
+                wt.Console();
+                wt.File(
+                    path: logPath,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 7,
+                    fileSizeLimitBytes: 32 * 1024 * 1024, // numeric here
+                    rollOnFileSizeLimit: true,
+                    shared: true,
+                    outputTemplate:
+                    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}"
+                );
+            })
             .CreateLogger();
 
         services.AddLogging(b =>

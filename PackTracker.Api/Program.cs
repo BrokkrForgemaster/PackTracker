@@ -11,14 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 // 🔹 Serilog pipeline
 builder.Host.UsePackTrackerSerilog();
 
-var cs =
-    Environment.GetEnvironmentVariable("ConnectionStrings:DefaultConnection");
-var configuration = builder.Configuration;
+ISettingsService? settingsService = builder.Services.BuildServiceProvider()
+    .GetRequiredService<ISettingsService>();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseNpgsql(cs);
+    options.UseNpgsql(settingsService.GetSettings().ConnectionString);
 });
-builder.Services.AddInfrastructure(configuration);
+builder.Services.AddInfrastructure(settingsService);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

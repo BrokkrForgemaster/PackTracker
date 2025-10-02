@@ -1,42 +1,67 @@
 using Microsoft.EntityFrameworkCore;
-using PackTracker.Application.Options;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
+using PackTracker.Application.Options;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
 
 namespace PackTracker.Infrastructure;
 
-/// <summary name="DependencyInjection">
+/// <summary>
 /// Extension methods for registering infrastructure services.
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, ISettingsService settingsService)
     {
-        var cs =
-            Environment.GetEnvironmentVariable("ConnectionStrings:DefaultConnection")
-            ?? configuration.GetConnectionString("DefaultConnection");
+        var config = settingsService.GetSettings();
 
-        services.AddDbContext<AppDbContext>(options => options.UseNpgsql(cs));
+        // --- DbContext ---
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            if (string.IsNullOrWhiteSpace(config.ConnectionString))
+                throw new InvalidDataException("Database connection string is missing. Please set it in the application settings.");
+            options.UseNpgsql(config.ConnectionString);
+        });
 
-        services.AddHttpClient("default");
-
+        // --- Core Services ---
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
         services.AddSingleton<JwtTokenService>();
 
-        // Options binding: if env vars are in config, these already override appsettings via the binder
-        services.Configure<RegolithOptions>(configuration.GetSection("Regolith"));
+        // --- SettingsService ---
+        // Don't re-create inside; just register the provided instance
+        services.AddSingleton(settingsService);
 
-        services.AddMemoryCache();
+        // --- Options objects pulled from SettingsService ---
+        services.AddSingleton(new RegolithOptions
+        {
+            ApiKey = config.RegolithApiKey,
+            BaseUrl = config.RegolithBaseUrl
+        });
+
+        services.AddSingleton(new UexOptions
+        {
+            ApiKey = config.UexCorpApiKey,
+            BaseUrl = config.UexBaseUrl
+        });
+
+        // --- HTTP Clients ---
+        services.AddHttpClient("default");
 
         services.AddHttpClient<IRegolithService, RegolithService>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
         });
+
+        services.AddHttpClient<IUexService, UexService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddMemoryCache();
 
         return services;
     }
