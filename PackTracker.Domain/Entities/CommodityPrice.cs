@@ -10,9 +10,9 @@ public class CommodityPrice
     public Commodity Commodity { get; set; } = default!;
 
     public int TerminalId { get; set; }
-    public string TerminalName { get; set; } = default!;
-    public string TerminalCode { get; set; } = default!;
-    public string TerminalSlug { get; set; } = default!;
+    public string? TerminalName { get; set; }
+    public string? TerminalCode { get; set; } 
+    public string? TerminalSlug { get; set; } 
 
     public float PriceBuy { get; set; }
     public float PriceBuyAvg { get; set; }
@@ -31,5 +31,4 @@ public class CommodityPrice
 
     public DateTime DateAdded { get; set; }
     public DateTime DateModified { get; set; }
-    
 }

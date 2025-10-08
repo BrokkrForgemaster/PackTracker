@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
@@ -9,57 +10,52 @@ using PackTracker.Infrastructure.Services;
 
 namespace PackTracker.Infrastructure;
 
-/// <summary>
-/// Extension methods for registering infrastructure services.
-/// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, ISettingsService settingsService)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, ISettingsService settings)
     {
-        var config = settingsService.GetSettings();
+        var config = settings.GetSettings() ?? throw new InvalidDataException("Application settings could not be loaded.");
 
-        // --- DbContext ---
+        config.ConnectionString ??= string.Empty;
+        config.RegolithBaseUrl ??= "https://regolith.rocks/api";
+        config.UexBaseUrl ??= "https://api.uexcorp.uk/2.0/";
+
+        // Database
+        if (string.IsNullOrWhiteSpace(config.ConnectionString))
+            throw new InvalidDataException("Database connection string missing in AppSettings.");
+
         services.AddDbContext<AppDbContext>(options =>
         {
-            if (string.IsNullOrWhiteSpace(config.ConnectionString))
-                throw new InvalidDataException("Database connection string is missing. Please set it in the application settings.");
             options.UseNpgsql(config.ConnectionString);
+            options.EnableDetailedErrors();
         });
 
-        // --- Core Services ---
+        // Register settings
+        services.AddSingleton(settings);
+
+        // Logging + Security
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
         services.AddSingleton<JwtTokenService>();
-
-        // --- SettingsService ---
-        // Don't re-create inside; just register the provided instance
-        services.AddSingleton(settingsService);
-
-        // --- Options objects pulled from SettingsService ---
-        services.AddSingleton(new RegolithOptions
-        {
-            ApiKey = config.RegolithApiKey,
-            BaseUrl = config.RegolithBaseUrl
-        });
-
-        services.AddSingleton(new UexOptions
-        {
-            ApiKey = config.UexCorpApiKey,
-            BaseUrl = config.UexBaseUrl
-        });
-
-        // --- HTTP Clients ---
-        services.AddHttpClient("default");
-
+        // HttpClient setup
         services.AddHttpClient<IRegolithService, RegolithService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(30);
+            if (Uri.TryCreate(config.RegolithBaseUrl, UriKind.Absolute, out var uri))
+                client.BaseAddress = uri;
+
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
         });
 
         services.AddHttpClient<IUexService, UexService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(30);
+            if (Uri.TryCreate(config.UexBaseUrl, UriKind.Absolute, out var uri))
+                client.BaseAddress = uri;
+
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
         });
+        services.AddSingleton<IRequestsService, RequestsService>();
+        services.AddSingleton<IKillEventService, KillEventService>();
+        services.AddSingleton<IGameLogService, GameLogService>();
 
         services.AddMemoryCache();
 

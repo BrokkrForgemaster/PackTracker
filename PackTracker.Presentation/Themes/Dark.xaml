@@ -17,7 +17,7 @@
     <GradientStop Color="#20FFFFFF" Offset="1.0"/>
   </LinearGradientBrush>
 
-  <BitmapImage x:Key="SidebarImage" UriSource="/PackTracker;component;component/Assets/HWiconnew.png"/>
+  <BitmapImage x:Key="SidebarImage" UriSource="/Assets/HWiconnew.png"/>
 
   <!-- Card shadow now uses AccentColor -->
   <DropShadowEffect x:Key="CardShadow"

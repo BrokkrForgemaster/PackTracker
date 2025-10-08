@@ -12,6 +12,8 @@ public class Commodity
     public string Slug { get; set; } = default!;
     public string? Kind { get; set; }
     public int? WeightScu { get; set; }
+    
+    public decimal? ROI { get; set; }
     public bool IsAvailable { get; set; }
     public bool IsAvailableLive { get; set; }
     public bool IsVisible { get; set; }

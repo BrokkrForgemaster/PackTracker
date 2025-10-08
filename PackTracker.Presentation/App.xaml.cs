@@ -5,150 +5,134 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
+using PackTracker.Application.Options;
+using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Presentation.Services;
+using PackTracker.Presentation.ViewModels;
 using PackTracker.Presentation.Views;
 using Serilog;
 
 namespace PackTracker.Presentation;
 
-/// <summary name="App">
-/// Application entry point. Handles DI setup, logging, and view navigation.
-/// </summary>
-public partial class App
+public partial class App : System.Windows.Application
 {
-    #region Fields
-
     private IServiceProvider? _serviceProvider;
+    public bool IsServiceProviderReady => _serviceProvider is not null;
 
-    #endregion
-
-    #region Constructor
-
-    public App()
+    public static T GetService<T>() where T : notnull
     {
-        // DO NOT attach Startup handler here if you have Startup="OnStartup" in App.xaml!
-        // Startup += OnStartup;
+        if (Current is not App app || app._serviceProvider is null)
+            throw new InvalidOperationException("❌ Service provider not initialized.");
+        return app._serviceProvider.GetRequiredService<T>();
     }
 
-    #endregion
-
-    #region Dependency Injection
-
-    public static IServiceProvider BootstrapServices(StartupEventArgs? e = null)
-    {
-        var services = new ServiceCollection();
-
-        // Make Serilog early (reads user-secrets + env)
-        var cfg = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-            .AddUserSecrets<App>(optional: true)
-            .AddEnvironmentVariables() // PACKTRACKER__XYZ etc.
-            .Build();
-
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(cfg)
-            .Enrich.FromLogContext()
-            .CreateLogger();
-
-        services.AddLogging(b => b.AddSerilog());
-
-        // Expose the WPF Application to DI for services that need it (e.g., ThemeManager)
-        services.AddSingleton<System.Windows.Application>(_ => System.Windows.Application.Current);
-
-        // SettingsService needs a string path => use a factory
-        services.AddSingleton<ISettingsService>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<SettingsService>>();
-            var defaultConfigPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
-            return new SettingsService(logger, defaultConfigPath);
-        });
-
-        // Resolve connection string with precedence: ENV -> user settings -> appsettings
-        services.AddDbContext<AppDbContext>((sp, options) =>
-        {
-            var settings = sp.GetRequiredService<ISettingsService>().GetSettings();
-
-            // ENV can be named however you prefer; this is just an example
-            var fromEnv = Environment.GetEnvironmentVariable("PACKTRACKER__CONNECTIONSTRING")
-                          ?? cfg.GetConnectionString("DefaultConnection");
-
-            var connectionString =
-                !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv :
-                !string.IsNullOrWhiteSpace(settings.ConnectionString) ? settings.ConnectionString :
-                throw new InvalidOperationException(
-                    "Database connection string not found. Set PACKTRACKER__CONNECTIONSTRING env var or configure it in user settings.");
-
-            options.UseNpgsql(connectionString);
-        });
-
-        // Core app services
-        services.AddSingleton<IGameLogService, GameLogService>();
-        services.AddSingleton<IKillEventService, KillEventService>();
-        services.AddSingleton<IThemeManager, ThemeManager>();
-
-        // Views & MainWindow
-        services.AddTransient<SettingsView>();
-        services.AddTransient<DashboardView>();
-        services.AddTransient<WelcomeView>();
-        services.AddSingleton<KillTracker>();
-        services.AddSingleton<MainWindow>();
-
-        // Let other parts resolve the App instance if they need to
-        services.AddSingleton(Current);
-
-        // HttpClient for anything that needs it
-        services.AddHttpClient();
-
-        return services.BuildServiceProvider();
-    }
-
-    #endregion
-
-    #region Startup Logic
-
-    private void OnStartup(object sender, StartupEventArgs e)
+    private async void OnStartup(object sender, StartupEventArgs e)
     {
         try
         {
-            _serviceProvider = BootstrapServices(e);
+            var cfg = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddUserSecrets<App>(optional: true)
+                .AddEnvironmentVariables()
+                .Build();
 
-            var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
-            var themeManager = _serviceProvider.GetRequiredService<IThemeManager>();
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(cfg)
+                .Enrich.FromLogContext()
+                .CreateLogger();
+
+            Log.Information("🔧 Initializing PackTracker services...");
+
+            var services = new ServiceCollection();
+            services.AddLogging(b => b.AddSerilog());
+
+            var settingsService = new SettingsService(new LoggerFactory().CreateLogger<SettingsService>());
+
+            services.AddSingleton<System.Windows.Application>(_ => Current);
+            // Infrastructure
+            services.AddInfrastructure(settingsService);
+
+            // Core
+            services.AddSingleton<ISettingsService>(settingsService);
+            services.AddSingleton<ApiHostedService>();
+            services.AddHostedService(sp => sp.GetRequiredService<ApiHostedService>());
+            services.Configure<RegolithOptions>(cfg.GetSection("Regolith"));
+            services.AddHttpClient<IRegolithService, RegolithService>();
+            services.Configure<UexOptions>(cfg.GetSection("Uex"));
+            services.AddHttpClient<IUexService, UexService>();
+            // Presentation Services
+            services.AddSingleton<IThemeManager, ThemeManager>();
+
+            // Views / ViewModels
+            services.AddSingleton<MainWindow>();
+            services.AddSingleton<WelcomeView>();
+            services.AddSingleton<KillTracker>();
+            services.AddSingleton< RefineryJobsView>();
+            services.AddSingleton<LoginView>();
+            services.AddSingleton<DashboardView>();
+            services.AddTransient<UexView>();
+            services.AddTransient<UexViewModel>(sp =>
+                new UexViewModel(
+                    sp.GetRequiredService<IUexService>(),
+                    sp.GetRequiredService<ILogger<UexViewModel>>()));
+            services.AddTransient<SettingsView>();
+
+            _serviceProvider = services.BuildServiceProvider();
+
+            var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
+            logger.LogInformation("🚀 Starting PackTracker...");
+
+            // Start embedded API
+            var apiHost = _serviceProvider.GetRequiredService<ApiHostedService>();
+            await apiHost.StartAsync(CancellationToken.None);
+
+            // UI setup
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-
-            // Load persisted settings
             var settings = settingsService.GetSettings();
+            var themeManager = _serviceProvider.GetRequiredService<IThemeManager>();
 
-            // Apply theme before showing any view
             if (!string.IsNullOrWhiteSpace(settings.Theme))
                 themeManager.ApplyTheme(settings.Theme);
 
-            // Go directly to dashboard if first run is complete
             if (settings.FirstRunComplete)
-            {
-                var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
-                mainWindow.ContentFrame.Navigate(dashboardView);
-            }
+                mainWindow.ContentFrame.Navigate(_serviceProvider.GetRequiredService<LoginView>());
             else
-            {
-                var welcomeView = _serviceProvider.GetRequiredService<WelcomeView>();
-                mainWindow.ContentFrame.Navigate(welcomeView);
-            }
+                mainWindow.ContentFrame.Navigate(_serviceProvider.GetRequiredService<WelcomeView>());
 
             mainWindow.Show();
+            Log.Information("✅ PackTracker started successfully.");
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Fatal error during PackTracker startup.");
-            MessageBox.Show(
-                "A critical error occurred during application startup:\n\n" + ex.Message,
-                "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error
-            );
+            Log.Fatal(ex, "❌ Fatal error during startup.");
+            MessageBox.Show($"A critical error occurred:\n\n{ex.Message}", "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(-1);
         }
     }
 
-    #endregion
+    protected override async void OnExit(ExitEventArgs e)
+    {
+        if (_serviceProvider is not null)
+        {
+            try
+            {
+                var apiHost = _serviceProvider.GetService<ApiHostedService>();
+                if (apiHost != null)
+                {
+                    Log.Information("🛑 Stopping embedded API host...");
+                    await apiHost.StopAsync(CancellationToken.None);
+                    Log.Information("✅ API host stopped.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "⚠️ Error during shutdown.");
+            }
+        }
+
+        Log.CloseAndFlush();
+        base.OnExit(e);
+    }
 }

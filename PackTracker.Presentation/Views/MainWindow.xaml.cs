@@ -1,162 +1,221 @@
-﻿using System.Windows;
+﻿using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Windows;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace PackTracker.Presentation.Views;
-
-/// <summary name="MainWindow">
-/// Main application window with navigation and sidebar timer logic.
-/// </summary>
-public partial class MainWindow
+namespace PackTracker.Presentation.Views
 {
-    #region Fields
-
-    private readonly IServiceProvider _serviceProvider;
-    private readonly DispatcherTimer _timer;
-
-    #endregion
-
-    #region Constructor
-
-    public MainWindow(IServiceProvider serviceProvider)
+    /// <summary name="MainWindow">
+    /// Main application window with navigation and sidebar timer logic.
+    /// </summary>
+    public partial class MainWindow
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        InitializeComponent();
+        #region Fields
 
-        WindowState = WindowState.Maximized;
-        WindowStyle = WindowStyle.None;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ISettingsService _settingsService;
+        private readonly DispatcherTimer _timer;
 
-        // Sidebar real-time clock
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += (_, _) =>
+        #endregion
+
+        #region Constructor
+
+        public MainWindow(IServiceProvider serviceProvider, ISettingsService settingsService)
         {
-            TxtLocalTime.Text = DateTime.Now.ToString("MMMM d, yyyy") + "\n" +
-                                DateTime.Now.ToString("       HH:mm:ss");
-        };
-        _timer.Start();
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            InitializeComponent();
 
-        NavigateToFirstView();
-    }
+            WindowState = WindowState.Maximized;
+            WindowStyle = WindowStyle.None;
 
-    #endregion
+            // Sidebar real-time clock
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _timer.Tick += (_, _) =>
+            {
+                TxtLocalTime.Text = DateTime.Now.ToString("MMMM d, yyyy") + "\n" +
+                                    DateTime.Now.ToString("       HH:mm:ss");
+            };
+            _timer.Start();
 
-    #region Navigation
+            NavigateToFirstView();
+        }
 
-    private void NavigateToFirstView()
-    {
-        var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
-        var settings = settingsService.GetSettings();
+        #endregion
 
-        bool incomplete =
-            string.IsNullOrWhiteSpace(settings.RegolithApiKey) ||
-            string.IsNullOrWhiteSpace(settings.UexCorpApiKey) ||
-            string.IsNullOrWhiteSpace(settings.GameLogFilePath);
+        #region Navigation
 
-        if (incomplete)
-            ContentFrame.Navigate(new WelcomeView(_serviceProvider));
-        else
+        private void NavigateToFirstView()
+        {
+            var settings = _settingsService.GetSettings();
+
+            // First-run setup not complete → go to Settings (Welcome) to capture keys/paths, etc.
+            if (!settings.FirstRunComplete)
+            {
+                NavigateToSettings();
+                return;
+            }
+
+            // We authenticate users with a JWT access token saved in settings (NOT JwtKey).
+            var jwtToken = settings.JwtToken;
+
+            // If token missing or invalid/expired → go to Login
+            if (string.IsNullOrWhiteSpace(jwtToken) || !IsJwtValid(jwtToken))
+            {
+                NavigateToLogin();
+                return;
+            }
+
+            // Otherwise, proceed to dashboard
             NavigateToDashboard();
-    }
+        }
 
-    private void Navigate_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is System.Windows.Controls.Button btn && btn.Tag is string tag)
+        /// <summary>
+        /// Defensive JWT validation (structure + expiration). Never throws.
+        /// </summary>
+        private bool IsJwtValid(string token)
         {
-            switch (tag)
+            // quick structure check: JWT must have three segments
+            if (string.IsNullOrWhiteSpace(token) || token.Count(c => c == '.') != 2)
+                return false;
+
+            try
             {
-                case "Dashboard":
-                    NavigateToDashboard();
-                    break;
-                case "KillTracker":
-                    NavigateToKillTracker();
-                    break;
-                case "Settings":
-                    NavigateToSettings();
-                    break;
-                // Add more cases as you add features!
+                var handler = new JwtSecurityTokenHandler();
+                var jwt = handler.ReadJwtToken(token);
+
+                // If token has no 'exp', treat as invalid
+                var expiresUtc = jwt.ValidTo;
+                if (expiresUtc == default)
+                    return false;
+
+                return expiresUtc > DateTime.UtcNow;
+            }
+            catch
+            {
+                return false;
             }
         }
-    }
 
-    private void NavigateToDashboard()
-    {
-        var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
-        ContentFrame.Navigate(dashboardView);
-    }
-    
-    private void NavigateToKillTracker()
-    {
-        try
+        private void NavigateToLogin()
         {
-            var killTrackerView = _serviceProvider.GetRequiredService<KillTracker>();
-            ContentFrame.Navigate(killTrackerView);
+            var loginView = _serviceProvider.GetRequiredService<LoginView>();
+            ContentFrame.Navigate(loginView);
         }
-        catch (Exception ex)
+
+        private void Navigate_Click(object sender, RoutedEventArgs e)
         {
-            var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
-            logger?.LogError(ex, "Failed to navigate to KillTracker");
-            MessageBox.Show($"Failed to load KillTracker: {ex.Message}", "Navigation Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void NavigateToSettings()
-    {
-        var settingsService = _serviceProvider.GetService<ISettingsService>();
-        var themeManager = _serviceProvider.GetService<IThemeManager>();
-        var loggerFactory = _serviceProvider.GetService<ILoggerFactory>();
-
-        if (settingsService != null && themeManager != null && loggerFactory != null)
-        {
-            var logger = loggerFactory.CreateLogger<SettingsView>();
-            var settingsView = new SettingsView(settingsService, themeManager, logger);
-            ContentFrame.Navigate(settingsView);
-        }
-        else
-        {
-            MessageBox.Show("Unable to resolve all required services for settings.", "Dependency Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    #endregion
-
-    #region Sidebar Controls
-
-    private void Exit_Click(object sender, RoutedEventArgs e)
-    {
-        System.Windows.Application.Current.Shutdown();
-    }
-
-    private async void UpdateButton_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            UpdateButton.IsEnabled = false;
-            UpdateProgressBar.Visibility = Visibility.Visible;
-            UpdateStatusText.Visibility = Visibility.Visible;
-            UpdateStatusText.Text = "Updating...";
-
-            for (int i = 0; i <= 100; i += 10)
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is string tag)
             {
-                UpdateProgressBar.Value = i;
-                await Task.Delay(200);
+                switch (tag)
+                {
+                    case "Dashboard":
+                        NavigateToDashboard();
+                        break;
+                    case "KillTracker":
+                        NavigateToKillTracker();
+                        break;
+                    case "RefineryJobs":
+                        {
+                            var refineryJobsView = _serviceProvider.GetRequiredService<RefineryJobsView>();
+                            ContentFrame.Navigate(refineryJobsView);
+                            break;
+                        }
+                    case "TradingHub":
+                        {
+                            var uexView = _serviceProvider.GetRequiredService<UexView>();
+                            ContentFrame.Navigate(uexView);
+                            break;
+                        }
+                    case "Settings":
+                        NavigateToSettings();
+                        break;
+                }
             }
+        }
 
-            UpdateStatusText.Text = "Update completed!";
-        }
-        catch (Exception ex)
+        private void NavigateToDashboard()
         {
-            MessageBox.Show($"Update failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            UpdateStatusText.Text = "Update failed.";
+            var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
+            ContentFrame.Navigate(dashboardView);
         }
-        finally
+
+        private void NavigateToKillTracker()
         {
-            UpdateProgressBar.Visibility = Visibility.Collapsed;
-            UpdateButton.IsEnabled = true;
+            try
+            {
+                var killTrackerView = _serviceProvider.GetRequiredService<KillTracker>();
+                ContentFrame.Navigate(killTrackerView);
+            }
+            catch (Exception ex)
+            {
+                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
+                logger?.LogError(ex, "Failed to navigate to KillTracker");
+                MessageBox.Show($"Failed to load KillTracker: {ex.Message}", "Navigation Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
+
+        private void NavigateToSettings()
+        {
+            var themeManager = _serviceProvider.GetService<IThemeManager>();
+            var loggerFactory = _serviceProvider.GetService<ILoggerFactory>();
+
+            if (_settingsService != null && themeManager != null && loggerFactory != null)
+            {
+                var logger = loggerFactory.CreateLogger<SettingsView>();
+                var settingsView = new SettingsView(_serviceProvider, _settingsService, themeManager, logger);
+                ContentFrame.Navigate(settingsView);
+            }
+            else
+            {
+                MessageBox.Show("Unable to resolve all required services for settings.", "Dependency Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        #endregion
+
+        #region Sidebar Controls
+
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+           System.Windows.Application.Current.Shutdown();
+        }
+
+        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                UpdateButton.IsEnabled = false;
+                UpdateProgressBar.Visibility = Visibility.Visible;
+                UpdateStatusText.Visibility = Visibility.Visible;
+                UpdateStatusText.Text = "Updating...";
+
+                for (int i = 0; i <= 100; i += 10)
+                {
+                    UpdateProgressBar.Value = i;
+                    await Task.Delay(200);
+                }
+
+                UpdateStatusText.Text = "Update completed!";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Update failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UpdateStatusText.Text = "Update failed.";
+            }
+            finally
+            {
+                UpdateProgressBar.Visibility = Visibility.Collapsed;
+                UpdateButton.IsEnabled = true;
+            }
+        }
+
+        #endregion
     }
-
-    #endregion
 }

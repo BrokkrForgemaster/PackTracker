@@ -13,6 +13,8 @@ namespace PackTracker.Application.Interfaces
     public interface ISettingsService : IDisposable
     {
         AppSettings GetSettings();
+        
+        Task SaveSettings(AppSettings settings);
 
         void UpdateSettings(Action<AppSettings> applyUpdates);
 

@@ -44,6 +44,13 @@ public class RegolithService : IRegolithService
 
     public async Task<RegolithProfileDto?> GetProfileAsync(CancellationToken ct = default)
     {
+        if (_opts.UseStub)
+        {
+            var fake = BuildStubProfile();
+            _cache.Set("regolith:profile", fake, TimeSpan.FromMinutes(5));
+            _log.LogInformation("[Stub] Returning fake Regolith profile for {ScName}", fake.ScName);
+            return fake;
+        }
         using var scope = _log.BeginScope(new Dictionary<string, object?>
         {
             ["component"] = "Regolith",
@@ -167,6 +174,13 @@ public class RegolithService : IRegolithService
     
     public async Task<IReadOnlyList<RegolithRefineryJobDto>> GetRefineryJobsAsync(CancellationToken ct = default)
     {
+        if (_opts.UseStub)
+        {
+            var fakeJobs = BuildStubJobs();
+            _cache.Set("regolith:refinery:jobs", fakeJobs, TimeSpan.FromMinutes(2));
+            _log.LogInformation("[Stub] Returning {Count} fake refinery jobs", fakeJobs.Count);
+            return fakeJobs;
+        }
         using var scope = _log.BeginScope(new Dictionary<string, object?>
         {
             ["component"] = "Regolith",
@@ -288,4 +302,65 @@ public class RegolithService : IRegolithService
 
         return jobs;
     }
+    
+    private RegolithProfileDto BuildStubProfile() => new()
+    {
+        UserId = "user_42",
+        ScName = "Sentinel_Wolf",
+        AvatarUrl = "https://cdn.example.com/avatars/wolf.png",
+        CreatedAt = DateTime.UtcNow.AddMonths(-7),
+        UpdatedAt = DateTime.UtcNow.AddMinutes(-5)
+    };
+
+    private List<RegolithRefineryJobDto> BuildStubJobs() => new()
+    {
+        new RegolithRefineryJobDto {
+            JobId = "RFY-BA14-8723",
+            Location = "Lyria / Arccorp Mining Area 157",
+            OreType = "Quantanium + Bexalite",
+            Quantity = 86,          // total raw mass
+            Status = "Processing",
+            SubmittedAt = DateTime.UtcNow.AddHours(-3.5),
+            CompletedAt = null
+        },
+        new RegolithRefineryJobDto {
+            JobId = "RFY-HUR-LOR-1229",
+            Location = "Hurston / HDMS Edmond",
+            OreType = "Titanium + Bexalite",
+            Quantity = 113,
+            Eta = DateTime.UtcNow.AddMinutes(15),
+            Progress = 0.75,
+            Efficiency = 0.87,
+            Yield = 98.5,
+            Status = "Complete",
+            SubmittedAt = DateTime.UtcNow.AddHours(-7),
+            CompletedAt = DateTime.UtcNow.AddHours(-1.5)
+        },
+        new RegolithRefineryJobDto {
+            JobId = "RFY-CRU-IAL-3370",
+            Location = "CRU-L1 Shallow Frontier",
+            OreType = "Hephaestanite + Laranite",
+            Quantity = 200,
+            Eta = DateTime.UtcNow.AddMinutes(45),
+            Progress = 0.40,
+            Efficiency = 0.92,
+            Yield = 184.0,
+            Status = "Processing",
+            SubmittedAt = DateTime.UtcNow.AddHours(-6),
+            CompletedAt = null
+        },
+        new RegolithRefineryJobDto {
+            JobId = "RFY-MIC-TAL-9977",
+            Location = "MicroTech / Shubin TAL-3",
+            OreType = "Agricium + Bexalite",
+            Quantity = 90,
+            Eta = DateTime.UtcNow.AddMinutes(5),
+            Progress = 0.95,
+            Efficiency = 0.89,
+            Yield = 80.1,
+            Status = "Complete",
+            SubmittedAt = DateTime.UtcNow.AddHours(-5),
+            CompletedAt = DateTime.UtcNow.AddHours(-2.5)
+        }
+    };
 }

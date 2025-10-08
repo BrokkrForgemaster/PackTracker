@@ -48,4 +48,9 @@ public class AppSettings
     /// Tracks whether the Discord account is linked to the app.
     /// </summary>
     public string DiscordConnected { get; set; } = string.Empty;
+    public string? DiscordAccessToken { get; set; }
+    public string? DiscordRefreshToken { get; set; }
+    public string? JwtToken { get; set; }
+    public string? JwtRefreshToken { get; set; }
+    
 }

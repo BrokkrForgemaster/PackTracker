@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<RegolithRefineryJob> RegolithRefineryJobs => Set<RegolithRefineryJob>();
     public DbSet<Commodity> Commodities => Set<Commodity>();
     public DbSet<CommodityPrice> CommodityPrices => Set<CommodityPrice>();
+    public DbSet<RequestTicket> RequestTickets => Set<RequestTicket>();
     
     public DbSet<Kill> KillEntries { get; set; } = null!;
 
@@ -163,6 +164,27 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.Attacker, e.Target, e.Timestamp })
                 .IsUnique();
+        });
+        
+        modelBuilder.Entity<RequestTicket>(e =>
+        {
+            e.ToTable("request_tickets");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.Title).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(4000);
+
+            e.Property(x => x.Kind).HasConversion<int>();
+            e.Property(x => x.Priority).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+
+            e.Property(x => x.CreatedByUserId).HasMaxLength(64);
+            e.Property(x => x.CreatedByDisplayName).HasMaxLength(64);
+            e.Property(x => x.AssignedToUserId).HasMaxLength(64);
+            e.Property(x => x.AssignedToDisplayName).HasMaxLength(64);
+
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
         });
     }
 }

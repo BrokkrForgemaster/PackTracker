@@ -20,7 +20,8 @@ public class ProfileService : IProfileService
         _config = config;
     }
 
-    public async Task<Profile?> UpsertFromDiscordAsync(string accessToken, string discordId, string username, string? avatarUrl)
+    public async Task<Profile?> UpsertFromDiscordAsync(string accessToken, string discordId, string username,
+        string? avatarUrl, CancellationToken ct)
     {
         var requiredGuildId = _config["Authentication:Discord:RequiredGuildId"];
         if (string.IsNullOrEmpty(requiredGuildId))
@@ -65,16 +66,16 @@ public class ProfileService : IProfileService
         return profile;
     }
 
-    public Task<Profile?> GetByIdAsync(Guid id) =>
+    public Task<Profile?> GetByIdAsync(Guid id, CancellationToken ct) =>
         _db.Profiles.SingleOrDefaultAsync(p => p.Id == id);
 
-    public Task<Profile?> GetByDiscordIdAsync(string discordId) =>
+    public Task<Profile?> GetByDiscordIdAsync(string discordId, CancellationToken ct) =>
         _db.Profiles.SingleOrDefaultAsync(p => p.DiscordId == discordId);
     
-    public Task<Profile?> GetByNameAsync(string name) =>
+    public Task<Profile?> GetByNameAsync(string name, CancellationToken ct) =>
         _db.Profiles.SingleOrDefaultAsync(p => p.Username.ToLower() == name.ToLower());
 
-    public Task<IEnumerable<Profile>> GetAllAsync() =>
+    public Task<IEnumerable<Profile>> GetAllAsync(CancellationToken ct) =>
         Task.FromResult<IEnumerable<Profile>>(_db.Profiles.ToList());
 
     private class DiscordGuild

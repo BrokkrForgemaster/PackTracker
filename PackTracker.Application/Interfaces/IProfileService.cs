@@ -7,10 +7,11 @@ namespace PackTracker.Application.Interfaces;
 /// </summary>
 public interface IProfileService
 {
-    Task<Profile?> UpsertFromDiscordAsync(string accessToken, string discordId, string username, string? avatarUrl);
-    Task<Profile?> GetByIdAsync(Guid id);
-    Task<Profile?> GetByDiscordIdAsync(string discordId);
+    Task<Profile?> UpsertFromDiscordAsync(string accessToken, string discordId, string username, string? avatarUrl,
+        CancellationToken ct);
+    Task<Profile?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task<Profile?> GetByDiscordIdAsync(string discordId, CancellationToken ct);
     
-    Task<Profile?> GetByNameAsync(string name);
-    Task<IEnumerable<Profile>> GetAllAsync();
+    Task<Profile?> GetByNameAsync(string name, CancellationToken ct);
+    Task<IEnumerable<Profile>> GetAllAsync(CancellationToken ct);
 }

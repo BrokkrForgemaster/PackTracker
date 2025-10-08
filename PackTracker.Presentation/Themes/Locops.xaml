@@ -12,7 +12,7 @@
 
   <!-- icon -->
   <BitmapImage x:Key="SidebarImage"
-               UriSource="/PackTracker;component;component/Assets/locops.png"/>
+                UriSource="/Assets/locops.png"/>
 
   <!-- all shadows now driven by AccentColor -->
   <DropShadowEffect x:Key="CardShadow"

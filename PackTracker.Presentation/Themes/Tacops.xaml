@@ -8,7 +8,8 @@
     <SolidColorBrush x:Key="MainBackground"    Color="#111111"/>
     <SolidColorBrush x:Key="CardBackground"    Color="#222222"/>
 
-    <BitmapImage   x:Key="SidebarImage"  UriSource="/PackTracker;component;component/Assets/tacops.png"/>
+    <BitmapImage   x:Key="SidebarImage"  
+                    UriSource="/Assets/tacops.png"/>
   
     <DropShadowEffect x:Key="CardShadow"
                       Color="{DynamicResource AccentColor}"

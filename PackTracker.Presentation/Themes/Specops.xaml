@@ -10,7 +10,7 @@
 
     <!-- Patch image -->
     <BitmapImage x:Key="SidebarImage" 
-                 UriSource="/PackTracker;component;component/Assets/specops.png"/>
+                    UriSource="/Assets/specops.png"/>
   
     <DropShadowEffect x:Key="CardShadow"
                       Color="{DynamicResource AccentColor}"

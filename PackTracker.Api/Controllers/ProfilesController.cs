@@ -1,38 +1,64 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using PackTracker.Application.Interfaces;
-using PackTracker.Domain.Entities;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+using PackTracker.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
+using PackTracker.Application.Interfaces;
+using Microsoft.AspNetCore.Authentication;
 
 namespace PackTracker.Api.Controllers;
 
+/// <summary name="ProfilesController">
+/// Controller for managing user profiles.
+/// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 public class ProfilesController : ControllerBase
 {
     private readonly IProfileService _profiles;
+    private readonly ILogger<ProfilesController> _logger;
 
-    public ProfilesController(IProfileService profiles) => _profiles = profiles;
+    public ProfilesController(IProfileService profiles, ILogger<ProfilesController> logger)
+    {
+        _profiles = profiles;
+        _logger = logger;
+    }
 
-    // ✅ NEW: Get the currently logged-in user's profile
+    /// <summary>
+    /// Get the currently logged-in user's profile.
+    /// </summary>
     [HttpGet("me")]
-    [Authorize] // requires valid login/JWT
+    [Authorize]
     [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetMe()
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMe(CancellationToken ct)
     {
-        // Pull Discord ID from claims
-        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(discordId))
-            return Unauthorized("Missing Discord ID claim.");
+        try
+        {
+            var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        // Load from DB
-        var profile = await _profiles.GetByDiscordIdAsync(discordId);
-        if (profile is null)
-            return NotFound("Profile not found in database.");
+            if (string.IsNullOrEmpty(discordId))
+            {
+                _logger.LogWarning("Missing Discord ID claim for user request.");
+                return Unauthorized("Missing Discord ID claim.");
+            }
 
-        return Ok(profile);
+            var profile = await _profiles.GetByDiscordIdAsync(discordId, ct);
+            if (profile is null)
+            {
+                _logger.LogInformation("Profile not found for DiscordId {DiscordId}", discordId);
+                return NotFound("Profile not found in database.");
+            }
+
+            _logger.LogInformation("Fetched profile for DiscordId {DiscordId}", discordId);
+            return Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving profile for current user.");
+            return Problem("An unexpected error occurred while retrieving your profile.");
+        }
     }
 
     /// <summary>
@@ -40,50 +66,116 @@ public class ProfilesController : ControllerBase
     /// </summary>
     [HttpPost("upsert")]
     [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Upsert([FromBody] UpsertProfileRequest request)
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Upsert([FromBody] UpsertProfileRequest request, CancellationToken ct)
     {
-        var token = await HttpContext.GetTokenAsync("access_token");
-        if (string.IsNullOrEmpty(token))
-            return Unauthorized("Missing access token");
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid profile upsert request received.");
+            return ValidationProblem(ModelState);
+        }
 
-        var profile = await _profiles.UpsertFromDiscordAsync(
-            token,
-            request.DiscordId,
-            request.Username,
-            request.AvatarUrl);
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.DiscordId) || string.IsNullOrWhiteSpace(request.Username))
+            {
+                _logger.LogWarning("Invalid upsert payload: missing required fields.");
+                return BadRequest("DiscordId and Username are required.");
+            }
 
-        if (profile is null)
-            return Forbid("Not a member of House Wolf");
+            var token = await HttpContext.GetTokenAsync("access_token");
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("Profile upsert attempt without access token.");
+                return Unauthorized("Missing access token.");
+            }
 
-        return Ok(profile);
+            var profile = await _profiles.UpsertFromDiscordAsync(token, request.DiscordId, request.Username, request.AvatarUrl, ct);
+            if (profile is null)
+            {
+                _logger.LogWarning("Upsert denied for DiscordId {DiscordId}: Not a member of House Wolf.", request.DiscordId);
+                return Forbid("Not a member of House Wolf.");
+            }
+
+            _logger.LogInformation("Profile upsert successful for DiscordId {DiscordId}.", request.DiscordId);
+            return Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during profile upsert for DiscordId {DiscordId}.", request.DiscordId);
+            return Problem("An error occurred while updating your profile.");
+        }
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var profile = await _profiles.GetByIdAsync(id);
-        return profile is null ? NotFound() : Ok(profile);
+        try
+        {
+            var profile = await _profiles.GetByIdAsync(id, ct);
+            return profile is null ? NotFound() : Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching profile by ID {ProfileId}", id);
+            return Problem("Error retrieving profile by ID.");
+        }
     }
 
     [HttpGet("discord/{discordId}")]
-    public async Task<IActionResult> GetByDiscordId(string discordId)
+    [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByDiscordId(string discordId, CancellationToken ct)
     {
-        var profile = await _profiles.GetByDiscordIdAsync(discordId);
-        return profile is null ? NotFound() : Ok(profile);
+        try
+        {
+            var profile = await _profiles.GetByDiscordIdAsync(discordId, ct);
+            return profile is null ? NotFound() : Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching profile by DiscordId {DiscordId}", discordId);
+            return Problem("Error retrieving profile by DiscordId.");
+        }
     }
 
     [HttpGet("name/{username}")]
-    public async Task<IActionResult> GetByUsername(string username)
+    [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByUsername(string username, CancellationToken ct)
     {
-        var profile = await _profiles.GetByNameAsync(username);
-        return profile is null ? NotFound() : Ok(profile);
+        try
+        {
+            var profile = await _profiles.GetByNameAsync(username, ct);
+            return profile is null ? NotFound() : Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching profile by username {Username}", username);
+            return Problem("Error retrieving profile by username.");
+        }
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [ProducesResponseType(typeof(IEnumerable<Profile>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        var profiles = await _profiles.GetAllAsync();
-        return Ok(profiles);
+        try
+        {
+            var profiles = await _profiles.GetAllAsync(ct);
+            _logger.LogInformation("Retrieved {Count} profiles.", profiles.Count());
+            return Ok(profiles);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all profiles.");
+            return Problem("Error retrieving profiles list.");
+        }
     }
 }
 

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using Microsoft.Extensions.Logging;
+using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.Views;
 
@@ -15,7 +16,6 @@ public partial class SettingsView : UserControl
     #region Fields & Constructor
 
     private readonly IServiceProvider _serviceProvider;
-    public readonly IKillEventService _killEventService;
     private readonly ISettingsService _settingsService;
     private readonly IThemeManager _themeManager;
     private readonly ILogger<SettingsView> _logger;
@@ -23,7 +23,6 @@ public partial class SettingsView : UserControl
 
     public SettingsView(
         IServiceProvider serviceProvider,
-        IKillEventService killEventService,
         ISettingsService settingsService,
         IThemeManager themeManager,
         ILogger<SettingsView> logger)
@@ -32,7 +31,6 @@ public partial class SettingsView : UserControl
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
         _current = _settingsService.GetSettings();
 
         // Bind only the fields your app uses
@@ -41,11 +39,6 @@ public partial class SettingsView : UserControl
         TxtRegolithApiKey.Text = _current.RegolithApiKey ?? string.Empty;
         TxtUexcorpApiKey.Text = _current.UexCorpApiKey ?? string.Empty;
         TxtGameLogFilePath.Text = _current.GameLogFilePath ?? string.Empty;
-    }
-
-    public SettingsView(ISettingsService settingsService, IThemeManager killEventService, ILogger<SettingsView> logger)
-    {
-        throw new NotImplementedException();
     }
 
     #endregion

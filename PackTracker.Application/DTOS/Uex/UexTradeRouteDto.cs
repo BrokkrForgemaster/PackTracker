@@ -1,28 +1,22 @@
-namespace PackTracker.Application.DTOS.Uex;
+using System.Text.Json.Serialization;
 
-/// <summary>
-/// Represents a trade route returned by UEX.
-/// </summary>
-public class UexTradeRouteDto
+public sealed class UexTradeRouteDto
 {
-    public int Id { get; set; }
-    public int IdCommodity { get; set; }
-    public int IdTerminalOrigin { get; set; }
-    public int IdTerminalDestination { get; set; }
-    public string CommodityName { get; set; } = default!;
-    public string CommodityCode { get; set; } = default!;
+    [JsonPropertyName("id")] public int Id { get; set; }
 
-    public string OriginTerminalName { get; set; } = default!;
-    public string DestinationTerminalName { get; set; } = default!;
+    [JsonPropertyName("id_commodity")] public int IdCommodity { get; set; }
 
-    public float PriceOrigin { get; set; }
-    public float PriceDestination { get; set; }
-    public float PriceMargin { get; set; }
-    public float PriceRoi { get; set; }
+    [JsonPropertyName("origin_terminal_name")] public string? OriginTerminalName { get; set; }
+    [JsonPropertyName("destination_terminal_name")] public string? DestinationTerminalName { get; set; }
 
-    public float Investment { get; set; }
-    public float Profit { get; set; }
-    public float Distance { get; set; }
+    [JsonPropertyName("price_origin")] public decimal? PriceOrigin { get; set; }
+    [JsonPropertyName("price_destination")] public decimal? PriceDestination { get; set; }
 
-    public int Score { get; set; }
+    [JsonPropertyName("price_margin")] public decimal? PriceMargin { get; set; }
+    [JsonPropertyName("price_roi")] public decimal? PriceRoi { get; set; }
+
+    [JsonPropertyName("profit")] public decimal? Profit { get; set; }
+    [JsonPropertyName("distance")] public decimal? Distance { get; set; }
+
+    [JsonPropertyName("commodity_name")] public string? CommodityName { get; set; }
 }

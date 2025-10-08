@@ -3,101 +3,83 @@ using System.Windows.Controls;
 using System.Windows.Navigation;
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.Services;
+using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Presentation.Views;
 
-/// <summary name="WelcomeView">
-/// WelcomeView handles first-run setup for PackTracker,
-/// including required integrations, opt-out logic, and proceeding to main app.
-/// </summary>
 public partial class WelcomeView : UserControl
 {
-    #region Fields & Constructor
-
     private readonly IServiceProvider _serviceProvider;
-    private bool _discordLinked = false; // True if Discord is connected
+    private readonly ISettingsService _settings;
 
     public WelcomeView(IServiceProvider serviceProvider)
     {
         InitializeComponent();
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _serviceProvider = serviceProvider;
+        _settings = serviceProvider.GetRequiredService<ISettingsService>();
+
+        LoadExistingSettings();
         CheckAllIntegrations();
         UpdateProceedButtonState();
     }
 
-    #endregion
-
-    #region Integration Status & State Logic
+    private void LoadExistingSettings()
+    {
+        var cfg = _settings.GetSettings();
+        RegolithApiKeyBox.Text = cfg.RegolithApiKey ?? "";
+        UexcorpApiKeyBox.Text = cfg.UexCorpApiKey ?? "";
+        LogLocationBox.Text = cfg.GameLogFilePath ?? "";
+    }
 
     private void CheckAllIntegrations()
     {
-        RegolithCheck.Visibility = !string.IsNullOrWhiteSpace(RegolithApiKeyBox.Text)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        RegolithStatus.Text = !string.IsNullOrWhiteSpace(RegolithApiKeyBox.Text)
-            ? "API key detected! You're connected."
-            : "No API key found. Please paste and save your key or opt out.";
+        RegolithCheck.Visibility = string.IsNullOrWhiteSpace(RegolithApiKeyBox.Text)
+            ? Visibility.Collapsed : Visibility.Visible;
+        RegolithStatus.Text = string.IsNullOrWhiteSpace(RegolithApiKeyBox.Text)
+            ? "No API key found. Please paste and save your key or opt out."
+            : "✅ Regolith API key saved.";
 
-        UexcorpCheck.Visibility = !string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        UexcorpStatus.Text = !string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text)
-            ? "API key detected! You're connected."
-            : "No API key found. Please paste and save your key or opt out.";
+        UexcorpCheck.Visibility = string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text)
+            ? Visibility.Collapsed : Visibility.Visible;
+        UexcorpStatus.Text = string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text)
+            ? "No API key found. Please paste and save your key or opt out."
+            : "✅ UEXCorp API key saved.";
 
-        LogCheck.Visibility = !string.IsNullOrWhiteSpace(LogLocationBox.Text)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        LogLocationStatus.Text = !string.IsNullOrWhiteSpace(LogLocationBox.Text)
-            ? "Star Citizen log folder detected."
-            : "No log folder detected. Please set a valid path or opt out.";
+        LogCheck.Visibility = string.IsNullOrWhiteSpace(LogLocationBox.Text)
+            ? Visibility.Collapsed : Visibility.Visible;
+        LogLocationStatus.Text = string.IsNullOrWhiteSpace(LogLocationBox.Text)
+            ? "No Star Citizen log path detected. Please browse or opt out."
+            : "✅ Log folder saved.";
+    }
 
+    #region Save buttons
+
+    private async void SaveRegolithApiKey_Click(object sender, RoutedEventArgs e)
+    {
+        await _settings.UpdateSettingsAsync(cfg => cfg.RegolithApiKey = RegolithApiKeyBox.Text.Trim());
+        CheckAllIntegrations();
+        UpdateProceedButtonState();
+    }
+
+    private async void SaveUexCorpApiKey_Click(object sender, RoutedEventArgs e)
+    {
+        await _settings.UpdateSettingsAsync(cfg => cfg.UexCorpApiKey = UexcorpApiKeyBox.Text.Trim());
+        CheckAllIntegrations();
+        UpdateProceedButtonState();
+    }
+
+    private async void SaveLogLocation_Click(object sender, RoutedEventArgs e)
+    {
+        await _settings.UpdateSettingsAsync(cfg => cfg.GameLogFilePath = LogLocationBox.Text.Trim());
+        CheckAllIntegrations();
         UpdateProceedButtonState();
     }
 
     #endregion
 
-    #region Opt-Out CheckBox Events
-
     private void OptOutCheckBox_Checked(object sender, RoutedEventArgs e) => UpdateProceedButtonState();
     private void OptOutCheckBox_Unchecked(object sender, RoutedEventArgs e) => UpdateProceedButtonState();
-
-    #endregion
-
-    #region Save, Connect, and Hyperlink Handlers
-
-    private void SaveRegolithApiKey_Click(object sender, RoutedEventArgs e)
-    {
-        // Example: SecretStorage.Protect(RegolithApiKeyBox.Text);
-        CheckAllIntegrations();
-    }
-
-    /// <summary>
-    /// Handles save for UEXCorp API key.
-    /// TODO: Securely store the key with SecretStorage here.
-    /// </summary>
-    private void SaveUexCorpApiKey_Click(object sender, RoutedEventArgs e)
-    {
-        SecretStorage.Protect(UexcorpApiKeyBox.Text);
-        SecretStorage.Protect(RegolithApiKeyBox.Text);
-        SecretStorage.Protect(LogLocationBox.Text);
-        CheckAllIntegrations();
-    }
-
-    private void ConnectDiscord_Click(object sender, RoutedEventArgs e)
-    {
-        // TODO: Integrate Discord OAuth2 authentication and securely store result.
-        _discordLinked = true;
-        CheckAllIntegrations();
-    }
-
-    private void SaveLogLocation_Click(object sender, RoutedEventArgs e)
-    {
-        // TODO: Securely store the path as needed.
-        CheckAllIntegrations();
-    }
 
     private void RegolithLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
@@ -111,54 +93,33 @@ public partial class WelcomeView : UserControl
         e.Handled = true;
     }
 
-    #endregion
-
-    #region Proceed Button Logic
-
     private void UpdateProceedButtonState()
     {
-        bool regolithComplete = !string.IsNullOrWhiteSpace(RegolithApiKeyBox.Text) ||
-                                (RegolithOptOutCheckBox.IsChecked == true);
-        bool uexcorpComplete = !string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text) ||
-                               (UexcorpOptOutCheckBox.IsChecked == true);
-        bool logComplete = !string.IsNullOrWhiteSpace(LogLocationBox.Text) || (LogOptOutCheckBox.IsChecked == true);
+        bool regolithComplete = !string.IsNullOrWhiteSpace(RegolithApiKeyBox.Text)
+                                || RegolithOptOutCheckBox.IsChecked == true;
+        bool uexcorpComplete = !string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text)
+                               || UexcorpOptOutCheckBox.IsChecked == true;
+        bool logComplete = !string.IsNullOrWhiteSpace(LogLocationBox.Text)
+                           || LogOptOutCheckBox.IsChecked == true;
 
         ProceedBtn.IsEnabled = regolithComplete && uexcorpComplete && logComplete;
+        ProceedBtn.Opacity = ProceedBtn.IsEnabled ? 1.0 : 0.5;
     }
 
     private async void ProceedBtn_Click(object sender, RoutedEventArgs e)
     {
-        ProceedBtn.IsEnabled = false;
+        // Save all current values and mark first run complete
+        await _settings.UpdateSettingsAsync(cfg =>
+        {
+            cfg.RegolithApiKey = RegolithApiKeyBox.Text.Trim();
+            cfg.UexCorpApiKey = UexcorpApiKeyBox.Text.Trim();
+            cfg.GameLogFilePath = LogLocationBox.Text.Trim();
+            cfg.FirstRunComplete = true;
+        });
 
-        try
+        if (Window.GetWindow(this) is MainWindow window)
         {
-            var settingsService = _serviceProvider.GetService<ISettingsService>();
-            if (settingsService != null)
-            {
-                var settings = settingsService.GetSettings();
-                settings.FirstRunComplete = true;
-                await settingsService.UpdateSettingsAsync( s =>
-                {
-                    s.RegolithApiKey = RegolithApiKeyBox.Text.Trim();
-                    s.UexCorpApiKey = UexcorpApiKeyBox.Text.Trim();
-                    s.GameLogFilePath = LogLocationBox.Text.Trim();
-                    s.FirstRunComplete = true;
-                });
-            }
-
-            if (Window.GetWindow(this) is MainWindow window)
-                window.ContentFrame.Navigate(new DashboardView());
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"An error occurred while saving settings: {ex.Message}", "Error", MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
-        finally
-        {
-            ProceedBtn.IsEnabled = true;
+            window.ContentFrame.Navigate(new LoginView(_serviceProvider));
         }
     }
-
-    #endregion
 }

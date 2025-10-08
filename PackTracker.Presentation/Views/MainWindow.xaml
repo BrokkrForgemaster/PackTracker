@@ -134,8 +134,12 @@
                             Tag="KillTracker"
                             Click="Navigate_Click"
                             Style="{DynamicResource SidebarButtonStyle}"/>
-                    <Button Content="Industry Tracker"
-                            Tag="Industry Tracker"
+                    <Button Content="Refinery Jobs"
+                            Tag="RefineryJobs"
+                            Click="Navigate_Click"
+                            Style="{DynamicResource SidebarButtonStyle}"/>
+                    <Button Content="Trading Hub"
+                            Tag="TradingHub"
                             Click="Navigate_Click"
                             Style="{DynamicResource SidebarButtonStyle}"/>
                     <Button Content="Settings"

@@ -1,21 +1,27 @@
-using Microsoft.AspNetCore.Authorization;
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Api.Controllers;
 
+/// <summary name="RegolithController">
+/// Controller for managing Regolith-related endpoints.
+/// Handles operations such as retrieving user profiles and refinery jobs.
+/// Requires authentication and authorization.
+/// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Policy = "HouseWolfOnly")] // ✅ Require HouseWolf role
+[Authorize(Policy = "HouseWolfOnly")]
 public class RegolithController : ControllerBase
 {
     private readonly IRegolithService _regolith;
-    private readonly ILogger<RegolithController> _log;
+    private readonly ILogger<RegolithController> _logger;
 
-    public RegolithController(IRegolithService regolith, ILogger<RegolithController> log)
+    public RegolithController(IRegolithService regolith, ILogger<RegolithController> logger)
     {
         _regolith = regolith;
-        _log = log;
+        _logger = logger;
     }
 
     /// <summary>
@@ -24,28 +30,49 @@ public class RegolithController : ControllerBase
     [HttpGet("profile")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetProfile(CancellationToken ct)
     {
-        _log.LogInformation("GET /Regolith/profile requested. User={User}", User.Identity?.Name);
+        var user = User.Identity?.Name ?? "Unknown";
+        var stopwatch = Stopwatch.StartNew();
+
+        _logger.LogInformation("Request: GET /Regolith/profile initiated by {User}", user);
 
         try
         {
+            ct.ThrowIfCancellationRequested();
+
             var profile = await _regolith.GetProfileAsync(ct);
 
-            if (profile == null)
+            if (profile is null)
             {
-                _log.LogWarning("No Regolith profile found for user {User}", User.Identity?.Name);
-                return NotFound(new { message = "Regolith profile not found" });
+                _logger.LogWarning("No Regolith profile found for {User}", user);
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Profile not found",
+                    Detail = "No Regolith profile found for this account.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
 
-            _log.LogInformation("Returning Regolith profile for {ScName}", profile.ScName);
+            stopwatch.Stop();
+            _logger.LogInformation("Success: Regolith profile returned for {ScName} in {Elapsed}ms", profile.ScName, stopwatch.ElapsedMilliseconds);
+
             return Ok(profile);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Request canceled: GET /Regolith/profile by {User}", user);
+            return Problem("Request canceled.", statusCode: StatusCodes.Status499ClientClosedRequest);
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Error fetching Regolith profile for user {User}", User.Identity?.Name);
-            return StatusCode(500, new { message = "Failed to fetch Regolith profile" });
+            _logger.LogError(ex, "Unhandled error fetching Regolith profile for {User}", user);
+            return Problem(
+                title: "Internal Server Error",
+                detail: "An unexpected error occurred while retrieving your Regolith profile.",
+                statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -54,22 +81,45 @@ public class RegolithController : ControllerBase
     /// </summary>
     [HttpGet("refinery-jobs")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetRefineryJobs(CancellationToken ct)
     {
-        _log.LogInformation("GET /Regolith/refinery-jobs requested. User={User}", User.Identity?.Name);
+        var user = User.Identity?.Name ?? "Unknown";
+        var stopwatch = Stopwatch.StartNew();
+
+        _logger.LogInformation("Request: GET /Regolith/refinery-jobs initiated by {User}", user);
 
         try
         {
-            var jobs = await _regolith.GetRefineryJobsAsync(ct);
+            ct.ThrowIfCancellationRequested();
 
-            _log.LogInformation("Returning {Count} refinery jobs for {User}", jobs.Count, User.Identity?.Name);
+            var jobs = await _regolith.GetRefineryJobsAsync(ct);
+            stopwatch.Stop();
+
+            if (jobs is null || jobs.Count == 0)
+            {
+                _logger.LogInformation("No refinery jobs found for {User}", user);
+                return Ok(Array.Empty<object>());
+            }
+
+            _logger.LogInformation("Success: {Count} refinery jobs returned for {User} in {Elapsed}ms",
+                jobs.Count, user, stopwatch.ElapsedMilliseconds);
+
             return Ok(jobs);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Request canceled: GET /Regolith/refinery-jobs by {User}", user);
+            return Problem("Request canceled.", statusCode: StatusCodes.Status499ClientClosedRequest);
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Error fetching refinery jobs for user {User}", User.Identity?.Name);
-            return StatusCode(500, new { message = "Failed to fetch refinery jobs" });
+            _logger.LogError(ex, "Unhandled error fetching refinery jobs for {User}", user);
+            return Problem(
+                title: "Internal Server Error",
+                detail: "An unexpected error occurred while retrieving refinery jobs.",
+                statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 }

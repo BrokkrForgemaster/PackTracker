@@ -1,13 +1,17 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Uex;
-using PackTracker.Application.DTOS.Uex;
 using PackTracker.Application.Interfaces;
-using PackTracker.Infrastructure.Persistence;
 using PackTracker.Domain.Entities;
+using PackTracker.Infrastructure.Persistence;
+using Polly;
+using Polly.Extensions.Http;
+
+namespace PackTracker.Infrastructure.Services;
 
 public class UexService : IUexService
 {
@@ -16,239 +20,248 @@ public class UexService : IUexService
     private readonly ISettingsService _settings;
     private readonly AppDbContext _db;
 
-    public UexService(HttpClient httpClient, ILogger<UexService> logger, ISettingsService settings , AppDbContext db)
+    private readonly Dictionary<string, int> _codeToId = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly IAsyncPolicy<HttpResponseMessage> RetryPolicy = HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(r => (int)r.StatusCode == 429)
+        .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+
+    private static readonly Dictionary<string, List<CommodityPrice>> _priceCache = new();
+    private static readonly Dictionary<int, List<UexTradeRouteDto>> _routeCache = new();
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString |
+                         JsonNumberHandling.AllowNamedFloatingPointLiterals
+    };
+
+    public UexService(HttpClient httpClient, ILogger<UexService> logger, ISettingsService settings, AppDbContext db)
     {
         _httpClient = httpClient;
         _logger = logger;
         _settings = settings;
         _db = db;
-
-        var uexSettings = _settings.GetSettings();
-        var baseUrl = uexSettings.UexBaseUrl;
-        if (!baseUrl.EndsWith("/")) baseUrl += "/";
-        _httpClient.BaseAddress = new Uri(baseUrl);
-
-        var apiKey = uexSettings.UexCorpApiKey;
-        if (!string.IsNullOrEmpty(apiKey))
-        {
-            _httpClient.DefaultRequestHeaders.Remove("Authorization");
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-        }
+        ConfigureHttpClient();
     }
 
-    public async Task SyncCommoditiesAsync(CancellationToken ct)
+    private void ConfigureHttpClient()
     {
-        _logger.LogInformation("🔄 Fetching commodities from UEX…");
+        var s = _settings.GetSettings();
+        if (string.IsNullOrWhiteSpace(s.UexBaseUrl))
+            throw new InvalidOperationException("UEX Base URL missing in settings.");
 
+        _httpClient.BaseAddress = new Uri(s.UexBaseUrl.TrimEnd('/') + "/");
+        _httpClient.DefaultRequestHeaders.Accept.Clear();
+        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
+        _httpClient.DefaultRequestHeaders.Remove("x-api-key");
+
+        if (!string.IsNullOrWhiteSpace(s.UexCorpApiKey))
+            _httpClient.DefaultRequestHeaders.Add("x-api-key", s.UexCorpApiKey);
+
+        _logger.LogInformation("🌐 HttpClient configured for UEX at {BaseUrl}", _httpClient.BaseAddress);
+    }
+
+    // ============================================================
+    // 📦 COMMODITIES
+    // ============================================================
+    public async Task<List<Commodity>> CommoditiesAsync(CancellationToken ct)
+    {
+        return await _db.Commodities.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct);
+    }
+
+    // ============================================================
+    // 💰 PRICES
+    // ============================================================
+    public async Task<List<CommodityPrice>> GetCommodityPricesAsync(string commodityCode, CancellationToken ct)
+    {
         try
         {
-            var response = await _httpClient.GetAsync("commodities", ct);
-            var raw = await response.Content.ReadAsStringAsync(ct);
+            var commodity = await _db.Commodities
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Code == commodityCode, ct);
 
-            _logger.LogDebug("UEX raw response: {Raw}", raw);
+            if (commodity == null)
+            {
+                _logger.LogWarning("❌ Commodity not found for code {Code}.", commodityCode);
+                return new();
+            }
 
+            var url = $"commodities_prices?id_commodity={commodity.Id}";
+            _logger.LogInformation("🌐 Fetching live prices for commodity {Name} ({Code})", commodity.Name, commodity.Code);
+
+            var response = await _httpClient.GetAsync(url, ct);
             response.EnsureSuccessStatusCode();
 
-            var wrapper = JsonSerializer.Deserialize<UexCommodityResponse>(raw,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var json = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
 
-            if (wrapper == null || wrapper.Data.Count == 0)
+            if (!doc.RootElement.TryGetProperty("data", out var data))
             {
-                _logger.LogWarning("⚠️ No commodities returned from UEX.");
-                return;
+                _logger.LogWarning("⚠️ No data property found in response for {Code}.", commodityCode);
+                return new();
             }
 
-            _logger.LogInformation("✅ Retrieved {Count} commodities from UEX.", wrapper.Data.Count);
+            var prices = JsonSerializer.Deserialize<List<CommodityPriceDto>>(data.GetRawText(), JsonOptions);
 
-            foreach (var dto in wrapper.Data)
+            if (prices == null || prices.Count == 0)
             {
-                var entity = await _db.Commodities
-                    .FirstOrDefaultAsync(c => c.Code == dto.Code, ct);
-
-                if (entity == null)
-                {
-                    entity = new Commodity
-                    {
-                        Name = dto.Name,
-                        Code = dto.Code,
-                        Slug = dto.Name.ToLower().Replace(" ", "-"),
-                        Kind = dto.Kind,
-                        WeightScu = dto.Weight_Scu.HasValue ? (int)Math.Round(dto.Weight_Scu.Value) : null,
-                        IsAvailable = dto.Is_Available == 1,
-                        IsSellable = dto.Is_Sellable == 1,
-                        IsBuyable = dto.Is_Buyable == 1,
-                        IsIllegal = dto.Is_Illegal == 1,
-                        Wiki = dto.Wiki,
-                        DateAdded = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Added).UtcDateTime,
-                        DateModified = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Modified).UtcDateTime
-                    };
-                    _db.Commodities.Add(entity);
-                }
-                else
-                {
-                    entity.Name = dto.Name;
-                    entity.Kind = dto.Kind;
-                    entity.WeightScu = dto.Weight_Scu.HasValue ? (int)Math.Round(dto.Weight_Scu.Value) : null;
-                    entity.IsAvailable = dto.Is_Available == 1;
-                    entity.IsSellable = dto.Is_Sellable == 1;
-                    entity.IsBuyable = dto.Is_Buyable == 1;
-                    entity.IsIllegal = dto.Is_Illegal == 1;
-                    entity.Wiki = dto.Wiki;
-                    entity.DateModified = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Modified).UtcDateTime;
-                    _db.Commodities.Update(entity);
-                }
+                _logger.LogWarning("⚠️ No prices returned from UEX for {Commodity}.", commodity.Name);
+                return new();
             }
 
-            await _db.SaveChangesAsync(ct);
-            _logger.LogInformation("💾 Saved {Count} commodities to database.", wrapper.Data.Count);
+            _logger.LogInformation("✅ Retrieved {Count} prices for {Commodity}.", prices.Count, commodity.Name);
+
+            return prices.Select(dto => new CommodityPrice
+            {
+                CommodityId = dto.Id_Commodity,
+                TerminalId = dto.Id_Terminal,
+                TerminalName = dto.Terminal_Name,
+                TerminalCode = dto.Terminal_Code ?? $"term_{dto.Id_Terminal}",
+                TerminalSlug = dto.Terminal_Slug ?? dto.Terminal_Code ?? $"term_{dto.Id_Terminal}",
+                PriceBuy = dto.Price_Buy,
+                PriceSell = dto.Price_Sell,
+                ScuBuy = dto.Scu_Buy,
+                ScuSell = dto.Scu_Sell,
+                ScuSellStock = dto.Scu_Sell_Stock,
+                StatusBuy = dto.Status_Buy,
+                StatusSell = dto.Status_Sell,
+                DateAdded = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Added).UtcDateTime,
+                DateModified = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Modified).UtcDateTime
+            }).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error fetching commodities from UEX.");
-            throw;
+            _logger.LogError(ex, "❌ Error fetching prices for commodity code {Code}.", commodityCode);
+            return new();
         }
     }
 
-
-    public async Task SyncCommodityPricesAsync(CancellationToken ct)
+    // ============================================================
+    // 🧭 UEX ID RESOLUTION
+    // ============================================================
+    private async Task<int?> ResolveUexCommodityIdAsync(string code, CancellationToken ct)
     {
-        _logger.LogInformation("🔄 Fetching commodity prices from UEX…");
+        if (string.IsNullOrWhiteSpace(code))
+            return null;
 
-        try
-        {
-            var response = await _httpClient.GetAsync("commodities_prices_all", ct);
-            var raw = await response.Content.ReadAsStringAsync(ct);
+        if (_codeToId.TryGetValue(code, out var cached))
+            return cached;
 
-            _logger.LogDebug("UEX raw prices response: {Raw}", raw);
+        _logger.LogInformation("🔎 Resolving UEX id for commodity code {Code}...", code);
+        var result = await _httpClient.GetFromJsonAsync<UexApiResponse<List<UexCommodityMini>>>("commodities", JsonOptions, ct);
 
-            response.EnsureSuccessStatusCode();
+        foreach (var c in result?.Data ?? [])
+            _codeToId[c.Code] = c.Id;
 
-            var wrapper = JsonSerializer.Deserialize<UexCommodityPriceResponse>(raw,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (wrapper == null || wrapper.Data.Count == 0)
-            {
-                _logger.LogWarning("⚠️ No commodity prices returned from UEX.");
-                return;
-            }
-
-            _logger.LogInformation("✅ Retrieved {Count} commodity prices from UEX.", wrapper.Data.Count);
-
-            foreach (var dto in wrapper.Data)
-            {
-                var entity = await _db.CommodityPrices
-                    .FirstOrDefaultAsync(c => c.CommodityId == dto.Id_Commodity && c.TerminalId == dto.Id_Terminal, ct);
-
-                if (entity == null)
-                {
-                    entity = new CommodityPrice
-                    {
-                        CommodityId = dto.Id_Commodity,
-                        TerminalId = dto.Id_Terminal,
-                        TerminalName = dto.Terminal_Name,
-                        PriceBuy = dto.Price_Buy,
-                        PriceBuyAvg = dto.Price_Buy_Avg,
-                        PriceSell = dto.Price_Sell,
-                        PriceSellAvg = dto.Price_Sell_Avg,
-                        ScuBuy = dto.Scu_Buy,
-                        ScuBuyAvg = dto.Scu_Buy_Avg,
-                        ScuSellStock = dto.Scu_Sell_Stock,
-                        ScuSellStockAvg = dto.Scu_Sell_Stock_Avg,
-                        ScuSell = dto.Scu_Sell,
-                        ScuSellAvg = dto.Scu_Sell_Avg,
-                        StatusBuy = dto.Status_Buy,
-                        StatusSell = dto.Status_Sell,
-                        DateAdded = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Added).UtcDateTime,
-                        DateModified = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Modified).UtcDateTime
-                    };
-                    _db.CommodityPrices.Add(entity);
-                }
-                else
-                {
-                    entity.TerminalName = dto.Terminal_Name;
-                    entity.PriceBuy = dto.Price_Buy;
-                    entity.PriceBuyAvg = dto.Price_Buy_Avg;
-                    entity.PriceSell = dto.Price_Sell;
-                    entity.PriceSellAvg = dto.Price_Sell_Avg;
-                    entity.ScuBuy = dto.Scu_Buy;
-                    entity.ScuBuyAvg = dto.Scu_Buy_Avg;
-                    entity.ScuSellStock = dto.Scu_Sell_Stock;
-                    entity.ScuSellStockAvg = dto.Scu_Sell_Stock_Avg;
-                    entity.ScuSell = dto.Scu_Sell;
-                    entity.ScuSellAvg = dto.Scu_Sell_Avg;
-                    entity.StatusBuy = dto.Status_Buy;
-                    entity.StatusSell = dto.Status_Sell;
-                    entity.DateModified = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Modified).UtcDateTime;
-                    _db.CommodityPrices.Update(entity);
-                }
-            }
-
-            await _db.SaveChangesAsync(ct);
-            _logger.LogInformation("💾 Saved {Count} commodity prices to database.", wrapper.Data.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "❌ Error fetch{name}ing commodity prices from UEX.", "ARG0");
-            throw;
-        }
+        return _codeToId.TryGetValue(code, out var id) ? id : null;
     }
 
-    public async Task<List<UexTradeRouteDto>> GetTopRoutesAsync(
-        int originTerminalId,
-        int? destinationTerminalId,
-        int top = 5,
+    // ============================================================
+    // 🚀 ROUTES (Corrected)
+    // ============================================================
+    public async Task<List<UexTradeRouteDto>> GetRoutesByCommodityCodeAsync(
+        string commodityCode,
+        int limit = 100,
         CancellationToken ct = default)
     {
-        _logger.LogInformation("🔄 Fetching trade routes from UEX… Origin={Origin}, Destination={Destination}",
-            originTerminalId, destinationTerminalId);
+        var uexId = await ResolveUexCommodityIdAsync(commodityCode, ct);
+        if (uexId == null)
+        {
+            _logger.LogWarning("⚠️ Could not resolve UEX id for code {Code}", commodityCode);
+            return new();
+        }
+
+        var url = $"commodities_routes?id_commodity={uexId}";
+        _logger.LogInformation("🌐 Requesting UEX routes from {Url}", url);
 
         try
         {
-            // Build query
-            var endpoint = $"commodities_routes?id_terminal_origin={originTerminalId}";
-            if (destinationTerminalId.HasValue)
-                endpoint += $"&id_terminal_destination={destinationTerminalId.Value}";
+            var json = await _httpClient.GetStringAsync(url, ct);
+            var previewLen = Math.Min(json?.Length ?? 0, 800);
+            _logger.LogTrace("UEX RAW JSON (preview): {Json}", json?.Substring(0, previewLen));
 
-            var response = await _httpClient.GetAsync(endpoint, ct);
-            var raw = await response.Content.ReadAsStringAsync(ct);
+            var payload = JsonSerializer.Deserialize<UexApiResponse<List<UexTradeRouteDto>>>(json!, JsonOptions);
+            var routes = payload?.Data ?? new();
 
-            _logger.LogDebug("UEX raw trade routes response: {Raw}", raw);
-
-            response.EnsureSuccessStatusCode();
-
-            using var doc = JsonDocument.Parse(raw);
-
-            // UEX always wraps routes in { "status": "ok", "data": [...] }
-            if (!doc.RootElement.TryGetProperty("data", out var dataElement))
+            foreach (var r in routes.Take(3))
             {
-                _logger.LogError("❌ Unexpected JSON from UEX: {Raw}", raw);
-                return new List<UexTradeRouteDto>();
+                _logger.LogInformation("Route: {O} -> {D} | Buy={Buy} Sell={Sell} ROI={ROI} Profit={Profit} (Commodity={C})",
+                    r.OriginTerminalName, r.DestinationTerminalName, r.PriceOrigin, r.PriceDestination, r.PriceRoi, r.Profit, r.CommodityName);
             }
 
-            var routes = JsonSerializer.Deserialize<List<UexTradeRouteDto>>(dataElement.GetRawText(),
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var first = routes.FirstOrDefault();
+            if (first is not null)
+                _logger.LogInformation("✅ First Route for {C}: Origin={O}, Buy={Buy}, Sell={Sell}",
+                    first.CommodityName, first.OriginTerminalName, first.PriceOrigin, first.PriceDestination);
 
-            if (routes == null || routes.Count == 0)
-            {
-                _logger.LogWarning("⚠️ No trade routes returned from UEX.");
-                return new List<UexTradeRouteDto>();
-            }
-
-            // Pick Top N by ROI, fallback Profit
-            var topRoutes = routes
-                .OrderByDescending(r => r.PriceRoi)
-                .ThenByDescending(r => r.Profit)
-                .Take(top)
-                .ToList();
-
-            _logger.LogInformation("✅ Returning {Count} top trade routes.", topRoutes.Count);
-
-            return topRoutes;
+            return routes;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error fetching trade routes from UEX.");
-            throw;
+            _logger.LogError(ex, "❌ Failed to fetch routes for UEX commodity code {Code}", commodityCode);
+            return new();
         }
     }
+
+    // Legacy fallback (calls the above)
+    public async Task<List<UexTradeRouteDto>> GetRoutesByCommodityAsync(
+        int commodityId,
+        int limit = 100,
+        CancellationToken ct = default)
+    {
+        var commodity = await _db.Commodities.AsNoTracking().FirstOrDefaultAsync(c => c.Id == commodityId, ct);
+        return commodity != null
+            ? await GetRoutesByCommodityCodeAsync(commodity.Code, limit, ct)
+            : new();
+    }
+    
+    public async Task<List<UexVehicleDto>> GetVehiclesAsync(int? companyId = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var url = companyId.HasValue
+                ? $"vehicles?id_company={companyId}"
+                : "vehicles";
+
+            _logger.LogInformation("🌐 Requesting UEX vehicles from {Url}", url);
+
+            var json = await _httpClient.GetStringAsync(url, ct);
+
+            var payload = JsonSerializer.Deserialize<UexApiResponse<List<UexVehicleDto>>>(json, JsonOptions);
+            var vehicles = payload?.Data ?? new List<UexVehicleDto>();
+
+            _logger.LogInformation("✅ Loaded {Count} vehicles from UEX.", vehicles.Count);
+
+            return vehicles
+                .Where(v => v.Scu > 0 && v.IsSpaceship == 1)
+                .OrderByDescending(v => v.Scu)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Failed to fetch vehicles from UEX.");
+            return new List<UexVehicleDto>();
+        }
+    }
+}
+
+// ============================================================
+// DTOs for helper methods
+// ============================================================
+public sealed class UexCommodityMini
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("code")] public string Code { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("slug")] public string Slug { get; set; } = "";
+}
+
+public sealed class UexApiResponse<T>
+{
+    [JsonPropertyName("status")] public string Status { get; set; } = "";
+    [JsonPropertyName("http_code")] public int HttpCode { get; set; }
+    [JsonPropertyName("data")] public T? Data { get; set; }
 }
