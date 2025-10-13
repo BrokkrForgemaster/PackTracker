@@ -1,34 +1,42 @@
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Api.Middleware;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
+using PackTracker.Infrastructure.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 🔹 Serilog pipeline
 builder.Host.UsePackTrackerSerilog();
+var settingsService = new SettingsService(builder.Services.BuildServiceProvider()
+    .GetRequiredService<ILogger<SettingsService>>());
 
-ISettingsService? settingsService = builder.Services.BuildServiceProvider()
-    .GetRequiredService<ISettingsService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(settingsService.GetSettings().ConnectionString);
 });
-builder.Services.AddInfrastructure(settingsService);
+builder.Services.AddSingleton<ISettingsService>(settingsService);
+builder.Services.AddInfrastructure(builder.Configuration, settingsService);
+builder.Services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<ValidationHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -38,6 +46,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+app.MapHub<RequestsHub>(RequestsHub.Route);
 app.MapHealthChecks("/health");
 
 try

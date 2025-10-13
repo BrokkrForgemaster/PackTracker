@@ -2,17 +2,19 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
+using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views
 {
     /// <summary name="MainWindow">
     /// Main application window with navigation and sidebar timer logic.
     /// </summary>
-    public partial class MainWindow
+    public partial class MainWindow : Window
     {
         #region Fields
 
@@ -120,17 +122,14 @@ namespace PackTracker.Presentation.Views
                         NavigateToKillTracker();
                         break;
                     case "RefineryJobs":
-                        {
-                            var refineryJobsView = _serviceProvider.GetRequiredService<RefineryJobsView>();
-                            ContentFrame.Navigate(refineryJobsView);
-                            break;
-                        }
+                        NavigateToRefineryJobs();
+                        break;
                     case "TradingHub":
-                        {
-                            var uexView = _serviceProvider.GetRequiredService<UexView>();
-                            ContentFrame.Navigate(uexView);
-                            break;
-                        }
+                        NavigateToUex();
+                        break;
+                    case "RequestHub":
+                        NavigateToRequestsHub();
+                        break;
                     case "Settings":
                         NavigateToSettings();
                         break;
@@ -143,6 +142,37 @@ namespace PackTracker.Presentation.Views
             var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
             ContentFrame.Navigate(dashboardView);
         }
+
+        private void NavigateToRefineryJobs()
+        {
+            var refineryJobsView = _serviceProvider.GetRequiredService<RefineryJobsView>();
+            ContentFrame.Navigate(refineryJobsView);
+        }
+
+        private void NavigateToUex()
+        {
+            var uexView = _serviceProvider.GetRequiredService<UexView>();
+            ContentFrame.Navigate(uexView);
+        }
+
+
+        private void NavigateToRequestsHub()
+        {
+            try
+            {
+                var requestView = _serviceProvider.GetRequiredService<RequestsView>();
+                ContentFrame.Navigate(requestView);
+            }
+            catch (Exception ex)
+            {
+                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
+                logger?.LogError(ex, "Failed to navigate to Requests Hub");
+                
+                MessageBox.Show($"Failed to open Requests Hub:\n{ex}", "Navigation Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
         private void NavigateToKillTracker()
         {
@@ -184,7 +214,7 @@ namespace PackTracker.Presentation.Views
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
-           System.Windows.Application.Current.Shutdown();
+            System.Windows.Application.Current.Shutdown();
         }
 
         private async void UpdateButton_Click(object sender, RoutedEventArgs e)

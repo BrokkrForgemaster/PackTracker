@@ -1,6 +1,6 @@
 using PackTracker.Domain.Enums;
 
-namespace PackTracker.Application.DTOS;
+namespace PackTracker.Application.DTOs.KillTracker;
 
 public class KillDto
 {

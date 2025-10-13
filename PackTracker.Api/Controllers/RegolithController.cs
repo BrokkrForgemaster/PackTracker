@@ -13,8 +13,9 @@ namespace PackTracker.Api.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Authorize(Policy = "HouseWolfOnly")]
-public class RegolithController : ControllerBase
+internal class RegolithController : ControllerBase
 {
+    #region Fields and Constructor
     private readonly IRegolithService _regolith;
     private readonly ILogger<RegolithController> _logger;
 
@@ -23,9 +24,12 @@ public class RegolithController : ControllerBase
         _regolith = regolith;
         _logger = logger;
     }
+    #endregion
 
-    /// <summary>
+    #region Endpoints
+    /// <summary name="GetProfile">
     /// Get the current Regolith profile for the authenticated user.
+    /// Returns 404 if no profile exists. Requires authentication.
     /// </summary>
     [HttpGet("profile")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -76,7 +80,7 @@ public class RegolithController : ControllerBase
         }
     }
 
-    /// <summary>
+    /// <summary name="GetRefineryJobs">
     /// Get the current refinery jobs for the authenticated user.
     /// </summary>
     [HttpGet("refinery-jobs")]
@@ -122,4 +126,5 @@ public class RegolithController : ControllerBase
                 statusCode: StatusCodes.Status500InternalServerError);
         }
     }
+    #endregion
 }

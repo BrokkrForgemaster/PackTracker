@@ -1,12 +1,14 @@
+using System.Net.Http;
 using System.Windows.Controls;
 using PackTracker.Application.Interfaces;
+using PackTracker.Infrastructure.Services;
 using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views;
 
-public class RefineryJobsView : UserControl
+public partial class RefineryJobsView : UserControl
 {
-    private IRegolithService service = App.GetService<IRegolithService>();
+    private IRegolithService service { get; }
 
     public RefineryJobsView()
     {

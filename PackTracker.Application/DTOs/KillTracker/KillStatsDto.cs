@@ -1,10 +1,12 @@
-namespace PackTracker.Domain.DTOs;
+namespace PackTracker.Application.DTOs.KillTracker;
 
 public class KillStatsDto
 {
     public int TotalKills { get; set; }
     public int TotalDeaths { get; set; }
+
     public Dictionary<string, int> KillsByType { get; set; } = new();
+
     public Dictionary<string, int> WeaponStats { get; set; } = new();
     public int KillsToday { get; set; }
     public int KillsThisWeek { get; set; }

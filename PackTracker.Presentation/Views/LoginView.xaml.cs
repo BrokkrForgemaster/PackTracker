@@ -7,6 +7,9 @@ using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
+using PackTracker.Infrastructure.Persistence;
+using PackTracker.Infrastructure.Services;
+using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views;
 
@@ -19,6 +22,7 @@ public partial class LoginView : UserControl
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<LoginView> _logger;
     private readonly ISettingsService _settingsService;
+    private readonly IKillEventService _killEventService;
     private static bool _apiStarted;
     private bool _discordLinked;
 
@@ -28,6 +32,7 @@ public partial class LoginView : UserControl
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = _serviceProvider.GetRequiredService<ILogger<LoginView>>();
         _settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
+        _killEventService = _serviceProvider.GetRequiredService<IKillEventService>();
 
         _ = InitializeAsync();
     }
@@ -107,7 +112,6 @@ public partial class LoginView : UserControl
         }
     }
 
-
     /// <summary>
     /// Called when the user clicks "Login with Discord".
     /// </summary>
@@ -115,11 +119,10 @@ public partial class LoginView : UserControl
     {
         try
         {
-            
             DiscordStatus.Text = "Checking API availability...";
-            
+
             var baseUrl = $"http://localhost:5001/api/v1/auth/login";
-            
+
             bool apiReady = await WaitForApiAsync(baseUrl);
 
             if (!apiReady)
@@ -210,9 +213,12 @@ public partial class LoginView : UserControl
 
     private void ProceedBtn_Click(object sender, RoutedEventArgs e)
     {
+
         if (_discordLinked && Window.GetWindow(this) is MainWindow window)
         {
-            window.ContentFrame.Navigate(new DashboardView());
+            window.ContentFrame.Navigate(
+                new DashboardView(
+                    _serviceProvider.GetRequiredService<IKillEventService>()));
         }
         else
         {

@@ -2,94 +2,106 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Pack Tracker"
-        Height="1080" Width="1920"
+        MinHeight="720"
+        MinWidth="1280"
+        WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MainBackground}"
         Icon="/Assets/housewolf2.ico"
-        WindowStartupLocation="CenterScreen">
-    
-     <Window.Resources>
-    <!-- Core brushes -->
-    <SolidColorBrush x:Key="ForegroundBrush"  Color="Black"/>
-    <SolidColorBrush x:Key="AccentBrush"      Color="#66FFFFFF"/>
-    <SolidColorBrush x:Key="GlassBorderBrush" Color="#40FFFFFF"/>
+        SizeToContent="Manual">
 
-    <!-- Frosted-glass button background -->
-    <LinearGradientBrush x:Key="GlassAccentBrush"
-                         StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#80FFFFFF" Offset="0.0"/>
-      <GradientStop Color="#40FFFFFF" Offset="0.5"/>
-      <GradientStop Color="#20FFFFFF" Offset="1.0"/>
-    </LinearGradientBrush>
+    <Window.Resources>
+        <!-- Core brushes -->
+        <SolidColorBrush x:Key="ForegroundBrush" Color="Black"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#66FFFFFF"/>
+        <SolidColorBrush x:Key="GlassBorderBrush" Color="#40FFFFFF"/>
 
-    <!-- Sidebar button style -->
-    <Style x:Key="SidebarButtonStyle" TargetType="Button">
-      <Setter Property="Foreground"     Value="{StaticResource ForegroundBrush}"/>
-      <Setter Property="Background"     Value="{StaticResource GlassAccentBrush}"/>
-      <Setter Property="BorderBrush"    Value="{StaticResource GlassBorderBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Padding"        Value="12,8"/>
-      <Setter Property="Margin"         Value="0,8"/>
-      <Setter Property="FontSize"       Value="16"/>
-      <Setter Property="Cursor"         Value="Hand"/>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Border x:Name="Bd"
-                    Background="{TemplateBinding Background}"
-                    BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}"
-                    CornerRadius="12"
-                    Padding="{TemplateBinding Padding}"
-                    SnapsToDevicePixels="True">
-              <ContentPresenter HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                RecognizesAccessKey="True"/>
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Bd" Property="Background">
-                  <Setter.Value>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                      <GradientStop Color="#90FFFFFF" Offset="0.0"/>
-                      <GradientStop Color="#50FFFFFF" Offset="0.5"/>
-                      <GradientStop Color="#30FFFFFF" Offset="1.0"/>
-                    </LinearGradientBrush>
-                  </Setter.Value>
-                </Setter>
-                <Setter TargetName="Bd" Property="Effect">
-                  <Setter.Value>
-                    <DropShadowEffect Color="Black"
-                                      BlurRadius="8"
-                                      Opacity="0.2"
-                                      ShadowDepth="1"/>
-                  </Setter.Value>
-                </Setter>
-              </Trigger>
-              <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="Bd" Property="RenderTransformOrigin" Value="0.5,0.5"/>
-                <Setter TargetName="Bd" Property="RenderTransform">
-                  <Setter.Value>
-                    <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
-                  </Setter.Value>
-                </Setter>
-              </Trigger>
-              <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Opacity" Value="0.5"/>
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-  </Window.Resources>
+        <!-- Frosted-glass button background -->
+        <LinearGradientBrush x:Key="GlassAccentBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#80FFFFFF" Offset="0.0"/>
+            <GradientStop Color="#40FFFFFF" Offset="0.5"/>
+            <GradientStop Color="#20FFFFFF" Offset="1.0"/>
+        </LinearGradientBrush>
 
+        <!-- Sidebar button style -->
+        <Style x:Key="SidebarButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="{StaticResource GlassAccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource GlassBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,8"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#90FFFFFF" Offset="0.0"/>
+                                            <GradientStop Color="#50FFFFFF" Offset="0.5"/>
+                                            <GradientStop Color="#30FFFFFF" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Bd" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="8"
+                                                          Color="Black"
+                                                          Opacity="0.2"
+                                                          ShadowDepth="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- ✅ Responsive grid layout -->
     <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- Sidebar column (fixed min width, expands slightly with window size) -->
+            <ColumnDefinition Width="Auto" MinWidth="280" MaxWidth="340"/>
+            <!-- Main content fills remaining space -->
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
         <!-- Sidebar -->
-        <Border Style="{DynamicResource SidebarBorderStyle}"
-                Width="300" Margin="20,20,0,20"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Stretch">
-            <DockPanel LastChildFill="True" Margin="16">
+        <Border Background="#202020" 
+                CornerRadius="16"
+                Padding="16"
+                Margin="20"
+                Grid.Column="0"
+                VerticalAlignment="Stretch"
+                Effect="{DynamicResource CardShadow}">
+            <DockPanel LastChildFill="True">
+                
                 <!-- Time Display -->
                 <TextBlock x:Name="TxtLocalTime"
                            DockPanel.Dock="Bottom"
@@ -98,80 +110,92 @@
                            Foreground="LightGray"
                            HorizontalAlignment="Center"
                            Margin="0,8,0,5"/>
+
                 <!-- Update Controls -->
-                <StackPanel Orientation="Vertical" Margin="10" DockPanel.Dock="Bottom">
+                <StackPanel Orientation="Vertical"
+                            DockPanel.Dock="Bottom"
+                            Margin="0,10,0,0"
+                            HorizontalAlignment="Center">
                     <Button x:Name="UpdateButton"
                             Content="Update Now"
-                            Width="175" Height="36"
-                            Style="{DynamicResource SidebarButtonStyle}"
+                            Width="175"
+                            Height="36"
+                            Style="{StaticResource SidebarButtonStyle}"
                             Click="UpdateButton_Click"
                             Visibility="Collapsed"/>
                     <ProgressBar x:Name="UpdateProgressBar"
-                                 Width="150" Height="16"
+                                 Width="150"
+                                 Height="16"
                                  Margin="10,4"
-                                 Minimum="0" Maximum="100"
+                                 Minimum="0"
+                                 Maximum="100"
                                  Visibility="Collapsed"
                                  Background="#FFDDDDDD"
-                                 Foreground="{DynamicResource AccentBrush}"/>
+                                 Foreground="{StaticResource AccentBrush}"/>
                     <TextBlock x:Name="UpdateStatusText"
                                FontSize="14"
                                Foreground="LightGray"
                                VerticalAlignment="Center"
                                Visibility="Collapsed"/>
                 </StackPanel>
+
                 <!-- Logo & Nav Buttons -->
-                <StackPanel>
+                <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,0,0,10">
                     <Image Source="{DynamicResource SidebarImage}"
-                           Width="150" Height="150"
+                           Width="140"
+                           Height="140"
                            Margin="0,0,0,20"
-                           HorizontalAlignment="Center"
-                           />
-                    <Button Content="Dashboard"
-                            Tag="Dashboard"
-                            Click="Navigate_Click"
-                            Style="{DynamicResource SidebarButtonStyle}"/>
-                    <Button Content="Kill Tracker"
-                            Tag="KillTracker"
-                            Click="Navigate_Click"
-                            Style="{DynamicResource SidebarButtonStyle}"/>
-                    <Button Content="Refinery Jobs"
-                            Tag="RefineryJobs"
-                            Click="Navigate_Click"
-                            Style="{DynamicResource SidebarButtonStyle}"/>
-                    <Button Content="Trading Hub"
-                            Tag="TradingHub"
-                            Click="Navigate_Click"
-                            Style="{DynamicResource SidebarButtonStyle}"/>
-                    <Button Content="Settings"
-                            Tag="Settings"
-                            Click="Navigate_Click"
-                            Style="{DynamicResource SidebarButtonStyle}"/>
+                           Stretch="Uniform"/>
+                    
+                    <Button Content="Dashboard" Tag="Dashboard"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="Navigate_Click"/>
+                    <Button Content="Kill Tracker" Tag="KillTracker"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="Navigate_Click"/>
+                    <Button Content="Refinery Jobs" Tag="RefineryJobs"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="Navigate_Click"/>
+                    <Button Content="Trading Hub" Tag="TradingHub"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="Navigate_Click"/>
+                    <Button Content="Request Hub" Tag="RequestHub"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="Navigate_Click"/>
+                    <Button Content="Settings" Tag="Settings"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="Navigate_Click"/>
                     <Button Content="Exit"
-                            Click="Exit_Click"
-                            Style="{DynamicResource SidebarButtonStyle}"/>
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="Exit_Click"/>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <!-- Main Content Area -->
-        <Grid Margin="340,20,20,20">
-            <!-- Faint Background Logo/Watermark -->
+        <!-- Main Content -->
+        <Grid Grid.Column="1" Margin="0,20,20,20">
+            <!-- Background Watermark -->
             <Image Source="/Assets/Pack_Tracker.png"
-                   Opacity="0.3"
+                   Opacity="0.25"
                    Stretch="UniformToFill"
-                   SnapsToDevicePixels="True"
                    IsHitTestVisible="False"
-                   Panel.ZIndex="1"/>
-            <!-- Card Background + Shadow -->
+                   Panel.ZIndex="0"/>
+
+            <!-- Floating Content Card -->
             <Border CornerRadius="24"
                     Background="{DynamicResource CardBackground}"
-                    Effect="{DynamicResource CardShadow}"/>
-            <!-- Main Content Frame -->
-            <Border Style="{DynamicResource ContentBorderStyle}"
-                    Padding="24">
+                    Effect="{DynamicResource CardShadow}"
+                    Margin="0"
+                    Panel.ZIndex="1"/>
+
+            <!-- Main content frame -->
+            <Border Padding="24"
+                    CornerRadius="24"
+                    Background="#00000020"
+                    Panel.ZIndex="2">
                 <Frame x:Name="ContentFrame"
                        NavigationUIVisibility="Hidden"
-                       Background="Transparent"/>
+                       Background="Transparent" />
             </Border>
         </Grid>
     </Grid>

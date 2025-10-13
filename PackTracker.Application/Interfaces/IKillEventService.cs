@@ -1,6 +1,5 @@
 using System.Collections;
-using PackTracker.Application.DTOS;
-using PackTracker.Domain.DTOs;
+using PackTracker.Application.DTOs.KillTracker;
 using PackTracker.Domain.Entities;
 
 namespace PackTracker.Application.Interfaces

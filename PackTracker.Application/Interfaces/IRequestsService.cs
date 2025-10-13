@@ -1,4 +1,4 @@
-using PackTracker.Application.DTOS.Request;
+using PackTracker.Application.DTOs.Request;
 using PackTracker.Domain.Enums;
 
 namespace PackTracker.Application.Interfaces;

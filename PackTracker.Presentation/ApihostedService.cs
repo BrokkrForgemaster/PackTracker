@@ -22,6 +22,7 @@ using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
+using PackTracker.Infrastructure.Services;
 using Serilog;
 
 namespace PackTracker.Presentation;
@@ -90,12 +91,20 @@ public class ApiHostedService : IHostedService
                 {
                     webBuilder.UseUrls($"http://localhost:5001");
                     _logger.LogInformation("✅ Embedded API running on http://localhost:5001/api/v1/Auth/login");
+                    
+                    // Configure services
+                    
                   
                     webBuilder.ConfigureServices(services =>
                     {
+                        
+                        services.AddSingleton(_settingsService);
+                        services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+                        services.AddInfrastructure(config, _settingsService);
+                        
                         // Logging & Core
                         services.AddPackTrackerLogging(_settingsService);
-                        services.AddInfrastructure(_settingsService);
+                        services.AddInfrastructure(config, _settingsService);
 
                         // Options pattern
                         services.Configure<RegolithOptions>(o =>

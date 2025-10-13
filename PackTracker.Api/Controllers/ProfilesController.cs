@@ -4,6 +4,7 @@ using PackTracker.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using PackTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Authentication;
+using PackTracker.Application.DTOs.Profiles;
 
 namespace PackTracker.Api.Controllers;
 
@@ -14,6 +15,7 @@ namespace PackTracker.Api.Controllers;
 [Route("api/v1/[controller]")]
 public class ProfilesController : ControllerBase
 {
+    #region Fields and Constructor
     private readonly IProfileService _profiles;
     private readonly ILogger<ProfilesController> _logger;
 
@@ -22,9 +24,11 @@ public class ProfilesController : ControllerBase
         _profiles = profiles;
         _logger = logger;
     }
+    #endregion
 
-    /// <summary>
-    /// Get the currently logged-in user's profile.
+    #region Endpoints
+    /// <summary name="GetMe">
+    /// Get the currently logged-in user's profile using their Discord identity.
     /// </summary>
     [HttpGet("me")]
     [Authorize]
@@ -61,7 +65,7 @@ public class ProfilesController : ControllerBase
         }
     }
 
-    /// <summary>
+    /// <summary name="Upsert">
     /// Create or update a profile using Discord identity data.
     /// </summary>
     [HttpPost("upsert")]
@@ -110,6 +114,18 @@ public class ProfilesController : ControllerBase
         }
     }
 
+    /// <summary name="GetById">
+    /// Get a profile by its unique ID.
+    /// </summary>
+    /// <param name="id">
+    /// The GUID of the profile to retrieve.
+    /// </param>
+    /// <param name="ct">
+    /// Cancellation token to cancel the operation if needed.
+    /// </param>
+    /// <returns>
+    /// The profile if found, otherwise a 404 Not Found response.
+    /// </returns>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -127,6 +143,9 @@ public class ProfilesController : ControllerBase
         }
     }
 
+    /// <summary name="GetByDiscordId">
+    /// Get a profile by its Discord ID.
+    /// </summary>
     [HttpGet("discord/{discordId}")]
     [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -144,6 +163,9 @@ public class ProfilesController : ControllerBase
         }
     }
 
+    /// <summary name="GetByUsername">
+    /// Get a profile by its username.
+    /// </summary>
     [HttpGet("name/{username}")]
     [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -161,6 +183,9 @@ public class ProfilesController : ControllerBase
         }
     }
 
+    /// <summary name="GetAll">
+    /// Get all profiles in the system.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<Profile>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
@@ -177,11 +202,6 @@ public class ProfilesController : ControllerBase
             return Problem("Error retrieving profiles list.");
         }
     }
+    #endregion
 }
 
-public class UpsertProfileRequest
-{
-    public string DiscordId { get; set; } = string.Empty;
-    public string Username { get; set; } = string.Empty;
-    public string? AvatarUrl { get; set; }
-}

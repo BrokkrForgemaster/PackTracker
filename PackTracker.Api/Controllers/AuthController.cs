@@ -18,6 +18,7 @@ namespace PackTracker.Api.Controllers;
 [Route("api/v1/[controller]")]
 public class AuthController : ControllerBase
 {
+    # region Fields and Constructor
     private readonly IConfiguration _config;
     private readonly JwtTokenService _jwt;
     private readonly AppDbContext _db;
@@ -30,7 +31,18 @@ public class AuthController : ControllerBase
         _db = db;
         _logger = logger;
     }
+    # endregion
 
+
+    #region Endpoints
+    /// <summary name="Login">
+    /// Initiates the Discord OAuth login process,
+    /// redirecting the user to Discord's authorization page.
+    /// </summary>
+    /// <returns>
+    /// A redirect to Discord's OAuth authorization endpoint
+    /// or an error response if configuration is missing.
+    /// </returns>
     [HttpGet("login")]
     public IActionResult Login()
     {
@@ -38,6 +50,17 @@ public class AuthController : ControllerBase
         return Challenge(new AuthenticationProperties { RedirectUri = "/swagger" }, "Discord");
     }
 
+    /// <summary name="GetToken">
+    /// Issues a JWT access token and refresh token for the authenticated user.
+    /// Requires the user to be authenticated via cookies (post-OAuth).
+    /// </summary>
+    /// <param name="ct">
+    /// Cancellation token for the async operation.
+    /// </param>
+    /// <returns>
+    /// A JSON response containing the access token, refresh token, and expiration info,
+    /// or an error response if the user is not registered or an error occurs.
+    /// </returns>
     [Authorize(AuthenticationSchemes = "Cookies")]
     [HttpGet("token")]
     public async Task<IActionResult> GetToken(CancellationToken ct)
@@ -82,7 +105,10 @@ public class AuthController : ControllerBase
             return Problem("An error occurred while generating the token.");
         }
     }
-
+    
+    /// <summary name="Refresh">
+    /// Refreshes the JWT access token using a valid refresh token.
+    /// </summary>
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct)
     {
@@ -119,6 +145,17 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary name="Logout">
+    /// Logs out the user by revoking the provided refresh token.
+    /// Requires the user to be authenticated.
+    /// </summary>
+    /// <param name="request">
+    /// The request containing the refresh token to revoke.
+    /// </param>
+    /// <param name="ct">
+    ///
+    /// </param>
+    /// <returns></returns>
     [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken ct)
@@ -136,6 +173,15 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary name="Me">
+    /// Fetches the profile information of the authenticated user,
+    /// including their claims.
+    /// </summary>
+    /// <returns>
+    /// A JSON response containing the user's username and claims,
+    /// or an unauthorized response if not authenticated.
+    /// </returns>
+    /// </summary>
     [Authorize]
     [HttpGet("me")]
     public IActionResult Me()
@@ -148,6 +194,18 @@ public class AuthController : ControllerBase
             Claims = claims
         });
     }
+    #endregion
 
-    public record RefreshTokenRequest(string RefreshToken);
+    #region Records
+    
+    /// <summary name="RefreshTokenRequest">
+    /// Request model for refreshing JWT tokens using a refresh token.
+    /// </summary>
+    /// <param name="RefreshToken">
+    /// The refresh token issued during initial authentication or previous refresh.
+    /// </param>
+    public record RefreshTokenRequest(
+        string RefreshToken);
+    #endregion 
+    
 }

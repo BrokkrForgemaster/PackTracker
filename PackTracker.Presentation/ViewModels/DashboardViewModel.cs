@@ -1,6 +1,7 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using PackTracker.Application.DTOS;
+using PackTracker.Application.DTOs.KillTracker;
 using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Presentation.ViewModels;
@@ -8,19 +9,25 @@ namespace PackTracker.Presentation.ViewModels;
 public class DashboardViewModel
 {
     private readonly IKillEventService _killEventService;
-    public ObservableCollection<LeaderCardModel> FpsLeaders { get; } = new();
-    public ObservableCollection<LeaderCardModel> AirLeaders { get; } = new();
+
+    private ObservableCollection<LeaderCardModel> FpsLeaders { get; } = new();
+    private ObservableCollection<LeaderCardModel> AirLeaders { get; } = new();
+
+    public int TotalKills { get; set; }
+    public double AverageRoi { get; set; }
+    public int ActiveMember { get; set; }
+    public int CompletedOps { get; set; }
 
     public DashboardViewModel(IKillEventService killEventService)
     {
-        _killEventService = killEventService;
-        _ = LoadLeadersAsync();
+        _killEventService = killEventService ?? throw new ArgumentNullException(nameof(killEventService));
+        _ = RefreshLeadersPeriodicallyAsync();
     }
 
     private async Task LoadLeadersAsync()
     {
-        var fpsLeaders = await _killEventService.GetTopKillersByTypeAsync("FPS", 5);
-        var airLeaders = await _killEventService.GetTopKillersByTypeAsync("Air", 5);
+        var fpsLeaders = await _killEventService.GetTopKillersByTypeAsync("FpsLeaders", 5);
+        var airLeaders = await _killEventService.GetTopKillersByTypeAsync("AirLeaders", 5);
 
         FpsLeaders.Clear();
         foreach (var leader in fpsLeaders)
@@ -44,5 +51,13 @@ public class DashboardViewModel
             });
         }
     }
-}
 
+    private async Task RefreshLeadersPeriodicallyAsync()
+    {
+        while (true)
+        {
+            await LoadLeadersAsync();
+            await Task.Delay(10000);
+        }
+    }
+}

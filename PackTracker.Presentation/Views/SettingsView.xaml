@@ -85,24 +85,6 @@
                      VerticalContentAlignment="Center"/>
           </StackPanel>
 
-          <!-- Discord Connected -->
-          <StackPanel Orientation="Horizontal" Margin="0,0,0,20" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock Text="Discord Connected:"
-                       FontSize="22"
-                       Foreground="White"
-                       Width="200"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Right"
-                       Margin="0,0,16,0"/>
-            <CheckBox x:Name="ChkDiscordConnected"
-                      FontSize="22"
-                      Height="42"
-                      Width="500"
-                      VerticalAlignment="Bottom"
-                      Content="Connected"
-                      Foreground="White"/>
-          </StackPanel>
-
           <!-- Game Log File Path -->
           <StackPanel Orientation="Horizontal" Margin="0,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center">
             <TextBlock Text="Game Log File Path:"

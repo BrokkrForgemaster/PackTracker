@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using PackTracker.Application.DTOS.Request;
+using PackTracker.Application.DTOs.Request;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
 

@@ -9,6 +9,7 @@ namespace PackTracker.Api.Controllers;
 [Authorize(Roles = "HouseWolfMember")]
 public class UexController : ControllerBase
 {
+    #region Fields & Constructor
     private readonly IUexService _uex;
     private readonly ILogger<UexController> _logger;
 
@@ -17,8 +18,21 @@ public class UexController : ControllerBase
         _uex = uex;
         _logger = logger;
     }
+    #endregion
 
-    // 📦 GET ALL COMMODITIES
+
+    #region Endpoints
+    /// <summary name="GetCommodities">
+    /// 📦 GET ALL COMMODITIEs - Public Endpoint
+    /// Retrieves a list of all commodities from the UEX service.
+    /// Includes logging and error handling. 
+    /// </summary>
+    /// <param name="ct">
+    /// Cancellation token to cancel the operation if needed.
+    /// </param>
+    /// <returns>
+    /// An IActionResult containing the list of commodities or an error message.\\\
+    /// </returns>
     [HttpGet("commodities")]
     [AllowAnonymous] // optional: make public if you want basic data accessible
     public async Task<IActionResult> GetCommodities(CancellationToken ct)
@@ -38,7 +52,18 @@ public class UexController : ControllerBase
         }
     }
 
-    // 💰 GET PRICES BY CODE
+    /// <summary name="GetPricesByCode">
+    /// 💰 GET PRICES BY COMMODITY CODE 
+    /// </summary>
+    /// <param name="commodityCode">
+    /// The commodity code to retrieve prices for.
+    /// </param>
+    /// <param name="ct">
+    /// Cancellation token to cancel the operation if needed.
+    ///  </param>
+    /// <returns>
+    /// 
+    /// </returns>
     [HttpGet("prices/by-code")]
     public async Task<IActionResult> GetPricesByCode([FromQuery] string commodityCode, CancellationToken ct)
     {
@@ -60,7 +85,23 @@ public class UexController : ControllerBase
         }
     }
 
-    // 🚀 GET ROUTES BY CODE
+    /// <summary name="GetRoutesByCode">
+    /// 🛤️ GET ROUTES BY COMMODITY CODE
+    /// Retrieves trade routes for a given commodity code.
+    /// Includes logging and error handling.
+    /// </summary>
+    /// <param name="commodityCode">
+    /// The commodity code to retrieve routes for (e.g., "gold", "silver").
+    ///  </param>
+    /// <param name="limit">
+    /// The maximum number of routes to return (default is 25, max is 100).
+    /// </param>
+    /// <param name="ct">
+    /// Cancellation token to cancel the operation if needed. 
+    /// </param>
+    /// <returns>
+    /// An IActionResult containing the list of routes or an error message.
+    /// </returns>
     [HttpGet("routes/by-code")]
     public async Task<IActionResult> GetRoutesByCode([FromQuery] string commodityCode, [FromQuery] int limit = 25, CancellationToken ct = default)
     {
@@ -82,7 +123,19 @@ public class UexController : ControllerBase
         }
     }
 
-    // 🧭 (Optional Legacy) GET ROUTES BY LOCAL DB ID
+    /// <summary>
+    /// / 🛤️ GET ROUTES BY COMMODITY ID
+    /// Retrieves trade routes for a given local commodity ID.
+    /// Includes logging and error handling.                                                                                                                                                                                                                                
+    /// </summary>
+    /// <param name="commodityId">
+    /// The local commodity ID to retrieve routes for.
+    /// </param>
+    /// <param name="limit">
+    ///           
+    /// </param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     [HttpGet("routes/by-id")]
     public async Task<IActionResult> GetRoutesById([FromQuery] int commodityId, [FromQuery] int limit = 25, CancellationToken ct = default)
     {
@@ -95,7 +148,7 @@ public class UexController : ControllerBase
                 return BadRequest(new { traceId, success = false, error = "Invalid commodity id." });
 
             var routes = await _uex.GetRoutesByCommodityAsync(commodityId, limit, ct);
-            return Ok(new { traceId, success = true, count = routes.Count, data = routes });
+            return Ok(new { traceId, success                                                                                                              = true, count = routes.Count, data = routes });
         }
         catch (Exception ex)
         {
@@ -103,4 +156,5 @@ public class UexController : ControllerBase
             return StatusCode(500, new { traceId, success = false, error = ex.Message });
         }
     }
+    #endregion
 }

@@ -1,9 +1,14 @@
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using Microsoft.Extensions.Logging;
+using PackTracker.Infrastructure.Persistence;
+using PackTracker.Infrastructure.Services;
 using PackTracker.Presentation.Services;
+using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views;
 
@@ -86,13 +91,9 @@ public partial class SettingsView : UserControl
             var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
             {
-
                 mainWindow.ContentFrame.Navigate(
-                    new DashboardView());
-                // OR if you have a specific view to navigate to:
-
-                // OR for last view logic:
-                // mainWindow.NavigateToLastView();
+                    new DashboardView(
+                        _serviceProvider.GetRequiredService<IKillEventService>()));
             }
         }
         catch (Exception ex)
@@ -102,8 +103,6 @@ public partial class SettingsView : UserControl
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
-
-
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {

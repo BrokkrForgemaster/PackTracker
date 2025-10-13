@@ -2,11 +2,10 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Interfaces;
-using PackTracker.Domain.DTOs;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
-using PackTracker.Application.DTOS;
+using PackTracker.Application.DTOs.KillTracker;
 using PackTracker.Domain.Enums;
 
 namespace PackTracker.Infrastructure.Services;
