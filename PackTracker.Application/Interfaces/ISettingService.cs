@@ -15,6 +15,8 @@ namespace PackTracker.Application.Interfaces
         AppSettings GetSettings();
         
         Task SaveSettings(AppSettings settings);
+        
+        void EnsureBootstrapDefaults(IConfiguration configuration);
 
         void UpdateSettings(Action<AppSettings> applyUpdates);
 

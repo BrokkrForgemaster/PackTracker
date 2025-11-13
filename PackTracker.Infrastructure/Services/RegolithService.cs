@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -19,6 +20,7 @@ public class RegolithService : IRegolithService
     private readonly AppDbContext _db;
     private readonly IMemoryCache _cache;
     private readonly ILogger<RegolithService> _log;
+  
 
     public RegolithService(
         HttpClient http,
@@ -44,13 +46,6 @@ public class RegolithService : IRegolithService
 
     public async Task<RegolithProfileDto?> GetProfileAsync(CancellationToken ct = default)
     {
-        if (_opts.UseStub)
-        {
-            var fake = BuildStubProfile();
-            _cache.Set("regolith:profile", fake, TimeSpan.FromMinutes(5));
-            _log.LogInformation("[Stub] Returning fake Regolith profile for {ScName}", fake.ScName);
-            return fake;
-        }
         using var scope = _log.BeginScope(new Dictionary<string, object?>
         {
             ["component"] = "Regolith",
@@ -114,9 +109,8 @@ public class RegolithService : IRegolithService
                 })
                 .FirstOrDefaultAsync(ct);
         }
-
         var rawWrapper = await res.Content
-            .ReadFromJsonAsync<RegolithResponseWrapper<RegolithProfileDtoRaw>>(cancellationToken: ct);
+            .ReadFromJsonAsync<RegolithProfileResponse>(cancellationToken: ct);
 
         var raw = rawWrapper?.Data.Profile;
         if (raw is null)
@@ -174,13 +168,6 @@ public class RegolithService : IRegolithService
     
     public async Task<IReadOnlyList<RegolithRefineryJobDto>> GetRefineryJobsAsync(CancellationToken ct = default)
     {
-        if (_opts.UseStub)
-        {
-            var fakeJobs = BuildStubJobs();
-            _cache.Set("regolith:refinery:jobs", fakeJobs, TimeSpan.FromMinutes(2));
-            _log.LogInformation("[Stub] Returning {Count} fake refinery jobs", fakeJobs.Count);
-            return fakeJobs;
-        }
         using var scope = _log.BeginScope(new Dictionary<string, object?>
         {
             ["component"] = "Regolith",
@@ -212,6 +199,10 @@ public class RegolithService : IRegolithService
                             material
                             quantity
                             status
+                            progress
+                            efficiency
+                            yield
+                            eta
                             submittedAt
                             completedAt
                         }
@@ -226,10 +217,10 @@ public class RegolithService : IRegolithService
         req.Headers.Add("x-api-key", apiKey ?? string.Empty);
 
         _log.LogInformation("Calling Regolith refinery jobs endpoint {Url}.", _opts.BaseUrl);
-        var res = await _http.SendAsync(req);
+        var res = await _http.SendAsync(req, ct);
         if (!res.IsSuccessStatusCode)
         {
-            var error = Trunc(await res.Content.ReadAsStringAsync());
+            var error = Trunc(await res.Content.ReadAsStringAsync(ct));
             _log.LogError("Refinery jobs call failed: {Status} {Reason}. Body: {Body}",
                 (int)res.StatusCode, res.ReasonPhrase, error);
             return Array.Empty<RegolithRefineryJobDto>();
@@ -238,28 +229,41 @@ public class RegolithService : IRegolithService
         RegolithRefineryJobsResponse? wrapper = null;
         try
         {
-            wrapper = await res.Content.ReadFromJsonAsync<RegolithRefineryJobsResponse>();
+            wrapper = await res.Content.ReadFromJsonAsync<RegolithRefineryJobsResponse>(cancellationToken: ct);
         }
         catch (Exception ex)
         {
-            var body = Trunc(await res.Content.ReadAsStringAsync());
+            var body = Trunc(await res.Content.ReadAsStringAsync(ct));
             _log.LogError(ex, "Failed to deserialize refinery jobs response. Body: {Body}", body);
             return Array.Empty<RegolithRefineryJobDto>();
         }
 
-        var rawJobs = wrapper?.Jobs ?? new List<RegolithRefineryJobDtoRaw>();
+        var rawJobs = wrapper?.Data.RefineryJobs ?? new List<RegolithRefineryJobDtoRaw>();
         _log.LogInformation("Refinery jobs received. Count={Count}", rawJobs.Count);
 
-        var jobs = rawJobs.Select(j => new RegolithRefineryJobDto
+        var now = DateTime.UtcNow;
+        var jobs = rawJobs.Select(j =>
         {
-            JobId = j.JobId,
-            Location = j.Location,
-            Material = j.Material,
-            Quantity = j.Quantity,
-            Status = j.Status,
-            SubmittedAt = FromEpoch(j.SubmittedAt),
-            CompletedAt = j.CompletedAt.HasValue ? FromEpoch(j.CompletedAt.Value) : null
-        }).ToList();
+            var submittedAt = FromEpoch(j.SubmittedAt);
+            var completedAt = j.CompletedAt.HasValue ? FromEpoch(j.CompletedAt.Value) : (DateTime?)null;
+            var eta = j.Eta.HasValue ? FromEpoch(j.Eta.Value) : (DateTime?)null;
+
+            return new RegolithRefineryJobDto
+            {
+                JobId = j.JobId,
+                Location = j.Location,
+                Material = string.IsNullOrWhiteSpace(j.Material) ? "Unknown" : j.Material,
+                Quantity = j.Quantity,
+                Status = j.Status,
+                Progress = Math.Clamp(j.Progress ?? 0d, 0d, 1d) * 100d,
+                Efficiency = Math.Clamp(j.Efficiency ?? 0d, 0d, 1d),
+                Yield = j.Yield ?? 0d,
+                Eta = eta,
+                SubmittedAt = submittedAt,
+                CompletedAt = completedAt,
+                SyncedAt = now
+            };
+        }).OrderByDescending(j => j.SubmittedAt).ToList();
 
         _cache.Set("regolith:refinery:jobs", jobs, TimeSpan.FromMinutes(2));
 
@@ -276,22 +280,30 @@ public class RegolithService : IRegolithService
                     JobId = dto.JobId,
                     Location = dto.Location,
                     Material = dto.Material,
-                    Quantity = dto.Quantity,
+                    Quantity = (int)Math.Round(dto.Quantity),
                     Status = dto.Status,
+                    Progress = dto.Progress.ToString("F2", CultureInfo.InvariantCulture),
+                    Efficiency = dto.Efficiency.ToString("F2", CultureInfo.InvariantCulture),
+                    Yield = dto.Yield.ToString("F2", CultureInfo.InvariantCulture),
+                    Eta = dto.Eta?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
                     SubmittedAt = dto.SubmittedAt,
                     CompletedAt = dto.CompletedAt,
-                    SyncedAt = DateTime.UtcNow
+                    SyncedAt = dto.SyncedAt
                 });
             }
             else
             {
                 entity.Location = dto.Location;
                 entity.Material = dto.Material;
-                entity.Quantity = dto.Quantity;
+                entity.Quantity = (int)Math.Round(dto.Quantity);
                 entity.Status = dto.Status;
+                entity.Progress = dto.Progress.ToString("F2", CultureInfo.InvariantCulture);
+                entity.Efficiency = dto.Efficiency.ToString("F2", CultureInfo.InvariantCulture);
+                entity.Yield = dto.Yield.ToString("F2", CultureInfo.InvariantCulture);
+                entity.Eta = dto.Eta?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
                 entity.SubmittedAt = dto.SubmittedAt;
                 entity.CompletedAt = dto.CompletedAt;
-                entity.SyncedAt = DateTime.UtcNow;
+                entity.SyncedAt = dto.SyncedAt;
             }
         }
 
@@ -302,65 +314,4 @@ public class RegolithService : IRegolithService
 
         return jobs;
     }
-    
-    private RegolithProfileDto BuildStubProfile() => new()
-    {
-        UserId = "user_42",
-        ScName = "Sentinel_Wolf",
-        AvatarUrl = "https://cdn.example.com/avatars/wolf.png",
-        CreatedAt = DateTime.UtcNow.AddMonths(-7),
-        UpdatedAt = DateTime.UtcNow.AddMinutes(-5)
-    };
-
-    private List<RegolithRefineryJobDto> BuildStubJobs() => new()
-    {
-        new RegolithRefineryJobDto {
-            JobId = "RFY-BA14-8723",
-            Location = "Lyria / Arccorp Mining Area 157",
-            OreType = "Quantanium + Bexalite",
-            Quantity = 86,          // total raw mass
-            Status = "Processing",
-            SubmittedAt = DateTime.UtcNow.AddHours(-3.5),
-            CompletedAt = null
-        },
-        new RegolithRefineryJobDto {
-            JobId = "RFY-HUR-LOR-1229",
-            Location = "Hurston / HDMS Edmond",
-            OreType = "Titanium + Bexalite",
-            Quantity = 113,
-            Eta = DateTime.UtcNow.AddMinutes(15),
-            Progress = 0.75,
-            Efficiency = 0.87,
-            Yield = 98.5,
-            Status = "Complete",
-            SubmittedAt = DateTime.UtcNow.AddHours(-7),
-            CompletedAt = DateTime.UtcNow.AddHours(-1.5)
-        },
-        new RegolithRefineryJobDto {
-            JobId = "RFY-CRU-IAL-3370",
-            Location = "CRU-L1 Shallow Frontier",
-            OreType = "Hephaestanite + Laranite",
-            Quantity = 200,
-            Eta = DateTime.UtcNow.AddMinutes(45),
-            Progress = 0.40,
-            Efficiency = 0.92,
-            Yield = 184.0,
-            Status = "Processing",
-            SubmittedAt = DateTime.UtcNow.AddHours(-6),
-            CompletedAt = null
-        },
-        new RegolithRefineryJobDto {
-            JobId = "RFY-MIC-TAL-9977",
-            Location = "MicroTech / Shubin TAL-3",
-            OreType = "Agricium + Bexalite",
-            Quantity = 90,
-            Eta = DateTime.UtcNow.AddMinutes(5),
-            Progress = 0.95,
-            Efficiency = 0.89,
-            Yield = 80.1,
-            Status = "Complete",
-            SubmittedAt = DateTime.UtcNow.AddHours(-5),
-            CompletedAt = DateTime.UtcNow.AddHours(-2.5)
-        }
-    };
 }

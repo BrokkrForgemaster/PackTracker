@@ -130,6 +130,11 @@ public class RequestsController : ControllerBase
             Status = RequestStatus.Open,
             CreatedByUserId = userId,
             CreatedByDisplayName = display,
+            MaterialName = dto.MaterialName,
+            QuantityNeeded = dto.QuantityNeeded,
+            MeetingLocation = dto.MeetingLocation,
+            RewardOffered = dto.RewardOffered,
+            NumberOfHelpersNeeded = dto.NumberOfHelpersNeeded
         };
         
         _db.RequestTickets.Add(entity);
@@ -172,6 +177,49 @@ public class RequestsController : ControllerBase
         entity.AssignedToUserId = dto.AssignedToUserId;
         entity.AssignedToDisplayName = dto.AssignedToDisplayName;
         entity.DueAt = dto.DueAt;
+        entity.MaterialName = dto.MaterialName;
+        entity.QuantityNeeded = dto.QuantityNeeded;
+        entity.MeetingLocation = dto.MeetingLocation;
+        entity.RewardOffered = dto.RewardOffered;
+        entity.NumberOfHelpersNeeded = dto.NumberOfHelpersNeeded;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        await _hub.Clients.All.SendAsync("RequestUpdated", Map(entity), ct);
+        return Ok(new { success = true, data = Map(entity) });
+    }
+
+    /// <summary name="Claim">
+    /// Claim a request ticket by assigning it to yourself.
+    /// This sets the ticket's status to "InProgress" and assigns it to the current user.
+    /// </summary>
+    /// <param name="id">
+    /// The ID of the request ticket to claim.
+    /// </param>
+    /// <param name="ct">
+    /// Cancellation token for the request.
+    /// </param>
+    /// <returns>
+    /// If the ticket is found and claimed, returns the updated ticket details.
+    /// If not found, returns a 404 Not Found response.
+    /// If already assigned, returns a 400 Bad Request response.
+    /// The response also includes a success flag.
+    /// </returns>
+    [HttpPatch("{id:int}/claim")]
+    public async Task<IActionResult> Claim([FromRoute] int id, CancellationToken ct)
+    {
+        var entity = await _db.RequestTickets.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (entity == null) return NotFound();
+
+        if (!string.IsNullOrEmpty(entity.AssignedToUserId))
+            return BadRequest(new { success = false, error = "Request is already claimed" });
+
+        var userId = User.FindFirst("sub")?.Value ?? "unknown";
+        var display = User.Identity?.Name ?? "Unknown";
+
+        entity.Status = RequestStatus.InProgress;
+        entity.AssignedToUserId = userId;
+        entity.AssignedToDisplayName = display;
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
@@ -251,7 +299,12 @@ public class RequestsController : ControllerBase
         DueAt = e.DueAt,
         CreatedAt = e.CreatedAt,
         UpdatedAt = e.UpdatedAt,
-        CompletedAt = e.CompletedAt
+        CompletedAt = e.CompletedAt,
+        MaterialName = e.MaterialName,
+        QuantityNeeded = e.QuantityNeeded,
+        MeetingLocation = e.MeetingLocation,
+        RewardOffered = e.RewardOffered,
+        NumberOfHelpersNeeded = e.NumberOfHelpersNeeded
     };
     #endregion
 }

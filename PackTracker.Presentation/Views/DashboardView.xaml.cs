@@ -1,19 +1,19 @@
-using System.Net.Http;
 using System.Windows.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.Interfaces;
 using PackTracker.Presentation.ViewModels;
+using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.Views;
 
 public partial class DashboardView : UserControl
 {
-    private readonly IKillEventService _killEventService;
-
-    public DashboardView(IKillEventService killEventService)
+    public DashboardView(
+        IKillEventService killEventService,
+        GuideDashboardViewModel guideViewModel,
+        IRegolithService regolithService,
+        IApiClientProvider apiClientProvider)
     {
-        _killEventService = killEventService;
         InitializeComponent();
-        DataContext = new DashboardViewModel(killEventService);
+        DataContext = new DashboardViewModel(killEventService, guideViewModel, regolithService, apiClientProvider);
     }
 }

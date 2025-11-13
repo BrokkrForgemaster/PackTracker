@@ -20,5 +20,11 @@ public class RefreshToken
 
     public DateTime? RevokedAt { get; set; }
 
-    public bool IsRevoked => RevokedAt != null || DateTime.UtcNow >= ExpiresAt;
+    public bool IsRevoked
+    {
+        get => RevokedAt != null || DateTime.UtcNow >= ExpiresAt;
+        init => throw new NotImplementedException();
+    }
+
+    public Profile? Profile { get; set; }
 }

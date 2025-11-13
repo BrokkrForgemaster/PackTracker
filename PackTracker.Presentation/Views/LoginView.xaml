@@ -32,6 +32,12 @@
                            Margin="0 0 0 32"
                            HorizontalAlignment="Center"
                            TextAlignment="Center"/>
+                <TextBlock Text="Your browser will open to Discord. As soon as authentication finishes, PackTracker will move you straight to the dashboard."
+                           FontSize="14"
+                           Foreground="#BEBEBE"
+                           Margin="0 0 0 24"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"/>
 
                 <!-- Discord Login Card -->
                 <Border Background="#2207E1CA"
@@ -88,25 +94,6 @@
                                    TextAlignment="Center"/>
                     </StackPanel>
                 </Border>
-
-                <!-- Back or Proceed buttons -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="← Back"
-                            Width="160"
-                            Height="42"
-                            FontSize="18"
-                            Margin="0,0,12,0"
-                            Style="{DynamicResource SidebarButtonStyle}"
-                            Click="Back_Click"/>
-                    <Button Content="Proceed"
-                            x:Name="ProceedBtn"
-                            Click="ProceedBtn_Click"
-                            IsEnabled="False"
-                            Height="42"
-                            FontSize="18"
-                            Style="{DynamicResource SidebarButtonStyle}"
-                            Width="160"/>
-                </StackPanel>
 
             </StackPanel>
         </Viewbox>

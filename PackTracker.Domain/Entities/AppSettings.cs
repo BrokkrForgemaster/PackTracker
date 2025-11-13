@@ -37,6 +37,9 @@ public class AppSettings
     public string UexCorpApiKey { get; set; } = string.Empty;
     public string UexBaseUrl { get; set; } = "https://api.uexcorp.uk/2.0";
 
+    // --- Embedded API ---
+    public string ApiBaseUrl { get; set; } = "http://localhost:5001";
+
     // --- Game Integration ---
     /// <summary>
     /// Path to the Star Citizen log folder.

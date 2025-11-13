@@ -33,7 +33,6 @@ namespace PackTracker.Presentation.Views
             InitializeComponent();
 
             WindowState = WindowState.Maximized;
-            WindowStyle = WindowStyle.None;
 
             // Sidebar real-time clock
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };

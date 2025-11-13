@@ -1,30 +1,27 @@
 using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
-using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
-using PackTracker.Presentation.ViewModels;
+using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.Views;
 
-/// <summary>
-/// Handles the Discord authentication stage before main app access.
-/// Automatically ensures the embedded API is running and detects login completion.
-/// </summary>
 public partial class LoginView : UserControl
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<LoginView> _logger;
     private readonly ISettingsService _settingsService;
-    private readonly IKillEventService _killEventService;
+    private readonly IApiClientProvider _apiClientProvider;
     private static bool _apiStarted;
-    private bool _discordLinked;
+    private bool _hasNavigated;
+    private string? _clientState;
 
     public LoginView(IServiceProvider serviceProvider)
     {
@@ -32,14 +29,13 @@ public partial class LoginView : UserControl
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = _serviceProvider.GetRequiredService<ILogger<LoginView>>();
         _settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
-        _killEventService = _serviceProvider.GetRequiredService<IKillEventService>();
+        _apiClientProvider = _serviceProvider.GetRequiredService<IApiClientProvider>();
 
         _ = InitializeAsync();
     }
 
-    /// <summary>
-    /// Ensures the API is running and updates status UI.
-    /// </summary>
+    private string ApiBaseUrl => _apiClientProvider.BaseUrl;
+
     private async Task InitializeAsync()
     {
         try
@@ -52,13 +48,10 @@ public partial class LoginView : UserControl
         {
             _logger.LogError(ex, "Failed to start local API.");
             DiscordStatus.Text = $"❌ Failed to start API: {ex.Message}";
-            ProceedBtn.IsEnabled = false;
+            DiscordLoginButton.IsEnabled = false;
         }
     }
 
-    /// <summary>
-    /// Starts the embedded API if it hasn't been started yet.
-    /// </summary>
     private async Task EnsureApiRunningAsync()
     {
         if (_apiStarted)
@@ -69,13 +62,13 @@ public partial class LoginView : UserControl
 
         try
         {
-            // Check if the API is already alive (e.g., from main host)
             using var client = new HttpClient();
+            var healthEndpoint = $"{ApiBaseUrl}/health";
             for (int i = 0; i < 3; i++)
             {
                 try
                 {
-                    var resp = await client.GetAsync("http://localhost:5001/swagger");
+                    var resp = await client.GetAsync(healthEndpoint);
                     if (resp.IsSuccessStatusCode)
                     {
                         _apiStarted = true;
@@ -89,7 +82,6 @@ public partial class LoginView : UserControl
                 }
             }
 
-            // Try to start manually only if not found
             if (!_apiStarted)
             {
                 var apiHost = _serviceProvider.GetService<ApiHostedService>();
@@ -97,7 +89,7 @@ public partial class LoginView : UserControl
                 {
                     await apiHost.StartAsync(default);
                     _apiStarted = true;
-                    _logger.LogInformation("Embedded API manually started on http://localhost:5001");
+                    _logger.LogInformation("Embedded API manually started on {Url}", ApiBaseUrl);
                 }
                 else
                 {
@@ -112,66 +104,83 @@ public partial class LoginView : UserControl
         }
     }
 
-    /// <summary>
-    /// Called when the user clicks "Login with Discord".
-    /// </summary>
     private async void DiscordLogin_Click(object sender, RoutedEventArgs e)
     {
+        _clientState = Guid.NewGuid().ToString("N");
+        _hasNavigated = false;
+        DiscordCheck.Visibility = Visibility.Collapsed;
+        var baseUrl = ApiBaseUrl;
+        var loginUrl = $"{baseUrl}/api/v1/auth/login?clientState={_clientState}";
+        var healthUrl = $"{baseUrl}/health";
+
         try
         {
+            DiscordLoginButton.IsEnabled = false;
             DiscordStatus.Text = "Checking API availability...";
 
-            var baseUrl = $"http://localhost:5001/api/v1/auth/login";
-
-            bool apiReady = await WaitForApiAsync(baseUrl);
+            var apiReady = await WaitForApiAsync(healthUrl);
 
             if (!apiReady)
             {
-                DiscordStatus.Text = $"❌ Unable to reach local API (http://localhost:5001/api/v1/auth/login).";
+                DiscordStatus.Text = $"❌ Unable to reach local API ({baseUrl}).";
+                DiscordLoginButton.IsEnabled = true;
                 return;
             }
 
-            // Open login flow in default browser
             DiscordStatus.Text = "Opening Discord login...";
-            var loginUrl = $"{baseUrl}";
             Process.Start(new ProcessStartInfo(loginUrl) { UseShellExecute = true });
 
             _logger.LogInformation("Discord OAuth login initiated.");
+            DiscordStatus.Text = "🔗 Waiting for Discord authentication. Close the browser window when it says you're done.";
 
-            _ = MonitorLoginCompletionAsync(); // start watching for login
-            DiscordStatus.Text = "🔗 Waiting for Discord authentication...";
+            _ = MonitorLoginCompletionAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Discord login failed.");
             DiscordStatus.Text = $"❌ Error: {ex.Message}";
+            DiscordLoginButton.IsEnabled = true;
         }
-
-        _discordLinked = true;
-        ProceedBtn.IsEnabled = true;
     }
 
-    /// <summary>
-    /// Polls settings for a stored access token to confirm login success.
-    /// </summary>
     private async Task MonitorLoginCompletionAsync()
     {
-        for (int attempt = 0; attempt < 30; attempt++) // ~30s max wait
+        for (int attempt = 0; attempt < 90; attempt++)
         {
-            var settings = _settingsService.GetSettings();
-            if (!string.IsNullOrWhiteSpace(settings.DiscordAccessToken))
+            if (!string.IsNullOrWhiteSpace(_clientState))
             {
-                _discordLinked = true;
-
-                await Dispatcher.InvokeAsync(() =>
+                try
                 {
-                    DiscordStatus.Text = "✅ Discord authentication complete.";
-                    DiscordCheck.Visibility = Visibility.Visible;
-                    ProceedBtn.IsEnabled = true;
-                });
+                    using var client = _apiClientProvider.CreateClient();
+                    var response = await client.GetAsync($"api/v1/auth/poll/{_clientState}");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var payload = await response.Content.ReadFromJsonAsync<TokenPayload>();
+                        if (payload is not null)
+                        {
+                            _clientState = null;
+                            await _settingsService.UpdateSettingsAsync(s =>
+                            {
+                                s.JwtToken = payload.access_token;
+                                s.JwtRefreshToken = payload.refresh_token;
+                                s.FirstRunComplete = true;
+                            });
 
-                _logger.LogInformation("Discord authentication confirmed.");
-                return;
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                DiscordStatus.Text = "✅ Authentication complete. Redirecting...";
+                                DiscordCheck.Visibility = Visibility.Visible;
+                            });
+
+                            NavigateToDashboardInternal();
+                            return;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Polling for OAuth completion failed.");
+                }
             }
 
             await Task.Delay(1000);
@@ -180,20 +189,35 @@ public partial class LoginView : UserControl
         await Dispatcher.InvokeAsync(() =>
         {
             DiscordStatus.Text = "⚠️ Timed out waiting for Discord authentication.";
+            DiscordLoginButton.IsEnabled = true;
         });
     }
 
-    /// <summary>
-    /// Verifies the API is responsive before attempting login.
-    /// </summary>
-    private async static Task<bool> WaitForApiAsync(string baseUrl)
+    private void NavigateToDashboardInternal()
+    {
+        if (_hasNavigated)
+            return;
+
+        _hasNavigated = true;
+
+        _ = Dispatcher.InvokeAsync(() =>
+        {
+            if (Window.GetWindow(this) is not MainWindow window)
+                return;
+
+            var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
+            window.ContentFrame.Navigate(dashboardView);
+        });
+    }
+
+    private static async Task<bool> WaitForApiAsync(string url)
     {
         using var client = new HttpClient();
         for (int i = 0; i < 6; i++)
         {
             try
             {
-                var response = await client.GetAsync(baseUrl);
+                var response = await client.GetAsync(url);
                 if (response.IsSuccessStatusCode)
                     return true;
             }
@@ -204,29 +228,6 @@ public partial class LoginView : UserControl
         }
         return false;
     }
-
-    private void Back_Click(object sender, RoutedEventArgs e)
-    {
-        if (Window.GetWindow(this) is MainWindow window)
-            window.ContentFrame.Navigate(new WelcomeView(_serviceProvider));
-    }
-
-    private void ProceedBtn_Click(object sender, RoutedEventArgs e)
-    {
-
-        if (_discordLinked && Window.GetWindow(this) is MainWindow window)
-        {
-            window.ContentFrame.Navigate(
-                new DashboardView(
-                    _serviceProvider.GetRequiredService<IKillEventService>()));
-        }
-        else
-        {
-            MessageBox.Show(
-                "Please log in with Discord before proceeding.",
-                "Authentication Required",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-        }
-    }
 }
+
+internal record TokenPayload(string access_token, string refresh_token, int expires_in);

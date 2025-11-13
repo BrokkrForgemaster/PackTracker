@@ -1,4 +1,10 @@
+using System.Security.Claims;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using AspNet.Security.OAuth.Discord;
+using Microsoft.AspNetCore.Authentication;
 using PackTracker.Api.Middleware;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
@@ -12,24 +18,70 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 🔹 Serilog pipeline
 builder.Host.UsePackTrackerSerilog();
-var settingsService = new SettingsService(builder.Services.BuildServiceProvider()
-    .GetRequiredService<ILogger<SettingsService>>());
-
+var tempProvider = builder.Services.BuildServiceProvider();
+var settingsLogger = tempProvider.GetRequiredService<ILogger<SettingsService>>();
+var settingsService = new SettingsService(settingsLogger);
+settingsService.EnsureBootstrapDefaults(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(settingsService.GetSettings().ConnectionString);
 });
 builder.Services.AddSingleton<ISettingsService>(settingsService);
-builder.Services.AddInfrastructure(builder.Configuration, settingsService);
+builder.Services.AddInfrastructure(settingsService);
 builder.Services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
-
+builder.Services.AddMemoryCache();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 builder.Services.AddSignalR();
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = "Cookies";
+        options.DefaultChallengeScheme = "Discord";
+    })
+    .AddCookie("Cookies", options =>
+    {
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+    })
+    .AddDiscord("Discord", options =>
+    {
+        var appSettings = settingsService.GetSettings();
+        options.ClientId = appSettings.DiscordClientId!;
+        options.ClientSecret = appSettings.DiscordClientSecret!;
+        options.CallbackPath = appSettings.DiscordCallbackPath ?? "/signin-discord";
+        options.SaveTokens = true;
+        options.Scope.Add("identify");
+        options.Scope.Add("guilds");
+
+        options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+        options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+        options.ClaimActions.MapJsonKey("urn:discord:avatar:url", "avatar");
+        options.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        var appSettings = settingsService.GetSettings();
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = appSettings.JwtIssuer,
+            ValidAudience = appSettings.JwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(appSettings.JwtKey))
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("HouseWolfOnly", policy =>
+        policy.RequireClaim(ClaimTypes.Role, "HouseWolfMember"));
+});
 
 var app = builder.Build();
 
@@ -40,14 +92,23 @@ app.UseMiddleware<ValidationHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/error");
 }
 
 app.UseHttpsRedirection();
-app.MapControllers();
-app.MapHub<RequestsHub>(RequestsHub.Route);
-app.MapHealthChecks("/health");
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHub<RequestsHub>(RequestsHub.Route);
+    endpoints.MapHealthChecks("/health");
+});
 
 try
 {

@@ -7,81 +7,9 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MainBackground}"
         Icon="/Assets/housewolf2.ico"
-        SizeToContent="Manual">
-
-    <Window.Resources>
-        <!-- Core brushes -->
-        <SolidColorBrush x:Key="ForegroundBrush" Color="Black"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#66FFFFFF"/>
-        <SolidColorBrush x:Key="GlassBorderBrush" Color="#40FFFFFF"/>
-
-        <!-- Frosted-glass button background -->
-        <LinearGradientBrush x:Key="GlassAccentBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#80FFFFFF" Offset="0.0"/>
-            <GradientStop Color="#40FFFFFF" Offset="0.5"/>
-            <GradientStop Color="#20FFFFFF" Offset="1.0"/>
-        </LinearGradientBrush>
-
-        <!-- Sidebar button style -->
-        <Style x:Key="SidebarButtonStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
-            <Setter Property="Background" Value="{StaticResource GlassAccentBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource GlassBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Margin" Value="0,8"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background">
-                                    <Setter.Value>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#90FFFFFF" Offset="0.0"/>
-                                            <GradientStop Color="#50FFFFFF" Offset="0.5"/>
-                                            <GradientStop Color="#30FFFFFF" Offset="1.0"/>
-                                        </LinearGradientBrush>
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter TargetName="Bd" Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect BlurRadius="8"
-                                                          Color="Black"
-                                                          Opacity="0.2"
-                                                          ShadowDepth="1"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="RenderTransformOrigin" Value="0.5,0.5"/>
-                                <Setter TargetName="Bd" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
+        SizeToContent="Manual"
+        ResizeMode="CanResize"
+        WindowStyle="SingleBorderWindow">
 
     <!-- ✅ Responsive grid layout -->
     <Grid>
@@ -93,7 +21,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Background="#202020" 
+        <Border Background="{DynamicResource SidebarBackground}" 
                 CornerRadius="16"
                 Padding="16"
                 Margin="20"

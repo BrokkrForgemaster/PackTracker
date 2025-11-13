@@ -9,6 +9,8 @@ namespace PackTracker.Presentation.Services;
 public class ThemeManager : IThemeManager
 {
     private const string ThemeFolder = "Themes/";
+    private static readonly Uri BaseThemeUri = new($"/PackTracker.Presentation;component/{ThemeFolder}Dark.xaml", UriKind.Relative);
+
     private readonly System.Windows.Application _app;
     public string[] AvailableThemes { get; }
     public string CurrentTheme { get; private set; }
@@ -34,10 +36,21 @@ public class ThemeManager : IThemeManager
         foreach (var dic in toRemove)
             _app.Resources.MergedDictionaries.Remove(dic);
 
-        var uri = new Uri($"/PackTracker.Presentation;component/Themes/{themeName}.xaml", UriKind.Relative);
-        var themeDict = new ResourceDictionary { Source = uri };
-        _app.Resources.MergedDictionaries.Add(themeDict);
+        // Always seed shared resources from the base theme so overlays can override selectively.
+        AddThemeDictionary(BaseThemeUri);
+
+        if (!string.Equals(themeName, "Dark", StringComparison.OrdinalIgnoreCase))
+        {
+            var themeUri = BuildThemeUri(themeName);
+            AddThemeDictionary(themeUri);
+        }
 
         CurrentTheme = themeName;
     }
+
+    private void AddThemeDictionary(Uri uri) =>
+        _app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = uri });
+
+    private static Uri BuildThemeUri(string themeName) =>
+        new($"/PackTracker.Presentation;component/{ThemeFolder}{themeName}.xaml", UriKind.Relative);
 }

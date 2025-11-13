@@ -13,4 +13,11 @@ public sealed class RequestUpdateDto
     public string? AssignedToUserId { get; set; }
     public string? AssignedToDisplayName { get; set; }
     public DateTime? DueAt { get; set; }
+
+    // Material/Resource fields
+    public string? MaterialName { get; set; }
+    public int? QuantityNeeded { get; set; }
+    public string? MeetingLocation { get; set; }
+    public string? RewardOffered { get; set; }
+    public int? NumberOfHelpersNeeded { get; set; }
 }

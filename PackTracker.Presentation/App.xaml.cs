@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
-using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Presentation.Services;
@@ -47,18 +46,14 @@ public partial class App : System.Windows.Application
         services.AddLogging(b => b.AddSerilog());
 
         // 2️⃣ Settings service (merge environment, secrets, local file)
-        services.AddSingleton<ISettingsService>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<SettingsService>>();
-            return new SettingsService(logger);
-        });
+        var settingsLoggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
+        var settingsLogger = settingsLoggerFactory.CreateLogger<SettingsService>();
+        var settingsService = new SettingsService(settingsLogger);
+        settingsService.EnsureBootstrapDefaults(cfg);
+        services.AddSingleton<ISettingsService>(settingsService);
 
         // 3️⃣ Infrastructure (requires settings)
-        using (var temp = services.BuildServiceProvider())
-        {
-            var settings = temp.GetRequiredService<ISettingsService>();
-            services.AddInfrastructure(cfg, settings);
-        }
+        services.AddInfrastructure(settingsService);
 
         // 4️⃣ Application + hosted API
         services.AddSingleton<System.Windows.Application>(_ => Current);
@@ -73,6 +68,7 @@ public partial class App : System.Windows.Application
 
         // 6️⃣ Core presentation services
         services.AddSingleton<IThemeManager, ThemeManager>();
+        services.AddSingleton<IApiClientProvider, ApiClientProvider>();
 
         // 7️⃣ Views + ViewModels
         services.AddSingleton<MainWindow>();
@@ -83,11 +79,20 @@ public partial class App : System.Windows.Application
         services.AddTransient<RequestsViewModel>();
         services.AddSingleton<KillTracker>();
         services.AddSingleton<RefineryJobsView>();
+        services.AddTransient<RefineryJobsViewModel>();
         services.AddTransient<UexView>();
         services.AddTransient<UexViewModel>(sp =>
             new UexViewModel(
                 sp.GetRequiredService<IUexService>(),
                 sp.GetRequiredService<ILogger<UexViewModel>>()));
+        // Bind GuideRequest and Api options from configuration
+        services.Configure<GuideRequestOptions>(cfg.GetSection(GuideRequestOptions.SectionName));
+
+        services.AddSingleton<GuideNotificationService>();
+        services.AddSingleton<GuideRequestWatcher>();
+        services.AddSingleton<GuideAssignmentHandler>();
+        services.AddTransient<GuideDashboardViewModel>();
+        services.AddTransient<NewRequestViewModel>();
         services.AddTransient<SettingsView>();
         services.AddSignalR();
         

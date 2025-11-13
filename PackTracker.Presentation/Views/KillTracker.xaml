@@ -14,32 +14,53 @@
         <global:SummaryFormatter         x:Key="SummaryFormatter" />
     </UserControl.Resources>
 
-    <Grid>
-        <Border Background="#181818"
-                CornerRadius="16"
-                Padding="24"
-                Margin="24"
-                BorderBrush="#292929"
-                BorderThickness="1"
-                SnapsToDevicePixels="True"
-                Effect="{DynamicResource DropShadowEffect}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <DockPanel LastChildFill="True">
-                <!-- Header -->
-                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource CardBackground}"
+                CornerRadius="16"
+                Padding="20,16"
+                Margin="0,0,0,20"
+                BorderBrush="{DynamicResource AccentGoldBrush}"
+                BorderThickness="2"
+                Effect="{DynamicResource CardShadow}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="💀"
+                               FontSize="36"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
                     <TextBlock Text="Kill Tracker"
                                FontSize="32"
-                               FontWeight="Bold"
-                               Foreground="#FFD700"
-                               HorizontalAlignment="Center" />
-                    <TextBlock x:Name="ConnectionStatus"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               Margin="0,4,0,0"
-                               Foreground="#FFC107"
-                               Text="Connecting..." />
+                               FontWeight="Black"
+                               Foreground="#C2A23A"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
+                <TextBlock x:Name="ConnectionStatus"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Margin="0,6,0,0"
+                           Foreground="#90EE90"
+                           Text="Connecting..." />
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource SurfaceAltBrush}"
+                CornerRadius="16"
+                Padding="24"
+                BorderBrush="{DynamicResource PanelStrokeBrush}"
+                BorderThickness="1"
+                Effect="{DynamicResource CardShadow}">
+
+            <DockPanel LastChildFill="True">
 
                 <!-- Main Content -->
                 <Grid>
@@ -51,71 +72,79 @@
                     <!-- Summary Cards -->
                     <Grid Grid.Row="0" Margin="0,0,0,20">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" MinWidth="200"/>
                             <ColumnDefinition Width="20" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" MinWidth="200"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- FPS Kills -->
                         <Border Grid.Column="0"
-                                Background="#1E1E1E"
-                                CornerRadius="12"
-                                Padding="18"
-                                BorderBrush="#333"
-                                BorderThickness="1">
+                                Background="{DynamicResource SurfaceAltBrush}"
+                                CornerRadius="14"
+                                Padding="24"
+                                BorderBrush="#4CAF50"
+                                BorderThickness="0,0,0,3"
+                                Effect="{DynamicResource CardShadow}">
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock Text="FPS Kills"
-                                           FontSize="16"
+                                <TextBlock Text="🎯 FPS KILLS"
+                                           FontSize="15"
                                            FontWeight="Bold"
-                                           Foreground="#AAAAAA"
-                                           HorizontalAlignment="Center" />
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,8"/>
                                 <TextBlock x:Name="TxtFpsKillCount"
                                            Text="0"
-                                           FontSize="40"
-                                           FontWeight="Bold"
+                                           FontSize="48"
+                                           FontWeight="Black"
                                            Foreground="#4CAF50"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,6,0,0" />
+                                           HorizontalAlignment="Center" />
                             </StackPanel>
                         </Border>
 
                         <!-- AIR Kills -->
                         <Border Grid.Column="2"
-                                Background="#1E1E1E"
-                                CornerRadius="12"
-                                Padding="18"
-                                BorderBrush="#333"
-                                BorderThickness="1">
+                                Background="{DynamicResource SurfaceAltBrush}"
+                                CornerRadius="14"
+                                Padding="24"
+                                BorderBrush="#E53935"
+                                BorderThickness="0,0,0,3"
+                                Effect="{DynamicResource CardShadow}">
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock Text="Air Kills"
-                                           FontSize="16"
+                                <TextBlock Text="✈️ AIR KILLS"
+                                           FontSize="15"
                                            FontWeight="Bold"
-                                           Foreground="#AAAAAA"
-                                           HorizontalAlignment="Center" />
+                                           Foreground="#888"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,8"/>
                                 <TextBlock x:Name="TxtAirKillCount"
                                            Text="0"
-                                           FontSize="40"
-                                           FontWeight="Bold"
+                                           FontSize="48"
+                                           FontWeight="Black"
                                            Foreground="#E53935"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,6,0,0" />
+                                           HorizontalAlignment="Center" />
                             </StackPanel>
                         </Border>
                     </Grid>
 
                     <!-- Recent Kills List -->
                     <Border Grid.Row="1"
-                            Background="#121212"
-                            CornerRadius="12"
-                            BorderBrush="#2b2b2b"
+                            Background="{DynamicResource CardBackground}"
+                            CornerRadius="14"
+                            BorderBrush="{DynamicResource PanelStrokeBrush}"
                             BorderThickness="1"
-                            Padding="12">
+                            Padding="16">
                         <StackPanel>
-                            <TextBlock Text="Recent Kills"
-                                       FontSize="20"
-                                       FontWeight="Bold"
-                                       Foreground="#FFD700"
-                                       Margin="0,0,0,10" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <TextBlock Text="📜"
+                                           FontSize="20"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="Recent Kills"
+                                           FontSize="20"
+                                           FontWeight="Bold"
+                                           Foreground="#C2A23A"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
@@ -136,8 +165,8 @@
 
                                                 <!-- Card -->
                                                 <Border Grid.Column="1"
-                                                        Background="#1c1c1c"
-                                                        BorderBrush="#2b2b2b"
+                                                        Background="{DynamicResource CardBackground}"
+                                                        BorderBrush="{DynamicResource PanelStrokeBrush}"
                                                         BorderThickness="1"
                                                         CornerRadius="8"
                                                         Padding="10">

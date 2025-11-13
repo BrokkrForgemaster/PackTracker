@@ -23,4 +23,11 @@ public class RequestCreateDto
     public string GroupPreference { get; set; } = "";
     public string SuccessCriteria { get; set; } = "";
     public string RecordingPermission { get; set; } = "";
+
+    // Material/Resource fields
+    public string? MaterialName { get; set; }
+    public int? QuantityNeeded { get; set; }
+    public string? MeetingLocation { get; set; }
+    public string? RewardOffered { get; set; }
+    public int? NumberOfHelpersNeeded { get; set; }
 }

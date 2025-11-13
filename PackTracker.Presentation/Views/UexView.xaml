@@ -12,9 +12,35 @@
             <Setter Property="TextAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
+
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="#C2A23A"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="0.9"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="32">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -22,61 +48,102 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock Text="UEX Trade Routes"
-                   FontSize="36"
-                   FontWeight="Black"
-                   Foreground="Yellow"
-                   HorizontalAlignment="Center"
-                   Margin="0,0,0,20" />
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource CardBackground}"
+                CornerRadius="16"
+                Padding="20,16"
+                Margin="0,0,0,20"
+                BorderBrush="{DynamicResource AccentGoldBrush}"
+                BorderThickness="2"
+                Effect="{DynamicResource CardShadow}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="🚀"
+                           FontSize="36"
+                           VerticalAlignment="Center"
+                           Margin="0,0,12,0"/>
+                <TextBlock Text="UEXCorp Trade Routes"
+                           FontSize="32"
+                           FontWeight="Black"
+                           Foreground="#C2A23A"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
 
         <!-- Controls -->
-        <StackPanel Orientation="Horizontal" Grid.Row="1" HorizontalAlignment="Left">
-            <ComboBox Width="320"
-                      ItemsSource="{Binding Commodities}"
-                      SelectedItem="{Binding SelectedCommodity, Mode=TwoWay}"
-                      DisplayMemberPath="Name"
-                      Background="#1e1e1e"
-                      Foreground="Black"
-                      Padding="6"
-                      FontSize="14"
-                      BorderBrush="#555"
-                      BorderThickness="1" />
-            <Button Content="🔄 Refresh Data"
-                    Command="{Binding RefreshDataCommand}"
-                    Background="#303030"
-                    Foreground="White"
-                    Padding="10,6"
-                    FontWeight="SemiBold"
-                    BorderBrush="#666"
-                    BorderThickness="1"
-                    Cursor="Hand" />
-        </StackPanel>
+        <Border Grid.Row="1"
+                Background="{DynamicResource SurfaceAltBrush}"
+                CornerRadius="12"
+                Padding="16"
+                Margin="0,0,0,16"
+                BorderBrush="{DynamicResource PanelStrokeBrush}"
+                BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="280"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="📦"
+                               FontSize="20"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <ComboBox MinWidth="280"
+                              MaxWidth="400"
+                              ItemsSource="{Binding Commodities}"
+                              SelectedItem="{Binding SelectedCommodity, Mode=TwoWay}"
+                              DisplayMemberPath="Name"
+                              Background="{DynamicResource SurfaceAltBrush}"
+                              Foreground="{DynamicResource TextPrimaryBrush}"
+                              Padding="12,8"
+                              FontSize="14"
+                              BorderBrush="{DynamicResource PanelStrokeBrush}"
+                              BorderThickness="1" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="🔄 Refresh Data"
+                        Command="{Binding RefreshDataCommand}"
+                        Style="{StaticResource ModernButton}"
+                        Margin="12,0,0,0"
+                        ToolTip="Refresh trade route data"/>
+            </Grid>
+        </Border>
 
         <!-- Main Content -->
-        <Grid Grid.Row="2" Margin="0,20,0,20">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*" />
-                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="2*" MinWidth="500"/>
+                <ColumnDefinition Width="*" MinWidth="350"/>
             </Grid.ColumnDefinitions>
 
             <!-- LEFT: All Routes Table -->
-            <!-- LEFT: All Routes Table -->
-            <Border Background="#181818"
-                    CornerRadius="12"
-                    Padding="16"
-                    Margin="0,0,8,0">
+            <Border Grid.Column="0"
+                    Background="{DynamicResource SurfaceAltBrush}"
+                    CornerRadius="16"
+                    Padding="20"
+                    Margin="0,0,12,0"
+                    BorderBrush="{DynamicResource PanelStrokeBrush}"
+                    BorderThickness="1"
+                    Effect="{DynamicResource CardShadow}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="All Trade Routes"
-                               FontSize="24"
-                               FontWeight="Bold"
-                               Foreground="#FFD700"
-                               Margin="0,0,0,8" />
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="📊"
+                                   FontSize="24"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+                        <TextBlock Text="All Trade Routes"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="#C2A23A"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
 
                     <DataGrid Grid.Row="1"
                               ItemsSource="{Binding AllRoutes}"
@@ -107,7 +174,7 @@
                                 <Setter Property="FontWeight" Value="Bold" />
                                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                                 <Setter Property="Padding" Value="8,6" />
-                                <Setter Property="BorderBrush" Value="#2b2b2b" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource PanelStrokeBrush}" />
                                 <Setter Property="BorderThickness" Value="0,0,1,1" />
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
@@ -146,111 +213,193 @@
 
 
             <!-- RIGHT: Top Routes and Best Route Summary -->
-            <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                <!-- Top Routes -->
-                <Border Background="#1e1e1e"
-                        CornerRadius="12"
-                        Padding="16"
-                        Margin="0,0,0,10">
-                    <StackPanel>
-                        <TextBlock Text="Top Routes (Highest ROI)"
-                                   FontWeight="Bold"
-                                   FontSize="18"
-                                   Foreground="#FFD700"
-                                   Margin="0,0,0,10" />
-                        <ItemsControl ItemsSource="{Binding TopRoutes}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,4,0,4"
-                                            Padding="8"
-                                            CornerRadius="6"
-                                            Background="#252525">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding OriginTerminalName}" Foreground="White"
-                                                       FontWeight="Bold" FontSize="12" />
-                                            <TextBlock Text="{Binding DestinationTerminalName}" Foreground="#ccc"
-                                                       FontSize="12" />
-                                            <TextBlock Text="{Binding PriceRoi, StringFormat='ROI: {0:N2}%'}"
-                                                       Foreground="#90EE90" FontSize="14" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-
-                <!-- Best Route -->
-                <Border Background="#1e1e1e"
-                        CornerRadius="12"
-                        Padding="16">
-                    <StackPanel>
-                        <TextBlock Text="Best Route"
-                                   FontWeight="Bold"
-                                   FontSize="18"
-                                   Foreground="#FFD700"
-                                   Margin="0,0,0,10" />
+            <ScrollViewer Grid.Column="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <!-- Top Routes -->
+                    <Border Background="{DynamicResource SurfaceAltBrush}"
+                            CornerRadius="16"
+                            Padding="20"
+                            Margin="0,0,0,16"
+                            BorderBrush="{DynamicResource PanelStrokeBrush}"
+                            BorderThickness="1"
+                            Effect="{DynamicResource CardShadow}">
                         <StackPanel>
-                            <TextBlock Text="{Binding BestRoute.DestinationTerminalName}" FontSize="16"
-                                       FontWeight="Bold" Foreground="#FFD700" />
-                            <TextBlock Text="{Binding BestRoute.PriceRoi, StringFormat='ROI: {0:N2}%'}"
-                                       Foreground="#90EE90" Margin="0,2,0,0" FontSize="12" />
-                            <TextBlock Text="{Binding BestRoute.Profit, StringFormat='Profit: {0:N0} aUEC'}"
-                                       Foreground="#fff" Margin="0,2,0,0" FontSize="12" />
-                            <TextBlock Text="{Binding BestRoute.Distance, StringFormat='Distance: {0:N1} km'}"
-                                       Foreground="#bbb" Margin="0,2,0,0" FontSize="12" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <TextBlock Text="⭐"
+                                           FontSize="20"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="Top Routes"
+                                           FontWeight="Bold"
+                                           FontSize="18"
+                                           Foreground="#C2A23A"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding TopRoutes}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,10"
+                                                Padding="12"
+                                                CornerRadius="8"
+                                                Background="{DynamicResource CardBackground}"
+                                                BorderBrush="{DynamicResource PanelStrokeBrush}"
+                                                BorderThickness="1">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding OriginTerminalName}"
+                                                           Foreground="White"
+                                                           FontWeight="Bold"
+                                                           FontSize="13"/>
+                                                <TextBlock Text="{Binding DestinationTerminalName}"
+                                                           Foreground="#BBB"
+                                                           FontSize="12"
+                                                           Margin="0,2,0,4"/>
+                                                <Border Background="#90EE90"
+                                                        CornerRadius="4"
+                                                        Padding="6,3"
+                                                        HorizontalAlignment="Left">
+                                                    <TextBlock Text="{Binding PriceRoi, StringFormat='ROI: {0:N2}%'}"
+                                                               Foreground="Black"
+                                                               FontSize="12"
+                                                               FontWeight="Bold"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
-                <!-- SHIP TRADE PROFIT ESTIMATOR -->
-                <Border Background="#1e1e1e"
-                        CornerRadius="12"
-                        Padding="16"
-                        Margin="0,10,0,0">
-                    <StackPanel>
-                        <TextBlock Text="Ship Trade Profit Estimator"
-                                   FontWeight="Bold"
-                                   FontSize="18"
-                                   Foreground="#FFD700"
-                                   Margin="0,0,0,10" />
+                    </Border>
 
-                        <!-- Ship Selector -->
-                        <ComboBox ItemsSource="{Binding Ships}"
-                                  SelectedItem="{Binding SelectedShip, Mode=TwoWay}"
-                                  DisplayMemberPath="NameFull"
-                                  Background="#101014"
-                                  Foreground="Black"
-                                  FontSize="14"
-                                  Padding="6"
-                                  BorderBrush="#555"
-                                  BorderThickness="1"
-                                  Margin="0,0,0,8"
-                                  ToolTip="Select ship to calculate trade profits" />
+                    <!-- Best Route -->
+                    <Border Background="{DynamicResource SurfaceAltBrush}"
+                            CornerRadius="16"
+                            Padding="20"
+                            Margin="0,0,0,16"
+                            BorderBrush="{DynamicResource AccentGoldBrush}"
+                            BorderThickness="2"
+                            Effect="{DynamicResource CardShadow}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <TextBlock Text="🏆"
+                                           FontSize="20"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="Best Route"
+                                           FontWeight="Bold"
+                                           FontSize="18"
+                                           Foreground="#C2A23A"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
 
-                        <!-- Optional Ship Image -->
-                        <Border Height="200"
-                                Margin="0,6,0,6"
-                                Background="#151515"
-                                CornerRadius="6"
-                                Visibility="{Binding SelectedShip.UrlPhoto, Converter={StaticResource NullToVisibilityConverter}}">
-                            <Image Source="{Binding SelectedShip.UrlPhoto}"
-                                   Stretch="UniformToFill"
-                                   ClipToBounds="True"/>
-                        </Border>
-
-                        <!-- Ship Details -->
-                        <StackPanel Margin="0,4,0,0">
-                            <TextBlock Text="{Binding SelectedShip.CompanyName, StringFormat='Manufacturer: {0}'}"
-                                       Foreground="White" FontSize="14" />
-                            <TextBlock Text="{Binding SelectedShip.Scu, StringFormat='Cargo Capacity: {0:N0} SCU'}"
-                                       Foreground="White" FontSize="14" />
-                            <TextBlock Text="{Binding EstimatedProfit, StringFormat='Est. Profit: {0:N0} aUEC'}"
-                                       Foreground="#90EE90" FontSize="16" FontWeight="Bold" Margin="0,6,0,0" />
+                            <Border Background="{DynamicResource CardBackground}"
+                                    CornerRadius="10"
+                                    Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding BestRoute.DestinationTerminalName}"
+                                               FontSize="16"
+                                               FontWeight="Bold"
+                                               Foreground="#C2A23A"/>
+                                    <Border Background="#90EE90"
+                                            CornerRadius="6"
+                                            Padding="8,4"
+                                            Margin="0,8,0,8"
+                                            HorizontalAlignment="Left">
+                                        <TextBlock Text="{Binding BestRoute.PriceRoi, StringFormat='ROI: {0:N2}%'}"
+                                                   Foreground="Black"
+                                                   FontSize="14"
+                                                   FontWeight="Bold"/>
+                                    </Border>
+                                    <StackPanel>
+                                        <TextBlock Foreground="#CCC" FontSize="12">
+                                            <Run Text="💰 Profit:" FontWeight="SemiBold"/>
+                                            <Run Text="{Binding BestRoute.Profit, StringFormat='{}{0:N0} aUEC'}" Foreground="White"/>
+                                        </TextBlock>
+                                        <TextBlock Foreground="#CCC" FontSize="12" Margin="0,4,0,0">
+                                            <Run Text="📏 Distance:" FontWeight="SemiBold"/>
+                                            <Run Text="{Binding BestRoute.Distance, StringFormat='{}{0:N1} km'}" Foreground="White"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
+                    </Border>
+                    <!-- SHIP TRADE PROFIT ESTIMATOR -->
+                    <Border Background="{DynamicResource SurfaceAltBrush}"
+                            CornerRadius="16"
+                            Padding="20"
+                            BorderBrush="{DynamicResource PanelStrokeBrush}"
+                            BorderThickness="1"
+                            Effect="{DynamicResource CardShadow}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <TextBlock Text="🚢"
+                                           FontSize="20"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="Profit Calculator"
+                                           FontWeight="Bold"
+                                           FontSize="18"
+                                           Foreground="#C2A23A"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
 
-            </StackPanel>
+                            <!-- Ship Selector -->
+                            <ComboBox ItemsSource="{Binding Ships}"
+                                      SelectedItem="{Binding SelectedShip, Mode=TwoWay}"
+                                      DisplayMemberPath="NameFull"
+                                      Background="{DynamicResource SurfaceAltBrush}"
+                                      Foreground="{DynamicResource TextPrimaryBrush}"
+                                      FontSize="13"
+                                      Padding="10,8"
+                                      BorderBrush="{DynamicResource PanelStrokeBrush}"
+                                      BorderThickness="1"
+                                      Margin="0,0,0,12"
+                                      ToolTip="Select ship to calculate trade profits" />
+
+                            <!-- Optional Ship Image -->
+                            <Border Height="180"
+                                    Margin="0,0,0,12"
+                                    Background="{DynamicResource CardBackground}"
+                                    CornerRadius="10"
+                                    BorderBrush="{DynamicResource PanelStrokeBrush}"
+                                    BorderThickness="1"
+                                    Visibility="{Binding SelectedShip.UrlPhoto, Converter={StaticResource NullToVisibilityConverter}}">
+                                <Image Source="{Binding SelectedShip.UrlPhoto}"
+                                       Stretch="UniformToFill"
+                                       ClipToBounds="True"/>
+                            </Border>
+
+                            <!-- Ship Details -->
+                            <Border Background="{DynamicResource CardBackground}"
+                                    CornerRadius="10"
+                                    Padding="14">
+                                <StackPanel>
+                                    <TextBlock Foreground="#CCC" FontSize="12" Margin="0,0,0,4">
+                                        <Run Text="🏭 Manufacturer:" FontWeight="SemiBold"/>
+                                        <Run Text="{Binding SelectedShip.CompanyName}" Foreground="White"/>
+                                    </TextBlock>
+                                    <TextBlock Foreground="#CCC" FontSize="12" Margin="0,0,0,10">
+                                        <Run Text="📦 Cargo:" FontWeight="SemiBold"/>
+                                        <Run Text="{Binding SelectedShip.Scu, StringFormat='{}{0:N0} SCU'}" Foreground="White"/>
+                                    </TextBlock>
+                                    <Border Background="#C2A23A"
+                                            CornerRadius="8"
+                                            Padding="10,6">
+                                        <TextBlock HorizontalAlignment="Center">
+                                            <Run Text="Est. Profit:" FontWeight="Bold" FontSize="12" Foreground="Black"/>
+                                            <Run Text="{Binding EstimatedProfit, StringFormat='{}{0:N0} aUEC'}"
+                                                 FontSize="16" FontWeight="Bold" Foreground="Black"/>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
       
 

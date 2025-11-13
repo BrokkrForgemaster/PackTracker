@@ -1,19 +1,27 @@
+using System.Text.Json.Serialization;
+
 namespace PackTracker.Application.DTOs.Regolith;
 
-public class RegolithResponseWrapper<T>
+public class RegolithProfileResponse
 {
-    public RegolithData<T> Data { get; set; } = new();
-    
+    [JsonPropertyName("data")]
+    public RegolithProfileData Data { get; set; } = new();
 }
 
-public class RegolithData<T>
+public class RegolithProfileData
 {
-    public T? Profile { get; set; }
-    
-    public List<RegolithRefineryJobDtoRaw>? RegolithRefineryJobs { get; set; } = new();
+    [JsonPropertyName("profile")]
+    public RegolithProfileDtoRaw? Profile { get; set; }
 }
 
 public class RegolithRefineryJobsResponse
 {
-    public List<RegolithRefineryJobDtoRaw> Jobs { get; set; } = new();
+    [JsonPropertyName("data")]
+    public RegolithRefineryJobsData Data { get; set; } = new();
+}
+
+public class RegolithRefineryJobsData
+{
+    [JsonPropertyName("refineryJobs")]
+    public List<RegolithRefineryJobDtoRaw> RefineryJobs { get; set; } = new();
 }

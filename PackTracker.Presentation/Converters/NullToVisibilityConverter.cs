@@ -9,7 +9,15 @@ namespace PackTracker.Presentation.Converters
     {
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            return value == null ? Visibility.Collapsed : Visibility.Visible;
+            bool isInverse = parameter?.ToString()?.Equals("Inverse", StringComparison.OrdinalIgnoreCase) == true;
+            bool isNull = value == null;
+
+            if (isInverse)
+            {
+                return isNull ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            return isNull ? Visibility.Collapsed : Visibility.Visible;
         }
 
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -41,6 +41,14 @@ public class RequestTicket
     public string SuccessCriteria { get; set; } = "";
     
     public string RecordingPermission { get; set; } = "";
+
+    // Material/Resource Request Fields
+    public string? MaterialName { get; set; }           // e.g., "Quantanium", "Hadanite", "Medical Supplies"
+    public int? QuantityNeeded { get; set; }            // Amount needed
+    public string? MeetingLocation { get; set; }        // Where to meet/deliver (e.g., "Port Olisar", "Crusader L1")
+    public string? RewardOffered { get; set; }          // aUEC amount or trade offer
+    public int? NumberOfHelpersNeeded { get; set; }     // How many people needed (for crew/escort requests)
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }

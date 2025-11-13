@@ -21,6 +21,8 @@ public class AppDbContext : DbContext
     public DbSet<CommodityPrice> CommodityPrices => Set<CommodityPrice>();
     public DbSet<RequestTicket> RequestTickets => Set<RequestTicket>();
     
+    public DbSet<GuideRequest> GuideRequests { get; set; } = null!;
+    
     public DbSet<Kill> KillEntries { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -183,8 +185,26 @@ public class AppDbContext : DbContext
             e.Property(x => x.AssignedToUserId).HasMaxLength(64);
             e.Property(x => x.AssignedToDisplayName).HasMaxLength(64);
 
+            // Material/Resource request fields
+            e.Property(x => x.MaterialName).HasMaxLength(100);
+            e.Property(x => x.MeetingLocation).HasMaxLength(200);
+            e.Property(x => x.RewardOffered).HasMaxLength(100);
+
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             e.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+        });
+        
+        modelBuilder.Entity<GuideRequest>(entity =>
+        {
+            entity.HasKey(g => g.Id);
+            entity.HasIndex(g => g.ThreadId).IsUnique();
+            entity.Property(g => g.Title).HasMaxLength(200).IsRequired();
+            entity.Property(g => g.Requester).HasMaxLength(100).IsRequired();
+            entity.Property(g => g.Status).HasMaxLength(50).IsRequired();
+            entity.Property(g => g.CreatedAt).IsRequired();
+
+            // Assignment tracking fields (nullable)
+            entity.Property(g => g.AssignedToUsername).HasMaxLength(100);
         });
     }
 }

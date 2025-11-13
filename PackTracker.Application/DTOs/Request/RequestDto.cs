@@ -16,4 +16,11 @@ public sealed class RequestDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    // Material/Resource fields
+    public string? MaterialName { get; set; }
+    public int? QuantityNeeded { get; set; }
+    public string? MeetingLocation { get; set; }
+    public string? RewardOffered { get; set; }
+    public int? NumberOfHelpersNeeded { get; set; }
 }

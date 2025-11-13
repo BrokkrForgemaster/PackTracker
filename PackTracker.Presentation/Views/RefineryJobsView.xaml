@@ -11,109 +11,237 @@
     <UserControl.Resources>
         <!-- Color converter for job status -->
         <global:StatusToColorConverter x:Key="StatusToColorConverter" />
+        <global:ProcessingToVisibleConverter x:Key="ProcessingToVisibleConverter" />
     </UserControl.Resources>
 
-    <Grid Margin="32">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Text="Regolith Refinery Operations"
-                   FontSize="36"
-                   FontWeight="Black"
-                   Foreground="#FFD700"
-                   HorizontalAlignment="Center"
-                   Margin="0 0 0 20" />
-
-        <!-- Refinery Jobs List -->
-        <Border Grid.Row="1"
-                Background="#181818"
+        <!-- Header with Icon -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource CardBackground}"
                 CornerRadius="16"
-                Padding="20"
-                BorderBrush="#2B2B2B"
+                Padding="20,16"
+                Margin="0,0,0,20"
+                BorderBrush="{DynamicResource AccentGoldBrush}"
+                BorderThickness="2"
+                Effect="{DynamicResource CardShadow}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="⚙️"
+                           FontSize="36"
+                           VerticalAlignment="Center"
+                           Margin="0,0,12,0"/>
+                <TextBlock Text="Regolith Refinery Operations"
+                           FontSize="32"
+                           FontWeight="Black"
+                           Foreground="#C2A23A"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Responsive Refinery Jobs List -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource SurfaceAltBrush}"
+                CornerRadius="16"
+                Padding="24"
+                BorderBrush="{DynamicResource PanelStrokeBrush}"
                 BorderThickness="1"
-                Effect="{DynamicResource DropShadowEffect}">
+                Effect="{DynamicResource CardShadow}">
 
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
 
                 <StackPanel>
-                    <TextBlock Text="Active Refinery Jobs"
-                               FontSize="22"
+                    <TextBlock Text="🔥 Active Jobs"
+                               FontSize="24"
                                FontWeight="Bold"
-                               Foreground="#FFD700"
-                               Margin="0 0 0 12"/>
+                               Foreground="#C2A23A"
+                               Margin="0,0,0,16"/>
 
+                    <!-- Responsive card grid -->
                     <ItemsControl ItemsSource="{Binding RefineryJobs}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal" ItemWidth="400" ItemHeight="Auto"/>
+                                <WrapPanel Orientation="Horizontal"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
 
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#202020"
-                                        CornerRadius="12"
-                                        Padding="16"
-                                        Margin="0 10 10 0"
-                                        BorderBrush="#303030"
-                                        BorderThickness="1">
+                                <Border Background="{DynamicResource SurfaceAltBrush}"
+                                        CornerRadius="14"
+                                        Padding="20"
+                                        Margin="0,0,16,16"
+                                        MinWidth="320"
+                                        MaxWidth="380"
+                                        BorderBrush="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
+                                        BorderThickness="0,0,0,3"
+                                        Effect="{DynamicResource CardShadow}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#2A2A2A"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+
                                     <StackPanel>
-                                        <!-- Job Location -->
-                                        <TextBlock Text="{Binding Location}"
-                                                   FontSize="18"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#FFD700"
-                                                   TextWrapping="Wrap"/>
+                                        <!-- Header with Status Badge -->
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- Material -->
-                                        <TextBlock Text="{Binding Material}"
-                                                   FontSize="14"
-                                                   Foreground="White"
-                                                   Margin="0 2 0 10"
-                                                   TextWrapping="Wrap"/>
+                                            <!-- Location Icon + Name -->
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                <TextBlock Text="📍"
+                                                           FontSize="18"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,6,0"/>
+                                                <TextBlock Text="{Binding Location}"
+                                                           FontSize="18"
+                                                           FontWeight="Bold"
+                                                           Foreground="#C2A23A"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
 
-                                        <!-- Quantity + Status Row -->
-                                        <DockPanel Margin="0 0 0 4">
-                                            <TextBlock Text="{Binding Status}"
-                                                       DockPanel.Dock="Left"
-                                                       Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
-                                                       FontWeight="Bold"
-                                                       FontSize="13"/>
-                                            <TextBlock Text="{Binding Quantity, StringFormat={}{0:N0} SCU}"
-                                                       DockPanel.Dock="Right"
-                                                       Foreground="#AAA"
-                                                       FontSize="13"/>
-                                        </DockPanel>
+                                            <!-- Status Badge -->
+                                            <Border Grid.Column="1"
+                                                    Background="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
+                                                    CornerRadius="12"
+                                                    Padding="10,4"
+                                                    VerticalAlignment="Center"
+                                                    Margin="8,0,0,0">
+                                                <TextBlock Text="{Binding Status}"
+                                                           Foreground="White"
+                                                           FontWeight="Bold"
+                                                           FontSize="11"/>
+                                            </Border>
+                                        </Grid>
 
-                                        <!-- Progress bar -->
-                                        <ProgressBar Minimum="0"
-                                                     Maximum="100"
-                                                     Value="{Binding Progress}"
-                                                     Height="6"
-                                                     Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
-                                                     Background="#333"/>
+                                        <!-- Material Info -->
+                                        <Border Background="{DynamicResource CardBackground}"
+                                                CornerRadius="8"
+                                                Padding="12"
+                                                Margin="0,0,0,12">
+                                            <StackPanel>
+                                                <TextBlock Text="Material"
+                                                           Foreground="#888"
+                                                           FontSize="11"
+                                                           Margin="0,0,0,4"/>
+                                                <TextBlock Text="{Binding Material}"
+                                                           FontSize="15"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="White"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
 
-                                        <!-- Times -->
-                                        <StackPanel Orientation="Horizontal"
-                                                    HorizontalAlignment="Center">
-                                            <TextBlock Text="{Binding SubmittedAt, StringFormat='Started: {0:t}'}"
+                                        <!-- Quantity -->
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0"
+                                                       Text="Quantity"
                                                        Foreground="#888"
-                                                       FontSize="12"/>
-                                            <TextBlock Text="{Binding CompletedAt, StringFormat='Completed: {0:t}'}"
-                                                       Foreground="#666"
-                                                       FontSize="12"/>
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Quantity, StringFormat={}{0:N0} SCU}"
+                                                       Foreground="#C2A23A"
+                                                       FontSize="16"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Progress Section -->
+                                        <StackPanel Margin="0,0,0,12">
+                                            <Grid Margin="0,0,0,6">
+                                                <TextBlock Text="Progress"
+                                                           Foreground="#888"
+                                                           FontSize="11"
+                                                           HorizontalAlignment="Left"/>
+                                                <TextBlock Text="{Binding Progress, StringFormat={}{0:N0}%}"
+                                                           Foreground="#C2A23A"
+                                                           FontSize="12"
+                                                           FontWeight="Bold"
+                                                           HorizontalAlignment="Right"/>
+                                            </Grid>
+
+                                            <!-- Modern Progress Bar -->
+                                            <ProgressBar Minimum="0"
+                                                         Maximum="100"
+                                                         Value="{Binding Progress}"
+                                                         Height="10"
+                                                         Background="{DynamicResource CardBackground}"
+                                                         Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
+                                                         BorderThickness="0">
+                                                <ProgressBar.Style>
+                                                    <Style TargetType="ProgressBar">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="ProgressBar">
+                                                                    <Border Background="{TemplateBinding Background}"
+                                                                            CornerRadius="6"
+                                                                            ClipToBounds="True">
+                                                                        <Border x:Name="PART_Track"
+                                                                                CornerRadius="6"
+                                                                                Background="{DynamicResource CardBackground}">
+                                                                            <Border x:Name="PART_Indicator"
+                                                                                    Background="{TemplateBinding Foreground}"
+                                                                                    CornerRadius="6"
+                                                                                    HorizontalAlignment="Left"/>
+                                                                        </Border>
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </ProgressBar.Style>
+                                            </ProgressBar>
                                         </StackPanel>
 
-                                        <!-- Remaining Time -->
-                                        <TextBlock Text="{Binding RemainingTime, StringFormat='Time Left: {0}'}"
-                                                   Foreground="#90EE90"
-                                                   FontSize="12"
-                                                   Margin="0 2 0 0"
-                                                   Visibility="{Binding Status, Converter={StaticResource ProcessingToVisibleConverter}}"/>
+                                        <!-- Time Information -->
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="⏱️ Started: "
+                                                           Foreground="#666"
+                                                           FontSize="11"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding SubmittedAt, StringFormat='{}{0:g}'}"
+                                                           Foreground="#888"
+                                                           FontSize="11"/>
+                                            </Grid>
+
+                                            <!-- Remaining Time (only for processing) -->
+                                            <StackPanel Orientation="Horizontal"
+                                                        Visibility="{Binding Status, Converter={StaticResource ProcessingToVisibleConverter}}">
+                                                <TextBlock Text="⏳ Time Left: "
+                                                           Foreground="#90EE90"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding RemainingTime}"
+                                                           Foreground="#90EE90"
+                                                           FontSize="12"
+                                                           FontWeight="Bold"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

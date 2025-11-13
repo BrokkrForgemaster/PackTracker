@@ -1,10 +1,13 @@
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +39,7 @@ public class ApiHostedService : IHostedService
     private IHost? _apiHost;
     private readonly ISettingsService _settingsService;
     private readonly ILogger<ApiHostedService> _logger;
+    private string _baseUrl = "http://localhost:5001";
 
     public ApiHostedService(ISettingsService settingsService, ILogger<ApiHostedService> logger)
     {
@@ -45,13 +49,18 @@ public class ApiHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (_apiHost is not null)
+            return;
+
         try
         {
-            _logger.LogInformation("🚀 Initializing embedded PackTracker API...");
+            _baseUrl = "http://localhost:5001"; // hardcode for testing
 
-            // Load layered config
+
+            _logger.LogInformation("🚀 Initializing embedded PackTracker API on {Url}...", _baseUrl);
             var config = new ConfigurationBuilder()
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true, reloadOnChange: true)
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true,
+                    reloadOnChange: true)
                 .AddUserSecrets<ApiHostedService>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();
@@ -60,11 +69,17 @@ public class ApiHostedService : IHostedService
 
             // Merge config priorities (Environment > appsettings > user settings)
             settings.JwtKey = config["Jwt:Key"] ?? settings.JwtKey;
+            settings.JwtIssuer = config["Jwt:Issuer"] ?? settings.JwtIssuer ?? "PackTracker";
+            settings.JwtAudience = config["Jwt:Audience"] ?? settings.JwtAudience ?? "PackTrackerClient";
+
             settings.ConnectionString = config.GetConnectionString("DefaultConnection") ?? settings.ConnectionString;
             settings.DiscordClientId = config["Authentication:Discord:ClientId"] ?? settings.DiscordClientId;
-            settings.DiscordClientSecret = config["Authentication:Discord:ClientSecret"] ?? settings.DiscordClientSecret;
-            settings.DiscordCallbackPath = config["Authentication:Discord:CallbackPath"] ?? settings.DiscordCallbackPath ?? "/signin-discord";
-            settings.DiscordRequiredGuildId = config["Authentication:Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
+            settings.DiscordClientSecret =
+                config["Authentication:Discord:ClientSecret"] ?? settings.DiscordClientSecret;
+            settings.DiscordCallbackPath = config["Authentication:Discord:CallbackPath"] ??
+                                           settings.DiscordCallbackPath ?? "/signin-discord";
+            settings.DiscordRequiredGuildId =
+                config["Authentication:Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
             settings.RegolithApiKey = config["Regolith:ApiKey"] ?? settings.RegolithApiKey;
             settings.UexCorpApiKey = config["Uex:ApiKey"] ?? settings.UexCorpApiKey;
             settings.UexBaseUrl = config["Uex:BaseUrl"] ?? settings.UexBaseUrl;
@@ -89,22 +104,29 @@ public class ApiHostedService : IHostedService
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseUrls($"http://localhost:5001");
-                    _logger.LogInformation("✅ Embedded API running on http://localhost:5001/api/v1/Auth/login");
-                    
+                    webBuilder.UseUrls(_baseUrl);
+                    _logger.LogInformation("✅ Embedded API running on {Url}/api/v1/Auth/login", _baseUrl);
+
                     // Configure services
-                    
-                  
+
+                    webBuilder.UseContentRoot(AppContext.BaseDirectory);
+                    webBuilder.UseWebRoot(Path.Combine(AppContext.BaseDirectory, "wwwroot"));
                     webBuilder.ConfigureServices(services =>
                     {
-                        
                         services.AddSingleton(_settingsService);
+                        services.AddDataProtection()
+                            .PersistKeysToFileSystem(new DirectoryInfo(
+                                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                    "packtracker", "apihosted")));
+
                         services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
-                        services.AddInfrastructure(config, _settingsService);
-                        
+                        services.AddInfrastructure(_settingsService);
+
                         // Logging & Core
                         services.AddPackTrackerLogging(_settingsService);
-                        services.AddInfrastructure(config, _settingsService);
+                        services.AddInfrastructure(_settingsService);
+                        services.AddHealthChecks();
+                        services.AddMemoryCache();
 
                         // Options pattern
                         services.Configure<RegolithOptions>(o =>
@@ -123,88 +145,28 @@ public class ApiHostedService : IHostedService
                             options.UseNpgsql(settings.ConnectionString));
 
                         // Authentication
-                        services.AddAuthentication(options =>
+                        services.AddAuthentication(o =>
                             {
-                                options.DefaultScheme = "Cookies";
-                                options.DefaultChallengeScheme = "Discord";
+                                o.DefaultScheme = "Cookies";
+                                o.DefaultChallengeScheme = "Discord";
                             })
-                            .AddCookie("Cookies", options =>
+                            .AddCookie("Cookies", o =>
                             {
-                                options.Cookie.SameSite = SameSiteMode.Lax;
-                                options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+                                o.Cookie.SameSite = SameSiteMode.Lax;   // OK for local OAuth
+                                o.Cookie.SecurePolicy = CookieSecurePolicy.None;
                             })
-                            .AddDiscord("Discord", options =>
+                            .AddDiscord("Discord", o =>
                             {
-                                options.ClientId = settings.DiscordClientId!;
-                                options.ClientSecret = settings.DiscordClientSecret!;
-                                options.CallbackPath = settings.DiscordCallbackPath ?? "/signin-discord";
-                                options.SaveTokens = true;
-                                options.Scope.Add("identify");
-                                options.Scope.Add("guilds");
+                                o.ClientId = settings.DiscordClientId!;
+                                o.ClientSecret = settings.DiscordClientSecret!;
+                                o.CallbackPath = settings.DiscordCallbackPath ?? "/signin-discord";
+                                o.SaveTokens = true;
+                                o.Scope.Add("identify");
+                                o.Scope.Add("guilds");
 
-                                options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-                                options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
-                                options.ClaimActions.MapJsonKey("urn:discord:avatar:url", "avatar");
-
-                                options.Events.OnCreatingTicket = async ctx =>
-                                {
-                                    try
-                                    {
-                                        var requiredGuildId = settings.DiscordRequiredGuildId;
-                                        var accessToken = ctx.AccessToken!;
-
-                                        using var client = new HttpClient();
-                                        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
-
-                                        var guildsResponse = await client.GetAsync("https://discord.com/api/users/@me/guilds");
-                                        guildsResponse.EnsureSuccessStatusCode();
-
-                                        var guildsJson = await guildsResponse.Content.ReadAsStringAsync();
-                                        var guilds = System.Text.Json.JsonDocument.Parse(guildsJson).RootElement;
-
-                                        bool isMember = string.IsNullOrWhiteSpace(requiredGuildId) ||
-                                                        guilds.EnumerateArray().Any(g => g.GetProperty("id").GetString() == requiredGuildId);
-
-                                        if (!isMember)
-                                            throw new Exception("User is not a member of the House Wolf server.");
-
-                                        var identity = (ClaimsIdentity)ctx.Principal!.Identity!;
-                                        identity.AddClaim(new Claim(ClaimTypes.Role, "HouseWolfMember"));
-
-                                        var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                                        var discordId = ctx.Principal!.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                                        var username = ctx.Principal!.FindFirstValue(ClaimTypes.Name)!;
-                                        var avatarUrl = ctx.Principal!.FindFirst("urn:discord:avatar:url")?.Value;
-
-                                        var profile = await db.Profiles.SingleOrDefaultAsync(p => p.DiscordId == discordId);
-                                        if (profile == null)
-                                        {
-                                            profile = new Profile
-                                            {
-                                                Id = Guid.NewGuid(),
-                                                DiscordId = discordId,
-                                                Username = username,
-                                                AvatarUrl = avatarUrl,
-                                                CreatedAt = DateTime.UtcNow,
-                                                LastLogin = DateTime.UtcNow
-                                            };
-                                            db.Profiles.Add(profile);
-                                        }
-                                        else
-                                        {
-                                            profile.Username = username;
-                                            profile.AvatarUrl = avatarUrl;
-                                            profile.LastLogin = DateTime.UtcNow;
-                                            db.Profiles.Update(profile);
-                                        }
-
-                                        await db.SaveChangesAsync();
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        ctx.Fail(ex.Message);
-                                    }
-                                };
+                                o.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+                                o.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+                                o.ClaimActions.MapJsonKey("urn:discord:avatar:url", "avatar");
                             })
                             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                             {
@@ -236,7 +198,8 @@ public class ApiHostedService : IHostedService
                             {
                                 Title = "🐺 PackTracker API",
                                 Version = "v1",
-                                Description = "Embedded API powering PackTracker — House Wolf’s logistics and data system.",
+                                Description =
+                                    "Embedded API powering PackTracker — House Wolf’s logistics and data system.",
                                 Contact = new OpenApiContact
                                 {
                                     Name = "House Wolf",
@@ -250,31 +213,25 @@ public class ApiHostedService : IHostedService
                     webBuilder.Configure(app =>
                     {
                         var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
-
-                        if (env.IsDevelopment())
-                            app.UseDeveloperExceptionPage();
-
+                        
                         app.UseRouting();
-                        app.UseMiddleware<ExceptionHandlingMiddleware>();
-
                         app.UseAuthentication();
                         app.UseAuthorization();
-
-                        app.UseSwagger();
-                        app.UseSwaggerUI(c =>
+                        app.UseMiddleware<ExceptionHandlingMiddleware>();
+                        
+                        app.UseEndpoints(endpoints =>
                         {
-                            c.SwaggerEndpoint("/swagger/v1/swagger.json", "PackTracker API v1");
-                            c.RoutePrefix = "swagger";
+                            endpoints.MapControllers();
+                            endpoints.MapHealthChecks("/health");
                         });
-
-                        app.UseEndpoints(endpoints => endpoints.MapControllers());
                     });
                 })
                 .Build();
 
             await _apiHost.StartAsync(cancellationToken);
+            await _settingsService.UpdateSettingsAsync(s => s.ApiBaseUrl = _baseUrl);
 
-            _logger.LogInformation("✅ Embedded API running at http://localhost:5001");
+            _logger.LogInformation("✅ Embedded API running at {Url}", _baseUrl);
         }
         catch (Exception ex)
         {
@@ -299,8 +256,40 @@ public class ApiHostedService : IHostedService
                 continue;
             }
         }
+
         throw new IOException($"No available port found between {start} and {end}");
     }
+
+    private string ResolveBaseUrl(string desiredBaseUrl)
+    {
+        if (!Uri.TryCreate(desiredBaseUrl, UriKind.Absolute, out var uri))
+            uri = new Uri("http://localhost:5001");
+
+        var port = uri.Port;
+        if (!IsPortAvailable(port))
+        {
+            _logger.LogWarning("Port {Port} is unavailable. Selecting an alternate port for the embedded API.", port);
+            port = GetAvailablePort(port + 1, port + 1000);
+        }
+
+        return $"{uri.Scheme}://{uri.Host}:{port}";
+    }
+
+    private static bool IsPortAvailable(int port)
+    {
+        try
+        {
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
+    }
+
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         if (_apiHost == null)

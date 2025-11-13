@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
@@ -18,18 +17,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration,
         ISettingsService settings)
     {
-        var connFromCfg = configuration.GetConnectionString("DefaultConnection");
-        var connFromEnv = Environment.GetEnvironmentVariable("PACKTRACKER__CONNECTIONSTRING");
-        var connFromUser = settings?.GetSettings()?.ConnectionString;
-
-        var connectionString =
-            !string.IsNullOrWhiteSpace(connFromCfg) ? connFromCfg :
-            !string.IsNullOrWhiteSpace(connFromEnv) ? connFromEnv :
-            !string.IsNullOrWhiteSpace(connFromUser) ? connFromUser :
-            throw new InvalidOperationException("❌ No database connection string configured.");
+        var connectionString = settings?.GetSettings().ConnectionString;
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException("❌ No database connection string configured. Set it via the Settings view or user secrets.");
 
         Console.WriteLine($"✅ Using connection: {connectionString.Substring(0, Math.Min(40, connectionString.Length))}...");
 
@@ -58,7 +50,7 @@ public static class DependencyInjection
             if (uexBaseUrl != null) client.BaseAddress = new Uri(uexBaseUrl);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
         });
-
+        services.AddTransient<JwtTokenService>();
         services.AddSingleton<IRequestsService, RequestsService>();
         services.AddSingleton<IKillEventService, KillEventService>();
         services.AddSingleton<IGameLogService, GameLogService>();

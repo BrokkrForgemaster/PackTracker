@@ -1,94 +1,139 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace PackTracker.Infrastructure.Security;
 
 public class JwtTokenService
 {
-    private readonly IConfiguration _config;
     private readonly AppDbContext _db;
+    private readonly ILogger<JwtTokenService> _logger;
+    private readonly string _jwtKey;
+    private readonly string _jwtIssuer;
+    private readonly string _jwtAudience;
+    private readonly int _accessTokenMinutes;
+    private readonly int _refreshTokenDays;
 
-    public JwtTokenService(IConfiguration config, AppDbContext db)
+    public JwtTokenService(
+        IConfiguration config,
+        AppDbContext db,
+        ILogger<JwtTokenService> logger)
     {
-        _config = config;
         _db = db;
+        _logger = logger;
+
+        _jwtKey = config["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt:Key in configuration.");
+        if (_jwtKey.Length < 16)
+            throw new InvalidOperationException("JWT key too short; must be at least 16 characters.");
+
+        _jwtIssuer = config["Jwt:Issuer"] ?? "PackTracker";
+        _jwtAudience = config["Jwt:Audience"] ?? "PackTrackerClient";
+        _accessTokenMinutes = int.TryParse(config["Jwt:ExpiresInMinutes"], out var m) ? m : 60;
+        _refreshTokenDays = int.TryParse(config["Jwt:RefreshTokenDays"], out var d) ? d : 7;
     }
 
-    /// <summary>
-    /// Generate a short-lived access token (JWT).
-    /// </summary>
     public string GenerateAccessToken(Profile user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var keyBytes = Encoding.UTF8.GetBytes(_jwtKey);
+        var creds = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, user.DiscordId ?? ""),
-            new Claim(ClaimTypes.Name, user.Username ?? ""),
-            new Claim(ClaimTypes.Role, "HouseWolfMember")
+            new Claim(ClaimTypes.NameIdentifier, user.DiscordId),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: _jwtIssuer,
+            audience: _jwtAudience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            expires: DateTime.UtcNow.AddMinutes(_accessTokenMinutes),
             signingCredentials: creds
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+        _logger.LogInformation("✅ Issued JWT for {User} expiring in {Minutes} min.", user.Username, _accessTokenMinutes);
+        return jwt;
     }
 
-    /// <summary>
-    /// Generate and persist a refresh token.
-    /// </summary>
     public async Task<RefreshToken> GenerateRefreshTokenAsync(Guid userId, CancellationToken ct)
     {
         var refresh = new RefreshToken
         {
+            Id = Guid.NewGuid(),
             UserId = userId,
-            Token = Convert.ToBase64String(Guid.NewGuid().ToByteArray()),
-            ExpiresAt = DateTime.UtcNow.AddDays(7)
+            Token = Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+                       .Replace("+", "")
+                       .Replace("/", "")
+                       .Replace("=", ""),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenDays),
+            IsRevoked = false
         };
 
-        _db.RefreshTokens.Add(refresh);
+        await _db.RefreshTokens.AddAsync(refresh, ct);
         await _db.SaveChangesAsync(ct);
 
+        _logger.LogInformation("✅ Created refresh token for user {UserId}, expiring in {Days} days.", userId, _refreshTokenDays);
         return refresh;
     }
 
-    /// <summary>
-    /// Validate a refresh token and return its user, or null if invalid.
-    /// </summary>
     public async Task<Profile?> ValidateRefreshTokenAsync(string token, CancellationToken ct)
     {
         var refresh = await _db.RefreshTokens
             .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Token == token, ct);
+            .Include(r => r.Profile)
+            .FirstOrDefaultAsync(r => r.Token == token && !r.IsRevoked, ct);
 
-        if (refresh == null || refresh.IsRevoked)
+        if (refresh == null)
+        {
+            _logger.LogWarning("❌ Invalid or revoked refresh token attempted.");
             return null;
+        }
 
-        return await _db.Profiles.FindAsync(new object[] { refresh.UserId }, ct);
+        if (refresh.ExpiresAt < DateTime.UtcNow)
+        {
+            _logger.LogWarning("⚠️ Expired refresh token used for {UserId}.", refresh.UserId);
+            return null;
+        }
+
+        _logger.LogInformation("✅ Valid refresh token for {UserId}.", refresh.UserId);
+        return refresh.Profile;
     }
 
-    /// <summary>
-    /// Revoke a refresh token so it can’t be reused.
-    /// </summary>
     public async Task RevokeRefreshTokenAsync(string token, CancellationToken ct)
     {
         var refresh = await _db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token, ct);
-        if (refresh != null && !refresh.IsRevoked)
+        if (refresh == null) return;
+
+        refresh = new RefreshToken
         {
-            refresh.RevokedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-        }
+            Id = refresh.Id,
+            UserId = refresh.UserId,
+            Token = refresh.Token,
+            CreatedAt = refresh.CreatedAt,
+            ExpiresAt = refresh.ExpiresAt,
+            IsRevoked = true,
+            RevokedAt = DateTime.UtcNow
+        };
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("🚫 Revoked refresh token for user {UserId}", refresh.UserId);
+    }
+
+    public async Task<(string accessToken, string refreshToken, int expiresIn)> IssueTokenPairAsync(Profile user, CancellationToken ct)
+    {
+        var accessToken = GenerateAccessToken(user);
+        var refresh = await GenerateRefreshTokenAsync(user.Id, ct);
+
+        return (accessToken, refresh.Token, _accessTokenMinutes * 60);
     }
 }
