@@ -1,0 +1,140 @@
+<UserControl x:Class="PackTracker.Presentation.Views.WelcomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:PackTracker.Presentation.Converters" Background="Transparent">
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </UserControl.Resources>
+    <Border Background="{DynamicResource CardBackground}" CornerRadius="18" Effect="{DynamicResource CardShadow}"
+            Padding="32" Margin="32">
+        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="800" MaxWidth="1200"
+                        Width="Auto"> <!-- Title --> <Viewbox Stretch="Uniform" MaxHeight="70" Margin="0,0,0,16">
+                    <TextBlock Text="Welcome to PackTracker" FontWeight="Bold" Foreground="White" FontSize="36"
+                               VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </Viewbox>
+                <TextBlock Text="Before you can use the app, connect your external accounts securely." FontSize="22"
+                           Foreground="White" Margin="0 0 0 32" HorizontalAlignment="Center" TextAlignment="Center" />
+                <!-- Regolith Card -->
+                <Border Background="#220769E1" CornerRadius="14" Padding="24" Margin="0 0 0 24" BorderThickness="1"
+                        BorderBrush="#4400F0FF">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image Source="/Assets/RssSolid.svg" Width="32" Height="32" Margin="0,0,12,0" />
+                            <Viewbox Stretch="Uniform" MaxHeight="44">
+                                <TextBlock Text="Regolith.rocks API Key" FontWeight="SemiBold" Foreground="White"
+                                           FontSize="22" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           TextAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </Viewbox>
+                            <TextBlock x:Name="RegolithCheck" Text="✓" FontSize="22" FontWeight="Bold"
+                                       Foreground="LimeGreen" Margin="12,0,0,0" Visibility="Collapsed"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock FontSize="15" Foreground="White" Margin="0,6,0,8" HorizontalAlignment="Center"
+                                   TextAlignment="Center">
+                            <Run Text="Paste your Regolith.rocks API key here and click Save. " /> <LineBreak />
+                            <Run Text="Don’t have a key? " />
+                            <Hyperlink NavigateUri="https://regolith.rocks"
+                                       RequestNavigate="RegolithLink_RequestNavigate">
+                                <Run Text="Get your api key at: https://regolith.rocks" />
+                            </Hyperlink>
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0" HorizontalAlignment="Center">
+                            <TextBox x:Name="RegolithApiKeyBox" Width="350" FontSize="18" Margin="0,0,8,0"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Button Content="Save" Click="SaveRegolithApiKey_Click" Width="60"
+                                    Style="{DynamicResource SidebarButtonStyle}" />
+                        </StackPanel>
+                        <CheckBox x:Name="RegolithOptOutCheckBox" Content="Skip this for now" Margin="0,10,0,0"
+                                  Checked="OptOutCheckBox_Checked" Unchecked="OptOutCheckBox_Unchecked"
+                                  Foreground="LightGray" />
+                        <TextBlock x:Name="RegolithStatus" FontSize="13" Foreground="LightGreen" Margin="0,8,0,0"
+                                   HorizontalAlignment="Center" TextAlignment="Center" />
+                        <TextBlock Text="(Some features will not work if skipped.)" FontSize="11" Foreground="Orange"
+                                   Margin="0,2,0,0"
+                                   Visibility="{Binding IsChecked, ElementName=RegolithOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </StackPanel>
+                </Border> <!-- UEXCorp API Card -->
+                <Border Background="#220769E1" CornerRadius="14" Padding="24" Margin="0 0 0 24" BorderThickness="1"
+                        BorderBrush="#4400F0FF">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image Source="/Assets/RocketSolid.svg" Width="32" Height="32" Margin="0,0,12,0" />
+                            <Viewbox Stretch="Uniform" MaxHeight="44">
+                                <TextBlock Text="UEXCorp API Key" FontWeight="SemiBold" Foreground="White"
+                                           FontSize="22" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           TextAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </Viewbox>
+                            <TextBlock x:Name="UexcorpCheck" Text="✓" FontSize="22" FontWeight="Bold"
+                                       Foreground="LimeGreen" Margin="12,0,0,0" Visibility="Collapsed"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock FontSize="15" Foreground="White" Margin="0,6,0,8" HorizontalAlignment="Center"
+                                   TextAlignment="Center">
+                            <Run Text="Paste your UEXCorp API key here and click Save. " /> <LineBreak />
+                            <Run Text="Don’t have a key? " />
+                            <Hyperlink NavigateUri="https://uexcorp.space"
+                                       RequestNavigate="UexcorpLink_RequestNavigate">
+                                <Run Text="Get your api key at: https://uexcorp.space" />
+                            </Hyperlink>
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0" HorizontalAlignment="Center">
+                            <TextBox x:Name="UexcorpApiKeyBox" Width="350" FontSize="18" Margin="0,0,8,0"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Button Content="Save" Click="SaveUexCorpApiKey_Click" Width="60"
+                                    Style="{DynamicResource SidebarButtonStyle}" />
+                        </StackPanel>
+                        <CheckBox x:Name="UexcorpOptOutCheckBox" Content="Skip this for now" Margin="0,10,0,0"
+                                  Checked="OptOutCheckBox_Checked" Unchecked="OptOutCheckBox_Unchecked"
+                                  Foreground="LightGray" />
+                        <TextBlock x:Name="UexcorpStatus" FontSize="13" Foreground="LightGreen" Margin="0,8,0,0"
+                                   HorizontalAlignment="Center" TextAlignment="Center" />
+                        <TextBlock Text="(Some features will not work if skipped.)" FontSize="11" Foreground="Orange"
+                                   Margin="0,2,0,0"
+                                   Visibility="{Binding IsChecked, ElementName=UexcorpOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </StackPanel>
+                </Border> <!-- Star Citizen Log Location Card -->
+                <Border Background="#2207E1CA" CornerRadius="14" Padding="24" Margin="0 0 0 24" BorderThickness="1"
+                        BorderBrush="#4418FF00">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image Source="/Assets/SkullCrossbonesSolid.svg" Width="32" Height="32" Margin="0,0,12,0" />
+                            <Viewbox Stretch="Uniform" MaxHeight="44">
+                                <TextBlock Text="Star Citizen Game Log Location" FontWeight="SemiBold"
+                                           Foreground="White" FontSize="22" VerticalAlignment="Center"
+                                           HorizontalAlignment="Center" TextAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Viewbox>
+                            <TextBlock x:Name="LogCheck" Text="✓" FontSize="22" FontWeight="Bold"
+                                       Foreground="LimeGreen" Margin="12,0,0,0" Visibility="Collapsed"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock
+                            Text="Paste your Star Citizen log folder (e.g. C:\Roberts_Space_Industries\StarCitizen\LIVE\Game.log) and click Save."
+                            FontSize="15" Foreground="White" Margin="0,6,0,8" HorizontalAlignment="Center"
+                            TextAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBox x:Name="LogLocationBox" Width="420" FontSize="18" Margin="0,0,8,0"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Button Content="Save" Click="SaveLogLocation_Click" Width="60"
+                                    Style="{DynamicResource SidebarButtonStyle}" />
+                        </StackPanel>
+                        <CheckBox x:Name="LogOptOutCheckBox" Content="Skip this for now" Margin="0,10,0,0"
+                                  Checked="OptOutCheckBox_Checked" Unchecked="OptOutCheckBox_Unchecked"
+                                  Foreground="LightGray" />
+                        <TextBlock x:Name="LogLocationStatus" FontSize="13" Foreground="LightGreen" Margin="0,8,0,0"
+                                   HorizontalAlignment="Center" TextAlignment="Center" />
+                        <TextBlock Text="(Some features will not work if skipped.)" FontSize="11" Foreground="Orange"
+                                   Margin="0,2,0,0"
+                                   Visibility="{Binding IsChecked, ElementName=LogOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </StackPanel>
+                </Border>
+                <!-- Proceed button -->
+                <Button Content="Proceed to App" x:Name="ProceedBtn" Click="ProceedBtn_Click" IsEnabled="False"
+                        Height="46" FontSize="22" Margin="0,16,0,0" Style="{DynamicResource SidebarButtonStyle}"
+                        HorizontalAlignment="Center" Width="220" />
+            </StackPanel>
+        </Viewbox>
+    </Border>
+</UserControl>

@@ -1,8 +1,7 @@
-using Microsoft.AspNetCore.Http;
-using PackTracker.Common.Abstractions;
 using PackTracker.Common.DTOs;
 using System.Net;
 using System.Text.Json;
+using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Api.Middleware;
 

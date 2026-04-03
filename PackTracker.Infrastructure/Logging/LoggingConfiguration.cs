@@ -1,39 +1,64 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Exceptions;
-using Serilog.Sinks.Async;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using PackTracker.Application.Interfaces;
+using Serilog.Events;
 
 namespace PackTracker.Infrastructure.Logging;
 
+/// <summary name="LoggingConfiguration">
+/// Configures Serilog logging for the PackTracker application,
+/// including enrichment with contextual information and file logging.
+/// </summary>
 public static class LoggingConfiguration
 {
-    // Call this early (e.g., before Build) to hook Serilog into the Host pipeline
+    
     public static IHostBuilder UsePackTrackerSerilog(this IHostBuilder hostBuilder) =>
         hostBuilder.UseSerilog((context, services, cfg) =>
         {
             cfg.ReadFrom.Configuration(context.Configuration)
                 .Enrich.WithExceptionDetails()
-                .Enrich.WithEnvironmentName()
+                .Enrich.FromLogContext()
+                .Enrich.WithProperty("Application", "PackTracker")
+                .Enrich.WithMachineName()
                 .Enrich.WithProcessId()
                 .Enrich.WithThreadId()
-                .Enrich.FromLogContext()
-                .WriteTo.Async(a => a.Console());
+                .Enrich.WithCorrelationId();
         });
 
-    // Optional: adds Serilog as ILogger provider in DI for non-host scenarios
-    public static IServiceCollection AddPackTrackerLogging(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddPackTrackerLogging(
+        this IServiceCollection services,
+        ISettingsService? settingsService)
     {
+        var s = settingsService.GetSettings();
+
+        // You can make these come from AppSettings (add properties if you like)
+        var logPath = string.IsNullOrWhiteSpace(s.GameLogFilePath)
+            ? "Logs/packtracker-.log"
+            : s.GameLogFilePath; // or add AppSettings.LogFilePath
+
         Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(configuration)
-            .Enrich.WithExceptionDetails()
-            .Enrich.WithEnvironmentName()
-            .Enrich.WithProcessId()
-            .Enrich.WithThreadId()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
             .Enrich.FromLogContext()
-            .WriteTo.Async(a => a.Console())
+            .WriteTo.Async(wt =>
+            {
+                wt.Console();
+                wt.File(
+                    path: logPath,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 7,
+                    fileSizeLimitBytes: 32 * 1024 * 1024, // numeric here
+                    rollOnFileSizeLimit: true,
+                    shared: true,
+                    outputTemplate:
+                    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}"
+                );
+            })
             .CreateLogger();
 
         services.AddLogging(b =>

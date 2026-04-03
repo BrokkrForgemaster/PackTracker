@@ -1,0 +1,166 @@
+<Window x:Class="PackTracker.Presentation.Views.KillFeedOverlay"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PackTracker Overlay"
+        Height="300"
+        Width="450"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        MouseDown="Window_MouseDown">
+
+    <Grid>
+        <!-- Semi-transparent background with rounded corners -->
+        <Border Background="#99000000"
+           
+                Padding="16"
+                Margin="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Text="Kill Feed"
+                               FontSize="14"
+                               Foreground="White"
+                               VerticalAlignment="Center"/>
+
+                    <Button Grid.Column="1"
+                            Content="✕"
+                            Width="28"
+                            Height="28"
+                            FontSize="16"
+                            Foreground="White"
+                            Background="#44FFFFFF"
+                            BorderThickness="0"
+                            Click="CloseButton_Click"
+                            Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#66FF0000"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
+
+                <!-- Kill Stats -->
+                <Grid Grid.Row="1" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <TextBlock Text="FPS Kills"
+                                   FontSize="8"
+                                   Foreground="LightGray"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TxtFpsKills"
+                                   Text="0"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Foreground="#FF4444"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                        <TextBlock Text="Air Kills"
+                                   FontSize="8"
+                                   Foreground="LightGray"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TxtAirKills"
+                                   Text="0"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Foreground="#4488FF"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Recent Kills List -->
+                <Border Grid.Row="2"
+                        Background="#22FFFFFF"
+                        Opacity="0.3"
+                        CornerRadius="8"
+                        Padding="8">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Height="125">
+                        <ItemsControl x:Name="RecentKillsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#11FFFFFF"
+                                            Opacity="0.8"
+                                            CornerRadius="6"
+                                            Padding="8"
+                                            Margin="0,0,0,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Kill Type Badge -->
+                                            <Border Grid.Column="0"
+                                                    Background="{Binding TypeColor}"
+                                                    CornerRadius="4"
+                                                    Padding="6,2"
+                                                    Margin="0,0,8,0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Type}"
+                                                           FontSize="10"
+                                                           FontWeight="Bold"
+                                                           Foreground="White"/>
+                                            </Border>
+
+                                            <!-- Kill Details -->
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock FontSize="12"
+                                                           Foreground="White"
+                                                           TextWrapping="Wrap">
+                                                    <Run Text="{Binding Attacker}" FontWeight="Bold"/>
+                                                    <Run Text="→"/>
+                                                    <Run Text="{Binding Target}" FontWeight="Bold"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Weapon}"
+                                                           FontSize="10"
+                                                           Foreground="LightGray"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

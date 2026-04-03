@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.Http;
-using PackTracker.Common.Abstractions;
 using System.Diagnostics;
+using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Api.Middleware;
 

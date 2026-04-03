@@ -1,0 +1,101 @@
+<UserControl x:Class="PackTracker.Presentation.Views.LoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Border Background="{DynamicResource CardBackground}"
+            CornerRadius="18"
+            Effect="{DynamicResource CardShadow}"
+            Padding="32"
+            Margin="32">
+        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MinWidth="800"
+                        MaxWidth="1200"
+                        Width="Auto">
+
+                <!-- Title -->
+                <Viewbox Stretch="Uniform" MaxHeight="70" Margin="0,0,0,16">
+                    <TextBlock Text="Login to PackTracker"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               FontSize="36"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </Viewbox>
+
+                <TextBlock Text="Sign in with your Discord account to access PackTracker and verify your House Wolf membership."
+                           FontSize="20"
+                           Foreground="White"
+                           Margin="0 0 0 32"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"/>
+                <TextBlock Text="Your browser will open to Discord. As soon as authentication finishes, PackTracker will move you straight to the dashboard."
+                           FontSize="14"
+                           Foreground="#BEBEBE"
+                           Margin="0 0 0 24"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"/>
+
+                <!-- Discord Login Card -->
+                <Border Background="#2207E1CA"
+                        CornerRadius="14"
+                        Padding="24"
+                        Margin="0 0 0 24"
+                        BorderThickness="1"
+                        BorderBrush="#4400F0FF">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image Source="/Assets/DiscordLogo.svg" Width="32" Height="32" Margin="0,0,12,0"/>
+                            <Viewbox Stretch="Uniform" MaxHeight="44">
+                                <TextBlock Text="Discord Authentication"
+                                           FontWeight="SemiBold"
+                                           Foreground="White"
+                                           FontSize="22"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Viewbox>
+                            <TextBlock x:Name="DiscordCheck"
+                                       Text="✓"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Foreground="LimeGreen"
+                                       Margin="12,0,0,0"
+                                       Visibility="Collapsed"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock FontSize="15"
+                                   Foreground="White"
+                                   Margin="0,6,0,8"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center">
+                            <Run Text="Click below to authenticate via Discord and continue."/>
+                        </TextBlock>
+
+                        <Button x:Name="DiscordLoginButton"
+                                Content="Login with Discord"
+                                Click="DiscordLogin_Click"
+                                Width="240"
+                                Height="46"
+                                FontSize="20"
+                                Style="{DynamicResource SidebarButtonStyle}"
+                                HorizontalAlignment="Center"/>
+
+                        <TextBlock x:Name="DiscordStatus"
+                                   FontSize="13"
+                                   Foreground="LightGreen"
+                                   Margin="0,8,0,0"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </Viewbox>
+    </Border>
+</UserControl>

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using PackTracker.Common.Abstractions;
+using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Infrastructure.Services;
 
