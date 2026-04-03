@@ -55,7 +55,25 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 url += "?" + string.Join("&", query);
 
             using var client = _apiClientProvider.CreateClient();
-            var items = await client.GetFromJsonAsync<List<BlueprintSearchItemDto>>(url)
+            using var response = await client.GetAsync(url);
+            var body = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusMessage = $"Blueprint search failed ({(int)response.StatusCode}): {TrimForDisplay(body)}";
+                Results.Clear();
+                return;
+            }
+
+            if (!IsJsonResponse(response))
+            {
+                StatusMessage = $"Blueprint search returned non-JSON content. First response text: {TrimForDisplay(body)}";
+                Results.Clear();
+                return;
+            }
+
+            var items = System.Text.Json.JsonSerializer.Deserialize<List<BlueprintSearchItemDto>>(body,
+                            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                         ?? new List<BlueprintSearchItemDto>();
 
             Results.Clear();
@@ -90,7 +108,29 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             StatusMessage = "Loading blueprint detail...";
 
             using var client = _apiClientProvider.CreateClient();
-            var detail = await client.GetFromJsonAsync<BlueprintDetailDto>($"api/v1/blueprints/{blueprintId}");
+            using var response = await client.GetAsync($"api/v1/blueprints/{blueprintId}");
+            var body = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusMessage = $"Blueprint detail failed ({(int)response.StatusCode}): {TrimForDisplay(body)}";
+                SelectedBlueprintDetail = null;
+                Materials.Clear();
+                Owners.Clear();
+                return;
+            }
+
+            if (!IsJsonResponse(response))
+            {
+                StatusMessage = $"Blueprint detail returned non-JSON content. First response text: {TrimForDisplay(body)}";
+                SelectedBlueprintDetail = null;
+                Materials.Clear();
+                Owners.Clear();
+                return;
+            }
+
+            var detail = System.Text.Json.JsonSerializer.Deserialize<BlueprintDetailDto>(body,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             SelectedBlueprintDetail = detail;
             Materials.Clear();
@@ -258,6 +298,23 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    private static bool IsJsonResponse(HttpResponseMessage response)
+    {
+        var mediaType = response.Content.Headers.ContentType?.MediaType;
+        return string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(mediaType, "text/json", StringComparison.OrdinalIgnoreCase)
+               || (mediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private static string TrimForDisplay(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "<empty response>";
+
+        var compact = value.Replace("\r", " ").Replace("\n", " ").Trim();
+        return compact.Length <= 180 ? compact : compact[..180] + "...";
     }
 
     private static string BuildCraftingRequestNote(BlueprintDetailDto detail)
