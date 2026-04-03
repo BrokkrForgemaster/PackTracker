@@ -55,7 +55,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 url += "?" + string.Join("&", query);
 
             using var client = _apiClientProvider.CreateClient();
-            var items = await client.GetFromJsonAsync<List<BlueprintSearchItemDto>>(url) ?? new List<BlueprintSearchItemDto>();
+            var items = await client.GetFromJsonAsync<List<BlueprintSearchItemDto>>(url)
+                        ?? new List<BlueprintSearchItemDto>();
 
             Results.Clear();
             foreach (var item in items)
@@ -87,12 +88,14 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         {
             IsLoading = true;
             StatusMessage = "Loading blueprint detail...";
+
             using var client = _apiClientProvider.CreateClient();
             var detail = await client.GetFromJsonAsync<BlueprintDetailDto>($"api/v1/blueprints/{blueprintId}");
 
             SelectedBlueprintDetail = detail;
             Materials.Clear();
             Owners.Clear();
+            SelectedMaterial = null;
 
             foreach (var material in detail?.Materials ?? Array.Empty<BlueprintRecipeMaterialDto>())
                 Materials.Add(material);
@@ -118,14 +121,14 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     {
         if (SelectedBlueprintDetail is null)
         {
-            StatusMessage = "Select a blueprint before registering ownership.";
+            StatusMessage = "Select a blueprint before saving status.";
             return;
         }
 
         try
         {
             IsLoading = true;
-            StatusMessage = "Registering blueprint ownership...";
+            StatusMessage = "Saving blueprint status...";
 
             using var client = _apiClientProvider.CreateClient();
             using var response = await client.PostAsJsonAsync(
@@ -133,7 +136,9 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 new RegisterBlueprintOwnershipRequest
                 {
                     InterestType = SelectedInterestType,
-                    AvailabilityStatus = SelectedInterestType == MemberBlueprintInterestType.Wants ? "Seeking Acquisition" : "Available",
+                    AvailabilityStatus = SelectedInterestType == MemberBlueprintInterestType.Wants
+                        ? "Seeking Acquisition"
+                        : "Available",
                     Notes = SelectedInterestType == MemberBlueprintInterestType.Wants
                         ? "Marked as wanted from Blueprint Explorer"
                         : "Registered from Blueprint Explorer"
@@ -147,7 +152,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Failed to register ownership: {ex.Message}";
+            StatusMessage = $"Failed to save blueprint status: {ex.Message}";
         }
         finally
         {
@@ -167,24 +172,6 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     {
         SelectedInterestType = MemberBlueprintInterestType.Owns;
         await RegisterOwnershipAsync();
-    }
-
-    [RelayCommand]
-    private async Task CreateCraftingRequestAsync()
-    {
-
-            response.EnsureSuccessStatusCode();
-            await LoadBlueprintDetailAsync(SelectedBlueprintDetail.Id);
-            StatusMessage = $"Ownership registered for {SelectedBlueprintDetail.BlueprintName}.";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Failed to register ownership: {ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
     }
 
     [RelayCommand]
