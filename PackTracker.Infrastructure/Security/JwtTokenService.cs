@@ -2,9 +2,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
 
@@ -21,21 +21,23 @@ public class JwtTokenService
     private readonly int _refreshTokenDays;
 
     public JwtTokenService(
-        IConfiguration config,
+        ISettingsService settingsService,
         AppDbContext db,
         ILogger<JwtTokenService> logger)
     {
         _db = db;
         _logger = logger;
 
-        _jwtKey = config["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt:Key in configuration.");
+        var settings = settingsService.GetSettings();
+
+        _jwtKey = settings.JwtKey ?? string.Empty;
         if (_jwtKey.Length < 16)
             throw new InvalidOperationException("JWT key too short; must be at least 16 characters.");
 
-        _jwtIssuer = config["Jwt:Issuer"] ?? "PackTracker";
-        _jwtAudience = config["Jwt:Audience"] ?? "PackTrackerClient";
-        _accessTokenMinutes = int.TryParse(config["Jwt:ExpiresInMinutes"], out var m) ? m : 60;
-        _refreshTokenDays = int.TryParse(config["Jwt:RefreshTokenDays"], out var d) ? d : 7;
+        _jwtIssuer = string.IsNullOrWhiteSpace(settings.JwtIssuer) ? "PackTracker" : settings.JwtIssuer;
+        _jwtAudience = string.IsNullOrWhiteSpace(settings.JwtAudience) ? "PackTrackerClient" : settings.JwtAudience;
+        _accessTokenMinutes = settings.JwtExpiresInMinutes > 0 ? settings.JwtExpiresInMinutes : 60;
+        _refreshTokenDays = 7;
     }
 
     public string GenerateAccessToken(Profile user)
