@@ -11,6 +11,7 @@ using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
+using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
 using Serilog;
 
@@ -30,6 +31,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSingleton<ISettingsService>(settingsService);
 builder.Services.AddInfrastructure(settingsService);
 builder.Services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<IKillEventService, KillEventService>();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddControllers();

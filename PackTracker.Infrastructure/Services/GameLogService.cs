@@ -29,6 +29,8 @@ public class GameLogService : IGameLogService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    public static bool IsReady { get; set; }
+
     #endregion
 
     #region Methods
