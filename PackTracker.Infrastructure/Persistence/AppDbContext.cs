@@ -20,6 +20,15 @@ public class AppDbContext : DbContext
     public DbSet<Commodity> Commodities => Set<Commodity>();
     public DbSet<CommodityPrice> CommodityPrices => Set<CommodityPrice>();
     public DbSet<RequestTicket> RequestTickets => Set<RequestTicket>();
+    public DbSet<Blueprint> Blueprints => Set<Blueprint>();
+    public DbSet<Material> Materials => Set<Material>();
+    public DbSet<BlueprintRecipe> BlueprintRecipes => Set<BlueprintRecipe>();
+    public DbSet<BlueprintRecipeMaterial> BlueprintRecipeMaterials => Set<BlueprintRecipeMaterial>();
+    public DbSet<MaterialSource> MaterialSources => Set<MaterialSource>();
+    public DbSet<MemberBlueprintOwnership> MemberBlueprintOwnerships => Set<MemberBlueprintOwnership>();
+    public DbSet<CraftingRequest> CraftingRequests => Set<CraftingRequest>();
+    public DbSet<MaterialProcurementRequest> MaterialProcurementRequests => Set<MaterialProcurementRequest>();
+    public DbSet<OrgInventoryItem> OrgInventoryItems => Set<OrgInventoryItem>();
     
     public DbSet<GuideRequest> GuideRequests { get; set; } = null!;
     
@@ -205,6 +214,148 @@ public class AppDbContext : DbContext
 
             // Assignment tracking fields (nullable)
             entity.Property(g => g.AssignedToUsername).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<Blueprint>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Slug).IsUnique();
+            entity.Property(x => x.BlueprintName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.CraftedItemName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Category).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Slug).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.AcquisitionSummary).HasMaxLength(500);
+            entity.Property(x => x.AcquisitionLocation).HasMaxLength(200);
+            entity.Property(x => x.AcquisitionMethod).HasMaxLength(100);
+            entity.Property(x => x.SourceVersion).HasMaxLength(100);
+            entity.Property(x => x.DataConfidence).HasMaxLength(50).IsRequired();
+        });
+
+        modelBuilder.Entity<Material>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Slug).IsUnique();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Slug).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.MaterialType).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Tier).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.SourceType).HasConversion<int>();
+        });
+
+        modelBuilder.Entity<BlueprintRecipe>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasOne(x => x.Blueprint)
+                .WithMany()
+                .HasForeignKey(x => x.BlueprintId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(x => x.CraftingStationType).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<BlueprintRecipeMaterial>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.QuantityRequired).HasPrecision(18, 2);
+            entity.Property(x => x.Unit).HasMaxLength(32).IsRequired();
+            entity.HasOne(x => x.BlueprintRecipe)
+                .WithMany()
+                .HasForeignKey(x => x.BlueprintRecipeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Material)
+                .WithMany()
+                .HasForeignKey(x => x.MaterialId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MaterialSource>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.SourceMethod).HasConversion<int>();
+            entity.Property(x => x.Location).HasMaxLength(200);
+            entity.Property(x => x.SourceVersion).HasMaxLength(100);
+            entity.Property(x => x.Confidence).HasMaxLength(50).IsRequired();
+            entity.HasOne(x => x.Material)
+                .WithMany()
+                .HasForeignKey(x => x.MaterialId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MemberBlueprintOwnership>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.OwnershipStatus).HasConversion<int>();
+            entity.Property(x => x.AvailabilityStatus).HasMaxLength(50).IsRequired();
+            entity.HasIndex(x => new { x.BlueprintId, x.MemberProfileId }).IsUnique();
+            entity.HasOne(x => x.Blueprint)
+                .WithMany()
+                .HasForeignKey(x => x.BlueprintId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.MemberProfile)
+                .WithMany()
+                .HasForeignKey(x => x.MemberProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.VerifiedByProfile)
+                .WithMany()
+                .HasForeignKey(x => x.VerifiedByProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CraftingRequest>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Priority).HasConversion<int>();
+            entity.Property(x => x.Status).HasConversion<int>();
+            entity.Property(x => x.DeliveryLocation).HasMaxLength(200);
+            entity.Property(x => x.RewardOffered).HasMaxLength(100);
+            entity.HasOne(x => x.Blueprint)
+                .WithMany()
+                .HasForeignKey(x => x.BlueprintId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.RequesterProfile)
+                .WithMany()
+                .HasForeignKey(x => x.RequesterProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.AssignedCrafterProfile)
+                .WithMany()
+                .HasForeignKey(x => x.AssignedCrafterProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MaterialProcurementRequest>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.QuantityRequested).HasPrecision(18, 2);
+            entity.Property(x => x.QuantityDelivered).HasPrecision(18, 2);
+            entity.Property(x => x.PreferredForm).HasConversion<int>();
+            entity.Property(x => x.Priority).HasConversion<int>();
+            entity.Property(x => x.Status).HasConversion<int>();
+            entity.Property(x => x.DeliveryLocation).HasMaxLength(200);
+            entity.Property(x => x.RewardOffered).HasMaxLength(100);
+            entity.HasOne(x => x.LinkedCraftingRequest)
+                .WithMany()
+                .HasForeignKey(x => x.LinkedCraftingRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.Material)
+                .WithMany()
+                .HasForeignKey(x => x.MaterialId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.AssignedToProfile)
+                .WithMany()
+                .HasForeignKey(x => x.AssignedToProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrgInventoryItem>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.QuantityOnHand).HasPrecision(18, 2);
+            entity.Property(x => x.QuantityReserved).HasPrecision(18, 2);
+            entity.Property(x => x.StorageLocation).HasMaxLength(200);
+            entity.HasIndex(x => x.MaterialId).IsUnique();
+            entity.HasOne(x => x.Material)
+                .WithMany()
+                .HasForeignKey(x => x.MaterialId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

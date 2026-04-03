@@ -123,6 +123,15 @@ namespace PackTracker.Presentation.Views
                     case "RequestHub":
                         NavigateToRequestsHub();
                         break;
+                    case "Blueprints":
+                        NavigateToBlueprintExplorer();
+                        break;
+                    case "CraftingQueue":
+                        NavigateToCraftingQueue();
+                        break;
+                    case "ProcurementQueue":
+                        NavigateToProcurementQueue();
+                        break;
                     case "Settings":
                         NavigateToSettings();
                         break;
@@ -156,6 +165,57 @@ namespace PackTracker.Presentation.Views
                 logger?.LogError(ex, "Failed to navigate to Requests Hub");
                 
                 MessageBox.Show($"Failed to open Requests Hub:\n{ex}", "Navigation Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void NavigateToBlueprintExplorer()
+        {
+            try
+            {
+                var blueprintView = _serviceProvider.GetRequiredService<BlueprintExplorerView>();
+                ContentFrame.Navigate(blueprintView);
+            }
+            catch (Exception ex)
+            {
+                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
+                logger?.LogError(ex, "Failed to navigate to Blueprint Explorer");
+
+                MessageBox.Show($"Failed to open Blueprint Explorer:\n{ex}", "Navigation Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void NavigateToCraftingQueue()
+        {
+            try
+            {
+                var craftingView = _serviceProvider.GetRequiredService<CraftingRequestsView>();
+                ContentFrame.Navigate(craftingView);
+            }
+            catch (Exception ex)
+            {
+                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
+                logger?.LogError(ex, "Failed to navigate to Crafting Queue");
+
+                MessageBox.Show($"Failed to open Crafting Queue:\n{ex}", "Navigation Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void NavigateToProcurementQueue()
+        {
+            try
+            {
+                var procurementView = _serviceProvider.GetRequiredService<ProcurementRequestsView>();
+                ContentFrame.Navigate(procurementView);
+            }
+            catch (Exception ex)
+            {
+                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
+                logger?.LogError(ex, "Failed to navigate to Procurement Queue");
+
+                MessageBox.Show($"Failed to open Procurement Queue:\n{ex}", "Navigation Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

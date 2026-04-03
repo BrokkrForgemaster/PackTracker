@@ -57,7 +57,7 @@
 
                 <!-- Header -->
                 <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,24">
-                    <TextBlock Text="🤝 Request Assistance Hub"
+                    <TextBlock Text="Request Assistance Hub"
                                FontSize="36"
                                FontWeight="Black"
                                Foreground="{DynamicResource TextPrimaryBrush}"
@@ -70,16 +70,16 @@
                                Foreground="#CCCCCC"
                                MaxWidth="900"
                                Margin="0,0,0,16">
-                        Request help from House Wolf members for materials, missions, escorts, and more.
-                        Click a request to view details, or create your own to get assistance from the org.
+                        Coordinate materials, escorts, missions, and ad-hoc support across House Wolf.
+                        Select a request to inspect details, claim responsibility, or close out completed work.
                     </TextBlock>
 
-                    <Border Background="{DynamicResource CardBackground}" CornerRadius="10" Padding="12" Margin="0,0,0,0" MaxWidth="800">
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,0" MaxWidth="860">
                         <TextBlock TextWrapping="Wrap"
                                    FontSize="13"
                                    Foreground="#AAAAAA"
                                    TextAlignment="Center"
-                                   Text="💡 Select a request to see full details including materials, location, and rewards. Use 'Claim' to help someone!"/>
+                                   Text="Tip: refresh after filters change, claim requests you are actively working, and use the detail pane to review reward/location metadata before accepting."/>
                     </Border>
                 </StackPanel>
 
@@ -113,7 +113,7 @@
                               FontSize="14"
                               ToolTip="Filter by status"/>
 
-                    <Button Content="🔄 Refresh"
+                    <Button Content="Refresh"
                             Command="{Binding RefreshCommand}"
                             Style="{StaticResource ModernButton}"
                             Background="#C2A23A"
@@ -292,7 +292,7 @@
                                             Margin="0,0,0,16"
                                             Visibility="{Binding SelectedRequest.MaterialName, Converter={StaticResource NullToVisibilityConverter}}">
                                         <StackPanel>
-                                            <TextBlock Text="📦 Material Details"
+                                            <TextBlock Text="Material Details"
                                                        FontSize="14"
                                                        FontWeight="Bold"
                                                        Foreground="#FFA500"
@@ -358,7 +358,7 @@
                                             Padding="16"
                                             Margin="0,0,0,16">
                                         <StackPanel>
-                                            <TextBlock Text="ℹ️ Request Information"
+                                            <TextBlock Text="Request Information"
                                                        FontSize="14"
                                                        FontWeight="Bold"
                                                        Foreground="#6DB3F2"
@@ -422,7 +422,7 @@
 
                                     <!-- Action Buttons -->
                                     <StackPanel Orientation="Vertical" Margin="0,8,0,0">
-                                        <Button Content="🤝 Claim Request"
+                                        <Button Content="Claim Request"
                                                 Command="{Binding ClaimCommand}"
                                                 Style="{StaticResource ModernButton}"
                                                 Background="#2D8A4E"
@@ -430,7 +430,7 @@
                                                 Margin="0,0,0,8"
                                                 ToolTip="Claim this request to help"/>
 
-                                        <Button Content="✔️ Mark Complete"
+                                        <Button Content="Mark Complete"
                                                 Command="{Binding CompleteCommand}"
                                                 Style="{StaticResource ModernButton}"
                                                 Background="#1E6B3B"
@@ -438,7 +438,7 @@
                                                 Margin="0,0,0,8"
                                                 ToolTip="Mark as completed"/>
 
-                                        <Button Content="🗑️ Delete Request"
+                                        <Button Content="Delete Request"
                                                 Command="{Binding DeleteCommand}"
                                                 Style="{StaticResource ModernButton}"
                                                 Background="#8A2D2D"
@@ -455,7 +455,7 @@
                 <StackPanel Grid.Row="3"
                             Orientation="Horizontal"
                             HorizontalAlignment="Center">
-                    <Button Content="➕ New Request"
+                    <Button Content="New Request"
                             Command="{Binding NewRequestCommand}"
                             Style="{StaticResource ModernButton}"
                             Background="#C2A23A"

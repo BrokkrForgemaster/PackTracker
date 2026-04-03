@@ -210,14 +210,32 @@ Candidate next slices:
 - Kill tracking ingestion and query flow
 - Commodity / UEX data sync
 
+### Priority 4 — New strategic feature track
+Planning artifacts created for the next major PackTracker expansion:
+- `CRAFTING_MINING_PLAN.md`
+- `DATA_SOURCE_STRATEGY.md`
+- `DEPLOYMENT_UPDATE_PLAN.md`
+
+These define the recommended direction for:
+- blueprint search and acquisition visibility
+- material requirement tracking
+- member blueprint ownership
+- crafting requests
+- miner/material procurement requests
+- internal dataset ownership instead of third-party runtime dependency
+- in-app update button and Windows signing strategy
+
 ## Recommendation
-Proceed immediately with:
-1. deeper repo inventory
-2. auth slice stabilization
-3. documentation truth alignment
+Proceed in this order:
+1. close remaining auth/runtime validation
+2. begin implementation of the blueprint/material canonical data model
+3. build blueprint explorer and ownership registry
+4. extend request workflows into crafting + mining procurement
+5. add release/update infrastructure after core feature surface is usable
 
 ## Commander decision point
-Unless redirected, the next implementation pass should focus on:
-- **Auth + profile + WPF handoff**
+The planning phase for the new crafting/mining expansion is now documented.
+The next implementation phase should focus on:
+- **blueprint/material data model + explorer MVP**
 
-That is the highest-leverage route to converting PackTracker from a broad scaffold into a working platform.
+That is the most direct route into meaningful feature delivery after auth stabilization.

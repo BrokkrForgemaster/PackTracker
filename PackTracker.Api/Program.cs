@@ -33,6 +33,7 @@ builder.Services.AddInfrastructure(settingsService);
 builder.Services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IKillEventService, KillEventService>();
+builder.Services.AddScoped<CraftingSeedService>();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddControllers();
@@ -87,6 +88,17 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var scopedServices = scope.ServiceProvider;
+    var db = scopedServices.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+
+    var seedService = scopedServices.GetRequiredService<CraftingSeedService>();
+    var seedPath = Path.Combine(app.Environment.ContentRootPath, "..", "PackTracker.Presentation", "wwwroot", "data", "crafting-seed.json");
+    await seedService.SeedAsync(seedPath);
+}
 
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();

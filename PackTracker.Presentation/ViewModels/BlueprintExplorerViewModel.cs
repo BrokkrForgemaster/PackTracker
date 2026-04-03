@@ -1,0 +1,264 @@
+using System.Collections.ObjectModel;
+using System.Net.Http.Json;
+using System.Text;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Domain.Enums;
+using PackTracker.Presentation.Services;
+
+namespace PackTracker.Presentation.ViewModels;
+
+public partial class BlueprintExplorerViewModel : ObservableObject
+{
+    private readonly IApiClientProvider _apiClientProvider;
+
+    public ObservableCollection<BlueprintSearchItemDto> Results { get; } = new();
+    public ObservableCollection<BlueprintRecipeMaterialDto> Materials { get; } = new();
+    public ObservableCollection<BlueprintOwnerDto> Owners { get; } = new();
+
+    [ObservableProperty] private string searchText = string.Empty;
+    [ObservableProperty] private string categoryFilter = string.Empty;
+    [ObservableProperty] private bool inGameOnly = true;
+    [ObservableProperty] private bool isLoading;
+    [ObservableProperty] private string statusMessage = "Search for an in-game blueprint to begin.";
+    [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
+    [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
+    [ObservableProperty] private BlueprintRecipeMaterialDto? selectedMaterial;
+
+    public BlueprintExplorerViewModel(IApiClientProvider apiClientProvider)
+    {
+        _apiClientProvider = apiClientProvider;
+    }
+
+    [RelayCommand]
+    private async Task SearchAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Searching blueprint catalog...";
+
+            var query = new List<string>();
+            if (!string.IsNullOrWhiteSpace(SearchText))
+                query.Add($"q={Uri.EscapeDataString(SearchText.Trim())}");
+            if (!string.IsNullOrWhiteSpace(CategoryFilter))
+                query.Add($"category={Uri.EscapeDataString(CategoryFilter.Trim())}");
+            query.Add($"inGameOnly={InGameOnly.ToString().ToLowerInvariant()}");
+
+            var url = "api/v1/blueprints";
+            if (query.Count > 0)
+                url += "?" + string.Join("&", query);
+
+            using var client = _apiClientProvider.CreateClient();
+            var items = await client.GetFromJsonAsync<List<BlueprintSearchItemDto>>(url) ?? new List<BlueprintSearchItemDto>();
+
+            Results.Clear();
+            foreach (var item in items)
+                Results.Add(item);
+
+            StatusMessage = Results.Count == 0
+                ? "No blueprints matched your search."
+                : $"Loaded {Results.Count} blueprint results.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Blueprint search failed: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    partial void OnSelectedBlueprintChanged(BlueprintSearchItemDto? value)
+    {
+        if (value is not null)
+            _ = LoadBlueprintDetailAsync(value.Id);
+    }
+
+    private async Task LoadBlueprintDetailAsync(Guid blueprintId)
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Loading blueprint detail...";
+            using var client = _apiClientProvider.CreateClient();
+            var detail = await client.GetFromJsonAsync<BlueprintDetailDto>($"api/v1/blueprints/{blueprintId}");
+
+            SelectedBlueprintDetail = detail;
+            Materials.Clear();
+            Owners.Clear();
+
+            foreach (var material in detail?.Materials ?? Array.Empty<BlueprintRecipeMaterialDto>())
+                Materials.Add(material);
+            foreach (var owner in detail?.Owners ?? Array.Empty<BlueprintOwnerDto>())
+                Owners.Add(owner);
+
+            StatusMessage = detail is null
+                ? "Blueprint detail not found."
+                : $"Loaded {detail.BlueprintName}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to load blueprint detail: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RegisterOwnershipAsync()
+    {
+        if (SelectedBlueprintDetail is null)
+        {
+            StatusMessage = "Select a blueprint before registering ownership.";
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Registering blueprint ownership...";
+
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                $"api/v1/blueprints/{SelectedBlueprintDetail.Id}/ownership",
+                new RegisterBlueprintOwnershipRequest
+                {
+                    AvailabilityStatus = "Available",
+                    Notes = "Registered from Blueprint Explorer"
+                });
+
+            response.EnsureSuccessStatusCode();
+            await LoadBlueprintDetailAsync(SelectedBlueprintDetail.Id);
+            StatusMessage = $"Ownership registered for {SelectedBlueprintDetail.BlueprintName}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to register ownership: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateCraftingRequestAsync()
+    {
+        if (SelectedBlueprintDetail is null)
+        {
+            StatusMessage = "Select a blueprint before creating a crafting request.";
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Creating crafting request...";
+
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/crafting/requests",
+                new CreateCraftingRequestDto
+                {
+                    BlueprintId = SelectedBlueprintDetail.Id,
+                    QuantityRequested = 1,
+                    Priority = RequestPriority.Normal,
+                    DeliveryLocation = "House Wolf Coordination",
+                    Notes = BuildCraftingRequestNote(SelectedBlueprintDetail)
+                });
+
+            response.EnsureSuccessStatusCode();
+            StatusMessage = $"Crafting request created for {SelectedBlueprintDetail.CraftedItemName}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to create crafting request: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateProcurementRequestAsync()
+    {
+        if (SelectedBlueprintDetail is null)
+        {
+            StatusMessage = "Select a blueprint before creating a procurement request.";
+            return;
+        }
+
+        if (SelectedMaterial is null)
+        {
+            StatusMessage = "Select a recipe material before creating a procurement request.";
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Creating procurement request...";
+
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/crafting/procurement-requests",
+                new CreateMaterialProcurementRequestDto
+                {
+                    MaterialId = SelectedMaterial.MaterialId,
+                    QuantityRequested = SelectedMaterial.QuantityRequired,
+                    PreferredForm = MaterialFormPreference.Any,
+                    Priority = RequestPriority.Normal,
+                    DeliveryLocation = "House Wolf Coordination",
+                    NumberOfHelpersNeeded = 1,
+                    Notes = BuildProcurementRequestNote(SelectedBlueprintDetail, SelectedMaterial)
+                });
+
+            response.EnsureSuccessStatusCode();
+            StatusMessage = $"Procurement request created for {SelectedMaterial.MaterialName}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to create procurement request: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private static string BuildCraftingRequestNote(BlueprintDetailDto detail)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Blueprint: {detail.BlueprintName}");
+        sb.AppendLine($"Crafted Item: {detail.CraftedItemName}");
+        if (!string.IsNullOrWhiteSpace(detail.AcquisitionSummary))
+            sb.AppendLine($"Acquisition: {detail.AcquisitionSummary}");
+
+        if (detail.Materials.Count > 0)
+        {
+            sb.AppendLine("Required materials:");
+            foreach (var material in detail.Materials)
+                sb.AppendLine($"- {material.MaterialName}: {material.QuantityRequired:N2} {material.Unit}");
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    private static string BuildProcurementRequestNote(BlueprintDetailDto detail, BlueprintRecipeMaterialDto material)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Blueprint support request for: {detail.BlueprintName}");
+        sb.AppendLine($"Crafted item: {detail.CraftedItemName}");
+        sb.AppendLine($"Requested material: {material.MaterialName}");
+        sb.AppendLine($"Required quantity: {material.QuantityRequired:N2} {material.Unit}");
+        if (!string.IsNullOrWhiteSpace(detail.AcquisitionSummary))
+            sb.AppendLine($"Blueprint acquisition: {detail.AcquisitionSummary}");
+        return sb.ToString().Trim();
+    }
+}

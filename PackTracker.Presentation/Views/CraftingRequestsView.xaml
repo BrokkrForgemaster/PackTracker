@@ -1,0 +1,142 @@
+<UserControl x:Class="PackTracker.Presentation.Views.CraftingRequestsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="0,0,0,18">
+            <TextBlock Text="Crafting Requests"
+                       FontSize="34"
+                       FontWeight="Black"
+                       Foreground="White"/>
+            <TextBlock Text="Track requested blueprint work, assigned crafters, and delivery objectives across House Wolf."
+                       FontSize="15"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       Margin="0,6,0,0"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <DockPanel Grid.Row="1" Margin="0,0,0,18" LastChildFill="False">
+            <TextBlock Text="Use Blueprint Explorer to create new requests, then manage visibility and assignment here."
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       VerticalAlignment="Center"
+                       DockPanel.Dock="Left"/>
+            <Button Content="Refresh"
+                    Command="{Binding RefreshCommand}"
+                    DockPanel.Dock="Right"
+                    Width="120"
+                    Height="42"
+                    Style="{StaticResource PrimaryActionButtonStyle}"/>
+        </DockPanel>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.1*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Style="{StaticResource SectionCardStyle}"
+                    Margin="0,0,12,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Open Queue"
+                               FontSize="22"
+                               FontWeight="Bold"
+                               Margin="0,0,0,14"/>
+
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Requests}"
+                             SelectedItem="{Binding SelectedRequest, Mode=TwoWay}"
+                             Background="Transparent"
+                             BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource SurfaceAltBrush}"
+                                        CornerRadius="12"
+                                        Padding="14"
+                                        Margin="0,0,0,10"
+                                        BorderBrush="{DynamicResource PanelStrokeBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding CraftedItemName}"
+                                                   FontWeight="Bold"
+                                                   FontSize="16"/>
+                                        <TextBlock Text="{Binding BlueprintName}"
+                                                   Margin="0,4,0,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <DockPanel Margin="0,10,0,0">
+                                            <TextBlock Text="{Binding Status}"
+                                                       DockPanel.Dock="Left"
+                                                       Foreground="{DynamicResource AccentGoldBrush}"
+                                                       FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Priority}"
+                                                       DockPanel.Dock="Right"
+                                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="{Binding SelectedRequest.CraftedItemName, TargetNullValue=Select a crafting request}"
+                               FontSize="24"
+                               FontWeight="Bold"/>
+                    <TextBlock Text="{Binding SelectedRequest.BlueprintName}"
+                               Margin="0,6,0,0"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="15"/>
+
+                    <Border Style="{StaticResource GlassPanelStyle}" Margin="0,18,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Request Summary"
+                                       FontWeight="Bold"
+                                       FontSize="16"/>
+                            <TextBlock Text="{Binding SelectedRequest.RequesterUsername, StringFormat=Requester: {0}}"
+                                       Margin="0,12,0,0"/>
+                            <TextBlock Text="{Binding SelectedRequest.AssignedCrafterUsername, StringFormat=Assigned Crafter: {0}, TargetNullValue=Assigned Crafter: Unassigned}"
+                                       Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding SelectedRequest.QuantityRequested, StringFormat=Quantity Requested: {0}}"
+                                       Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat=Delivery: {0}, TargetNullValue=Delivery: Not specified}"
+                                       Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource GlassPanelStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Operational Notes"
+                                       FontWeight="Bold"
+                                       FontSize="16"/>
+                            <TextBlock Text="This surface is the first queue for the new crafting workflow. Next phases will add assignment, completion, linked procurement, and shortage visibility."
+                                       Margin="0,12,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TextBlock Grid.Row="3"
+                   Text="{Binding StatusMessage}"
+                   Margin="0,14,0,0"
+                   Foreground="{DynamicResource TextMutedBrush}"/>
+    </Grid>
+</UserControl>

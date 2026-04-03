@@ -80,6 +80,12 @@ public partial class App : System.Windows.Application
             new UexViewModel(
                 sp.GetRequiredService<IUexService>(),
                 sp.GetRequiredService<ILogger<UexViewModel>>()));
+        services.AddTransient<BlueprintExplorerView>();
+        services.AddTransient<BlueprintExplorerViewModel>();
+        services.AddTransient<CraftingRequestsView>();
+        services.AddTransient<CraftingRequestsViewModel>();
+        services.AddTransient<ProcurementRequestsView>();
+        services.AddTransient<ProcurementRequestsViewModel>();
         // Bind GuideRequest and Api options from configuration
         services.Configure<GuideRequestOptions>(cfg.GetSection(GuideRequestOptions.SectionName));
 

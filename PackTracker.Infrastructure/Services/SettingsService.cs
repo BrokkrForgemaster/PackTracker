@@ -254,15 +254,19 @@ public sealed class SettingsService : ISettingsService, IDisposable
     Assign(ref jwtKey, jwtSection["Key"]);
     _settings.JwtKey = jwtKey;
 
-    var jwtIssuer = _settings.JwtIssuer;
-    Assign(ref jwtIssuer, jwtSection["Issuer"]);
-    _settings.JwtIssuer = jwtIssuer;
+    if (!string.IsNullOrWhiteSpace(jwtSection["Issuer"]) && _settings.JwtIssuer != jwtSection["Issuer"] && string.IsNullOrWhiteSpace(_settings.JwtIssuer))
+    {
+        _settings.JwtIssuer = jwtSection["Issuer"]!;
+        changed = true;
+    }
 
-    var jwtAudience = _settings.JwtAudience;
-    Assign(ref jwtAudience, jwtSection["Audience"]);
-    _settings.JwtAudience = jwtAudience;
+    if (!string.IsNullOrWhiteSpace(jwtSection["Audience"]) && _settings.JwtAudience != jwtSection["Audience"] && string.IsNullOrWhiteSpace(_settings.JwtAudience))
+    {
+        _settings.JwtAudience = jwtSection["Audience"]!;
+        changed = true;
+    }
 
-    if (_settings.JwtExpiresInMinutes == 0 && int.TryParse(jwtSection["ExpiresInMinutes"], out var minutes))
+    if ((_settings.JwtExpiresInMinutes <= 0) && int.TryParse(jwtSection["ExpiresInMinutes"], out var minutes) && minutes > 0)
     {
         _settings.JwtExpiresInMinutes = minutes;
         changed = true;
@@ -277,9 +281,18 @@ public sealed class SettingsService : ISettingsService, IDisposable
     Assign(ref discordClientSecret, discord["ClientSecret"]);
     _settings.DiscordClientSecret = discordClientSecret;
 
-    var discordCallbackPath = _settings.DiscordCallbackPath;
-    Assign(ref discordCallbackPath, discord["CallbackPath"]);
-    _settings.DiscordCallbackPath = discordCallbackPath;
+    if (string.IsNullOrWhiteSpace(_settings.DiscordCallbackPath))
+    {
+        var discordCallbackPath = _settings.DiscordCallbackPath;
+        Assign(ref discordCallbackPath, discord["CallbackPath"]);
+        _settings.DiscordCallbackPath = discordCallbackPath;
+    }
+
+    if (string.IsNullOrWhiteSpace(_settings.DiscordCallbackPath))
+    {
+        _settings.DiscordCallbackPath = "/signin-discord";
+        changed = true;
+    }
 
     var discordRequiredGuildId = _settings.DiscordRequiredGuildId;
     Assign(ref discordRequiredGuildId, discord["RequiredGuildId"]);
@@ -303,7 +316,25 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
     var apiBase = _settings.ApiBaseUrl;
     Assign(ref apiBase, configuration["Api:BaseUrl"]);
-    _settings.ApiBaseUrl = apiBase;
+    _settings.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBase) ? "http://localhost:5001" : apiBase;
+
+    if (string.IsNullOrWhiteSpace(_settings.JwtIssuer))
+    {
+        _settings.JwtIssuer = "PackTracker";
+        changed = true;
+    }
+
+    if (string.IsNullOrWhiteSpace(_settings.JwtAudience))
+    {
+        _settings.JwtAudience = "PackTrackerClients";
+        changed = true;
+    }
+
+    if (_settings.JwtExpiresInMinutes <= 0)
+    {
+        _settings.JwtExpiresInMinutes = 60;
+        changed = true;
+    }
 
     if (changed)
     {
