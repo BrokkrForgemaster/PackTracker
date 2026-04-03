@@ -44,6 +44,7 @@ public class BlueprintOwnershipController : ControllerBase
             {
                 BlueprintId = blueprintId,
                 MemberProfileId = profile.Id,
+                InterestType = request.InterestType,
                 AvailabilityStatus = string.IsNullOrWhiteSpace(request.AvailabilityStatus) ? "Available" : request.AvailabilityStatus.Trim(),
                 Notes = request.Notes
             };
@@ -51,6 +52,7 @@ public class BlueprintOwnershipController : ControllerBase
         }
         else
         {
+            existing.InterestType = request.InterestType;
             existing.AvailabilityStatus = string.IsNullOrWhiteSpace(request.AvailabilityStatus) ? existing.AvailabilityStatus : request.AvailabilityStatus.Trim();
             existing.Notes = request.Notes;
             existing.UpdatedAt = DateTime.UtcNow;

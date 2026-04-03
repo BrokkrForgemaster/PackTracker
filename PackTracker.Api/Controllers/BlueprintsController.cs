@@ -57,7 +57,7 @@ public class BlueprintsController : ControllerBase
                 AcquisitionSummary = x.AcquisitionSummary,
                 DataConfidence = x.DataConfidence,
                 VerifiedOwnerCount = _db.MemberBlueprintOwnerships.Count(o =>
-                    o.BlueprintId == x.Id && o.OwnershipStatus == BlueprintOwnershipStatus.Verified)
+                    o.BlueprintId == x.Id && o.InterestType == MemberBlueprintInterestType.Owns && o.OwnershipStatus == BlueprintOwnershipStatus.Verified)
             })
             .Take(100)
             .ToListAsync(ct);
@@ -111,6 +111,7 @@ public class BlueprintsController : ControllerBase
             {
                 MemberProfileId = x.MemberProfileId,
                 Username = x.MemberProfile != null ? x.MemberProfile.Username : string.Empty,
+                InterestType = x.InterestType.ToString(),
                 OwnershipStatus = x.OwnershipStatus.ToString(),
                 AvailabilityStatus = x.AvailabilityStatus,
                 VerifiedAt = x.VerifiedAt,

@@ -8,6 +8,7 @@ public class MemberBlueprintOwnership
     public Guid BlueprintId { get; set; }
     public Guid MemberProfileId { get; set; }
     public BlueprintOwnershipStatus OwnershipStatus { get; set; } = BlueprintOwnershipStatus.Claimed;
+    public MemberBlueprintInterestType InterestType { get; set; } = MemberBlueprintInterestType.Owns;
     public Guid? VerifiedByProfileId { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public string AvailabilityStatus { get; set; } = "Available";

@@ -284,6 +284,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.OwnershipStatus).HasConversion<int>();
+            entity.Property(x => x.InterestType).HasConversion<int>();
             entity.Property(x => x.AvailabilityStatus).HasMaxLength(50).IsRequired();
             entity.HasIndex(x => new { x.BlueprintId, x.MemberProfileId }).IsUnique();
             entity.HasOne(x => x.Blueprint)

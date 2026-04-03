@@ -25,6 +25,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
     [ObservableProperty] private BlueprintRecipeMaterialDto? selectedMaterial;
+    [ObservableProperty] private MemberBlueprintInterestType selectedInterestType = MemberBlueprintInterestType.Owns;
+
+    public IReadOnlyList<MemberBlueprintInterestType> InterestTypeOptions { get; } =
+        Enum.GetValues<MemberBlueprintInterestType>();
 
     public BlueprintExplorerViewModel(IApiClientProvider apiClientProvider)
     {
@@ -128,9 +132,46 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 $"api/v1/blueprints/{SelectedBlueprintDetail.Id}/ownership",
                 new RegisterBlueprintOwnershipRequest
                 {
-                    AvailabilityStatus = "Available",
-                    Notes = "Registered from Blueprint Explorer"
+                    InterestType = SelectedInterestType,
+                    AvailabilityStatus = SelectedInterestType == MemberBlueprintInterestType.Wants ? "Seeking Acquisition" : "Available",
+                    Notes = SelectedInterestType == MemberBlueprintInterestType.Wants
+                        ? "Marked as wanted from Blueprint Explorer"
+                        : "Registered from Blueprint Explorer"
                 });
+
+            response.EnsureSuccessStatusCode();
+            await LoadBlueprintDetailAsync(SelectedBlueprintDetail.Id);
+            StatusMessage = SelectedInterestType == MemberBlueprintInterestType.Wants
+                ? $"Marked {SelectedBlueprintDetail.BlueprintName} as wanted."
+                : $"Ownership registered for {SelectedBlueprintDetail.BlueprintName}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to register ownership: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task MarkWantedAsync()
+    {
+        SelectedInterestType = MemberBlueprintInterestType.Wants;
+        await RegisterOwnershipAsync();
+    }
+
+    [RelayCommand]
+    private async Task MarkOwnedAsync()
+    {
+        SelectedInterestType = MemberBlueprintInterestType.Owns;
+        await RegisterOwnershipAsync();
+    }
+
+    [RelayCommand]
+    private async Task CreateCraftingRequestAsync()
+    {
 
             response.EnsureSuccessStatusCode();
             await LoadBlueprintDetailAsync(SelectedBlueprintDetail.Id);

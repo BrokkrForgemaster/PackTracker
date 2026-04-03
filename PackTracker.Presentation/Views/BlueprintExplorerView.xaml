@@ -144,24 +144,48 @@
                                    Foreground="{DynamicResource TextMutedBrush}"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,18,0,0">
-                        <Button Content="Register Ownership"
-                                Command="{Binding RegisterOwnershipCommand}"
-                                Style="{StaticResource PrimaryActionButtonStyle}"
-                                Height="42"
-                                Padding="20,0"
-                                Margin="0,0,12,0"/>
-                        <Button Content="Create Crafting Request"
-                                Command="{Binding CreateCraftingRequestCommand}"
-                                Style="{StaticResource SecondaryActionButtonStyle}"
-                                Height="42"
-                                Padding="20,0"
-                                Margin="0,0,12,0"/>
-                        <Button Content="Request Materials"
-                                Command="{Binding CreateProcurementRequestCommand}"
-                                Style="{StaticResource SecondaryActionButtonStyle}"
-                                Height="42"
-                                Padding="20,0"/>
+                    <StackPanel Grid.Row="1" Margin="0,18,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="My Status:"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,10,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <ComboBox Width="180"
+                                      ItemsSource="{Binding InterestTypeOptions}"
+                                      SelectedItem="{Binding SelectedInterestType, Mode=TwoWay}"
+                                      Margin="0,0,12,0"/>
+                            <Button Content="Save Status"
+                                    Command="{Binding RegisterOwnershipCommand}"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"
+                                    Height="42"
+                                    Padding="20,0"
+                                    Margin="0,0,12,0"/>
+                            <Button Content="Mark Wanted"
+                                    Command="{Binding MarkWantedCommand}"
+                                    Style="{StaticResource SecondaryActionButtonStyle}"
+                                    Height="42"
+                                    Padding="20,0"
+                                    Margin="0,0,12,0"/>
+                            <Button Content="Mark Owned"
+                                    Command="{Binding MarkOwnedCommand}"
+                                    Style="{StaticResource SecondaryActionButtonStyle}"
+                                    Height="42"
+                                    Padding="20,0"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button Content="Create Crafting Request"
+                                    Command="{Binding CreateCraftingRequestCommand}"
+                                    Style="{StaticResource SecondaryActionButtonStyle}"
+                                    Height="42"
+                                    Padding="20,0"
+                                    Margin="0,0,12,0"/>
+                            <Button Content="Request Materials"
+                                    Command="{Binding CreateProcurementRequestCommand}"
+                                    Style="{StaticResource SecondaryActionButtonStyle}"
+                                    Height="42"
+                                    Padding="20,0"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <Grid Grid.Row="2" Margin="0,18,0,0">
@@ -216,7 +240,8 @@
                                                     CornerRadius="10">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Username}" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding OwnershipStatus}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
+                                                    <TextBlock Text="{Binding InterestType}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
+                                                    <TextBlock Text="{Binding OwnershipStatus}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
                                                     <TextBlock Text="{Binding AvailabilityStatus}" Foreground="{DynamicResource AccentGoldBrush}" FontSize="12"/>
                                                 </StackPanel>
                                             </Border>
