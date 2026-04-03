@@ -115,9 +115,16 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
             // 🔓 Decrypt sensitive fields
             settings.ConnectionString = SecretStorage.Unprotect(settings.ConnectionString);
+            settings.JwtKey = SecretStorage.Unprotect(settings.JwtKey);
+            settings.DiscordClientId = SecretStorage.Unprotect(settings.DiscordClientId);
+            settings.DiscordClientSecret = SecretStorage.Unprotect(settings.DiscordClientSecret);
             settings.RegolithApiKey = SecretStorage.Unprotect(settings.RegolithApiKey);
             settings.UexCorpApiKey = SecretStorage.Unprotect(settings.UexCorpApiKey);
             settings.GameLogFilePath = SecretStorage.Unprotect(settings.GameLogFilePath);
+            settings.DiscordAccessToken = SecretStorage.Unprotect(settings.DiscordAccessToken);
+            settings.DiscordRefreshToken = SecretStorage.Unprotect(settings.DiscordRefreshToken);
+            settings.JwtToken = SecretStorage.Unprotect(settings.JwtToken);
+            settings.JwtRefreshToken = SecretStorage.Unprotect(settings.JwtRefreshToken);
 
             return settings;
         }
@@ -139,18 +146,32 @@ public sealed class SettingsService : ISettingsService, IDisposable
             {
                 PlayerName = newSettings.PlayerName,
                 Theme = newSettings.Theme,
+                FirstRunComplete = newSettings.FirstRunComplete,
+
                 ConnectionString = SecretStorage.Protect(newSettings.ConnectionString),
-                RegolithApiKey = SecretStorage.Protect(newSettings.RegolithApiKey),
-                UexCorpApiKey = SecretStorage.Protect(newSettings.UexCorpApiKey),
-                GameLogFilePath = SecretStorage.Protect(newSettings.GameLogFilePath),
+
+                JwtKey = SecretStorage.Protect(newSettings.JwtKey),
+                JwtIssuer = newSettings.JwtIssuer,
+                JwtAudience = newSettings.JwtAudience,
+                JwtExpiresInMinutes = newSettings.JwtExpiresInMinutes,
+
+                DiscordClientId = SecretStorage.Protect(newSettings.DiscordClientId),
+                DiscordClientSecret = SecretStorage.Protect(newSettings.DiscordClientSecret),
+                DiscordCallbackPath = newSettings.DiscordCallbackPath,
+                DiscordRequiredGuildId = newSettings.DiscordRequiredGuildId,
+                DiscordConnected = newSettings.DiscordConnected,
                 DiscordAccessToken = SecretStorage.Protect(newSettings.DiscordAccessToken),
                 DiscordRefreshToken = SecretStorage.Protect(newSettings.DiscordRefreshToken),
-                JwtToken = SecretStorage.Protect(newSettings.JwtToken),
-                JwtRefreshToken = SecretStorage.Protect(newSettings.JwtRefreshToken),
-                FirstRunComplete = newSettings.FirstRunComplete,
-                UexBaseUrl = newSettings.UexBaseUrl,
+
+                RegolithApiKey = SecretStorage.Protect(newSettings.RegolithApiKey),
                 RegolithBaseUrl = newSettings.RegolithBaseUrl,
-                ApiBaseUrl = newSettings.ApiBaseUrl
+                UexCorpApiKey = SecretStorage.Protect(newSettings.UexCorpApiKey),
+                UexBaseUrl = newSettings.UexBaseUrl,
+                ApiBaseUrl = newSettings.ApiBaseUrl,
+                GameLogFilePath = SecretStorage.Protect(newSettings.GameLogFilePath),
+
+                JwtToken = SecretStorage.Protect(newSettings.JwtToken),
+                JwtRefreshToken = SecretStorage.Protect(newSettings.JwtRefreshToken)
             };
 
             JsonObject root;
