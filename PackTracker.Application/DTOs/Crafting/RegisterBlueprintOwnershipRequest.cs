@@ -1,5 +1,3 @@
-namespace PackTracker.Application.DTOs.Crafting;
-
 using PackTracker.Domain.Enums;
 
 namespace PackTracker.Application.DTOs.Crafting;
