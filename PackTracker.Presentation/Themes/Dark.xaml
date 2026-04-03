@@ -391,17 +391,100 @@
     </Setter>
   </Style>
 
-  <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
-    <Setter Property="Background" Value="{DynamicResource AccentGoldBrush}"/>
+  <Style x:Key="PrimaryActionButtonStyle" TargetType="Button">
     <Setter Property="Foreground" Value="#111111"/>
+    <Setter Property="Background" Value="{DynamicResource AccentGoldBrush}"/>
     <Setter Property="BorderBrush" Value="#66FFE08A"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="14,10"/>
+    <Setter Property="Margin" Value="0,8"/>
+    <Setter Property="FontSize" Value="16"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="12"
+                  Padding="{TemplateBinding Padding}"
+                  SnapsToDevicePixels="True">
+            <ContentPresenter HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              RecognizesAccessKey="True"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="Opacity" Value="0.95"/>
+              <Setter TargetName="Bd" Property="Effect">
+                <Setter.Value>
+                  <DropShadowEffect Color="#66000000" BlurRadius="10" Opacity="0.3" ShadowDepth="1"/>
+                </Setter.Value>
+              </Setter>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+              <Setter TargetName="Bd" Property="RenderTransform">
+                <Setter.Value>
+                  <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                </Setter.Value>
+              </Setter>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.5"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
   </Style>
 
-  <Style x:Key="SecondaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
+  <Style x:Key="SecondaryActionButtonStyle" TargetType="Button">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     <Setter Property="Background" Value="#2E2E2E"/>
     <Setter Property="BorderBrush" Value="{DynamicResource PanelStrokeBrush}"/>
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="14,10"/>
+    <Setter Property="Margin" Value="0,8"/>
+    <Setter Property="FontSize" Value="16"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="12"
+                  Padding="{TemplateBinding Padding}"
+                  SnapsToDevicePixels="True">
+            <ContentPresenter HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              RecognizesAccessKey="True"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="Bd" Property="Opacity" Value="0.96"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+              <Setter TargetName="Bd" Property="RenderTransform">
+                <Setter.Value>
+                  <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                </Setter.Value>
+              </Setter>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.5"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
   </Style>
 
 </ResourceDictionary>
