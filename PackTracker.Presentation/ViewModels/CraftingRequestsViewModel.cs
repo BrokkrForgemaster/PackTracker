@@ -20,6 +20,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
     public CraftingRequestsViewModel(IApiClientProvider apiClientProvider)
     {
         _apiClientProvider = apiClientProvider;
+        StatusMessage = "Loading crafting requests...";
         _ = RefreshAsync();
     }
 

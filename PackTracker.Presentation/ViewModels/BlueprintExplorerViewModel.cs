@@ -34,6 +34,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     public BlueprintExplorerViewModel(IApiClientProvider apiClientProvider)
     {
         _apiClientProvider = apiClientProvider;
+        SearchText = "Blueprint";
+        _ = SearchAsync();
     }
 
     [RelayCommand]

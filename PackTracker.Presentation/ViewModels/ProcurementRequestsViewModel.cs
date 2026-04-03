@@ -20,6 +20,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
     public ProcurementRequestsViewModel(IApiClientProvider apiClientProvider)
     {
         _apiClientProvider = apiClientProvider;
+        StatusMessage = "Loading material procurement requests...";
         _ = RefreshAsync();
     }
 
