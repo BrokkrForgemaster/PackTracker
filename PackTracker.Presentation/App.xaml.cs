@@ -61,8 +61,6 @@ public partial class App : System.Windows.Application
         services.AddHostedService(sp => sp.GetRequiredService<ApiHostedService>());
 
         // 5️⃣ External API configs
-        services.Configure<RegolithOptions>(cfg.GetSection("Regolith"));
-        services.AddHttpClient<IRegolithService, RegolithService>();
         services.Configure<UexOptions>(cfg.GetSection("Uex"));
         services.AddHttpClient<IUexService, UexService>();
 
@@ -77,9 +75,6 @@ public partial class App : System.Windows.Application
         services.AddSingleton<DashboardView>();
         services.AddTransient<RequestsView>();
         services.AddTransient<RequestsViewModel>();
-        services.AddSingleton<KillTracker>();
-        services.AddSingleton<RefineryJobsView>();
-        services.AddTransient<RefineryJobsViewModel>();
         services.AddTransient<UexView>();
         services.AddTransient<UexViewModel>(sp =>
             new UexViewModel(

@@ -210,6 +210,28 @@ public partial class LoginView : UserControl
         });
     }
 
+    private async void RetryApi_Click(object sender, RoutedEventArgs e)
+    {
+        DiscordLoginButton.IsEnabled = false;
+        DiscordCheck.Visibility = Visibility.Collapsed;
+        DiscordStatus.Text = "Re-checking local API readiness...";
+
+        try
+        {
+            await EnsureApiRunningAsync();
+            DiscordStatus.Text = "✅ API running locally. Ready for login.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Retrying API readiness failed.");
+            DiscordStatus.Text = $"❌ Failed to start API: {ex.Message}";
+        }
+        finally
+        {
+            DiscordLoginButton.IsEnabled = true;
+        }
+    }
+
     private static async Task<bool> WaitForApiAsync(string url)
     {
         using var client = new HttpClient();

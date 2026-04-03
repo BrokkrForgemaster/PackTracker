@@ -38,16 +38,45 @@
 
 ---
 
+## 🚧 Current Status
+
+PackTracker is currently in an **active implementation/stabilization phase**.
+
+What is clearly present in the repository today:
+- multi-project .NET 9 solution structure
+- WPF desktop shell and themed UI foundation
+- ASP.NET Core API bootstrap
+- Discord OAuth + JWT authentication flow scaffolding
+- EF Core persistence layer with multiple operational domains
+- request/dashboard/guide-related presentation surfaces
+- settings persistence and first-run onboarding flow
+
+What is **still being verified or completed**:
+- end-to-end auth reliability from WPF → API → OAuth callback → token handoff
+- feature completeness across request, guide, kill-tracking, and trading modules
+- embedded API host wiring used by the desktop client
+- test coverage for critical flows
+- README claims vs currently shippable behavior
+
+If you are adopting or contributing to PackTracker, assume the project is:
+- **architecturally promising**
+- **partially implemented**
+- **not yet fully production-hardened**
+
+Repository truth-pass tracking lives in:
+- `IMPLEMENTATION_STATUS.md`
+
+---
+
 ## ✨ Highlights
 
-- 🎨 **Modern WPF Client** — MVVM-first, responsive, themed desktop UI.
-- 🔌 **REST API + SignalR** — Real-time events with a versioned ASP.NET Core API.
-- 📊 **Data Integrations** — UEXCorp, Regolith.rocks, and GitHub data sync.
-- 🧱 **Clean Architecture** — Domain, Application, Infrastructure, API, Presentation, Shared, Logging.
-- 🗂 **Centralized Logging** — Serilog to console/file, optional Seq and OTEL exporters.
-- 🔄 **Background Services** — Game log parsing and data sync workers.
-- 🐳 **Dockerized API** — Container-ready for repeatable deployments.
-- 🔐 **Secrets Hygiene** — Dev secrets with `dotnet user-secrets` or GitHub Encrypted Secrets.
+- 🎨 **Modern WPF Client** — MVVM-first, responsive, themed desktop UI with House Wolf visual cues.
+- 🔌 **REST API + SignalR** — Real-time capable ASP.NET Core service foundation.
+- 📊 **Data Integrations** — UEXCorp and Regolith integration paths are present and under active build-out.
+- 🧱 **Clean Architecture Direction** — Domain, Application, Infrastructure, API, and Presentation projects are established.
+- 🗂 **Centralized Logging** — Serilog-based logging is wired into the application bootstrap.
+- 🔄 **Expandable Workflow Surface** — request handling, guide scheduling, trading, and telemetry domains are present in the repo.
+- 🔐 **Secrets Hygiene** — local settings persistence exists with protected storage helpers for sensitive values.
 
 ---
 
@@ -84,6 +113,21 @@
 - Swagger — `docs/images/swagger.png`  
 
 ---
+
+## 🧭 Implementation Priorities
+
+Current execution priority:
+1. stabilize auth flow
+2. verify embedded API startup path
+3. confirm request/guide feature completeness
+4. improve UI consistency and responsiveness
+5. add tests around critical flows
+
+Planned near-term vertical slices:
+- Discord auth and profile bootstrap
+- request workflow completion
+- guide scheduling / assignment flow
+- trading and telemetry refinement
 
 ## 🚀 Quick Start
 

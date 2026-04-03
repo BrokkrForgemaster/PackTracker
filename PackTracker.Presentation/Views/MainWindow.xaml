@@ -78,12 +78,6 @@
                     <Button Content="Dashboard" Tag="Dashboard"
                             Style="{StaticResource SidebarButtonStyle}"
                             Click="Navigate_Click"/>
-                    <Button Content="Kill Tracker" Tag="KillTracker"
-                            Style="{StaticResource SidebarButtonStyle}"
-                            Click="Navigate_Click"/>
-                    <Button Content="Refinery Jobs" Tag="RefineryJobs"
-                            Style="{StaticResource SidebarButtonStyle}"
-                            Click="Navigate_Click"/>
                     <Button Content="Trading Hub" Tag="TradingHub"
                             Style="{StaticResource SidebarButtonStyle}"
                             Click="Navigate_Click"/>

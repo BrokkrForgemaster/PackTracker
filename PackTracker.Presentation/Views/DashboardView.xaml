@@ -78,11 +78,11 @@
                         Padding="28"
                         Effect="{DynamicResource CardShadow}">
                     <StackPanel>
-                        <TextBlock Text="Today's posture looks steady."
+                        <TextBlock Text="Guild support posture is stable."
                                    FontSize="20"
                                    FontWeight="SemiBold"
                                    Foreground="White"/>
-                        <TextBlock Text="Ground + air teams stream in here, so keep it pinned when coordinating ops."
+                        <TextBlock Text="Keep this view pinned for request traffic, guide scheduling, and logistics coordination while crafting workflows are brought online."
                                    FontSize="14"
                                    Foreground="#BEBEBE"
                                    Margin="0,4,0,12"/>
@@ -117,91 +117,6 @@
                                                ToolTip="Guide request watcher feed."/>
                                 </StackPanel>
                             </Border>
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
-                                <StackPanel>
-                                    <TextBlock Text="Ground leaders"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding Fps.Count}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               ToolTip="Number of entries pulled from Kill Tracker."/>
-                                </StackPanel>
-                            </Border>
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
-                                <StackPanel>
-                                    <TextBlock Text="Flight leaders"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding AirLeaders.Count}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               ToolTip="Carrier / fighter kill feed."/>
-                                </StackPanel>
-                            </Border>
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
-                                <StackPanel>
-                                    <TextBlock Text="Active refinery jobs"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding Mining.ActiveJobs}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               ToolTip="Regolith jobs still processing."/>
-                                </StackPanel>
-                            </Border>
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
-                                <StackPanel>
-                                    <TextBlock Text="Ore in queue"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding Mining.PendingQuantity, StringFormat={}{0:N0} SCU}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               ToolTip="Total SCU still awaiting refinement."/>
-                                </StackPanel>
-                            </Border>
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
-                                <StackPanel>
-                                    <TextBlock Text="Projected yield"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding Mining.ProjectedYield, StringFormat={}{0:N0} SCU}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               ToolTip="Estimated refined output once current queue completes."/>
-                                </StackPanel>
-                            </Border>
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
-                                <StackPanel>
-                                    <TextBlock Text="Next completion"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding Mining.NextCompletionDisplay}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               FontSize="20"
-                                               ToolTip="Soonest ETA reported by Regolith."/>
-                                </StackPanel>
-                            </Border>
                         </WrapPanel>
                     </StackPanel>
                 </Border>
@@ -209,138 +124,6 @@
                 <!-- Content cards -->
                 <WrapPanel Margin="0,24,0,0"
                            HorizontalAlignment="Stretch">
-
-                    <!-- Ground FPS leaders -->
-                    <Border Style="{StaticResource DashboardCardStyle}"
-                            Width="360"
-                            MinWidth="320">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                                <TextBlock Text="Ground mercenaries"
-                                           Style="{StaticResource SectionHeaderTextStyle}"/>
-                                <Border Style="{StaticResource BadgeStyle}">
-                                    <TextBlock Text="{Binding Fps.Count, StringFormat={}{0} tracked}"
-                                               FontSize="12"
-                                               Foreground="#F1F1F1"/>
-                                </Border>
-                            </StackPanel>
-                            <ItemsControl ItemsSource="{Binding Fps}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="#1F1F1F"
-                                                CornerRadius="14"
-                                                Padding="12"
-                                                Margin="0,0,0,10">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Username, TargetNullValue=Unknown}"
-                                                           FontSize="16"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="White"/>
-                                                <TextBlock Text="{Binding KillCount, StringFormat={}{0} confirmed kills}"
-                                                           Foreground="#C9C9C9"
-                                                           FontSize="13"/>
-                                                <TextBlock Text="{Binding MostUsedWeapon, StringFormat='Favorite: {0}'}"
-                                                           Foreground="#8BB8FF"
-                                                           FontSize="12"
-                                                           Margin="0,6,0,0"
-                                                           TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                                <ItemsControl.Style>
-                                    <Style TargetType="ItemsControl">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Fps.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ItemsControl.Style>
-                            </ItemsControl>
-                            <TextBlock Text="No ground kills reported yet."
-                                       Foreground="#7D7D7D"
-                                       FontStyle="Italic">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Fps.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Air leaders -->
-                    <Border Style="{StaticResource DashboardCardStyle}"
-                            Width="360"
-                            MinWidth="320">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                                <TextBlock Text="Flight leaders"
-                                           Style="{StaticResource SectionHeaderTextStyle}"/>
-                                <Border Style="{StaticResource BadgeStyle}">
-                                    <TextBlock Text="{Binding AirLeaders.Count, StringFormat={}{0} tracked}"
-                                               FontSize="12"
-                                               Foreground="#F1F1F1"/>
-                                </Border>
-                            </StackPanel>
-                            <ItemsControl ItemsSource="{Binding AirLeaders}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="#1F1F1F"
-                                                CornerRadius="14"
-                                                Padding="12"
-                                                Margin="0,0,0,10">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Username, TargetNullValue=Unknown}"
-                                                           FontSize="16"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="White"/>
-                                                <TextBlock Text="{Binding KillCount, StringFormat={}{0} confirmed kills}"
-                                                           Foreground="#C9C9C9"
-                                                           FontSize="13"/>
-                                                <TextBlock Text="{Binding MostUsedWeapon, StringFormat='Favorite: {0}'}"
-                                                           Foreground="#FFD580"
-                                                           FontSize="12"
-                                                           Margin="0,6,0,0"
-                                                           TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                                <ItemsControl.Style>
-                                    <Style TargetType="ItemsControl">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding AirLeaders.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ItemsControl.Style>
-                            </ItemsControl>
-                            <TextBlock Text="No sorties logged for this window."
-                                       Foreground="#7D7D7D"
-                                       FontStyle="Italic">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding AirLeaders.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
 
                     <!-- Active requests -->
                     <Border Style="{StaticResource DashboardCardStyle}"

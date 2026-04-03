@@ -117,12 +117,6 @@ namespace PackTracker.Presentation.Views
                     case "Dashboard":
                         NavigateToDashboard();
                         break;
-                    case "KillTracker":
-                        NavigateToKillTracker();
-                        break;
-                    case "RefineryJobs":
-                        NavigateToRefineryJobs();
-                        break;
                     case "TradingHub":
                         NavigateToUex();
                         break;
@@ -140,12 +134,6 @@ namespace PackTracker.Presentation.Views
         {
             var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
             ContentFrame.Navigate(dashboardView);
-        }
-
-        private void NavigateToRefineryJobs()
-        {
-            var refineryJobsView = _serviceProvider.GetRequiredService<RefineryJobsView>();
-            ContentFrame.Navigate(refineryJobsView);
         }
 
         private void NavigateToUex()
@@ -168,23 +156,6 @@ namespace PackTracker.Presentation.Views
                 logger?.LogError(ex, "Failed to navigate to Requests Hub");
                 
                 MessageBox.Show($"Failed to open Requests Hub:\n{ex}", "Navigation Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-
-        private void NavigateToKillTracker()
-        {
-            try
-            {
-                var killTrackerView = _serviceProvider.GetRequiredService<KillTracker>();
-                ContentFrame.Navigate(killTrackerView);
-            }
-            catch (Exception ex)
-            {
-                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
-                logger?.LogError(ex, "Failed to navigate to KillTracker");
-                MessageBox.Show($"Failed to load KillTracker: {ex.Message}", "Navigation Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
