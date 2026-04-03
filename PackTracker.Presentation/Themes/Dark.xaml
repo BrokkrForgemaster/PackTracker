@@ -324,19 +324,6 @@
     <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/>
   </Style>
 
-  <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
-    <Setter Property="Background" Value="{DynamicResource AccentGoldBrush}"/>
-    <Setter Property="Foreground" Value="#111111"/>
-    <Setter Property="BorderBrush" Value="#66FFE08A"/>
-    <Setter Property="FontWeight" Value="SemiBold"/>
-  </Style>
-
-  <Style x:Key="SecondaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
-    <Setter Property="Background" Value="#2E2E2E"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource PanelStrokeBrush}"/>
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-  </Style>
-
   <Style x:Key="StatusPillTextStyle" TargetType="TextBlock">
     <Setter Property="FontSize" Value="12"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
@@ -402,6 +389,19 @@
         </ControlTemplate>
       </Setter.Value>
     </Setter>
+  </Style>
+
+  <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
+    <Setter Property="Background" Value="{DynamicResource AccentGoldBrush}"/>
+    <Setter Property="Foreground" Value="#111111"/>
+    <Setter Property="BorderBrush" Value="#66FFE08A"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+
+  <Style x:Key="SecondaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
+    <Setter Property="Background" Value="#2E2E2E"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource PanelStrokeBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
   </Style>
 
 </ResourceDictionary>
