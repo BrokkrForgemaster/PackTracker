@@ -30,62 +30,64 @@ public class BlueprintsController : ControllerBase
         [FromQuery] bool inGameOnly = true,
         CancellationToken ct = default)
     {
-        _logger.LogInformation(
-            "Blueprint search endpoint hit. Path={Path} QueryQ={QueryQ} Category={Category} InGameOnly={InGameOnly} User={User}",
-            HttpContext.Request.Path,
-            q,
-            category,
-            inGameOnly,
-            User?.Identity?.Name ?? "<anonymous>");
-
-        var query = _db.Blueprints.AsNoTracking().AsQueryable();
-
-        if (inGameOnly)
-            query = query.Where(x => x.IsInGameAvailable);
-
-        if (!string.IsNullOrWhiteSpace(category))
-            query = query.Where(x => x.Category == category);
-
-        if (!string.IsNullOrWhiteSpace(q))
+        try
         {
-            var term = q.Trim();
-            query = query.Where(x =>
-                EF.Functions.ILike(x.BlueprintName, $"%{term}%") ||
-                EF.Functions.ILike(x.CraftedItemName, $"%{term}%") ||
-                EF.Functions.ILike(x.Category, $"%{term}%"));
-        }
+            _logger.LogInformation(
+                "Blueprint search endpoint hit. Path={Path} QueryQ={QueryQ} Category={Category} InGameOnly={InGameOnly} User={User}",
+                HttpContext.Request.Path,
+                q,
+                category,
+                inGameOnly,
+                User?.Identity?.Name ?? "<anonymous>");
 
-        var blueprints = await query
-            .OrderBy(x => x.BlueprintName)
-            .Take(100)
-            .ToListAsync(ct);
+            IQueryable<Blueprint> query = _db.Blueprints.AsNoTracking();
 
-        var blueprintIds = blueprints.Select(x => x.Id).ToList();
-        var verifiedOwnerCounts = await _db.MemberBlueprintOwnerships
-            .AsNoTracking()
-            .Where(o => blueprintIds.Contains(o.BlueprintId)
-                        && o.InterestType == MemberBlueprintInterestType.Owns
-                        && o.OwnershipStatus == BlueprintOwnershipStatus.Verified)
-            .GroupBy(o => o.BlueprintId)
-            .Select(g => new { BlueprintId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.BlueprintId, x => x.Count, ct);
+            if (inGameOnly)
+                query = query.Where(x => x.IsInGameAvailable);
 
-        var items = blueprints
-            .Select(x => new BlueprintSearchItemDto
+            if (!string.IsNullOrWhiteSpace(category))
+                query = query.Where(x => x.Category == category);
+
+            var blueprints = await query
+                .OrderBy(x => x.BlueprintName)
+                .Take(200)
+                .ToListAsync(ct);
+
+            _logger.LogInformation("Blueprint search loaded {Count} candidate blueprints before text filtering.", blueprints.Count);
+
+            if (!string.IsNullOrWhiteSpace(q))
             {
-                Id = x.Id,
-                BlueprintName = x.BlueprintName,
-                CraftedItemName = x.CraftedItemName,
-                Category = x.Category,
-                IsInGameAvailable = x.IsInGameAvailable,
-                AcquisitionSummary = x.AcquisitionSummary,
-                DataConfidence = x.DataConfidence,
-                VerifiedOwnerCount = verifiedOwnerCounts.TryGetValue(x.Id, out var count) ? count : 0
-            })
-            .ToList();
+                var term = q.Trim();
+                blueprints = blueprints
+                    .Where(x => (!string.IsNullOrWhiteSpace(x.BlueprintName) && x.BlueprintName.Contains(term, StringComparison.OrdinalIgnoreCase))
+                                || (!string.IsNullOrWhiteSpace(x.CraftedItemName) && x.CraftedItemName.Contains(term, StringComparison.OrdinalIgnoreCase))
+                                || (!string.IsNullOrWhiteSpace(x.Category) && x.Category.Contains(term, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+            }
 
-        _logger.LogInformation("Blueprint search returned {Count} results", items.Count);
-        return Ok(items);
+            var items = blueprints
+                .Select(x => new BlueprintSearchItemDto
+                {
+                    Id = x.Id,
+                    BlueprintName = x.BlueprintName,
+                    CraftedItemName = x.CraftedItemName,
+                    Category = x.Category,
+                    IsInGameAvailable = x.IsInGameAvailable,
+                    AcquisitionSummary = x.AcquisitionSummary,
+                    DataConfidence = x.DataConfidence,
+                    VerifiedOwnerCount = 0
+                })
+                .Take(100)
+                .ToList();
+
+            _logger.LogInformation("Blueprint search returned {Count} results", items.Count);
+            return Ok(items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Blueprint search failed for QueryQ={QueryQ}, Category={Category}, InGameOnly={InGameOnly}", q, category, inGameOnly);
+            throw;
+        }
     }
 
     [HttpGet("{id:guid}")]
