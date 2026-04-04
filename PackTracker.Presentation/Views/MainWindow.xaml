@@ -151,7 +151,7 @@
 
         <Grid Grid.Column="1" Margin="0,20,20,20">
             <Image Source="/Assets/Pack_Tracker.png"
-                   Opacity="0.12"
+                   Opacity="0.30"
                    Stretch="UniformToFill"
                    IsHitTestVisible="False"
                    Panel.ZIndex="0"/>
@@ -159,7 +159,7 @@
             <Border Panel.ZIndex="1"
                     Style="{StaticResource SectionCardStyle}"
                     Padding="0"
-                    Background="{DynamicResource SurfaceOverlayBrush}">
+                    Background="#18000000">
                 <Grid>
                     <Border Background="#14000000"
                             CornerRadius="18"

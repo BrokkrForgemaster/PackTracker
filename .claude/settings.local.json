@@ -4,7 +4,8 @@
       "WebFetch(domain:chatgpt.com)",
       "Bash(dotnet build:*)",
       "Read(//home/ravenadmin/**)",
-      "Bash(find / -name \"dotnet\" -type f)"
+      "Bash(find / -name \"dotnet\" -type f)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
