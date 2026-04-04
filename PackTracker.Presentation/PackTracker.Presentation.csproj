@@ -123,6 +123,7 @@
     <Content Include="Assets\tacops.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="Styles\Buttons.xml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -144,7 +145,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Page>
   </ItemGroup>
-
+ 
   <ItemGroup>
     <Content Include="wwwroot\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

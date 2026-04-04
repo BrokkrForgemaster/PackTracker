@@ -4,10 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using Microsoft.Extensions.Logging;
-using PackTracker.Infrastructure.Persistence;
-using PackTracker.Infrastructure.Services;
-using PackTracker.Presentation.Services;
-using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views;
 

@@ -86,6 +86,7 @@ public partial class App : System.Windows.Application
         services.AddTransient<CraftingRequestsViewModel>();
         services.AddTransient<ProcurementRequestsView>();
         services.AddTransient<ProcurementRequestsViewModel>();
+        services.AddTransient<ComponentViewModel>();
         // Bind GuideRequest and Api options from configuration
         services.Configure<GuideRequestOptions>(cfg.GetSection(GuideRequestOptions.SectionName));
 

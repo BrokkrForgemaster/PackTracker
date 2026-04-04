@@ -150,7 +150,7 @@ public sealed class CraftingSeedService
         public string MaterialType { get; set; } = string.Empty;
         public string Tier { get; set; } = string.Empty;
         public string SourceType { get; set; } = nameof(MaterialSourceType.Unknown);
-        public decimal QuantityRequired { get; set; }
+        public double QuantityRequired { get; set; }
         public string Unit { get; set; } = "SCU";
         public bool IsOptional { get; set; }
         public bool IsIntermediateCraftable { get; set; }

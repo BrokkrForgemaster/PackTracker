@@ -73,13 +73,13 @@ public class ApiHostedService : IHostedService
             settings.JwtAudience = config["Jwt:Audience"] ?? settings.JwtAudience ?? "PackTrackerClient";
 
             settings.ConnectionString = config.GetConnectionString("DefaultConnection") ?? settings.ConnectionString;
-            settings.DiscordClientId = config["Authentication:Discord:ClientId"] ?? settings.DiscordClientId;
+            settings.DiscordClientId = config["Discord:ClientId"] ?? settings.DiscordClientId;
             settings.DiscordClientSecret =
-                config["Authentication:Discord:ClientSecret"] ?? settings.DiscordClientSecret;
-            settings.DiscordCallbackPath = config["Authentication:Discord:CallbackPath"] ??
+                config["Discord:ClientSecret"] ?? settings.DiscordClientSecret;
+            settings.DiscordCallbackPath = config["Discord:CallbackPath"] ??
                                            settings.DiscordCallbackPath ?? "/signin-discord";
             settings.DiscordRequiredGuildId =
-                config["Authentication:Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
+                config["Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
             settings.RegolithApiKey = config["Regolith:ApiKey"] ?? settings.RegolithApiKey;
             settings.UexCorpApiKey = config["Uex:ApiKey"] ?? settings.UexCorpApiKey;
             settings.UexBaseUrl = config["Uex:BaseUrl"] ?? settings.UexBaseUrl;
@@ -93,7 +93,20 @@ public class ApiHostedService : IHostedService
 
             if (string.IsNullOrWhiteSpace(settings.DiscordClientId) ||
                 string.IsNullOrWhiteSpace(settings.DiscordClientSecret))
-                _logger.LogWarning("⚠️ Discord credentials not found — OAuth login may not function.");
+                throw new InvalidOperationException("Discord OAuth credentials missing.");
+            if (string.IsNullOrWhiteSpace(settings.DiscordCallbackPath))
+                throw new InvalidOperationException("Discord callback path missing.");
+            if (string.IsNullOrWhiteSpace(settings.DiscordRequiredGuildId))
+                throw new InvalidOperationException("Discord required guild ID missing.");
+            if (string.IsNullOrWhiteSpace(settings.RegolithApiKey))
+                throw new InvalidOperationException("Regolith API key missing.");
+            if (string.IsNullOrWhiteSpace(settings.UexCorpApiKey))
+                throw new InvalidOperationException("Uex Corp API key missing.");
+            if (string.IsNullOrWhiteSpace(settings.UexBaseUrl))
+                throw new InvalidOperationException("Uex Base URL missing.");
+            
+            _logger.LogInformation(@"✅ Configuration loaded and validated successfully. Starting API host...");  
+
 
             // Build the self-hosted API
             _apiHost = Host.CreateDefaultBuilder()

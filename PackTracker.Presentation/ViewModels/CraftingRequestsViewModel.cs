@@ -33,7 +33,29 @@ public partial class CraftingRequestsViewModel : ObservableObject
             StatusMessage = "Refreshing crafting requests...";
 
             using var client = _apiClientProvider.CreateClient();
-            var items = await client.GetFromJsonAsync<List<CraftingRequestListItemDto>>("api/v1/crafting/requests")
+        
+            // 1. Use GetAsync instead of GetFromJsonAsync to safely inspect the result
+            using var response = await client.GetAsync("api/v1/crafting/requests");
+
+            // 2. Check for HTTP Success (200 OK)
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusMessage = $"Server Error: {(int)response.StatusCode} {response.ReasonPhrase}";
+                return;
+            }
+
+            // 3. Verify the Content-Type is actually JSON
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+            if (contentType != "application/json" && !(contentType?.Contains("json") ?? false))
+            {
+                // If we got here, we likely hit a 404 or redirect that returned HTML
+                var preview = await response.Content.ReadAsStringAsync();
+                StatusMessage = "API returned HTML instead of JSON. Check your ApiBaseUrl.";
+                return;
+            }
+
+            // 4. Now it is safe to read the JSON
+            var items = await response.Content.ReadFromJsonAsync<List<CraftingRequestListItemDto>>()
                         ?? new List<CraftingRequestListItemDto>();
 
             Requests.Clear();
@@ -41,12 +63,13 @@ public partial class CraftingRequestsViewModel : ObservableObject
                 Requests.Add(item);
 
             StatusMessage = Requests.Count == 0
-                ? "No crafting requests yet. Create one from the Blueprint Explorer."
+                ? "No crafting requests yet."
                 : $"Loaded {Requests.Count} crafting requests.";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Failed to load crafting requests: {ex.Message}";
+            // This will now only catch real connection issues (like DNS or Timeout)
+            StatusMessage = $"Connection failed: {ex.Message}";
         }
         finally
         {

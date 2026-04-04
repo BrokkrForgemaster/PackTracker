@@ -12,10 +12,11 @@ public class AppSettings
     public bool FirstRunComplete { get; set; } = false;
 
     // --- Database ---
-    /// <summary>
-    /// Encrypted connection string to PostgreSQL.
-    /// </summary>
     public string ConnectionString { get; set; } = string.Empty;
+
+    // --- Blueprint / Crafting Data Source ---
+    // Star Citizen Wiki API — free, no key required, has ingredients per blueprint
+    public string BlueprintDataSourceUrl { get; set; } = "https://api.star-citizen.wiki/api/blueprints";
 
     // --- JWT Authentication ---
     public string JwtKey { get; set; } = string.Empty;
@@ -33,27 +34,20 @@ public class AppSettings
     public string RegolithApiKey { get; set; } = string.Empty;
     public string RegolithBaseUrl { get; set; } = "https://api.regolith.rocks";
 
-    // --- UEX API ---
+    // --- UEX API (trading/economy data — no blueprint support) ---
     public string UexCorpApiKey { get; set; } = string.Empty;
-    public string UexBaseUrl { get; set; } = "https://api.uexcorp.uk/2.0";
+    public string UexBaseUrl { get; set; } = "https://api.uexcorp.space/2.0";
 
     // --- Embedded API ---
     public string ApiBaseUrl { get; set; } = "http://localhost:5001";
 
     // --- Game Integration ---
-    /// <summary>
-    /// Path to the Star Citizen log folder.
-    /// </summary>
     public string GameLogFilePath { get; set; } = string.Empty;
 
     // --- Misc Integration Flags ---
-    /// <summary>
-    /// Tracks whether the Discord account is linked to the app.
-    /// </summary>
     public string DiscordConnected { get; set; } = string.Empty;
     public string? DiscordAccessToken { get; set; }
     public string? DiscordRefreshToken { get; set; }
     public string? JwtToken { get; set; }
     public string? JwtRefreshToken { get; set; }
-    
 }
