@@ -27,15 +27,15 @@ public sealed class WikiSyncBackgroundService : BackgroundService
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var blueprintCount = await db.Blueprints.CountAsync(stoppingToken);
+            var wikiSyncedCount = await db.Blueprints.CountAsync(x => x.WikiUuid != null, stoppingToken);
 
-            if (blueprintCount >= 10)
+            if (wikiSyncedCount > 0)
             {
-                _logger.LogInformation("Wiki auto-sync skipped: {Count} blueprints already in database.", blueprintCount);
+                _logger.LogInformation("Wiki auto-sync skipped: {Count} wiki-synced blueprints already present.", wikiSyncedCount);
                 return;
             }
 
-            _logger.LogInformation("Wiki auto-sync starting: only {Count} blueprints found, pulling from Star Citizen Wiki...", blueprintCount);
+            _logger.LogInformation("Wiki auto-sync starting: no wiki-synced blueprints found, pulling from Star Citizen Wiki...");
 
             var wikiSync = scope.ServiceProvider.GetRequiredService<IWikiSyncService>();
             var result = await wikiSync.SyncBlueprintsAsync(stoppingToken);
