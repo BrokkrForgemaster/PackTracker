@@ -261,7 +261,7 @@ public sealed class CraftingSeedService
                     Slug = Slugify(name),
                     MaterialType = "Resource",
                     Tier = node.MinQuality > 0 ? $"Q{node.MinQuality}" : string.Empty,
-                    SourceType = MaterialSourceType.Mining,
+                    SourceType = MaterialSourceType.Mined,
                     Unit = node.QuantityScu > 0 ? "SCU" : "Units",
                     Notes = node.MinQuality > 0 ? $"Minimum quality {node.MinQuality}" : null
                 };
