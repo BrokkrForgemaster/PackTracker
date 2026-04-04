@@ -96,8 +96,9 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 
     var seedService = scopedServices.GetRequiredService<CraftingSeedService>();
-    var seedPath = Path.Combine(app.Environment.ContentRootPath, "..", "PackTracker.Presentation", "wwwroot", "data", "crafting-seed.json");
-    await seedService.SeedAsync(seedPath);
+    var preferredBlueprintPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "scunpacked-data", "blueprints.json"));
+    var fallbackSeedPath = Path.Combine(app.Environment.ContentRootPath, "..", "PackTracker.Presentation", "wwwroot", "data", "crafting-seed.json");
+    await seedService.SeedAsync(File.Exists(preferredBlueprintPath) ? preferredBlueprintPath : fallbackSeedPath);
 }
 
 app.UseMiddleware<RequestLoggingMiddleware>();
