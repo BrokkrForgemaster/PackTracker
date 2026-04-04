@@ -9,6 +9,88 @@
 
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+
+        <!-- Shared ComboBox style to match existing dark theme -->
+        <Style x:Key="DarkComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#1D1813"/>
+            <Setter Property="Foreground" Value="#E6D5B6"/>
+            <Setter Property="BorderBrush" Value="#3E3023"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="Border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="28"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0"
+                                                  Margin="10,0,0,0"
+                                                  VerticalAlignment="Center"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="▾"
+                                           Foreground="#9A8264"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Center"/>
+                            </Grid>
+                            <ToggleButton Focusable="False"
+                                         IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                         Opacity="0"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Border Background="#1D1813"
+                                        BorderBrush="#3E3023"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="220">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#6B5A42"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Resources>
+                <Style TargetType="ComboBoxItem">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="#E6D5B6"/>
+                    <Setter Property="Padding" Value="10,7"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#2A2118"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#3A2E20"/>
+                            <Setter Property="Foreground" Value="#F0DFC0"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Style.Resources>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -23,7 +105,9 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.ColumnSpan="3" CornerRadius="10" BorderThickness="1" Padding="18,14" Margin="0,0,0,16"
+        <!-- ── Header ── -->
+        <Border Grid.Row="0" Grid.ColumnSpan="3"
+                CornerRadius="10" BorderThickness="1" Padding="18,14" Margin="0,0,0,16"
                 Background="#15120F" BorderBrush="#30251B">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -35,7 +119,8 @@
                     <TextBlock Text="Search imported Star Citizen blueprint data, inspect material requirements, and dispatch House Wolf workflow actions."
                                Foreground="#85745E" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
-                <Border Grid.Column="1" Background="#20170F" BorderBrush="#4B3828" BorderThickness="1" CornerRadius="6" Padding="10,6" VerticalAlignment="Center">
+                <Border Grid.Column="1" Background="#20170F" BorderBrush="#4B3828" BorderThickness="1"
+                        CornerRadius="6" Padding="10,6" VerticalAlignment="Center">
                     <StackPanel>
                         <TextBlock Text="STATUS" Foreground="#8E765B" FontSize="9" FontWeight="Bold"/>
                         <TextBlock Text="{Binding StatusMessage}" Foreground="#D9C4A2" FontSize="11" Width="260" TextWrapping="Wrap"/>
@@ -44,24 +129,34 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="0" CornerRadius="10" BorderThickness="1" Background="#14110E" BorderBrush="#2A2118">
+        <!-- ── Left Panel: Search + Results ── -->
+        <Border Grid.Row="1" Grid.Column="0"
+                CornerRadius="10" BorderThickness="1"
+                Background="#14110E" BorderBrush="#2A2118">
             <DockPanel Margin="12">
                 <StackPanel DockPanel.Dock="Top">
+
+                    <!-- Search text -->
                     <TextBlock Text="SEARCH" Foreground="#9A8264" FontSize="10" FontWeight="Bold"/>
                     <TextBox Margin="0,6,0,10"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#1D1813" Foreground="#E6D5B6" BorderBrush="#3E3023" BorderThickness="1" Padding="10,8"/>
+                             Background="#1D1813" Foreground="#E6D5B6"
+                             BorderBrush="#3E3023" BorderThickness="1" Padding="10,8"/>
 
-                    <TextBlock Text="CATEGORY FILTER" Foreground="#9A8264" FontSize="10" FontWeight="Bold"/>
-                    <TextBox Margin="0,6,0,10"
-                             Text="{Binding CategoryFilter, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#1D1813" Foreground="#E6D5B6" BorderBrush="#3E3023" BorderThickness="1" Padding="10,8"/>
+                    <!-- Category dropdown -->
+                    <TextBlock Text="CATEGORY" Foreground="#9A8264" FontSize="10" FontWeight="Bold"/>
+                    <ComboBox Margin="0,6,0,10"
+                              ItemsSource="{Binding Categories}"
+                              SelectedItem="{Binding SelectedCategory}"
+                              Style="{StaticResource DarkComboBoxStyle}"/>
 
+                    <!-- In-game only toggle -->
                     <CheckBox Content="Only show in-game available blueprints"
                               IsChecked="{Binding InGameOnly}"
                               Foreground="#CFBEA2"
                               Margin="0,0,0,12"/>
 
+                    <!-- Search button -->
                     <Button Content="SEARCH BLUEPRINTS"
                             Command="{Binding SearchCommand}"
                             Padding="12,8"
@@ -71,9 +166,12 @@
                             BorderBrush="#B15B34"
                             BorderThickness="1"/>
 
-                    <TextBlock Margin="0,12,0,0" Foreground="#7E6B56" FontSize="11" Text="{Binding Results.Count, StringFormat=Results: {0}}"/>
+                    <TextBlock Margin="0,12,0,0"
+                               Foreground="#7E6B56" FontSize="11"
+                               Text="{Binding Results.Count, StringFormat=Results: {0}}"/>
                 </StackPanel>
 
+                <!-- Results list -->
                 <ListBox ItemsSource="{Binding Results}"
                          SelectedItem="{Binding SelectedBlueprint}"
                          Margin="0,14,0,0"
@@ -82,13 +180,20 @@
                          Foreground="#E6D5B6">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="0,0,0,8" Padding="10" Background="#191510" BorderBrush="#31271E" BorderThickness="1" CornerRadius="8">
+                            <Border Margin="0,0,0,8" Padding="10"
+                                    Background="#191510" BorderBrush="#31271E"
+                                    BorderThickness="1" CornerRadius="8">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding BlueprintName}" Foreground="#EADABD" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding CraftedItemName}" Foreground="#B8A185" FontSize="11" Margin="0,3,0,0"/>
+                                    <TextBlock Text="{Binding BlueprintName}"
+                                               Foreground="#EADABD" FontWeight="SemiBold"
+                                               FontSize="13" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding CraftedItemName}"
+                                               Foreground="#B8A185" FontSize="11" Margin="0,3,0,0"/>
                                     <DockPanel Margin="0,6,0,0">
-                                        <TextBlock Text="{Binding Category}" Foreground="#8D775F" FontSize="10" DockPanel.Dock="Left"/>
-                                        <TextBlock Text="{Binding VerifiedOwnerCount, StringFormat=Owners: {0}}" Foreground="#8D775F" FontSize="10" DockPanel.Dock="Right"/>
+                                        <TextBlock Text="{Binding Category}"
+                                                   Foreground="#8D775F" FontSize="10" DockPanel.Dock="Left"/>
+                                        <TextBlock Text="{Binding VerifiedOwnerCount, StringFormat=Owners: {0}}"
+                                                   Foreground="#8D775F" FontSize="10" DockPanel.Dock="Right"/>
                                     </DockPanel>
                                 </StackPanel>
                             </Border>
@@ -98,6 +203,7 @@
             </DockPanel>
         </Border>
 
+        <!-- ── Right Panel: Detail ── -->
         <Grid Grid.Row="1" Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -106,23 +212,31 @@
             </Grid.RowDefinitions>
 
             <StackPanel Visibility="{Binding SelectedBlueprintDetail, Converter={StaticResource NullToVisibilityConverter}}">
-                <Border CornerRadius="10" BorderThickness="1" Padding="18" Background="#15120F" BorderBrush="#31261D">
+                <Border CornerRadius="10" BorderThickness="1" Padding="18"
+                        Background="#15120F" BorderBrush="#31261D">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="{Binding SelectedBlueprintDetail.BlueprintName}" FontSize="24" FontWeight="Bold" Foreground="#F0DFC0"/>
-                            <TextBlock Text="{Binding SelectedBlueprintDetail.CraftedItemName}" FontSize="14" Foreground="#D0B796" Margin="0,4,0,0"/>
+                            <TextBlock Text="{Binding SelectedBlueprintDetail.BlueprintName}"
+                                       FontSize="24" FontWeight="Bold" Foreground="#F0DFC0"/>
+                            <TextBlock Text="{Binding SelectedBlueprintDetail.CraftedItemName}"
+                                       FontSize="14" Foreground="#D0B796" Margin="0,4,0,0"/>
                             <WrapPanel Margin="0,10,0,0">
-                                <Border Background="#20170F" BorderBrush="#4A3928" BorderThickness="1" CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
-                                    <TextBlock Text="{Binding SelectedBlueprintDetail.Category}" Foreground="#C9AF8D" FontSize="11"/>
+                                <Border Background="#20170F" BorderBrush="#4A3928" BorderThickness="1"
+                                        CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding SelectedBlueprintDetail.Category}"
+                                               Foreground="#C9AF8D" FontSize="11"/>
                                 </Border>
-                                <Border Background="#20170F" BorderBrush="#4A3928" BorderThickness="1" CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
-                                    <TextBlock Text="{Binding SelectedBlueprintDetail.DataConfidence}" Foreground="#C9AF8D" FontSize="11"/>
+                                <Border Background="#20170F" BorderBrush="#4A3928" BorderThickness="1"
+                                        CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding SelectedBlueprintDetail.DataConfidence}"
+                                               Foreground="#C9AF8D" FontSize="11"/>
                                 </Border>
-                                <Border Background="#20170F" BorderBrush="#4A3928" BorderThickness="1" CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
+                                <Border Background="#20170F" BorderBrush="#4A3928" BorderThickness="1"
+                                        CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
                                     <TextBlock Foreground="#C9AF8D" FontSize="11">
                                         <Run Text="Craft Time: "/>
                                         <Run Text="{Binding SelectedBlueprintDetail.TimeToCraftSeconds}"/>
@@ -130,46 +244,33 @@
                                     </TextBlock>
                                 </Border>
                             </WrapPanel>
-                            <TextBlock Text="{Binding SelectedBlueprintDetail.Description}" Foreground="#8C7963" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding SelectedBlueprintDetail.AcquisitionSummary}" Foreground="#B9A081" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedBlueprintDetail.Description}"
+                                       Foreground="#8C7963" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedBlueprintDetail.AcquisitionSummary}"
+                                       Foreground="#B9A081" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top">
                             <Button Content="MARK OWNED"
                                     Command="{Binding MarkOwnedCommand}"
-                                    Margin="0,0,0,8"
-                                    Padding="12,8"
-                                    FontWeight="Bold"
-                                    Background="#2B4E2E"
-                                    Foreground="#EEF6EE"
-                                    BorderBrush="#5C8B5E"
-                                    BorderThickness="1"/>
+                                    Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                    Background="#2B4E2E" Foreground="#EEF6EE"
+                                    BorderBrush="#5C8B5E" BorderThickness="1"/>
                             <Button Content="MARK WANTED"
                                     Command="{Binding MarkWantedCommand}"
-                                    Margin="0,0,0,8"
-                                    Padding="12,8"
-                                    FontWeight="Bold"
-                                    Background="#5A3A14"
-                                    Foreground="#F8E9D4"
-                                    BorderBrush="#A36E2F"
-                                    BorderThickness="1"/>
+                                    Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                    Background="#5A3A14" Foreground="#F8E9D4"
+                                    BorderBrush="#A36E2F" BorderThickness="1"/>
                             <Button Content="CREATE CRAFTING REQUEST"
                                     Command="{Binding CreateCraftingRequestCommand}"
-                                    Margin="0,0,0,8"
-                                    Padding="12,8"
-                                    FontWeight="Bold"
-                                    Background="#8B1A0F"
-                                    Foreground="#F4EBDD"
-                                    BorderBrush="#B15B34"
-                                    BorderThickness="1"/>
+                                    Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                    Background="#8B1A0F" Foreground="#F4EBDD"
+                                    BorderBrush="#B15B34" BorderThickness="1"/>
                             <Button Content="REQUEST SELECTED MATERIAL"
                                     Command="{Binding CreateProcurementRequestCommand}"
-                                    Padding="12,8"
-                                    FontWeight="Bold"
-                                    Background="#24374A"
-                                    Foreground="#E8F0F8"
-                                    BorderBrush="#4F6A84"
-                                    BorderThickness="1"/>
+                                    Padding="12,8" FontWeight="Bold"
+                                    Background="#24374A" Foreground="#E8F0F8"
+                                    BorderBrush="#4F6A84" BorderThickness="1"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -181,23 +282,31 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Grid.Column="0" CornerRadius="10" BorderThickness="1" Padding="14" Background="#14110E" BorderBrush="#2E241B">
+                    <Border Grid.Column="0" CornerRadius="10" BorderThickness="1" Padding="14"
+                            Background="#14110E" BorderBrush="#2E241B">
                         <StackPanel>
                             <TextBlock Text="RECIPE MATERIALS" Foreground="#E6D5B8" FontSize="16" FontWeight="Bold"/>
-                            <TextBlock Text="Select a material to create a procurement request." Foreground="#897760" FontSize="11" Margin="0,4,0,12"/>
-                            <ListBox ItemsSource="{Binding Materials}" SelectedItem="{Binding SelectedMaterial}" Background="Transparent" BorderThickness="0" Foreground="#E8D6B8">
+                            <TextBlock Text="Select a material to create a procurement request."
+                                       Foreground="#897760" FontSize="11" Margin="0,4,0,12"/>
+                            <ListBox ItemsSource="{Binding Materials}"
+                                     SelectedItem="{Binding SelectedMaterial}"
+                                     Background="Transparent" BorderThickness="0" Foreground="#E8D6B8">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Margin="0,0,0,8" Padding="10" Background="#191510" BorderBrush="#31271E" BorderThickness="1" CornerRadius="8">
+                                        <Border Margin="0,0,0,8" Padding="10"
+                                                Background="#191510" BorderBrush="#31271E"
+                                                BorderThickness="1" CornerRadius="8">
                                             <StackPanel>
-                                                <TextBlock Text="{Binding MaterialName}" Foreground="#EADABD" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock Text="{Binding MaterialName}"
+                                                           Foreground="#EADABD" FontWeight="SemiBold" FontSize="13"/>
                                                 <TextBlock Foreground="#B8A185" FontSize="11" Margin="0,4,0,0">
                                                     <Run Text="Qty: "/>
                                                     <Run Text="{Binding QuantityRequired}"/>
                                                     <Run Text=" "/>
                                                     <Run Text="{Binding Unit}"/>
                                                 </TextBlock>
-                                                <TextBlock Text="{Binding SourceType}" Foreground="#8D775F" FontSize="10" Margin="0,4,0,0"/>
+                                                <TextBlock Text="{Binding SourceType}"
+                                                           Foreground="#8D775F" FontSize="10" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -206,23 +315,29 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Column="2" CornerRadius="10" BorderThickness="1" Padding="14" Background="#14110E" BorderBrush="#2E241B">
+                    <Border Grid.Column="2" CornerRadius="10" BorderThickness="1" Padding="14"
+                            Background="#14110E" BorderBrush="#2E241B">
                         <StackPanel>
                             <TextBlock Text="OWNERS / INTEREST" Foreground="#E6D5B8" FontSize="16" FontWeight="Bold"/>
-                            <TextBlock Text="Members who own or want this blueprint." Foreground="#897760" FontSize="11" Margin="0,4,0,12"/>
+                            <TextBlock Text="Members who own or want this blueprint."
+                                       Foreground="#897760" FontSize="11" Margin="0,4,0,12"/>
                             <ItemsControl ItemsSource="{Binding Owners}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Margin="0,0,0,8" Padding="10" Background="#191510" BorderBrush="#31271E" BorderThickness="1" CornerRadius="8">
+                                        <Border Margin="0,0,0,8" Padding="10"
+                                                Background="#191510" BorderBrush="#31271E"
+                                                BorderThickness="1" CornerRadius="8">
                                             <StackPanel>
-                                                <TextBlock Text="{Binding Username}" Foreground="#EADABD" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock Text="{Binding Username}"
+                                                           Foreground="#EADABD" FontWeight="SemiBold" FontSize="13"/>
                                                 <TextBlock Foreground="#B8A185" FontSize="11" Margin="0,4,0,0">
                                                     <Run Text="Interest: "/>
                                                     <Run Text="{Binding InterestType}"/>
                                                     <Run Text=" | Status: "/>
                                                     <Run Text="{Binding OwnershipStatus}"/>
                                                 </TextBlock>
-                                                <TextBlock Text="{Binding AvailabilityStatus}" Foreground="#8D775F" FontSize="10" Margin="0,4,0,0"/>
+                                                <TextBlock Text="{Binding AvailabilityStatus}"
+                                                           Foreground="#8D775F" FontSize="10" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -232,24 +347,33 @@
                     </Border>
                 </Grid>
 
-                <Border Margin="0,16,0,0" Padding="18" CornerRadius="10" BorderThickness="1" Background="#14110E" BorderBrush="#2D231A">
+                <Border Margin="0,16,0,0" Padding="18" CornerRadius="10" BorderThickness="1"
+                        Background="#14110E" BorderBrush="#2D231A">
                     <StackPanel>
                         <TextBlock Text="OPERATIONAL NOTES" Foreground="#E6D5B8" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding SelectedBlueprintDetail.Notes}" Foreground="#AC977B" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedBlueprintDetail.Notes}"
+                                   Foreground="#AC977B" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
 
-            <Border Background="#14110E" BorderBrush="#2E241B" BorderThickness="1" CornerRadius="10" Padding="22">
+            <!-- Empty state -->
+            <Border Background="#14110E" BorderBrush="#2E241B" BorderThickness="1"
+                    CornerRadius="10" Padding="22">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="SELECT A BLUEPRINT" Foreground="#B9A07D" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="SELECT A BLUEPRINT" Foreground="#B9A07D"
+                               FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
                     <TextBlock Text="Choose a blueprint from the registry to inspect materials, ownership, and workflow actions."
-                               Foreground="#7E6C58" FontSize="12" Margin="0,8,0,0" TextAlignment="Center" TextWrapping="Wrap" Width="360"/>
+                               Foreground="#7E6C58" FontSize="12" Margin="0,8,0,0"
+                               TextAlignment="Center" TextWrapping="Wrap" Width="360"/>
                 </StackPanel>
             </Border>
         </Grid>
 
-        <Border Grid.Row="2" Grid.ColumnSpan="3" Margin="0,16,0,0" Background="#15120F" BorderBrush="#2D231A" BorderThickness="1" CornerRadius="8" Padding="12,10">
+        <!-- ── Footer status bar ── -->
+        <Border Grid.Row="2" Grid.ColumnSpan="3"
+                Margin="0,16,0,0" Background="#15120F" BorderBrush="#2D231A"
+                BorderThickness="1" CornerRadius="8" Padding="12,10">
             <TextBlock Text="{Binding StatusMessage}" Foreground="#CBB293" FontSize="12" TextWrapping="Wrap"/>
         </Border>
     </Grid>

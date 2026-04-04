@@ -2,231 +2,173 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
 
-        <StackPanel Margin="0,0,0,18">
-            <TextBlock Text="Authentication Gateway"
-                       FontSize="34"
-                       FontWeight="Black"
-                       Foreground="White"/>
-            <TextBlock Text="Secure Discord sign-in for PackTracker command access."
-                       FontSize="15"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       Margin="0,6,0,0"/>
-        </StackPanel>
+    <Grid>
+        <Border Background="{DynamicResource AppBackgroundBrush}"/>
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.35*"/>
-                <ColumnDefinition Width="0.95*"/>
-            </Grid.ColumnDefinitions>
+        <Grid HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Width="400">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <Border Grid.Column="0"
-                    Style="{StaticResource SectionCardStyle}"
-                    Margin="0,0,18,0"
-                    Padding="28"
-                    Background="{DynamicResource HeroGradientBrush}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <!-- Logo / Wordmark -->
+            <StackPanel Grid.Row="0"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,40">
+                <Border Width="72"
+                        Height="72"
+                        CornerRadius="18"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        BorderBrush="{DynamicResource PanelStrokeBrush}"
+                        BorderThickness="1"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,16">
+                    <Image Source="/Assets/HWiconnew.png"
+                           Width="52"
+                           Height="52"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Stretch="Uniform"/>
+                </Border>
 
-                    <StackPanel>
-                        <Border Background="{DynamicResource SurfaceGlassStrongBrush}"
-                                BorderBrush="{DynamicResource GlassBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="999"
-                                Padding="12,6"
-                                HorizontalAlignment="Left">
-                            <TextBlock Text="HOUSE WOLF // SECURE ACCESS"
-                                       Style="{StaticResource StatusPillTextStyle}"
-                                       Foreground="{DynamicResource AccentGoldBrush}"/>
-                        </Border>
+                <TextBlock Text="PackTracker"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           Foreground="White"
+                           HorizontalAlignment="Center"/>
 
-                        <TextBlock Text="Authenticate once. Return to the dashboard armed with a live token."
-                                   TextWrapping="Wrap"
-                                   FontSize="28"
-                                   FontWeight="Bold"
-                                   Foreground="White"
-                                   Margin="0,18,0,10"/>
+                <TextBlock Text="House Wolf Operations"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
 
-                        <TextBlock Text="PackTracker opens a browser window for Discord OAuth, validates your House Wolf identity path, then hands tokens back to the desktop client automatically."
-                                   FontSize="15"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   MaxWidth="680"/>
-                    </StackPanel>
+            <!-- Status pill -->
+            <Border Grid.Row="1"
+                    x:Name="StatusPill"
+                    Background="{DynamicResource SurfaceAltBrush}"
+                    BorderBrush="{DynamicResource PanelStrokeBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="14,10"
+                    Margin="0,0,0,20"
+                    Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Ellipse x:Name="StatusDot"
+                             Width="7"
+                             Height="7"
+                             Fill="LightGreen"
+                             VerticalAlignment="Center"
+                             Margin="0,0,8,0"/>
+                    <TextBlock x:Name="DiscordStatus"
+                               FontSize="13"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
 
-                    <Grid Grid.Row="1" Margin="0,26,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+            <!-- Primary action card -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource SurfaceAltBrush}"
+                    BorderBrush="{DynamicResource PanelStrokeBrush}"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="28">
+                <StackPanel>
+                    <TextBlock Text="Sign in to continue"
+                               FontSize="17"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"/>
 
-                        <Border Grid.Column="0"
-                                Style="{StaticResource GlassPanelStyle}"
-                                Margin="0,0,12,0">
-                            <StackPanel>
-                                <TextBlock Text="01"
-                                           FontSize="24"
+                    <TextBlock Text="PackTracker uses Discord OAuth to verify your House Wolf membership. No passwords stored."
+                               FontSize="13"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               HorizontalAlignment="Center"
+                               MaxWidth="300"
+                               Margin="0,8,0,24"/>
+
+                    <Button x:Name="DiscordLoginButton"
+                            Click="DiscordLogin_Click"
+                            Height="46"
+                            FontSize="15"
+                            FontWeight="SemiBold"
+                            Style="{StaticResource PrimaryActionButtonStyle}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Border Background="#5865F2"
+                                    CornerRadius="6"
+                                    Padding="5,3"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="D"
+                                           FontSize="12"
                                            FontWeight="Black"
-                                           Foreground="{DynamicResource AccentGoldBrush}"/>
-                                <TextBlock Text="Local API readiness"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Margin="0,12,0,6"/>
-                                <TextBlock Text="The client checks health and, if needed, spins up the embedded API before opening Discord."
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            </StackPanel>
-                        </Border>
+                                           Foreground="White"/>
+                            </Border>
+                            <TextBlock Text="Continue with Discord"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
-                        <Border Grid.Column="1"
-                                Style="{StaticResource GlassPanelStyle}">
-                            <StackPanel>
-                                <TextBlock Text="02"
-                                           FontSize="24"
-                                           FontWeight="Black"
-                                           Foreground="{DynamicResource AccentGoldBrush}"/>
-                                <TextBlock Text="Token handoff"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Margin="0,12,0,6"/>
-                                <TextBlock Text="Once Discord completes, PackTracker polls for the token pair and routes you straight into operations."
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            </StackPanel>
+                    <Grid Margin="0,20,0,20">
+                        <Separator Background="{DynamicResource PanelStrokeBrush}" VerticalAlignment="Center"/>
+                        <Border Background="{DynamicResource SurfaceAltBrush}"
+                                HorizontalAlignment="Center"
+                                Padding="10,0">
+                            <TextBlock Text="having trouble?"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextMutedBrush}"/>
                         </Border>
                     </Grid>
 
-                    <StackPanel Grid.Row="2"
-                                Margin="0,26,0,0"
-                                VerticalAlignment="Bottom">
-                        <Border Background="#1DFFFFFF"
-                                BorderBrush="#28FFFFFF"
-                                BorderThickness="1"
-                                CornerRadius="18"
-                                Padding="18">
-                            <StackPanel>
-                                <TextBlock Text="Operational notes"
-                                           FontSize="15"
-                                           FontWeight="SemiBold"
-                                           Foreground="White"/>
-                                <TextBlock Text="• Browser launch is expected&#x0a;• The close-screen indicates OAuth completion&#x0a;• If readiness fails, status will remain local to this panel"
-                                           Margin="0,10,0,0"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
+                    <Button Content="Retry API readiness"
+                            Click="RetryApi_Click"
+                            Height="38"
+                            FontSize="13"
+                            Style="{StaticResource SecondaryActionButtonStyle}"/>
+                </StackPanel>
             </Border>
 
-            <Border Grid.Column="1"
-                    Style="{StaticResource SectionCardStyle}"
-                    Padding="28">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+            <!-- Authenticated confirmation -->
+            <StackPanel Grid.Row="3"
+                        x:Name="AuthConfirmPanel"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0,18,0,0"
+                        Visibility="Collapsed">
+                <TextBlock x:Name="DiscordCheck"
+                           Text="✓"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           Foreground="LimeGreen"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0"/>
+                <TextBlock Text="Authenticated — redirecting to dashboard"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
 
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Discord Authentication"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="White"/>
-                            <TextBlock x:Name="DiscordCheck"
-                                       Text="✓"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="LimeGreen"
-                                       Margin="12,0,0,0"
-                                       Visibility="Collapsed"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <TextBlock Text="Use your Discord identity to unlock PackTracker. The app will return you here automatically when complete."
-                                   FontSize="14"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,10,0,0"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-
-                    <Border Grid.Row="1"
-                            Margin="0,22,0,0"
-                            Background="{DynamicResource SurfaceAltBrush}"
-                            BorderBrush="{DynamicResource PanelStrokeBrush}"
-                            BorderThickness="1"
-                            CornerRadius="16"
-                            Padding="18">
-                        <StackPanel>
-                            <TextBlock Text="Connection status"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            <TextBlock x:Name="DiscordStatus"
-                                       FontSize="15"
-                                       Foreground="LightGreen"
-                                       Margin="0,8,0,0"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-
-                    <StackPanel Grid.Row="2" Margin="0,18,0,0">
-                        <Button x:Name="DiscordLoginButton"
-                                Content="Login with Discord"
-                                Click="DiscordLogin_Click"
-                                Height="48"
-                                FontSize="18"
-                                Style="{StaticResource PrimaryActionButtonStyle}"/>
-
-                        <Button Content="Retry API readiness"
-                                Click="RetryApi_Click"
-                                Height="44"
-                                Margin="0,12,0,0"
-                                FontSize="15"
-                                Style="{StaticResource SecondaryActionButtonStyle}"/>
-                    </StackPanel>
-
-                    <Border Grid.Row="3"
-                            Margin="0,22,0,0"
-                            Background="{DynamicResource SuccessFillBrush}"
-                            BorderBrush="#334CAF50"
-                            BorderThickness="1"
-                            CornerRadius="16"
-                            Padding="18"
-                            VerticalAlignment="Top">
-                        <StackPanel>
-                            <TextBlock Text="Expected flow"
-                                       FontSize="14"
-                                       FontWeight="SemiBold"
-                                       Foreground="White"/>
-                            <TextBlock Text="1. Verify local API health&#x0a;2. Open Discord OAuth page&#x0a;3. Wait for the success screen&#x0a;4. PackTracker stores your token pair and redirects to the dashboard"
-                                       Margin="0,10,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Grid.Row="4"
-                               Text="If authentication times out, use Retry API readiness first, then re-launch Discord sign-in."
-                               FontSize="12"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               Margin="0,18,0,0"
-                               TextWrapping="Wrap"/>
-                </Grid>
-            </Border>
+            <!-- Footer note -->
+            <TextBlock Grid.Row="4"
+                       Text="A browser window will open for OAuth. It will close automatically."
+                       FontSize="12"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="320"
+                       Margin="0,24,0,0"/>
         </Grid>
     </Grid>
 </UserControl>
