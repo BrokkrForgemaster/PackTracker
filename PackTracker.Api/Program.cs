@@ -97,18 +97,27 @@ using (var scope = app.Services.CreateScope())
 
     // Apply wiki sync columns idempotently — safe for both fresh installs and
     // existing EnsureCreated-based databases that predate EF migration management.
-    await db.Database.ExecuteSqlRawAsync(
-        @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
-    await db.Database.ExecuteSqlRawAsync(
-        @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)");
-    await db.Database.ExecuteSqlRawAsync(
-        @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
-    await db.Database.ExecuteSqlRawAsync(
-        @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)");
-    await db.Database.ExecuteSqlRawAsync(
-        @"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")");
-    await db.Database.ExecuteSqlRawAsync(
-        @"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")");
+    var schemaLogger = scopedServices.GetRequiredService<ILogger<AppDbContext>>();
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
+        await db.Database.ExecuteSqlRawAsync(
+            @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)");
+        await db.Database.ExecuteSqlRawAsync(
+            @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
+        await db.Database.ExecuteSqlRawAsync(
+            @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)");
+        await db.Database.ExecuteSqlRawAsync(
+            @"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")");
+        await db.Database.ExecuteSqlRawAsync(
+            @"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")");
+        schemaLogger.LogInformation("✅ Wiki sync schema columns applied successfully");
+    }
+    catch (Exception ex)
+    {
+        schemaLogger.LogError(ex, "❌ Failed to apply wiki sync schema columns — wiki sync will fail until columns are added manually");
+    }
 
     var seedService = scopedServices.GetRequiredService<CraftingSeedService>();
     var preferredBlueprintPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "scunpacked-data", "blueprints.json"));
