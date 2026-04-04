@@ -159,7 +159,7 @@
             <Border Panel.ZIndex="1"
                     Style="{StaticResource SectionCardStyle}"
                     Padding="0"
-                    Background="#18000000">
+                    Background="Transparent">
                 <Grid>
                     <Border Background="#14000000"
                             CornerRadius="18"

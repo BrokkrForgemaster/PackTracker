@@ -295,7 +295,6 @@
          COMPONENT QUANTITY TEXTBOX
     ══════════════════════════════════════ -->
     <Style x:Key="QuantityBoxStyle" TargetType="TextBox">
-        <Setter Property="Background"               Value="#201810"/>
         <Setter Property="Foreground"               Value="#C8922A"/>
         <Setter Property="BorderBrush"              Value="#3D2A1A"/>
         <Setter Property="BorderThickness"          Value="1"/>
