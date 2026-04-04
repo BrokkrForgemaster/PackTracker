@@ -71,10 +71,7 @@
                             BorderBrush="#B15B34"
                             BorderThickness="1"/>
 
-                    <TextBlock Margin="0,12,0,0" Foreground="#7E6B56" FontSize="11">
-                        <Run Text="Results: "/>
-                        <Run Text="{Binding Results.Count}"/>
-                    </TextBlock>
+                    <TextBlock Margin="0,12,0,0" Foreground="#7E6B56" FontSize="11" Text="{Binding Results.Count, StringFormat=Results: {0}}"/>
                 </StackPanel>
 
                 <ListBox ItemsSource="{Binding Results}"
