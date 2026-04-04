@@ -95,6 +95,21 @@ using (var scope = app.Services.CreateScope())
     var db = scopedServices.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 
+    // Apply wiki sync columns idempotently — safe for both fresh installs and
+    // existing EnsureCreated-based databases that predate EF migration management.
+    await db.Database.ExecuteSqlRawAsync(
+        @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
+    await db.Database.ExecuteSqlRawAsync(
+        @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)");
+    await db.Database.ExecuteSqlRawAsync(
+        @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
+    await db.Database.ExecuteSqlRawAsync(
+        @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)");
+    await db.Database.ExecuteSqlRawAsync(
+        @"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")");
+    await db.Database.ExecuteSqlRawAsync(
+        @"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")");
+
     var seedService = scopedServices.GetRequiredService<CraftingSeedService>();
     var preferredBlueprintPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "scunpacked-data", "blueprints.json"));
     var fallbackSeedPath = Path.Combine(app.Environment.ContentRootPath, "..", "PackTracker.Presentation", "wwwroot", "data", "crafting-seed.json");
