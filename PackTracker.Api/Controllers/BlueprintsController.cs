@@ -55,8 +55,22 @@ public class BlueprintsController : ControllerBase
                 EF.Functions.ILike(x.Category, $"%{term}%"));
         }
 
-        var items = await query
+        var blueprints = await query
             .OrderBy(x => x.BlueprintName)
+            .Take(100)
+            .ToListAsync(ct);
+
+        var blueprintIds = blueprints.Select(x => x.Id).ToList();
+        var verifiedOwnerCounts = await _db.MemberBlueprintOwnerships
+            .AsNoTracking()
+            .Where(o => blueprintIds.Contains(o.BlueprintId)
+                        && o.InterestType == MemberBlueprintInterestType.Owns
+                        && o.OwnershipStatus == BlueprintOwnershipStatus.Verified)
+            .GroupBy(o => o.BlueprintId)
+            .Select(g => new { BlueprintId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.BlueprintId, x => x.Count, ct);
+
+        var items = blueprints
             .Select(x => new BlueprintSearchItemDto
             {
                 Id = x.Id,
@@ -66,12 +80,9 @@ public class BlueprintsController : ControllerBase
                 IsInGameAvailable = x.IsInGameAvailable,
                 AcquisitionSummary = x.AcquisitionSummary,
                 DataConfidence = x.DataConfidence,
-                VerifiedOwnerCount = _db.MemberBlueprintOwnerships.Count(o =>
-                    o.BlueprintId == x.Id && o.InterestType == MemberBlueprintInterestType.Owns &&
-                    o.OwnershipStatus == BlueprintOwnershipStatus.Verified)
+                VerifiedOwnerCount = verifiedOwnerCounts.TryGetValue(x.Id, out var count) ? count : 0
             })
-            .Take(100)
-            .ToListAsync(ct);
+            .ToList();
 
         _logger.LogInformation("Blueprint search returned {Count} results", items.Count);
         return Ok(items);
