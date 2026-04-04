@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Domain.Enums;
 using PackTracker.Presentation.Services;
@@ -13,6 +14,7 @@ namespace PackTracker.Presentation.ViewModels;
 public partial class BlueprintExplorerViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
+    private readonly ILogger<BlueprintExplorerViewModel> _logger;
 
     public ObservableCollection<BlueprintSearchItemDto> Results { get; } = new();
     public ObservableCollection<BlueprintRecipeMaterialDto> Materials { get; } = new();
@@ -31,9 +33,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     public IReadOnlyList<MemberBlueprintInterestType> InterestTypeOptions { get; } =
         Enum.GetValues<MemberBlueprintInterestType>();
 
-    public BlueprintExplorerViewModel(IApiClientProvider apiClientProvider)
+    public BlueprintExplorerViewModel(IApiClientProvider apiClientProvider, ILogger<BlueprintExplorerViewModel> logger)
     {
         _apiClientProvider = apiClientProvider;
+        _logger = logger;
         SearchText = "Blueprint";
         _ = SearchAsync();
     }
@@ -58,8 +61,15 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 url += "?" + string.Join("&", query);
 
             using var client = _apiClientProvider.CreateClient();
+            var requestUri = new Uri(client.BaseAddress!, url);
+            _logger.LogInformation("Blueprint search request starting. BaseAddress={BaseAddress} RelativeUrl={RelativeUrl} AbsoluteUrl={AbsoluteUrl}", client.BaseAddress, url, requestUri);
+
             using var response = await client.GetAsync(url);
             var body = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Blueprint search response received. StatusCode={StatusCode} ContentType={ContentType} BodyPreview={BodyPreview}",
+                (int)response.StatusCode,
+                response.Content.Headers.ContentType?.MediaType ?? "<none>",
+                TrimForDisplay(body));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -111,8 +121,16 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             StatusMessage = "Loading blueprint detail...";
 
             using var client = _apiClientProvider.CreateClient();
-            using var response = await client.GetAsync($"api/v1/blueprints/{blueprintId}");
+            var relativeUrl = $"api/v1/blueprints/{blueprintId}";
+            var requestUri = new Uri(client.BaseAddress!, relativeUrl);
+            _logger.LogInformation("Blueprint detail request starting. BaseAddress={BaseAddress} RelativeUrl={RelativeUrl} AbsoluteUrl={AbsoluteUrl}", client.BaseAddress, relativeUrl, requestUri);
+
+            using var response = await client.GetAsync(relativeUrl);
             var body = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Blueprint detail response received. StatusCode={StatusCode} ContentType={ContentType} BodyPreview={BodyPreview}",
+                (int)response.StatusCode,
+                response.Content.Headers.ContentType?.MediaType ?? "<none>",
+                TrimForDisplay(body));
 
             if (!response.IsSuccessStatusCode)
             {

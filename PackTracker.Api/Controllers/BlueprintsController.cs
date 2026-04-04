@@ -28,6 +28,13 @@ public class BlueprintsController : ControllerBase
         [FromQuery] bool inGameOnly = true,
         CancellationToken ct = default)
     {
+        _logger.LogInformation("Blueprint search endpoint hit. Path={Path} QueryQ={QueryQ} Category={Category} InGameOnly={InGameOnly} User={User}",
+            HttpContext.Request.Path,
+            q,
+            category,
+            inGameOnly,
+            User?.Identity?.Name ?? "<anonymous>");
+
         var query = _db.Blueprints.AsNoTracking().AsQueryable();
 
         if (inGameOnly)
@@ -69,6 +76,11 @@ public class BlueprintsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<BlueprintDetailDto>> GetById(Guid id, CancellationToken ct)
     {
+        _logger.LogInformation("Blueprint detail endpoint hit. Path={Path} BlueprintId={BlueprintId} User={User}",
+            HttpContext.Request.Path,
+            id,
+            User?.Identity?.Name ?? "<anonymous>");
+
         var blueprint = await _db.Blueprints
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id, ct);
