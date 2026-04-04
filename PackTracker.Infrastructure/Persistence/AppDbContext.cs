@@ -220,6 +220,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.Slug).IsUnique();
+            entity.HasIndex(x => x.WikiUuid);
             entity.Property(x => x.BlueprintName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.CraftedItemName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Category).HasMaxLength(100).IsRequired();
@@ -229,17 +230,22 @@ public class AppDbContext : DbContext
             entity.Property(x => x.AcquisitionMethod).HasMaxLength(100);
             entity.Property(x => x.SourceVersion).HasMaxLength(100);
             entity.Property(x => x.DataConfidence).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.WikiUuid).HasMaxLength(200);
+            entity.Property(x => x.WikiLastSyncedAt).HasMaxLength(50);
         });
 
         modelBuilder.Entity<Material>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.Slug).IsUnique();
+            entity.HasIndex(x => x.WikiUuid);
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Slug).HasMaxLength(200).IsRequired();
             entity.Property(x => x.MaterialType).HasMaxLength(100).IsRequired();
             entity.Property(x => x.Tier).HasMaxLength(50).IsRequired();
             entity.Property(x => x.SourceType).HasConversion<int>();
+            entity.Property(x => x.WikiUuid).HasMaxLength(200);
+            entity.Property(x => x.Category).HasMaxLength(100);
         });
 
         modelBuilder.Entity<BlueprintRecipe>(entity =>

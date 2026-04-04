@@ -15,6 +15,8 @@ public class Blueprint
     public string? SourceVersion { get; set; }
     public string DataConfidence { get; set; } = "Imported";
     public string? Notes { get; set; }
+    public string? WikiUuid { get; set; }
+    public string? WikiLastSyncedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
+using PackTracker.Infrastructure.BackgroundServices;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
@@ -55,6 +56,16 @@ public static class DependencyInjection
         services.AddSingleton<IKillEventService, KillEventService>();
         services.AddSingleton<IGameLogService, GameLogService>();
         services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
+
+        services.AddHttpClient("WikiApi", client =>
+        {
+            client.BaseAddress = new Uri("https://api.star-citizen.wiki/api/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
+        });
+
+        services.AddScoped<IWikiSyncService, WikiSyncService>();
+        services.AddHostedService<WikiSyncBackgroundService>();
 
         services.AddMemoryCache();
         return services;

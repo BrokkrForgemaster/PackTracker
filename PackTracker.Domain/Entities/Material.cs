@@ -14,6 +14,8 @@ public class Material
     public bool IsRefinedMaterial { get; set; }
     public bool IsCraftedComponent { get; set; }
     public string? Notes { get; set; }
+    public string? WikiUuid { get; set; }
+    public string? Category { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

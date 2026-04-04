@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:chatgpt.com)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Read(//home/ravenadmin/**)",
+      "Bash(find / -name \"dotnet\" -type f)"
     ],
     "deny": [],
     "ask": []
