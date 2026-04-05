@@ -12,8 +12,8 @@ public partial class ComponentViewModel : ObservableObject
     // This list will hold the green/red percentage pills
     public ObservableCollection<StatModifier> Modifiers { get; } = new();
 
-    partial void OnQualityValueChanged(int value) => (Parent as dynamic)?.UpdateTotalModifiers();
-    
+    partial void OnQualityValueChanged(int value) => Parent?.UpdateCombinedModifiers();
+
     public BlueprintExplorerViewModel? Parent { get; set; }
 }
 

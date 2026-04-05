@@ -12,6 +12,12 @@ using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.ViewModels;
 
+public class BlueprintComponentModifierPreview
+{
+    public string PropertyKey { get; set; } = string.Empty;
+    public double CalculatedValue { get; set; }
+}
+
 public partial class BlueprintExplorerViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
@@ -21,6 +27,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     public ObservableCollection<BlueprintRecipeMaterialDto> Materials { get; } = new();
     public ObservableCollection<BlueprintOwnerDto> Owners { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
+    public ObservableCollection<ComponentViewModel> Components { get; } = new();
+    public ObservableCollection<BlueprintComponentModifierPreview> CombinedModifiers { get; } = new();
 
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private string? selectedCategory;
@@ -31,6 +39,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
     [ObservableProperty] private BlueprintRecipeMaterialDto? selectedMaterial;
     [ObservableProperty] private MemberBlueprintInterestType selectedInterestType = MemberBlueprintInterestType.Owns;
+
+    public bool HasSelectedBlueprintDetail => SelectedBlueprintDetail is not null;
 
     private const string AllCategoriesLabel = "All Categories";
 
@@ -238,6 +248,11 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             _ = LoadBlueprintDetailAsync(value.Id);
     }
 
+    partial void OnSelectedBlueprintDetailChanged(BlueprintDetailDto? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedBlueprintDetail));
+    }
+
     private async Task LoadBlueprintDetailAsync(Guid blueprintId)
     {
         try
@@ -265,12 +280,22 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             {
                 _logger.LogError(ex, "Blueprint detail HTTP request failed.");
                 StatusMessage = $"Network error — could not reach API: {ex.Message}";
+                SelectedBlueprintDetail = null;
+                Materials.Clear();
+                Owners.Clear();
+                Components.Clear();
+                CombinedModifiers.Clear();
                 return;
             }
             catch (TaskCanceledException ex)
             {
                 _logger.LogError(ex, "Blueprint detail request timed out.");
                 StatusMessage = "Blueprint detail request timed out.";
+                SelectedBlueprintDetail = null;
+                Materials.Clear();
+                Owners.Clear();
+                Components.Clear();
+                CombinedModifiers.Clear();
                 return;
             }
 
@@ -288,6 +313,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 SelectedBlueprintDetail = null;
                 Materials.Clear();
                 Owners.Clear();
+                Components.Clear();
+                CombinedModifiers.Clear();
                 return;
             }
 
@@ -297,6 +324,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 SelectedBlueprintDetail = null;
                 Materials.Clear();
                 Owners.Clear();
+                Components.Clear();
+                CombinedModifiers.Clear();
                 return;
             }
 
@@ -313,12 +342,16 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 SelectedBlueprintDetail = null;
                 Materials.Clear();
                 Owners.Clear();
+                Components.Clear();
+                CombinedModifiers.Clear();
                 return;
             }
 
             SelectedBlueprintDetail = detail;
             Materials.Clear();
             Owners.Clear();
+            Components.Clear();
+            CombinedModifiers.Clear();
             SelectedMaterial = null;
 
             foreach (var material in detail?.Materials ?? Array.Empty<BlueprintRecipeMaterialDto>())
@@ -326,6 +359,27 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             foreach (var owner in detail?.Owners ?? Array.Empty<BlueprintOwnerDto>())
                 Owners.Add(owner);
 
+            foreach (var component in detail?.Components ?? Array.Empty<BlueprintComponentDto>())
+            {
+                var vm = new ComponentViewModel
+                {
+                    Parent = this,
+                    PartName = component.PartName,
+                    MaterialName = component.MaterialName,
+                    Quantity = component.Quantity,
+                    QualityValue = component.DefaultQuality
+                };
+
+                foreach (var modifier in component.Modifiers)
+                {
+                    var averagedValue = (modifier.AtMinQuality + modifier.AtMaxQuality) / 2d;
+                    vm.Modifiers.Add(new StatModifier(modifier.PropertyKey, averagedValue, vm));
+                }
+
+                Components.Add(vm);
+            }
+
+            UpdateCombinedModifiers();
             StatusMessage = detail is null ? "Blueprint detail not found." : $"Loaded {detail.BlueprintName}.";
         }
         catch (Exception ex)
@@ -497,6 +551,25 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    public void UpdateCombinedModifiers()
+    {
+        CombinedModifiers.Clear();
+
+        var grouped = Components
+            .SelectMany(component => component.Modifiers)
+            .GroupBy(modifier => modifier.StatName);
+
+        foreach (var group in grouped)
+        {
+            var combined = group.Sum(modifier => modifier.Percentage * (modifier.ParentComponent.QualityValue / 1000.0));
+            CombinedModifiers.Add(new BlueprintComponentModifierPreview
+            {
+                PropertyKey = group.Key,
+                CalculatedValue = combined
+            });
         }
     }
 

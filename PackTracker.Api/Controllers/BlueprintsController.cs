@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -268,6 +269,8 @@ public class BlueprintsController : ControllerBase
                 })
                 .ToListAsync(ct);
 
+            var components = await LoadComponentsFromSourceAsync(blueprint, ct);
+
             var dto = new BlueprintDetailDto
             {
                 Id = blueprint.Id,
@@ -286,7 +289,8 @@ public class BlueprintsController : ControllerBase
                 CraftingStationType = recipe?.CraftingStationType,
                 TimeToCraftSeconds = recipe?.TimeToCraftSeconds,
                 Materials = materials,
-                Owners = owners
+                Owners = owners,
+                Components = components
             };
 
             return Ok(dto);
@@ -302,6 +306,120 @@ public class BlueprintsController : ControllerBase
                 type = ex.GetType().FullName
             });
         }
+    }
+
+    private async Task<IReadOnlyList<BlueprintComponentDto>> LoadComponentsFromSourceAsync(Blueprint blueprint, CancellationToken ct)
+    {
+        try
+        {
+            var sourcePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scunpacked-data", "blueprints.json"));
+            if (!System.IO.File.Exists(sourcePath))
+                return Array.Empty<BlueprintComponentDto>();
+
+            await using var stream = System.IO.File.OpenRead(sourcePath);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+
+            foreach (var record in document.RootElement.EnumerateArray())
+            {
+                var key = record.TryGetProperty("key", out var keyElement) ? keyElement.GetString() : null;
+                var uuid = record.TryGetProperty("uuid", out var uuidElement) ? uuidElement.GetString() : null;
+
+                if (!string.Equals(key, blueprint.Slug, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(uuid, blueprint.Slug, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!record.TryGetProperty("tiers", out var tiersElement) || tiersElement.ValueKind != JsonValueKind.Array || tiersElement.GetArrayLength() == 0)
+                    return Array.Empty<BlueprintComponentDto>();
+
+                var tier = tiersElement.EnumerateArray().FirstOrDefault();
+                if (!tier.TryGetProperty("requirements", out var requirementsElement))
+                    return Array.Empty<BlueprintComponentDto>();
+
+                var components = new List<BlueprintComponentDto>();
+                if (requirementsElement.TryGetProperty("children", out var rootChildren) && rootChildren.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var child in rootChildren.EnumerateArray())
+                    {
+                        if (!child.TryGetProperty("kind", out var kindElement) || !string.Equals(kindElement.GetString(), "group", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        components.Add(BuildComponent(child));
+                    }
+                }
+
+                return components;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load source component data for blueprint {BlueprintSlug}", blueprint.Slug);
+        }
+
+        return Array.Empty<BlueprintComponentDto>();
+    }
+
+    private static BlueprintComponentDto BuildComponent(JsonElement groupNode)
+    {
+        var partName = groupNode.TryGetProperty("name", out var nameElement) ? nameElement.GetString() ?? "Component" : "Component";
+        var materialName = "Unknown Material";
+        double quantity = 0;
+
+        if (groupNode.TryGetProperty("children", out var childrenElement) && childrenElement.ValueKind == JsonValueKind.Array)
+        {
+            var firstResource = childrenElement.EnumerateArray().FirstOrDefault(x =>
+                x.TryGetProperty("kind", out var childKind) && string.Equals(childKind.GetString(), "resource", StringComparison.OrdinalIgnoreCase));
+
+            if (firstResource.ValueKind != JsonValueKind.Undefined)
+            {
+                materialName = firstResource.TryGetProperty("name", out var materialNameElement)
+                    ? materialNameElement.GetString() ?? materialName
+                    : materialName;
+
+                if (firstResource.TryGetProperty("quantity_scu", out var quantityScuElement) && quantityScuElement.TryGetDouble(out var scuValue))
+                    quantity = scuValue;
+                else if (firstResource.TryGetProperty("quantity", out var quantityElement) && quantityElement.TryGetDouble(out var quantityValue))
+                    quantity = quantityValue;
+            }
+        }
+
+        var modifiers = new List<BlueprintModifierDto>();
+        if (groupNode.TryGetProperty("modifiers", out var modifiersElement) && modifiersElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var modifierElement in modifiersElement.EnumerateArray())
+            {
+                var propertyKey = modifierElement.TryGetProperty("property_key", out var propertyKeyElement)
+                    ? propertyKeyElement.GetString() ?? "modifier"
+                    : "modifier";
+
+                var atMin = 0d;
+                var atMax = 0d;
+                if (modifierElement.TryGetProperty("modifier_range", out var modifierRangeElement))
+                {
+                    if (modifierRangeElement.TryGetProperty("at_min_quality", out var minElement) && minElement.TryGetDouble(out var minValue))
+                        atMin = minValue;
+                    if (modifierRangeElement.TryGetProperty("at_max_quality", out var maxElement) && maxElement.TryGetDouble(out var maxValue))
+                        atMax = maxValue;
+                }
+
+                modifiers.Add(new BlueprintModifierDto
+                {
+                    PropertyKey = propertyKey,
+                    AtMinQuality = atMin,
+                    AtMaxQuality = atMax
+                });
+            }
+        }
+
+        return new BlueprintComponentDto
+        {
+            PartName = partName,
+            MaterialName = materialName,
+            Quantity = quantity,
+            DefaultQuality = 500,
+            Modifiers = modifiers
+        };
     }
 
     // ─── HELPERS ────────────────────────────────────────────────────────────────
