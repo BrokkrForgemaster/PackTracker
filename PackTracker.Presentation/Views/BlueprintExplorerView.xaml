@@ -10,6 +10,22 @@
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
 
+        <Style x:Key="DarkComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#1D1813"/>
+            <Setter Property="Foreground" Value="#E6D5B6"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Style.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter Property="Background" Value="#3E3023"/>
+                    <Setter Property="Foreground" Value="#F0DFC0"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#4B3828"/>
+                    <Setter Property="Foreground" Value="#F0DFC0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="DarkComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Background" Value="#1D1813"/>
             <Setter Property="Foreground" Value="#E6D5B6"/>
@@ -19,6 +35,7 @@
             <Setter Property="Height" Value="36"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItemStyle}"/>
         </Style>
     </UserControl.Resources>
 
@@ -98,7 +115,8 @@
                               SelectedItem="{Binding SelectedBlueprint}"
                               Background="#1D1813" Foreground="#E6D5B6"
                               BorderBrush="#3E3023" BorderThickness="1"
-                              Padding="10,8" MaxDropDownHeight="420">
+                              Padding="10,8" MaxDropDownHeight="420"
+                              ItemContainerStyle="{StaticResource DarkComboBoxItemStyle}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="2,4">
