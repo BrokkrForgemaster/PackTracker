@@ -3,273 +3,90 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
 
-    <UserControl.Resources>
-        <!-- Modern TextBox Style -->
-        <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelStrokeBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8">
-                            <ScrollViewer x:Name="PART_ContentHost"
-                                        Padding="{TemplateBinding Padding}"
-                                        VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="BorderBrush" Value="#C2A23A"/>
-                            </Trigger>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter Property="BorderBrush" Value="#C2A23A"/>
-                                <Setter Property="BorderThickness" Value="2"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="28,12"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="10"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Opacity" Value="0.9"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Opacity" Value="0.8"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </UserControl.Resources>
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="24" MaxWidth="1200">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <!-- ── Header ── -->
+        <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}">
+            <StackPanel>
+                <TextBlock Text="SYSTEM CONFIGURATION" Foreground="{StaticResource OpTextTitleBrush}" FontSize="22" FontWeight="Bold"/>
+                <TextBlock Text="Manage operational parameters, API credentials, and game log integration for the House Wolf shell."
+                           Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
 
-            <!-- Header -->
-            <Border Grid.Row="0"
-                    Background="{DynamicResource CardBackground}"
-                    CornerRadius="16"
-                    Padding="20,16"
-                    Margin="0,0,0,24"
-                    BorderBrush="{DynamicResource AccentGoldBrush}"
-                    BorderThickness="2"
-                    Effect="{DynamicResource CardShadow}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <TextBlock Text="⚙️"
-                               FontSize="36"
-                               VerticalAlignment="Center"
-                               Margin="0,0,12,0"/>
-                    <TextBlock Text="Settings"
-                               FontSize="32"
-                               FontWeight="Black"
-                               Foreground="#C2A23A"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Settings Content -->
-            <StackPanel Grid.Row="1">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="800" HorizontalAlignment="Left" Width="800">
 
                 <!-- Appearance Section -->
-                <Border Background="{DynamicResource SurfaceAltBrush}"
-                        CornerRadius="16"
-                        Padding="24"
-                        Margin="0,0,0,16"
-                        BorderBrush="{DynamicResource PanelStrokeBrush}"
-                        BorderThickness="1"
-                        Effect="{DynamicResource CardShadow}">
+                <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,16">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <TextBlock Text="🎨"
-                                       FontSize="24"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,8,0"/>
-                            <TextBlock Text="Appearance"
-                                       FontSize="22"
-                                       FontWeight="Bold"
-                                       Foreground="#C2A23A"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
+                        <TextBlock Text="APPEARANCE" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,16"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" MinWidth="180"/>
+                                <ColumnDefinition Width="200"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0"
-                                       Text="Theme"
-                                       FontSize="16"
-                                       Foreground="#CCC"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,16,0"/>
-                            <ComboBox Grid.Column="1"
-                                      x:Name="CmbThemes"
-                                      SelectionChanged="cmbThemes_SelectionChanged"
-                                      Style="{StaticResource ModernComboBox}"
-                                      Height="44"/>
+                            <TextBlock Text="Active Theme" Foreground="{StaticResource OpTextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1" x:Name="CmbThemes" SelectionChanged="cmbThemes_SelectionChanged" Style="{StaticResource OpComboBoxStyle}"/>
                         </Grid>
                     </StackPanel>
                 </Border>
 
                 <!-- API Configuration Section -->
-                <Border Background="{DynamicResource SurfaceAltBrush}"
-                        CornerRadius="16"
-                        Padding="24"
-                        Margin="0,0,0,16"
-                        BorderBrush="{DynamicResource PanelStrokeBrush}"
-                        BorderThickness="1"
-                        Effect="{DynamicResource CardShadow}">
+                <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,16">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-                            <TextBlock Text="🔐"
-                                       FontSize="24"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,8,0"/>
-                            <TextBlock Text="API Configuration"
-                                       FontSize="22"
-                                       FontWeight="Bold"
-                                       Foreground="#C2A23A"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <TextBlock Text="EXTERNAL API CREDENTIALS" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,16"/>
 
                         <!-- Regolith API Key -->
                         <StackPanel Margin="0,0,0,20">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <Image Source="/Assets/RssSolid.svg" Width="18" Height="18" Margin="0,0,8,0"/>
-                                <TextBlock Text="Regolith API Key"
-                                           FontSize="15"
-                                           FontWeight="SemiBold"
-                                           Foreground="White"/>
-                            </StackPanel>
-                            <TextBox x:Name="TxtRegolithApiKey"
-                                     Style="{StaticResource ModernTextBox}"
-                                     Height="44"
-                                     ToolTip="Enter your Regolith.rocks API key"/>
-                            <TextBlock Text="Get your API key at: https://regolith.rocks"
-                                       FontSize="11"
-                                       Foreground="#888"
-                                       Margin="12,4,0,0"/>
+                            <TextBlock Text="REGOLITH API KEY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <TextBox x:Name="TxtRegolithApiKey" Style="{StaticResource OpTextBoxStyle}"/>
+                            <TextBlock Text="Required for House Wolf refinery coordination and material tracking." Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="4,4,0,0"/>
                         </StackPanel>
 
                         <!-- UEXCorp API Key -->
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <Image Source="/Assets/RocketSolid.svg" Width="18" Height="18" Margin="0,0,8,0"/>
-                                <TextBlock Text="UEXCorp API Key"
-                                           FontSize="15"
-                                           FontWeight="SemiBold"
-                                           Foreground="White"/>
-                            </StackPanel>
-                            <TextBox x:Name="TxtUexcorpApiKey"
-                                     Style="{StaticResource ModernTextBox}"
-                                     Height="44"
-                                     ToolTip="Enter your UEXCorp API key"/>
-                            <TextBlock Text="Get your API key at: https://uexcorp.space"
-                                       FontSize="11"
-                                       Foreground="#888"
-                                       Margin="12,4,0,0"/>
+                            <TextBlock Text="UEXCORP API KEY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <TextBox x:Name="TxtUexcorpApiKey" Style="{StaticResource OpTextBoxStyle}"/>
+                            <TextBlock Text="Required for real-time market data and trade route analysis." Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="4,4,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- Game Integration Section -->
-                <Border Background="{DynamicResource SurfaceAltBrush}"
-                        CornerRadius="16"
-                        Padding="24"
-                        Margin="0,0,0,16"
-                        BorderBrush="{DynamicResource PanelStrokeBrush}"
-                        BorderThickness="1"
-                        Effect="{DynamicResource CardShadow}">
+                <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,16">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <Image Source="/Assets/SkullCrossbonesSolid.svg" Width="24" Height="24" Margin="0,0,8,0"/>
-                            <TextBlock Text="Game Integration"
-                                       FontSize="22"
-                                       FontWeight="Bold"
-                                       Foreground="#C2A23A"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
+                        <TextBlock Text="GAME INTEGRATION" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,16"/>
                         <StackPanel>
-                            <TextBlock Text="Star Citizen Log File Path"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"
-                                       Foreground="White"
-                                       Margin="0,0,0,8"/>
-                            <TextBox x:Name="TxtGameLogFilePath"
-                                     Style="{StaticResource ModernTextBox}"
-                                     Height="44"
-                                     ToolTip="Path to your Star Citizen Game.log file"/>
-                            <TextBlock TextWrapping="Wrap"
-                                       FontSize="11"
-                                       Foreground="#888"
-                                       Margin="12,4,0,0">
-                                <Run Text="Example: C:\Roberts_Space_Industries\StarCitizen\LIVE\Game.log"/>
-                            </TextBlock>
+                            <TextBlock Text="STAR CITIZEN LOG PATH" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <TextBox x:Name="TxtGameLogFilePath" Style="{StaticResource OpTextBoxStyle}"/>
+                            <TextBlock Text="Path to Game.log for real-time event parsing (kills, deaths, disconnects)." Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="4,4,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
-
-                <!-- Action Buttons -->
-                <Grid Margin="0,8,0,24">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button Grid.Column="1"
-                            Content="✖ Cancel"
-                            Click="Cancel_Click"
-                            Width="140"
-                            Height="46"
-                            Background="#3A3A3A"
-                            Foreground="White"
-                            Margin="0,0,12,0"
-                            Style="{StaticResource ModernButton}"/>
-
-                    <Button Grid.Column="2"
-                            Content="✅ Save Changes"
-                            Click="Save_Click"
-                            Width="180"
-                            Height="46"
-                            Background="#C2A23A"
-                            Foreground="Black"
-                            FontWeight="Bold"
-                            Style="{StaticResource ModernButton}"/>
-                </Grid>
             </StackPanel>
-        </Grid>
-    </ScrollViewer>
+        </ScrollViewer>
+
+        <!-- ── Footer / Actions ── -->
+        <Border Grid.Row="2" Style="{StaticResource OpHeaderBorderStyle}" Margin="0,16,0,0" Padding="12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Text="Operational changes require a manual save to persist to the system registry." 
+                           Foreground="{StaticResource OpTextSecondaryBrush}" VerticalAlignment="Center" FontSize="12"/>
+
+                <Button Grid.Column="1" Content="CANCEL" Click="Cancel_Click" Margin="0,0,12,0" Padding="20,8" FontWeight="Bold" Background="#3A3A3A" Foreground="White" BorderThickness="0"/>
+                <Button Grid.Column="2" Content="SAVE CONFIGURATION" Click="Save_Click" Padding="24,8" FontWeight="Bold" Background="#8B1A0F" Foreground="#F4EBDD" BorderBrush="#B15B34" BorderThickness="1"/>
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>
