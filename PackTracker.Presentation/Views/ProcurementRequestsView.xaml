@@ -1,7 +1,11 @@
 <UserControl x:Class="PackTracker.Presentation.Views.ProcurementRequestsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
              Background="Transparent">
+    <UserControl.Resources>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+    </UserControl.Resources>
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -114,18 +118,39 @@
                                        Margin="0,8,0,0"/>
                             <TextBlock Text="{Binding SelectedRequest.NumberOfHelpersNeeded, StringFormat=Helpers Needed: {0}, TargetNullValue=Helpers Needed: Not specified}"
                                        Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding SelectedRequest.AssignedToUsername, StringFormat=Assigned To: {0}, TargetNullValue=Assigned To: Unclaimed}"
+                                       Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding SelectedRequest.Notes, StringFormat=Notes: {0}}"
+                                       Margin="0,8,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding SelectedRequest.Notes, Converter={StaticResource NullToVisibilityConverter}}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource GlassPanelStyle}">
                         <StackPanel>
-                            <TextBlock Text="Operational Notes"
+                            <TextBlock Text="Actions"
                                        FontWeight="Bold"
-                                       FontSize="16"/>
-                            <TextBlock Text="Next phases will connect these requests directly to missing recipe materials and add claim/assignment flow for miners."
-                                       Margin="0,12,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
+                                       FontSize="16"
+                                       Margin="0,0,0,12"/>
+                            <Button Content="Claim Request"
+                                    Command="{Binding ClaimCommand}"
+                                    IsEnabled="{Binding CanClaim}"
+                                    Height="40"
+                                    Margin="0,0,0,8"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
+                            <Button Content="Mark Completed"
+                                    Command="{Binding MarkCompletedCommand}"
+                                    IsEnabled="{Binding CanMarkCompleted}"
+                                    Height="40"
+                                    Margin="0,0,0,8"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
+                            <Button Content="Cancel Request"
+                                    Command="{Binding CancelCommand}"
+                                    IsEnabled="{Binding CanCancel}"
+                                    Height="40"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using PackTracker.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,7 @@ public class CraftingRequestsController : ControllerBase
                 Priority = x.Priority.ToString(),
                 Status = x.Status.ToString(),
                 DeliveryLocation = x.DeliveryLocation,
+                Notes = x.Notes,
                 CreatedAt = x.CreatedAt
             })
             .ToListAsync(ct);
@@ -102,6 +104,7 @@ public class CraftingRequestsController : ControllerBase
         var items = await _db.MaterialProcurementRequests
             .AsNoTracking()
             .Include(x => x.Material)
+            .Include(x => x.AssignedToProfile)
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => new MaterialProcurementRequestListItemDto
             {
@@ -117,6 +120,8 @@ public class CraftingRequestsController : ControllerBase
                 DeliveryLocation = x.DeliveryLocation,
                 NumberOfHelpersNeeded = x.NumberOfHelpersNeeded,
                 RewardOffered = x.RewardOffered,
+                AssignedToUsername = x.AssignedToProfile != null ? x.AssignedToProfile.Username : null,
+                Notes = x.Notes,
                 CreatedAt = x.CreatedAt
             })
             .ToListAsync(ct);
@@ -166,5 +171,93 @@ public class CraftingRequestsController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         return Ok(new { message = "Material procurement request created.", requestId = procurementRequest.Id });
+    }
+
+    // ─── CRAFTING: UPDATE STATUS ────────────────────────────────────────────────
+    [HttpPatch("requests/{id:guid}/status")]
+    public async Task<IActionResult> UpdateCraftingRequestStatus(Guid id, [FromBody] UpdateRequestStatusDto dto, CancellationToken ct)
+    {
+        if (!Enum.TryParse<RequestStatus>(dto.Status, ignoreCase: true, out var newStatus))
+            return BadRequest(new { error = $"Unknown status '{dto.Status}'. Valid values: {string.Join(", ", Enum.GetNames<RequestStatus>())}" });
+
+        var request = await _db.CraftingRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (request is null)
+            return NotFound(new { error = "Crafting request not found." });
+
+        request.Status = newStatus;
+        request.UpdatedAt = DateTime.UtcNow;
+        if (newStatus == RequestStatus.Completed)
+            request.CompletedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { message = $"Crafting request status updated to {newStatus}.", requestId = id });
+    }
+
+    // ─── CRAFTING: ASSIGN SELF ──────────────────────────────────────────────────
+    [HttpPatch("requests/{id:guid}/assign")]
+    public async Task<IActionResult> AssignCraftingRequestToSelf(Guid id, CancellationToken ct)
+    {
+        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(discordId))
+            return Unauthorized();
+
+        var profile = await _db.Profiles.FirstOrDefaultAsync(x => x.DiscordId == discordId, ct);
+        if (profile is null)
+            return Unauthorized();
+
+        var request = await _db.CraftingRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (request is null)
+            return NotFound(new { error = "Crafting request not found." });
+
+        request.AssignedCrafterProfileId = profile.Id;
+        request.Status = RequestStatus.InProgress;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { message = $"Crafting request assigned to {profile.Username}.", requestId = id });
+    }
+
+    // ─── PROCUREMENT: UPDATE STATUS ─────────────────────────────────────────────
+    [HttpPatch("procurement-requests/{id:guid}/status")]
+    public async Task<IActionResult> UpdateProcurementRequestStatus(Guid id, [FromBody] UpdateRequestStatusDto dto, CancellationToken ct)
+    {
+        if (!Enum.TryParse<RequestStatus>(dto.Status, ignoreCase: true, out var newStatus))
+            return BadRequest(new { error = $"Unknown status '{dto.Status}'. Valid values: {string.Join(", ", Enum.GetNames<RequestStatus>())}" });
+
+        var request = await _db.MaterialProcurementRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (request is null)
+            return NotFound(new { error = "Procurement request not found." });
+
+        request.Status = newStatus;
+        request.UpdatedAt = DateTime.UtcNow;
+        if (newStatus == RequestStatus.Completed)
+            request.CompletedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { message = $"Procurement request status updated to {newStatus}.", requestId = id });
+    }
+
+    // ─── PROCUREMENT: CLAIM ─────────────────────────────────────────────────────
+    [HttpPatch("procurement-requests/{id:guid}/claim")]
+    public async Task<IActionResult> ClaimProcurementRequest(Guid id, CancellationToken ct)
+    {
+        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(discordId))
+            return Unauthorized();
+
+        var profile = await _db.Profiles.FirstOrDefaultAsync(x => x.DiscordId == discordId, ct);
+        if (profile is null)
+            return Unauthorized();
+
+        var request = await _db.MaterialProcurementRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (request is null)
+            return NotFound(new { error = "Procurement request not found." });
+
+        request.AssignedToProfileId = profile.Id;
+        request.Status = RequestStatus.InProgress;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { message = $"Procurement request claimed by {profile.Username}.", requestId = id });
     }
 }

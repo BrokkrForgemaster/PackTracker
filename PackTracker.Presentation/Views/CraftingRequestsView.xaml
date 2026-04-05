@@ -1,7 +1,11 @@
 <UserControl x:Class="PackTracker.Presentation.Views.CraftingRequestsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
              Background="Transparent">
+    <UserControl.Resources>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+    </UserControl.Resources>
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -116,18 +120,43 @@
                                        Margin="0,8,0,0"/>
                             <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat=Delivery: {0}, TargetNullValue=Delivery: Not specified}"
                                        Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding SelectedRequest.Notes, StringFormat=Notes: {0}}"
+                                       Margin="0,8,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding SelectedRequest.Notes, Converter={StaticResource NullToVisibilityConverter}}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource GlassPanelStyle}">
                         <StackPanel>
-                            <TextBlock Text="Operational Notes"
+                            <TextBlock Text="Actions"
                                        FontWeight="Bold"
-                                       FontSize="16"/>
-                            <TextBlock Text="This surface is the first queue for the new crafting workflow. Next phases will add assignment, completion, linked procurement, and shortage visibility."
-                                       Margin="0,12,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
+                                       FontSize="16"
+                                       Margin="0,0,0,12"/>
+                            <Button Content="Assign to Me"
+                                    Command="{Binding AssignToSelfCommand}"
+                                    IsEnabled="{Binding CanAssign}"
+                                    Height="40"
+                                    Margin="0,0,0,8"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
+                            <Button Content="Mark In Progress"
+                                    Command="{Binding MarkInProgressCommand}"
+                                    IsEnabled="{Binding CanMarkInProgress}"
+                                    Height="40"
+                                    Margin="0,0,0,8"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
+                            <Button Content="Mark Completed"
+                                    Command="{Binding MarkCompletedCommand}"
+                                    IsEnabled="{Binding CanMarkCompleted}"
+                                    Height="40"
+                                    Margin="0,0,0,8"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
+                            <Button Content="Cancel Request"
+                                    Command="{Binding CancelCommand}"
+                                    IsEnabled="{Binding CanCancel}"
+                                    Height="40"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

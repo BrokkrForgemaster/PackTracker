@@ -14,5 +14,7 @@ public sealed class MaterialProcurementRequestListItemDto
     public string? DeliveryLocation { get; set; }
     public int? NumberOfHelpersNeeded { get; set; }
     public string? RewardOffered { get; set; }
+    public string? AssignedToUsername { get; set; }
+    public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
 }
