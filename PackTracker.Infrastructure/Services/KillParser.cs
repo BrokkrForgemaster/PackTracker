@@ -24,8 +24,7 @@ public static class KillParser
         Log.Information("IsRealPlayer: {Name}", name);
         return !string.IsNullOrWhiteSpace(name) &&
                !name.Contains("NPC", StringComparison.OrdinalIgnoreCase) &&
-               !name.Contains("Enemy", StringComparison.OrdinalIgnoreCase) &&
-               !name.Contains("_");
+               !name.Contains("Enemy", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary name="ClassifyKill">

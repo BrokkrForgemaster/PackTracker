@@ -3,7 +3,6 @@ using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace PackTracker.Infrastructure.Services;
 
@@ -11,19 +10,20 @@ public class ProfileService : IProfileService
 {
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpFactory;
-    private readonly IConfiguration _config;
+    private readonly ISettingsService _settingsService;
 
-    public ProfileService(AppDbContext db, IHttpClientFactory httpFactory, IConfiguration config)
+    public ProfileService(AppDbContext db, IHttpClientFactory httpFactory, ISettingsService settingsService)
     {
         _db = db;
         _httpFactory = httpFactory;
-        _config = config;
+        _settingsService = settingsService;
     }
 
     public async Task<Profile?> UpsertFromDiscordAsync(string accessToken, string discordId, string username,
         string? avatarUrl, CancellationToken ct)
     {
-        var requiredGuildId = _config["Authentication:Discord:RequiredGuildId"];
+        var settings = _settingsService.GetSettings();
+        var requiredGuildId = settings.DiscordRequiredGuildId;
         if (string.IsNullOrEmpty(requiredGuildId))
             throw new InvalidOperationException("RequiredGuildId is not configured");
 

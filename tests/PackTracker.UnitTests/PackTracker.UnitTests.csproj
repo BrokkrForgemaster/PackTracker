@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\PackTracker.Domain\PackTracker.Domain.csproj" />
     <ProjectReference Include="..\..\PackTracker.Application\PackTracker.Application.csproj" />
+    <ProjectReference Include="..\..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

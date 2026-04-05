@@ -14,6 +14,7 @@ public sealed class WikiSyncService : IWikiSyncService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppDbContext _db;
     private readonly ILogger<WikiSyncService> _logger;
+    private static readonly SemaphoreSlim SyncLock = new(1, 1);
 
     private static readonly JsonSerializerOptions WikiJsonOptions = new()
     {
@@ -30,103 +31,127 @@ public sealed class WikiSyncService : IWikiSyncService
 
     public async Task<WikiSyncResult> SyncBlueprintsAsync(CancellationToken ct = default)
     {
-        var result = new WikiSyncResult();
+        if (!await SyncLock.WaitAsync(0, ct))
+        {
+            return new WikiSyncResult { ErrorMessage = "A wiki sync is already in progress." };
+        }
+
         try
         {
-            var client = _httpClientFactory.CreateClient("WikiApi");
-            var page = 1;
-            var lastPage = 1;
-            var processed = 0;
-
-            do
+            var result = new WikiSyncResult();
+            try
             {
-                // API pagination uses page[number] query param (URL-encoded as page%5Bnumber%5D)
-                var json = await client.GetStringAsync($"blueprints?page%5Bnumber%5D={page}&page%5Bsize%5D=50", ct);
-                var paged = JsonSerializer.Deserialize<WikiPagedResponseDto<WikiBlueprintListItemDto>>(json, WikiJsonOptions);
+                var client = _httpClientFactory.CreateClient("WikiApi");
+                var page = 1;
+                var lastPage = 1;
+                var processed = 0;
 
-                if (paged?.Data == null || paged.Data.Count == 0)
-                    break;
-
-                lastPage = paged.Meta?.LastPage ?? page;
-
-                foreach (var item in paged.Data)
+                do
                 {
-                    ct.ThrowIfCancellationRequested();
-                    await Task.Delay(100, ct);
+                    // API pagination uses page[number] query param (URL-encoded as page%5Bnumber%5D)
+                    var json = await client.GetStringAsync($"blueprints?page%5Bnumber%5D={page}&page%5Bsize%5D=50", ct);
+                    var paged = JsonSerializer.Deserialize<WikiPagedResponseDto<WikiBlueprintListItemDto>>(json, WikiJsonOptions);
 
-                    try
+                    if (paged?.Data == null || paged.Data.Count == 0)
+                        break;
+
+                    lastPage = paged.Meta?.LastPage ?? page;
+
+                    foreach (var item in paged.Data)
                     {
-                        var detailJson = await client.GetStringAsync($"blueprints/{item.Uuid}", ct);
-                        // API wraps single items in {"data": {...}}
-                        var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(detailJson, WikiJsonOptions);
-                        var detail = wrapper?.Data;
+                        ct.ThrowIfCancellationRequested();
+                        await Task.Delay(100, ct);
 
-                        if (detail == null)
+                        try
                         {
-                            result.Failed++;
-                            continue;
+                            var detailJson = await client.GetStringAsync($"blueprints/{item.Uuid}", ct);
+                            // API wraps single items in {"data": {...}}
+                            var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(detailJson, WikiJsonOptions);
+                            var detail = wrapper?.Data;
+
+                            if (detail == null)
+                            {
+                                result.Failed++;
+                                continue;
+                            }
+
+                            var wasCreated = await UpsertBlueprintAsync(detail, ct);
+                            if (wasCreated) result.Created++;
+                            else result.Updated++;
+
+                            processed++;
+                            if (processed % 10 == 0)
+                                _logger.LogInformation("Wiki blueprint sync progress: {Processed} processed (created={Created}, updated={Updated}, failed={Failed})",
+                                    processed, result.Created, result.Updated, result.Failed);
                         }
-
-                        var wasCreated = await UpsertBlueprintAsync(detail, ct);
-                        if (wasCreated) result.Created++;
-                        else result.Updated++;
-
-                        processed++;
-                        if (processed % 10 == 0)
-                            _logger.LogInformation("Wiki blueprint sync progress: {Processed} processed (created={Created}, updated={Updated}, failed={Failed})",
-                                processed, result.Created, result.Updated, result.Failed);
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to sync blueprint {Uuid}", item.Uuid);
+                            result.Failed++;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to sync blueprint {Uuid}", item.Uuid);
-                        result.Failed++;
-                    }
-                }
 
-                page++;
-            } while (page <= lastPage);
+                    page++;
+                } while (page <= lastPage);
 
-            _logger.LogInformation("Wiki blueprint sync complete: created={Created}, updated={Updated}, failed={Failed}",
-                result.Created, result.Updated, result.Failed);
+                _logger.LogInformation("Wiki blueprint sync complete: created={Created}, updated={Updated}, failed={Failed}",
+                    result.Created, result.Updated, result.Failed);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Wiki blueprint sync encountered a fatal error");
+                result.ErrorMessage = ex.Message;
+            }
+
+            return result;
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogError(ex, "Wiki blueprint sync encountered a fatal error");
-            result.ErrorMessage = ex.Message;
+            SyncLock.Release();
         }
-
-        return result;
     }
 
     public async Task<WikiSyncResult> SyncItemsAsync(CancellationToken ct = default)
     {
-        var result = new WikiSyncResult();
+        if (!await SyncLock.WaitAsync(0, ct))
+        {
+            return new WikiSyncResult { ErrorMessage = "A wiki sync is already in progress." };
+        }
+
         try
         {
-            var itemQueries = new[]
+            var result = new WikiSyncResult();
+            try
             {
-                ("items?filter[type]=WeaponMining", "Mining Laser"),
-                ("items?filter[category]=mining-modifiers", "Mining Modifier"),
-                ("items?filter[category]=fps-armor", "FPS Armor"),
-                ("items?filter[type]=WeaponPersonal", "Personal Weapon")
-            };
+                var itemQueries = new[]
+                {
+                    ("items?filter[type]=WeaponMining", "Mining Laser"),
+                    ("items?filter[category]=mining-modifiers", "Mining Modifier"),
+                    ("items?filter[category]=fps-armor", "FPS Armor"),
+                    ("items?filter[type]=WeaponPersonal", "Personal Weapon")
+                };
 
-            foreach (var (query, category) in itemQueries)
+                foreach (var (query, category) in itemQueries)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    await SyncItemQueryAsync(query, category, result, ct);
+                }
+
+                _logger.LogInformation("Wiki items sync complete: created={Created}, updated={Updated}, failed={Failed}",
+                    result.Created, result.Updated, result.Failed);
+            }
+            catch (Exception ex)
             {
-                ct.ThrowIfCancellationRequested();
-                await SyncItemQueryAsync(query, category, result, ct);
+                _logger.LogError(ex, "Wiki items sync encountered a fatal error");
+                result.ErrorMessage = ex.Message;
             }
 
-            _logger.LogInformation("Wiki items sync complete: created={Created}, updated={Updated}, failed={Failed}",
-                result.Created, result.Updated, result.Failed);
+            return result;
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogError(ex, "Wiki items sync encountered a fatal error");
-            result.ErrorMessage = ex.Message;
+            SyncLock.Release();
         }
-
-        return result;
     }
 
     private async Task SyncItemQueryAsync(string baseQuery, string categoryHint, WikiSyncResult result, CancellationToken ct)
