@@ -6,211 +6,96 @@
 
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
-
-        <LinearGradientBrush x:Key="HeroBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#2B2B2B" Offset="0"/>
-            <GradientStop Color="#1C1C1C" Offset="0.65"/>
-            <GradientStop Color="#141414" Offset="1"/>
-        </LinearGradientBrush>
-
-        <Style x:Key="DashboardCardStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="20"/>
-            <Setter Property="Background" Value="#232323"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="0,0,16,16"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Effect" Value="{DynamicResource CardShadow}"/>
-        </Style>
-
-        <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="22"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#F1F1F1"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-
-        <Style x:Key="BadgeStyle" TargetType="Border">
-            <Setter Property="Background" Value="#33FFFFFF"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="Margin" Value="12,0,0,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="MetricLabelStyle">
-            <Setter Property="Foreground" Value="#B6B6B6"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="MetricValueStyle">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="28"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="24">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <StackPanel Orientation="Vertical" Margin="0,0,0,12">
-            <TextBlock Text="Operations Dashboard"
-                       FontSize="34"
-                       FontWeight="Black"
-                       Foreground="White"/>
-            <TextBlock Text="Live snapshot of House Wolf readiness across squads and support teams."
-                       FontSize="15"
-                       Foreground="#B5B5B5"/>
-        </StackPanel>
+        <!-- ── Header ── -->
+        <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}">
+            <StackPanel>
+                <TextBlock Text="OPERATIONS DASHBOARD" Foreground="{StaticResource OpTextTitleBrush}" FontSize="22" FontWeight="Bold"/>
+                <TextBlock Text="Live snapshot of House Wolf readiness across squads and support teams."
+                           Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
 
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Orientation="Vertical" Margin="0,4,0,0">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Orientation="Vertical">
 
-                <!-- Hero -->
-                <Border Background="{StaticResource HeroBackgroundBrush}"
-                        CornerRadius="26"
-                        Padding="28"
-                        Effect="{DynamicResource CardShadow}">
+                <!-- ── Hero Section ── -->
+                <Border Style="{StaticResource OpHeaderBorderStyle}" Margin="0,0,0,16" Padding="20">
                     <StackPanel>
-                        <TextBlock Text="Guild support posture is stable."
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"/>
+                        <TextBlock Text="Guild support posture is stable." Foreground="{StaticResource OpTextTitleBrush}" FontSize="18" FontWeight="SemiBold"/>
                         <TextBlock Text="Keep this view pinned for request traffic, guide scheduling, and logistics coordination while crafting workflows are brought online."
-                                   FontSize="14"
-                                   Foreground="#BEBEBE"
-                                   Margin="0,4,0,12"/>
+                                   Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,4,0,16" TextWrapping="Wrap"/>
 
-                        <WrapPanel Margin="0,12,0,0"
-                                   HorizontalAlignment="Stretch">
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
+                        <WrapPanel HorizontalAlignment="Stretch">
+                            <Border Width="220" Style="{StaticResource OpItemBorderStyle}" Background="{StaticResource OpBackgroundPillBrush}" BorderBrush="{StaticResource OpBorderPillBrush}" Margin="0,0,12,0" Padding="14">
                                 <StackPanel>
-                                    <TextBlock Text="Active requests"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding ActiveRequests.Count}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               ToolTip="Currently open, ordered by priority."/>
+                                    <TextBlock Text="ACTIVE REQUESTS" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding ActiveRequests.Count}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="28" FontWeight="Bold"/>
                                 </StackPanel>
                             </Border>
-                            <Border Width="220"
-                                    CornerRadius="16"
-                                    Padding="12"
-                                    Margin="0,0,12,12"
-                                    Background="#2F2F2F"
-                                    Effect="{DynamicResource CardShadow}">
+                            <Border Width="220" Style="{StaticResource OpItemBorderStyle}" Background="{StaticResource OpBackgroundPillBrush}" BorderBrush="{StaticResource OpBorderPillBrush}" Margin="0,0,12,0" Padding="14">
                                 <StackPanel>
-                                    <TextBlock Text="Scheduled guides"
-                                               Style="{StaticResource MetricLabelStyle}"/>
-                                    <TextBlock Text="{Binding Guide.Requests.Count}"
-                                               Style="{StaticResource MetricValueStyle}"
-                                               ToolTip="Guide request watcher feed."/>
+                                    <TextBlock Text="SCHEDULED GUIDES" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Guide.Requests.Count}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="28" FontWeight="Bold"/>
                                 </StackPanel>
                             </Border>
                         </WrapPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- Content cards -->
-                <WrapPanel Margin="0,24,0,0"
-                           HorizontalAlignment="Stretch">
-
-                    <!-- Active requests -->
-                    <Border Style="{StaticResource DashboardCardStyle}"
-                            Width="420"
-                            MinWidth="340">
+                <!-- ── Content Grid ── -->
+                <UniformGrid Columns="2">
+                    
+                    <!-- Urgent Requests -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,8,0" Padding="16">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                                <TextBlock Text="Urgent requests"
-                                           Style="{StaticResource SectionHeaderTextStyle}"/>
-                                <Border Style="{StaticResource BadgeStyle}">
-                                    <TextBlock Text="{Binding ActiveRequests.Count, StringFormat={}{0} open}"
-                                               FontSize="12"
-                                               Foreground="#F1F1F1"/>
+                            <DockPanel LastChildFill="False" Margin="0,0,0,12">
+                                <TextBlock Text="URGENT REQUESTS" Style="{x:Null}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" DockPanel.Dock="Left"/>
+                                <Border Background="{StaticResource OpBackgroundPillBrush}" CornerRadius="10" Padding="8,2" DockPanel.Dock="Right">
+                                    <TextBlock Text="{Binding ActiveRequests.Count, StringFormat={}{0} OPEN}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="10" FontWeight="Bold"/>
                                 </Border>
-                            </StackPanel>
+                            </DockPanel>
+
                             <ItemsControl ItemsSource="{Binding ActiveRequests}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#1F1F1F"
-                                                CornerRadius="12"
-                                                Padding="12"
-                                                Margin="0,0,0,10">
+                                        <Border Style="{StaticResource OpItemBorderStyle}" Padding="12">
                                             <StackPanel>
-                                                <TextBlock Text="{Binding Title}"
-                                                           FontSize="16"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="White"
-                                                           TextWrapping="Wrap"/>
-
+                                                <TextBlock Text="{Binding Title}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                
                                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                                    <Border Background="#43536A"
-                                                            CornerRadius="8"
-                                                            Padding="8,2"
-                                                            Margin="0,0,6,0">
-                                                        <TextBlock Text="{Binding Kind}"
-                                                                   FontSize="12"
-                                                                   Foreground="#F3F6FF"/>
+                                                    <Border Background="#24374A" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                                        <TextBlock Text="{Binding Kind}" Foreground="#E8F0F8" FontSize="10" FontWeight="Bold"/>
                                                     </Border>
-                                                    <Border Background="#5B2A2A"
-                                                            CornerRadius="8"
-                                                            Padding="8,2"
-                                                            Margin="0,0,6,0">
-                                                        <TextBlock Text="{Binding Priority}"
-                                                                   FontSize="12"
-                                                                   Foreground="#FFD7D7"/>
+                                                    <Border Background="#8B1A0F" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                                        <TextBlock Text="{Binding Priority}" Foreground="#F4EBDD" FontSize="10" FontWeight="Bold"/>
                                                     </Border>
-                                                    <Border Background="#2F3B2F"
-                                                            CornerRadius="8"
-                                                            Padding="8,2">
-                                                        <TextBlock Text="{Binding Status}"
-                                                                   FontSize="12"
-                                                                   Foreground="#B9FFBF"/>
+                                                    <Border Background="#2B4E2E" CornerRadius="4" Padding="6,2">
+                                                        <TextBlock Text="{Binding Status}" Foreground="#EEF6EE" FontSize="10" FontWeight="Bold"/>
                                                     </Border>
                                                 </StackPanel>
 
-                                                <TextBlock Text="{Binding Description}"
-                                                           Foreground="#B7B7B7"
-                                                           FontSize="12"
-                                                           Margin="0,6,0,0"
-                                                           TextWrapping="Wrap"
+                                                <TextBlock Text="{Binding Description}" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
                                                            Visibility="{Binding Description, Converter={StaticResource NullToVisibilityConverter}}"/>
 
-                                                <TextBlock Text="{Binding CreatedByDisplayName, StringFormat='Raised by {0}'}"
-                                                           Foreground="#909090"
-                                                           FontSize="12"
-                                                           Margin="0,6,0,0"/>
-                                                <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:MMM dd · HH:mm}}"
-                                                           Foreground="#6D6D6D"
-                                                           FontSize="11"/>
+                                                <DockPanel Margin="0,8,0,0">
+                                                    <TextBlock Text="{Binding CreatedByDisplayName, StringFormat='Raised by {0}'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" DockPanel.Dock="Left"/>
+                                                    <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:MMM dd · HH:mm}}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" DockPanel.Dock="Right"/>
+                                                </DockPanel>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
-                                <ItemsControl.Style>
-                                    <Style TargetType="ItemsControl">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ActiveRequests.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ItemsControl.Style>
                             </ItemsControl>
-                            <TextBlock Text="All quiet on the request board."
-                                       Foreground="#7D7D7D"
-                                       FontStyle="Italic">
+
+                            <TextBlock Text="All quiet on the request board." Foreground="{StaticResource OpTextMutedBrush}" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,20">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -225,80 +110,40 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Guide schedule -->
-                    <Border Style="{StaticResource DashboardCardStyle}"
-                            Width="420"
-                            MinWidth="340">
+                    <!-- Guide Rota -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Margin="8,0,0,0" Padding="16">
                         <StackPanel>
-                            <DockPanel LastChildFill="False">
-                                <TextBlock Text="Guide rota"
-                                           Style="{StaticResource SectionHeaderTextStyle}"
-                                           DockPanel.Dock="Left"/>
-                                <Button Content="Refresh"
-                                        Command="{Binding Guide.RefreshCommand}"
-                                        DockPanel.Dock="Right"
-                                        Padding="10,4"
-                                        Margin="12,0,0,0"
-                                        FontSize="12"
-                                        HorizontalAlignment="Right"/>
+                            <DockPanel LastChildFill="False" Margin="0,0,0,12">
+                                <TextBlock Text="GUIDE ROTA" Style="{x:Null}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" DockPanel.Dock="Left"/>
+                                <Button Content="REFRESH" Command="{Binding Guide.RefreshCommand}" DockPanel.Dock="Right" Padding="8,2" FontSize="10" FontWeight="Bold" Background="#24374A" Foreground="#E8F0F8" BorderBrush="#4F6A84"/>
                             </DockPanel>
 
                             <ItemsControl ItemsSource="{Binding Guide.Requests}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#1F1F1F"
-                                                CornerRadius="12"
-                                                Padding="12"
-                                                Margin="0,0,0,10">
+                                        <Border Style="{StaticResource OpItemBorderStyle}" Padding="12">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="2*"/>
-                                                    <ColumnDefinition Width="1*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                                    <TextBlock Text="{Binding Title}"
-                                                               FontWeight="SemiBold"
-                                                               FontSize="15"
-                                                               Foreground="White"/>
-                                                    <TextBlock Text="{Binding Requester, StringFormat='Requested by {0}'}"
-                                                               Foreground="#9F9F9F"
-                                                               FontSize="12"/>
+                                                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Requester, StringFormat='Requested by {0}'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="0,2,0,0"/>
                                                 </StackPanel>
-                                                <StackPanel Grid.Column="1"
-                                                            HorizontalAlignment="Right">
-                                                    <Border Background="#454545"
-                                                            CornerRadius="8"
-                                                            Padding="8,2"
-                                                            HorizontalAlignment="Right">
-                                                        <TextBlock Text="{Binding Status}"
-                                                                   Foreground="#F7F7F7"
-                                                                   FontSize="12"/>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <Border Background="#1D1813" BorderBrush="#3E3023" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="10" FontWeight="Bold"/>
                                                     </Border>
-                                                    <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:MMM dd · HH:mm}}"
-                                                               Foreground="#7F7F7F"
-                                                               FontSize="11"
-                                                               Margin="0,6,0,0"
-                                                               HorizontalAlignment="Right"/>
+                                                    <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:MMM dd · HH:mm}}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" Margin="0,4,0,0" HorizontalAlignment="Right"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
-                                <ItemsControl.Style>
-                                    <Style TargetType="ItemsControl">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Guide.Requests.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ItemsControl.Style>
                             </ItemsControl>
 
-                            <TextBlock Text="No guide shifts are scheduled."
-                                       Foreground="#7D7D7D"
-                                       FontStyle="Italic">
+                            <TextBlock Text="No guide shifts are scheduled." Foreground="{StaticResource OpTextMutedBrush}" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,20">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -313,7 +158,7 @@
                         </StackPanel>
                     </Border>
 
-                </WrapPanel>
+                </UniformGrid>
             </StackPanel>
         </ScrollViewer>
     </Grid>

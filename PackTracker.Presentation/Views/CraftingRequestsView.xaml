@@ -6,166 +6,175 @@
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
     </UserControl.Resources>
-    <Grid Margin="24">
+    
+    <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Margin="0,0,0,18">
-            <TextBlock Text="Crafting Requests"
-                       FontSize="34"
-                       FontWeight="Black"
-                       Foreground="White"/>
-            <TextBlock Text="Track requested blueprint work, assigned crafters, and delivery objectives across House Wolf."
-                       FontSize="15"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       Margin="0,6,0,0"
-                       TextWrapping="Wrap"/>
-        </StackPanel>
+        <!-- ── Header ── -->
+        <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="CRAFTING REQUESTS" Foreground="{StaticResource OpTextTitleBrush}" FontSize="22" FontWeight="Bold"/>
+                    <TextBlock Text="Track requested blueprint work, assigned crafters, and delivery objectives across House Wolf."
+                               Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="REFRESH"
+                            Command="{Binding RefreshCommand}"
+                            Padding="16,8" FontWeight="Bold"
+                            Background="#24374A" Foreground="#E8F0F8"
+                            BorderBrush="#4F6A84" BorderThickness="1"/>
+                </StackPanel>
+            </Grid>
+        </Border>
 
-        <DockPanel Grid.Row="1" Margin="0,0,0,18" LastChildFill="False">
-            <TextBlock Text="Use Blueprint Explorer to create new requests, then manage visibility and assignment here."
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       VerticalAlignment="Center"
-                       DockPanel.Dock="Left"/>
-            <Button Content="Refresh"
-                    Command="{Binding RefreshCommand}"
-                    DockPanel.Dock="Right"
-                    Width="120"
-                    Height="42"
-                    Style="{StaticResource PrimaryActionButtonStyle}"/>
-        </DockPanel>
-
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.1*"/>
-                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="360"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0"
-                    Style="{StaticResource SectionCardStyle}"
-                    Margin="0,0,12,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Text="Open Queue"
-                               FontSize="22"
-                               FontWeight="Bold"
-                               Margin="0,0,0,14"/>
-
-                    <ListBox Grid.Row="1"
-                             ItemsSource="{Binding Requests}"
+            <!-- ── Left Panel: Open Queue ── -->
+            <Border Grid.Column="0" Style="{StaticResource OpPanelBorderStyle}">
+                <DockPanel Margin="12">
+                    <TextBlock Text="OPEN QUEUE" DockPanel.Dock="Top" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <ListBox ItemsSource="{Binding Requests}"
                              SelectedItem="{Binding SelectedRequest, Mode=TwoWay}"
-                             Background="Transparent"
-                             BorderThickness="0">
+                             Style="{StaticResource OpListBoxStyle}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource SurfaceAltBrush}"
-                                        CornerRadius="12"
-                                        Padding="14"
-                                        Margin="0,0,0,10"
-                                        BorderBrush="{DynamicResource PanelStrokeBrush}"
-                                        BorderThickness="1">
+                                <Border Style="{StaticResource OpItemBorderStyle}">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding CraftedItemName}"
-                                                   FontWeight="Bold"
-                                                   FontSize="16"/>
-                                        <TextBlock Text="{Binding BlueprintName}"
-                                                   Margin="0,4,0,0"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <DockPanel Margin="0,10,0,0">
-                                            <TextBlock Text="{Binding Status}"
-                                                       DockPanel.Dock="Left"
-                                                       Foreground="{DynamicResource AccentGoldBrush}"
-                                                       FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Priority}"
-                                                       DockPanel.Dock="Right"
-                                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{Binding CraftedItemName}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="Bold" FontSize="14"/>
+                                        <TextBlock Text="{Binding BlueprintName}" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
+                                        <DockPanel Margin="0,8,0,0">
+                                            <TextBlock Text="{Binding Status}" DockPanel.Dock="Left" Foreground="#E8A020" FontWeight="SemiBold" FontSize="11"/>
+                                            <TextBlock Text="{Binding Priority}" DockPanel.Dock="Right" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11"/>
                                         </DockPanel>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                </Grid>
+                </DockPanel>
             </Border>
 
-            <Border Grid.Column="1"
-                    Style="{StaticResource SectionCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="{Binding SelectedRequest.CraftedItemName, TargetNullValue=Select a crafting request}"
-                               FontSize="24"
-                               FontWeight="Bold"/>
-                    <TextBlock Text="{Binding SelectedRequest.BlueprintName}"
-                               Margin="0,6,0,0"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="15"/>
+            <!-- ── Right Panel: Detail ── -->
+            <Border Grid.Column="2" Style="{StaticResource OpPanelBorderStyle}">
+                <Grid Margin="18">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedRequest, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <Border Style="{StaticResource GlassPanelStyle}" Margin="0,18,0,12">
-                        <StackPanel>
-                            <TextBlock Text="Request Summary"
-                                       FontWeight="Bold"
-                                       FontSize="16"/>
-                            <TextBlock Text="{Binding SelectedRequest.RequesterUsername, StringFormat=Requester: {0}}"
-                                       Margin="0,12,0,0"/>
-                            <TextBlock Text="{Binding SelectedRequest.AssignedCrafterUsername, StringFormat=Assigned Crafter: {0}, TargetNullValue=Assigned Crafter: Unassigned}"
-                                       Margin="0,8,0,0"/>
-                            <TextBlock Text="{Binding SelectedRequest.QuantityRequested, StringFormat=Quantity Requested: {0}}"
-                                       Margin="0,8,0,0"/>
-                            <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat=Delivery: {0}, TargetNullValue=Delivery: Not specified}"
-                                       Margin="0,8,0,0"/>
-                            <TextBlock Text="{Binding SelectedRequest.Notes, StringFormat=Notes: {0}}"
-                                       Margin="0,8,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"
-                                       Visibility="{Binding SelectedRequest.Notes, Converter={StaticResource NullToVisibilityConverter}}"/>
-                        </StackPanel>
-                    </Border>
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="{Binding SelectedRequest.CraftedItemName}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="24" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding SelectedRequest.BlueprintName}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="14" Margin="0,4,0,0"/>
+                    </StackPanel>
 
-                    <Border Style="{StaticResource GlassPanelStyle}">
-                        <StackPanel>
-                            <TextBlock Text="Actions"
-                                       FontWeight="Bold"
-                                       FontSize="16"
-                                       Margin="0,0,0,12"/>
-                            <Button Content="Assign to Me"
-                                    Command="{Binding AssignToSelfCommand}"
-                                    IsEnabled="{Binding CanAssign}"
-                                    Height="40"
-                                    Margin="0,0,0,8"
-                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
-                            <Button Content="Mark In Progress"
-                                    Command="{Binding MarkInProgressCommand}"
-                                    IsEnabled="{Binding CanMarkInProgress}"
-                                    Height="40"
-                                    Margin="0,0,0,8"
-                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
-                            <Button Content="Mark Completed"
-                                    Command="{Binding MarkCompletedCommand}"
-                                    IsEnabled="{Binding CanMarkCompleted}"
-                                    Height="40"
-                                    Margin="0,0,0,8"
-                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
-                            <Button Content="Cancel Request"
-                                    Command="{Binding CancelCommand}"
-                                    IsEnabled="{Binding CanCancel}"
-                                    Height="40"
-                                    Style="{StaticResource PrimaryActionButtonStyle}"/>
-                        </StackPanel>
+                    <Border Grid.Row="1" Style="{StaticResource OpItemBorderStyle}" Margin="0,18,0,0" Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel>
+                                <TextBlock Text="REQUEST SUMMARY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
+                                <TextBlock Text="{Binding SelectedRequest.RequesterUsername, StringFormat=Requester: {0}}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.AssignedCrafterUsername, StringFormat=Assigned: {0}, TargetNullValue=Assigned: Unassigned}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.QuantityRequested, StringFormat=Quantity: {0}}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat=Location: {0}, TargetNullValue=Location: Not specified}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                
+                                <TextBlock Text="NOTES" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"
+                                           Visibility="{Binding SelectedRequest.Notes, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                <TextBlock Text="{Binding SelectedRequest.Notes}" Foreground="{StaticResource OpTextSecondaryBrush}" TextWrapping="Wrap"
+                                           Visibility="{Binding SelectedRequest.Notes, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Width="200" Margin="24,0,0,0">
+                                <TextBlock Text="ACTIONS" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
+                                <Button Content="ASSIGN TO ME"
+                                        Command="{Binding AssignToSelfCommand}"
+                                        IsEnabled="{Binding CanAssign}"
+                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                        Background="#2B4E2E" Foreground="#EEF6EE"
+                                        BorderBrush="#5C8B5E" BorderThickness="1"/>
+                                <Button Content="MARK IN PROGRESS"
+                                        Command="{Binding MarkInProgressCommand}"
+                                        IsEnabled="{Binding CanMarkInProgress}"
+                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                        Background="#5A3A14" Foreground="#F8E9D4"
+                                        BorderBrush="#A36E2F" BorderThickness="1"/>
+                                <Button Content="MARK COMPLETED"
+                                        Command="{Binding MarkCompletedCommand}"
+                                        IsEnabled="{Binding CanMarkCompleted}"
+                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                        Background="#24374A" Foreground="#E8F0F8"
+                                        BorderBrush="#4F6A84" BorderThickness="1"/>
+                                <Button Content="CANCEL REQUEST"
+                                        Command="{Binding CancelCommand}"
+                                        IsEnabled="{Binding CanCancel}"
+                                        Padding="12,8" FontWeight="Bold"
+                                        Background="#8B1A0F" Foreground="#F4EBDD"
+                                        BorderBrush="#B15B34" BorderThickness="1"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
-                </StackPanel>
+                    
+                    <!-- Empty state inside detail area if no selection -->
+                    <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <!-- This is only shown if nothing is selected, but handled by parent Grid visibility above -->
+                    </StackPanel>
+                </Grid>
+
+                <!-- Alternative Empty State for Right Panel -->
+                <Control.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource OpPanelBorderStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedRequest}" Value="{x:Null}">
+                                <Setter Property="Child">
+                                    <Setter.Value>
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock Text="SELECT A REQUEST" Foreground="#B9A07D" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Choose a request from the queue to view details and manage assignments."
+                                                       Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" Margin="0,8,0,0"
+                                                       TextAlignment="Center" TextWrapping="Wrap" Width="300"/>
+                                        </StackPanel>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Control.Style>
             </Border>
         </Grid>
 
-        <TextBlock Grid.Row="3"
-                   Text="{Binding StatusMessage}"
-                   Margin="0,14,0,0"
-                   Foreground="{DynamicResource TextMutedBrush}"/>
+        <!-- ── Footer ── -->
+        <Border Grid.Row="2" Style="{StaticResource OpHeaderBorderStyle}" Margin="0,16,0,0" Padding="12,10">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="12" TextWrapping="Wrap"/>
+        </Border>
     </Grid>
 </UserControl>

@@ -8,6 +8,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/Themes/Dark.xaml" />
                 <ResourceDictionary Source="Styles/BlueprintStyles.xaml"/>
+                <ResourceDictionary Source="Styles/OperationalStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <converters:BoolToYesNoConverter x:Key="BoolToYesNoConverter" />
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
