@@ -332,7 +332,7 @@
             </ScrollViewer>
 
             <!-- Empty state -->
-            <Border Style="{StaticResource OpPanelBorderStyle}" Padding="22">
+            <Border Padding="22">
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource OpPanelBorderStyle}">
                         <Setter Property="Visibility" Value="Visible"/>

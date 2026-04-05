@@ -19,6 +19,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
     [ObservableProperty] private string statusMessage = "Loading material procurement requests...";
 
     public bool CanClaim => SelectedRequest is not null && SelectedRequest.Status == "Open";
+    public bool CanMarkInProgress => SelectedRequest is not null && SelectedRequest.Status == "Open";
     public bool CanMarkCompleted => SelectedRequest is not null
         && (SelectedRequest.Status == "Open" || SelectedRequest.Status == "InProgress");
     public bool CanCancel => SelectedRequest is not null
@@ -34,6 +35,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
     partial void OnSelectedRequestChanged(MaterialProcurementRequestListItemDto? value)
     {
         OnPropertyChanged(nameof(CanClaim));
+        OnPropertyChanged(nameof(CanMarkInProgress));
         OnPropertyChanged(nameof(CanMarkCompleted));
         OnPropertyChanged(nameof(CanCancel));
     }
@@ -74,6 +76,15 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         if (SelectedRequest is null) return;
         await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/claim", null,
             "Request claimed — status set to In Progress.");
+    }
+
+    [RelayCommand]
+    private async Task MarkInProgressAsync()
+    {
+        if (SelectedRequest is null) return;
+        await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/status",
+            new UpdateRequestStatusDto { Status = "InProgress" },
+            "Request marked as In Progress.");
     }
 
     [RelayCommand]

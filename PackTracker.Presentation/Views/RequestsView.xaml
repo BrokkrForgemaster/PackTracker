@@ -106,6 +106,25 @@
 
             <!-- Detail -->
             <Border Grid.Column="2" Style="{StaticResource OpPanelBorderStyle}">
+                <Grid>
+                <!-- Empty state -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedRequest, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="SELECT A DISPATCH" Foreground="#B9A07D" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Choose a request from the hub to view details and coordinate support."
+                               Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" Margin="0,8,0,0"
+                               TextAlignment="Center" TextWrapping="Wrap" Width="300"/>
+                </StackPanel>
+
                 <Grid Margin="18">
                     <Grid.Style>
                         <Style TargetType="Grid">
@@ -190,25 +209,7 @@
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
-
-                <Control.Style>
-                    <Style TargetType="Border" BasedOn="{StaticResource OpPanelBorderStyle}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedRequest}" Value="{x:Null}">
-                                <Setter Property="Child">
-                                    <Setter.Value>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <TextBlock Text="SELECT A DISPATCH" Foreground="#B9A07D" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Choose a request from the hub to view details and coordinate support."
-                                                       Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" Margin="0,8,0,0"
-                                                       TextAlignment="Center" TextWrapping="Wrap" Width="300"/>
-                                        </StackPanel>
-                                    </Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Control.Style>
+                </Grid>
             </Border>
         </Grid>
 

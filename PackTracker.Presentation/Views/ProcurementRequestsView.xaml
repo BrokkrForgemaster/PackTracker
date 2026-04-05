@@ -18,8 +18,8 @@
         <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <Definition Width="*"/>
-                    <Definition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel>
                     <TextBlock Text="MATERIAL PROCUREMENT" Foreground="{StaticResource OpTextTitleBrush}" FontSize="22" FontWeight="Bold"/>
@@ -75,6 +75,25 @@
 
             <!-- ── Right Panel: Detail ── -->
             <Border Grid.Column="2" Style="{StaticResource OpPanelBorderStyle}">
+                <Grid>
+                <!-- Empty state -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedRequest, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="SELECT A REQUEST" Foreground="#B9A07D" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Choose a procurement request from the queue to view details and manage assignments."
+                               Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" Margin="0,8,0,0"
+                               TextAlignment="Center" TextWrapping="Wrap" Width="300"/>
+                </StackPanel>
+
                 <Grid Margin="18">
                     <Grid.Style>
                         <Style TargetType="Grid">
@@ -109,7 +128,7 @@
                                 <TextBlock Text="REQUEST SUMMARY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
                                 <TextBlock Text="{Binding SelectedRequest.RequesterUsername, StringFormat=Requester: {0}}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.AssignedToUsername, StringFormat=Assigned: {0}, TargetNullValue=Assigned: Unassigned}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
-                                <TextBlock Text="{Binding SelectedRequest.QuantityRequested, StringFormat=Quantity: {0} {1}, BodyMask={Binding SelectedRequest.Unit}}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6">
+                                <TextBlock Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6">
                                     <TextBlock.Text>
                                         <MultiBinding StringFormat="Quantity: {0} {1}">
                                             <Binding Path="SelectedRequest.QuantityRequested"/>
@@ -156,25 +175,7 @@
                         </Grid>
                     </Border>
                 </Grid>
-
-                <Control.Style>
-                    <Style TargetType="Border" BasedOn="{StaticResource OpPanelBorderStyle}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedRequest}" Value="{x:Null}">
-                                <Setter Property="Child">
-                                    <Setter.Value>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <TextBlock Text="SELECT A REQUEST" Foreground="#B9A07D" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Choose a procurement request from the queue to view details and manage assignments."
-                                                       Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" Margin="0,8,0,0"
-                                                       TextAlignment="Center" TextWrapping="Wrap" Width="300"/>
-                                        </StackPanel>
-                                    </Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Control.Style>
+                </Grid>
             </Border>
         </Grid>
 
