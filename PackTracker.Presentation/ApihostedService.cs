@@ -203,6 +203,7 @@ public class ApiHostedService : IHostedService
                         });
 
                         // MVC & Swagger
+                        services.AddScoped<CraftingSeedService>();
                         services.AddControllers().AddApplicationPart(typeof(ProfilesController).Assembly);
                         services.AddEndpointsApiExplorer();
                         services.AddSwaggerGen(c =>
@@ -241,6 +242,9 @@ public class ApiHostedService : IHostedService
                 })
                 .Build();
 
+            // ── Database initialization & data cleanup ─────────────────────────────
+            await InitializeDatabaseAsync(cancellationToken);
+
             await _apiHost.StartAsync(cancellationToken);
             await _settingsService.UpdateSettingsAsync(s => s.ApiBaseUrl = _baseUrl);
 
@@ -250,6 +254,78 @@ public class ApiHostedService : IHostedService
         {
             _logger.LogError(ex, "❌ Failed to start embedded API host.");
             throw;
+        }
+    }
+
+    private async Task InitializeDatabaseAsync(CancellationToken ct)
+    {
+        using var scope = _apiHost!.Services.CreateScope();
+        var sp = scope.ServiceProvider;
+        var db = sp.GetRequiredService<AppDbContext>();
+        var log = sp.GetRequiredService<ILogger<ApiHostedService>>();
+
+        try
+        {
+            db.Database.EnsureCreated();
+
+            // Add wiki sync columns idempotently (safe for both fresh and existing DBs)
+            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
+            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)", ct);
+            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
+            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)", ct);
+            await db.Database.ExecuteSqlRawAsync(@"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")", ct);
+            await db.Database.ExecuteSqlRawAsync(@"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")", ct);
+
+            // Remove corrupt records created by a previous broken wiki sync
+            // (all fields deserialized as empty/default because the {"data":{}} wrapper was missed)
+            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''", ct);
+
+            // Fix any leftover IsInGameAvailable=false rows — all wiki/scunpacked blueprints are in-game
+            await db.Database.ExecuteSqlRawAsync(@"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE", ct);
+
+            // Remap raw game type identifiers to user-friendly category names
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE ""Blueprints"" SET ""Category"" = CASE ""Category""
+                    WHEN 'WeaponPersonal'        THEN 'Personal Weapon'
+                    WHEN 'WeaponAttachment'      THEN 'Weapon Attachment'
+                    WHEN 'Char_Armor_Torso'      THEN 'Armor - Torso'
+                    WHEN 'Char_Armor_Arms'       THEN 'Armor - Arms'
+                    WHEN 'Char_Armor_Legs'       THEN 'Armor - Legs'
+                    WHEN 'Char_Armor_Helmet'     THEN 'Armor - Helmet'
+                    WHEN 'Char_Armor_Undersuit'  THEN 'Armor - Undersuit'
+                    WHEN 'Char_Armor_Backpack'   THEN 'Armor - Backpack'
+                    ELSE ""Category""
+                END
+                WHERE ""Category"" IN (
+                    'WeaponPersonal','WeaponAttachment',
+                    'Char_Armor_Torso','Char_Armor_Arms','Char_Armor_Legs',
+                    'Char_Armor_Helmet','Char_Armor_Undersuit','Char_Armor_Backpack'
+                )", ct);
+
+            log.LogInformation("✅ Database initialization and cleanup complete.");
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "❌ Database initialization failed — wiki sync or seed may not work correctly.");
+        }
+
+        // Seed blueprint data from scunpacked local file
+        try
+        {
+            var seedService = sp.GetRequiredService<CraftingSeedService>();
+
+            // Try solution-root path (dev layout: 4 directories up from bin output)
+            var blueprintPath = Path.GetFullPath(
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scunpacked-data", "blueprints.json"));
+
+            // Fallback: wwwroot/data/crafting-seed.json alongside the executable
+            var fallbackPath = Path.Combine(AppContext.BaseDirectory, "data", "crafting-seed.json");
+
+            await seedService.SeedAsync(File.Exists(blueprintPath) ? blueprintPath : fallbackPath, ct);
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "❌ Crafting seed failed.");
         }
     }
 

@@ -27,7 +27,9 @@ public sealed class WikiSyncBackgroundService : BackgroundService
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var wikiSyncedCount = await db.Blueprints.CountAsync(x => x.WikiUuid != null, stoppingToken);
+            // Only count blueprints with a valid (non-empty) WikiUuid — empty strings are corrupt records
+            var wikiSyncedCount = await db.Blueprints.CountAsync(
+                x => x.WikiUuid != null && x.WikiUuid != "", stoppingToken);
 
             if (wikiSyncedCount > 0)
             {
