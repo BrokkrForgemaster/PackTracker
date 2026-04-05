@@ -62,7 +62,21 @@ public class CraftingRequestsController : ControllerBase
 
         var blueprint = await _db.Blueprints.FirstOrDefaultAsync(x => x.Id == request.BlueprintId, ct);
         if (blueprint is null)
-            return NotFound(new { error = "Blueprint not found." });
+        {
+            blueprint = new Blueprint
+            {
+                Id = request.BlueprintId,
+                Slug = request.BlueprintId.ToString(),
+                BlueprintName = "Wiki Blueprint",
+                CraftedItemName = "Unknown",
+                Category = "Unknown",
+                IsInGameAvailable = true,
+                DataConfidence = "WikiAPI",
+                WikiUuid = request.BlueprintId.ToString()
+            };
+            _db.Blueprints.Add(blueprint);
+            await _db.SaveChangesAsync(ct);
+        }
 
         var craftingRequest = new CraftingRequest
         {
@@ -115,7 +129,18 @@ public class CraftingRequestsController : ControllerBase
     {
         var material = await _db.Materials.FirstOrDefaultAsync(x => x.Id == request.MaterialId, ct);
         if (material is null)
-            return NotFound(new { error = "Material not found." });
+        {
+            material = new Material
+            {
+                Id = request.MaterialId,
+                Name = "Unknown Material",
+                Slug = request.MaterialId.ToString(),
+                MaterialType = "Resource",
+                Tier = string.Empty
+            };
+            _db.Materials.Add(material);
+            await _db.SaveChangesAsync(ct);
+        }
 
         if (request.LinkedCraftingRequestId.HasValue)
         {

@@ -67,6 +67,7 @@ public partial class App : System.Windows.Application
         // 6️⃣ Core presentation services
         services.AddSingleton<IThemeManager, ThemeManager>();
         services.AddSingleton<IApiClientProvider, ApiClientProvider>();
+        services.AddSingleton<WikiBlueprintService>();
 
         // 7️⃣ Views + ViewModels
         services.AddSingleton<MainWindow>();

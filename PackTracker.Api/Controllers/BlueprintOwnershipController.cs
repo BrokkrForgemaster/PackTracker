@@ -34,7 +34,21 @@ public class BlueprintOwnershipController : ControllerBase
 
         var blueprintExists = await _db.Blueprints.AnyAsync(x => x.Id == blueprintId, ct);
         if (!blueprintExists)
-            return NotFound(new { error = "Blueprint not found." });
+        {
+            // Auto-create a placeholder so wiki UUIDs can be used for ownership tracking
+            _db.Blueprints.Add(new PackTracker.Domain.Entities.Blueprint
+            {
+                Id = blueprintId,
+                Slug = blueprintId.ToString(),
+                BlueprintName = "Wiki Blueprint",
+                CraftedItemName = "Unknown",
+                Category = "Unknown",
+                IsInGameAvailable = true,
+                DataConfidence = "WikiAPI",
+                WikiUuid = blueprintId.ToString()
+            });
+            await _db.SaveChangesAsync(ct);
+        }
 
         var existing = await _db.MemberBlueprintOwnerships
             .FirstOrDefaultAsync(x => x.BlueprintId == blueprintId && x.MemberProfileId == profile.Id, ct);

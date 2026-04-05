@@ -16,7 +16,9 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('count:', len\\(d['data']\\)\\); print\\('meta last_page:', d['meta']['last_page']\\)\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d['data'].get\\('requirement_groups', []\\), indent=2\\)\\)\")",
       "Bash(python3 -c \" import json with open\\('/home/ravenadmin/.openclaw/workspace/PackTracker/scunpacked-data/blueprints.json'\\) as f: data = json.load\\(f\\) print\\('Type:', type\\(data\\).__name__\\) if isinstance\\(data, list\\): print\\('Count:', len\\(data\\)\\) if data: print\\('First keys:', list\\(data[0].keys\\(\\)\\)\\) avail = [x.get\\('availability',{}\\).get\\('default'\\) for x in data[:20]] print\\('First 20 availability.default:', avail\\) \")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Read(//usr/share/dotnet/**)",
+      "Read(//opt/**)"
     ],
     "deny": [],
     "ask": []

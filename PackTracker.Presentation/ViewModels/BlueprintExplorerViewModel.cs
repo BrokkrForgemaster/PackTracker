@@ -21,6 +21,7 @@ public class BlueprintComponentModifierPreview
 public partial class BlueprintExplorerViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
+    private readonly WikiBlueprintService _wikiBlueprints;
     private readonly ILogger<BlueprintExplorerViewModel> _logger;
 
     public ObservableCollection<BlueprintSearchItemDto> Results { get; } = new();
@@ -47,79 +48,48 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     public IReadOnlyList<MemberBlueprintInterestType> InterestTypeOptions { get; } =
         Enum.GetValues<MemberBlueprintInterestType>();
 
-    public BlueprintExplorerViewModel(IApiClientProvider apiClientProvider, ILogger<BlueprintExplorerViewModel> logger)
+    public BlueprintExplorerViewModel(
+        IApiClientProvider apiClientProvider,
+        WikiBlueprintService wikiBlueprints,
+        ILogger<BlueprintExplorerViewModel> logger)
     {
         _apiClientProvider = apiClientProvider;
+        _wikiBlueprints = wikiBlueprints;
         _logger = logger;
         _ = InitializeAsync();
     }
 
     private async Task InitializeAsync()
     {
-        await LoadCategoriesAsync();
+        LoadCategoriesFromWiki();
+        await LoadWikiCacheAsync();
         await SearchAsync();
     }
 
-    private async Task LoadCategoriesAsync()
-    {
-        try
-        {
-            using var client = _apiClientProvider.CreateClient();
-
-            if (client.BaseAddress is null)
-            {
-                _logger.LogWarning("Cannot load categories — BaseAddress is null.");
-                return;
-            }
-
-            var relativeUrl = "api/v1/blueprints/categories";
-            _logger.LogInformation("Loading blueprint categories from {Url}", relativeUrl);
-
-            HttpResponseMessage response;
-            try
-            {
-                response = await client.GetAsync(relativeUrl);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to load blueprint categories — using empty list.");
-                PopulateDefaultCategories();
-                return;
-            }
-
-            var body = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode || !IsJsonResponse(response))
-            {
-                _logger.LogWarning("Categories endpoint returned {StatusCode}. Falling back to defaults.", (int)response.StatusCode);
-                PopulateDefaultCategories();
-                return;
-            }
-
-            var fetched = JsonSerializer.Deserialize<List<string>>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                ?? new List<string>();
-
-            Categories.Clear();
-            Categories.Add(AllCategoriesLabel);
-            foreach (var cat in fetched.Where(c => !string.IsNullOrWhiteSpace(c)).OrderBy(c => c))
-                Categories.Add(cat);
-
-            SelectedCategory = AllCategoriesLabel;
-            _logger.LogInformation("Loaded {Count} blueprint categories.", Categories.Count - 1);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error loading categories.");
-            PopulateDefaultCategories();
-        }
-    }
-
-    private void PopulateDefaultCategories()
+    private void LoadCategoriesFromWiki()
     {
         Categories.Clear();
         Categories.Add(AllCategoriesLabel);
+        foreach (var cat in WikiBlueprintService.KnownCategories)
+            Categories.Add(cat);
         SelectedCategory = AllCategoriesLabel;
+    }
+
+    private async Task LoadWikiCacheAsync()
+    {
+        try
+        {
+            StatusMessage = "Loading blueprints from Star Citizen wiki...";
+            var count = await _wikiBlueprints.LoadAllAsync();
+            StatusMessage = count > 0
+                ? $"Loaded {count} blueprints. Use search to filter."
+                : "Could not reach Star Citizen wiki API.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Wiki cache load failed.");
+            StatusMessage = $"Wiki load error: {ex.Message}";
+        }
     }
 
     [RelayCommand]
@@ -128,97 +98,15 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Searching blueprint catalog...";
 
-            using var client = _apiClientProvider.CreateClient();
-
-            _logger.LogInformation("ApiClient BaseAddress={BaseAddress}", client.BaseAddress?.ToString() ?? "<null>");
-
-            if (client.BaseAddress is null)
+            if (!_wikiBlueprints.IsLoaded)
             {
-                StatusMessage = "API client has no BaseAddress configured. Check IApiClientProvider setup.";
-                _logger.LogError("HttpClient BaseAddress is null. Cannot build request URI.");
-                return;
+                StatusMessage = "Still loading blueprint data from wiki...";
+                await LoadWikiCacheAsync();
             }
-
-            var query = new List<string>();
-            if (!string.IsNullOrWhiteSpace(SearchText))
-                query.Add($"q={Uri.EscapeDataString(SearchText.Trim())}");
 
             var effectiveCategory = SelectedCategory == AllCategoriesLabel ? null : SelectedCategory;
-            if (!string.IsNullOrWhiteSpace(effectiveCategory))
-                query.Add($"category={Uri.EscapeDataString(effectiveCategory.Trim())}");
-
-            query.Add($"inGameOnly={InGameOnly.ToString().ToLowerInvariant()}");
-
-            var relativeUrl = "api/v1/blueprints";
-            if (query.Count > 0)
-                relativeUrl += "?" + string.Join("&", query);
-
-            var requestUri = new Uri(client.BaseAddress, relativeUrl);
-            _logger.LogInformation("Blueprint search request. RelativeUrl={RelativeUrl} AbsoluteUrl={AbsoluteUrl}", relativeUrl, requestUri);
-
-            HttpResponseMessage response;
-            try
-            {
-                response = await client.GetAsync(relativeUrl);
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "Blueprint search HTTP request failed.");
-                StatusMessage = $"Network error — could not reach API: {ex.Message}";
-                Results.Clear();
-                return;
-            }
-            catch (TaskCanceledException ex)
-            {
-                _logger.LogError(ex, "Blueprint search request timed out.");
-                StatusMessage = "Blueprint search timed out. Check that the API is running.";
-                Results.Clear();
-                return;
-            }
-
-            var body = await response.Content.ReadAsStringAsync();
-            var contentType = response.Content.Headers.ContentType?.MediaType ?? "<none>";
-
-            _logger.LogInformation(
-                "Blueprint search response. StatusCode={StatusCode} ContentType={ContentType} BodyPreview={BodyPreview}",
-                (int)response.StatusCode, contentType, TrimForDisplay(body));
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Blueprint search returned non-success. StatusCode={StatusCode} Body={Body}",
-                    (int)response.StatusCode, body);
-                StatusMessage = IsJsonResponse(response)
-                    ? $"Blueprint search failed ({(int)response.StatusCode}): {TrimForDisplay(body)}"
-                    : $"Blueprint search failed ({(int)response.StatusCode}). API returned {contentType}. Preview: {TrimForDisplay(body)}";
-                Results.Clear();
-                return;
-            }
-
-            if (!IsJsonResponse(response))
-            {
-                _logger.LogError("Blueprint search returned non-JSON. ContentType={ContentType} BodyPreview={BodyPreview}",
-                    contentType, TrimForDisplay(body));
-                StatusMessage = $"Blueprint search returned {contentType} instead of JSON. Preview: {TrimForDisplay(body)}";
-                Results.Clear();
-                return;
-            }
-
-            List<BlueprintSearchItemDto> items;
-            try
-            {
-                items = JsonSerializer.Deserialize<List<BlueprintSearchItemDto>>(body,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                        ?? new List<BlueprintSearchItemDto>();
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Blueprint search JSON deserialization failed.");
-                StatusMessage = $"Blueprint search returned malformed JSON: {ex.Message}";
-                Results.Clear();
-                return;
-            }
+            var items = _wikiBlueprints.Search(SearchText, effectiveCategory);
 
             Results.Clear();
             foreach (var item in items)
@@ -226,14 +114,12 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
             StatusMessage = Results.Count == 0
                 ? "No blueprints matched your search."
-                : $"Loaded {Results.Count} blueprint results.";
-
-            _logger.LogInformation("Blueprint search complete. ResultCount={ResultCount}", Results.Count);
+                : $"{Results.Count} results.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Blueprint search encountered an unexpected error.");
-            StatusMessage = $"Unexpected error during blueprint search: {ex.GetType().Name} — {ex.Message}";
+            _logger.LogError(ex, "Blueprint search failed.");
+            StatusMessage = $"Search error: {ex.Message}";
         }
         finally
         {
@@ -259,92 +145,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             IsLoading = true;
             StatusMessage = "Loading blueprint detail...";
 
-            using var client = _apiClientProvider.CreateClient();
-
-            if (client.BaseAddress is null)
-            {
-                StatusMessage = "API client has no BaseAddress configured.";
-                return;
-            }
-
-            var relativeUrl = $"api/v1/blueprints/{blueprintId}";
-            _logger.LogInformation("Blueprint detail request. RelativeUrl={RelativeUrl}", relativeUrl);
-
-            HttpResponseMessage response;
-            try
-            {
-                response = await client.GetAsync(relativeUrl);
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "Blueprint detail HTTP request failed.");
-                StatusMessage = $"Network error — could not reach API: {ex.Message}";
-                SelectedBlueprintDetail = null;
-                Materials.Clear();
-                Owners.Clear();
-                Components.Clear();
-                CombinedModifiers.Clear();
-                return;
-            }
-            catch (TaskCanceledException ex)
-            {
-                _logger.LogError(ex, "Blueprint detail request timed out.");
-                StatusMessage = "Blueprint detail request timed out.";
-                SelectedBlueprintDetail = null;
-                Materials.Clear();
-                Owners.Clear();
-                Components.Clear();
-                CombinedModifiers.Clear();
-                return;
-            }
-
-            var body = await response.Content.ReadAsStringAsync();
-            var contentType = response.Content.Headers.ContentType?.MediaType ?? "<none>";
-
-            _logger.LogInformation("Blueprint detail response. StatusCode={StatusCode} ContentType={ContentType} BodyPreview={BodyPreview}",
-                (int)response.StatusCode, contentType, TrimForDisplay(body));
-
-            if (!response.IsSuccessStatusCode)
-            {
-                StatusMessage = IsJsonResponse(response)
-                    ? $"Blueprint detail failed ({(int)response.StatusCode}): {TrimForDisplay(body)}"
-                    : $"Blueprint detail failed ({(int)response.StatusCode}). API returned {contentType}. Preview: {TrimForDisplay(body)}";
-                SelectedBlueprintDetail = null;
-                Materials.Clear();
-                Owners.Clear();
-                Components.Clear();
-                CombinedModifiers.Clear();
-                return;
-            }
-
-            if (!IsJsonResponse(response))
-            {
-                StatusMessage = $"Blueprint detail returned {contentType} instead of JSON. Preview: {TrimForDisplay(body)}";
-                SelectedBlueprintDetail = null;
-                Materials.Clear();
-                Owners.Clear();
-                Components.Clear();
-                CombinedModifiers.Clear();
-                return;
-            }
-
-            BlueprintDetailDto? detail;
-            try
-            {
-                detail = JsonSerializer.Deserialize<BlueprintDetailDto>(body,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Blueprint detail JSON deserialization failed.");
-                StatusMessage = $"Blueprint detail returned malformed JSON: {ex.Message}";
-                SelectedBlueprintDetail = null;
-                Materials.Clear();
-                Owners.Clear();
-                Components.Clear();
-                CombinedModifiers.Clear();
-                return;
-            }
+            // Fetch blueprint data from wiki API
+            var detail = await _wikiBlueprints.GetDetailAsync(blueprintId);
 
             SelectedBlueprintDetail = detail;
             Materials.Clear();
@@ -353,12 +155,16 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             CombinedModifiers.Clear();
             SelectedMaterial = null;
 
-            foreach (var material in detail?.Materials ?? Array.Empty<BlueprintRecipeMaterialDto>())
-                Materials.Add(material);
-            foreach (var owner in detail?.Owners ?? Array.Empty<BlueprintOwnerDto>())
-                Owners.Add(owner);
+            if (detail is null)
+            {
+                StatusMessage = "Blueprint detail not found.";
+                return;
+            }
 
-            foreach (var component in detail?.Components ?? Array.Empty<BlueprintComponentDto>())
+            foreach (var material in detail.Materials)
+                Materials.Add(material);
+
+            foreach (var component in detail.Components)
             {
                 var vm = new ComponentViewModel
                 {
@@ -371,24 +177,54 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
                 foreach (var modifier in component.Modifiers)
                 {
-                    var averagedValue = (modifier.AtMinQuality + modifier.AtMaxQuality) / 2d;
-                    vm.Modifiers.Add(new StatModifier(modifier.PropertyKey, averagedValue, vm));
+                    var averaged = (modifier.AtMinQuality + modifier.AtMaxQuality) / 2d;
+                    vm.Modifiers.Add(new StatModifier(modifier.PropertyKey, averaged, vm));
                 }
 
                 Components.Add(vm);
             }
 
             UpdateCombinedModifiers();
-            StatusMessage = detail is null ? "Blueprint detail not found." : $"Loaded {detail.BlueprintName}.";
+
+            // Load ownership records from local API (non-fatal if unavailable)
+            await LoadOwnersFromLocalAsync(blueprintId);
+
+            StatusMessage = $"Loaded {detail.BlueprintName}.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Blueprint detail encountered an unexpected error for {BlueprintId}", blueprintId);
-            StatusMessage = $"Unexpected error loading blueprint detail: {ex.GetType().Name} — {ex.Message}";
+            _logger.LogError(ex, "Blueprint detail failed for {BlueprintId}", blueprintId);
+            StatusMessage = $"Error loading blueprint: {ex.Message}";
         }
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task LoadOwnersFromLocalAsync(Guid blueprintId)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            if (client.BaseAddress is null) return;
+
+            var response = await client.GetAsync($"api/v1/blueprints/{blueprintId}");
+            if (!response.IsSuccessStatusCode) return;
+
+            var body = await response.Content.ReadAsStringAsync();
+            var local = JsonSerializer.Deserialize<BlueprintDetailDto>(body,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (local?.Owners == null) return;
+
+            Owners.Clear();
+            foreach (var owner in local.Owners)
+                Owners.Add(owner);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load owners from local API for {BlueprintId}", blueprintId);
         }
     }
 
