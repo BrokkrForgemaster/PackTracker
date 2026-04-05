@@ -32,9 +32,9 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private string? selectedCategory;
-    [ObservableProperty] private bool inGameOnly = true;
+    [ObservableProperty] private bool inGameOnly = false;
     [ObservableProperty] private bool isLoading;
-    [ObservableProperty] private string statusMessage = "Search for an in-game blueprint to begin.";
+    [ObservableProperty] private string statusMessage = "Loading blueprints...";
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
     [ObservableProperty] private BlueprintRecipeMaterialDto? selectedMaterial;
@@ -51,7 +51,6 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     {
         _apiClientProvider = apiClientProvider;
         _logger = logger;
-        SearchText = "Blueprint";
         _ = InitializeAsync();
     }
 

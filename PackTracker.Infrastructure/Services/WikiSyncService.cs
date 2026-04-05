@@ -169,8 +169,7 @@ public sealed class WikiSyncService : IWikiSyncService
     private async Task<bool> UpsertBlueprintAsync(WikiBlueprintDetailDto detail, CancellationToken ct)
     {
         var outputName = detail.Output?.Name ?? detail.OutputName ?? detail.Uuid;
-        var category = detail.Output?.Type ?? detail.Output?.Subtype ?? detail.Output?.Class ?? "Unknown";
-        var isAvailable = detail.Availability?.Default ?? detail.IsAvailableByDefault;
+        var category = MapCategory(detail.Output?.Type ?? detail.Output?.Class);
         var sourceVersion = detail.GameVersion ?? "star-citizen-wiki";
         var syncedAt = DateTime.UtcNow.ToString("O");
         var description = BuildDescription(detail.Output);
@@ -188,7 +187,7 @@ public sealed class WikiSyncService : IWikiSyncService
             blueprint.BlueprintName = $"{outputName} Blueprint";
             blueprint.Category = category;
             blueprint.Description = description;
-            blueprint.IsInGameAvailable = isAvailable;
+            blueprint.IsInGameAvailable = true; // All wiki blueprints are in-game craftable
             blueprint.SourceVersion = sourceVersion;
             blueprint.WikiLastSyncedAt = syncedAt;
             blueprint.UpdatedAt = DateTime.UtcNow;
@@ -205,7 +204,7 @@ public sealed class WikiSyncService : IWikiSyncService
                 CraftedItemName = outputName,
                 Category = category,
                 Description = description,
-                IsInGameAvailable = isAvailable,
+                IsInGameAvailable = true, // All wiki blueprints are in-game craftable
                 DataConfidence = "WikiSync",
                 SourceVersion = sourceVersion,
                 WikiLastSyncedAt = syncedAt
@@ -392,6 +391,19 @@ public sealed class WikiSyncService : IWikiSyncService
 
         return parts.Length == 0 ? null : string.Join(" / ", parts);
     }
+
+    private static string MapCategory(string? type) => type switch
+    {
+        "WeaponPersonal"       => "Personal Weapon",
+        "WeaponAttachment"     => "Weapon Attachment",
+        "Char_Armor_Torso"     => "Armor - Torso",
+        "Char_Armor_Arms"      => "Armor - Arms",
+        "Char_Armor_Legs"      => "Armor - Legs",
+        "Char_Armor_Helmet"    => "Armor - Helmet",
+        "Char_Armor_Undersuit" => "Armor - Undersuit",
+        "Char_Armor_Backpack"  => "Armor - Backpack",
+        _                      => type ?? "Unknown"
+    };
 
     private static string Slugify(string value)
     {

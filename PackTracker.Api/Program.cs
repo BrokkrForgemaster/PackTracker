@@ -112,7 +112,38 @@ using (var scope = app.Services.CreateScope())
             @"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")");
         await db.Database.ExecuteSqlRawAsync(
             @"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")");
-        schemaLogger.LogInformation("✅ Wiki sync schema columns applied successfully");
+
+        // All seeded/synced blueprints are in-game craftable.
+        var fixedCount = await db.Database.ExecuteSqlRawAsync(
+            @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE");
+        if (fixedCount > 0)
+            schemaLogger.LogInformation("Fixed {Count} blueprints with IsInGameAvailable=false", fixedCount);
+
+        // Remove corrupt blueprints written by a previous broken wiki sync
+        // (deserialization bug caused WikiUuid='', Category='Unknown', BlueprintName=' Blueprint').
+        await db.Database.ExecuteSqlRawAsync(
+            @"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''");
+
+        // Remap raw game type identifiers to user-friendly category names.
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE ""Blueprints"" SET ""Category"" = CASE ""Category""
+                WHEN 'WeaponPersonal'        THEN 'Personal Weapon'
+                WHEN 'WeaponAttachment'      THEN 'Weapon Attachment'
+                WHEN 'Char_Armor_Torso'      THEN 'Armor - Torso'
+                WHEN 'Char_Armor_Arms'       THEN 'Armor - Arms'
+                WHEN 'Char_Armor_Legs'       THEN 'Armor - Legs'
+                WHEN 'Char_Armor_Helmet'     THEN 'Armor - Helmet'
+                WHEN 'Char_Armor_Undersuit'  THEN 'Armor - Undersuit'
+                WHEN 'Char_Armor_Backpack'   THEN 'Armor - Backpack'
+                ELSE ""Category""
+            END
+            WHERE ""Category"" IN (
+                'WeaponPersonal','WeaponAttachment',
+                'Char_Armor_Torso','Char_Armor_Arms','Char_Armor_Legs',
+                'Char_Armor_Helmet','Char_Armor_Undersuit','Char_Armor_Backpack'
+            )");
+
+        schemaLogger.LogInformation("✅ Blueprint data cleanup applied successfully");
     }
     catch (Exception ex)
     {

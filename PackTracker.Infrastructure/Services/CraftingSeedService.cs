@@ -151,7 +151,7 @@ public sealed class CraftingSeedService
                 ? $"{record.Output.Name} Blueprint"
                 : record.Key ?? "Unknown Blueprint";
 
-            var category = FirstNonEmpty(record.Output.Type, record.Kind, "Unknown");
+            var category = MapCategory(record.Output.Type, record.Kind);
             var acquisitionSummary = BuildAvailabilitySummary(record.Availability);
 
             var blueprint = new Blueprint
@@ -161,7 +161,7 @@ public sealed class CraftingSeedService
                 CraftedItemName = FirstNonEmpty(record.Output.Name, record.Key, "Unknown Item"),
                 Category = category,
                 Description = BuildDescription(record.Output),
-                IsInGameAvailable = record.Availability?.Default ?? false,
+                IsInGameAvailable = true, // All blueprints from this source are in-game craftable
                 AcquisitionSummary = acquisitionSummary,
                 AcquisitionLocation = null,
                 AcquisitionMethod = record.Availability?.Default == true ? "In-game crafting availability confirmed" : "Reward pool / restricted availability",
@@ -324,6 +324,19 @@ public sealed class CraftingSeedService
 
     private static string FirstNonEmpty(params string?[] values) =>
         values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty;
+
+    private static string MapCategory(string? type, string? kind = null) => type switch
+    {
+        "WeaponPersonal"       => "Personal Weapon",
+        "WeaponAttachment"     => "Weapon Attachment",
+        "Char_Armor_Torso"     => "Armor - Torso",
+        "Char_Armor_Arms"      => "Armor - Arms",
+        "Char_Armor_Legs"      => "Armor - Legs",
+        "Char_Armor_Helmet"    => "Armor - Helmet",
+        "Char_Armor_Undersuit" => "Armor - Undersuit",
+        "Char_Armor_Backpack"  => "Armor - Backpack",
+        _                      => type ?? kind ?? "Unknown"
+    };
 
     private static string Slugify(string value)
     {

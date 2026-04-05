@@ -74,7 +74,7 @@
                               SelectedItem="{Binding SelectedCategory}"
                               Style="{StaticResource DarkComboBoxStyle}"/>
 
-                    <CheckBox Content="Only show in-game available blueprints"
+                    <CheckBox Content="Only show default-unlock blueprints"
                               IsChecked="{Binding InGameOnly}"
                               Foreground="#CFBEA2"
                               Margin="0,0,0,12"/>
@@ -88,39 +88,34 @@
                             BorderBrush="#B15B34"
                             BorderThickness="1"/>
 
-                    <TextBlock Margin="0,12,0,0"
+                    <TextBlock Margin="0,6,0,6"
                                Foreground="#7E6B56" FontSize="11"
                                Text="{Binding Results.Count, StringFormat=Results: {0}}"/>
-                </StackPanel>
 
-                <ListBox ItemsSource="{Binding Results}"
-                         SelectedItem="{Binding SelectedBlueprint}"
-                         Margin="0,14,0,0"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Foreground="#E6D5B6">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Margin="0,0,0,8" Padding="10"
-                                    Background="#191510" BorderBrush="#31271E"
-                                    BorderThickness="1" CornerRadius="8">
-                                <StackPanel>
+                    <TextBlock Text="SELECT BLUEPRINT" Foreground="#9A8264" FontSize="10" FontWeight="Bold"/>
+                    <ComboBox Margin="0,6,0,0"
+                              ItemsSource="{Binding Results}"
+                              SelectedItem="{Binding SelectedBlueprint}"
+                              Background="#1D1813" Foreground="#E6D5B6"
+                              BorderBrush="#3E3023" BorderThickness="1"
+                              Padding="10,8" MaxDropDownHeight="420">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="2,4">
                                     <TextBlock Text="{Binding BlueprintName}"
-                                               Foreground="#EADABD" FontWeight="SemiBold"
-                                               FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding CraftedItemName}"
-                                               Foreground="#B8A185" FontSize="11" Margin="0,3,0,0"/>
-                                    <DockPanel Margin="0,6,0,0">
+                                               Foreground="#EADABD" FontWeight="SemiBold" FontSize="13"
+                                               TextWrapping="Wrap"/>
+                                    <DockPanel Margin="0,3,0,0">
                                         <TextBlock Text="{Binding Category}"
                                                    Foreground="#8D775F" FontSize="10" DockPanel.Dock="Left"/>
                                         <TextBlock Text="{Binding VerifiedOwnerCount, StringFormat=Owners: {0}}"
                                                    Foreground="#8D775F" FontSize="10" DockPanel.Dock="Right"/>
                                     </DockPanel>
                                 </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
             </DockPanel>
         </Border>
 
