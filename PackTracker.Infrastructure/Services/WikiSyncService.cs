@@ -40,7 +40,8 @@ public sealed class WikiSyncService : IWikiSyncService
 
             do
             {
-                var json = await client.GetStringAsync($"blueprints?page={page}&limit=50", ct);
+                // API pagination uses page[number] query param (URL-encoded as page%5Bnumber%5D)
+                var json = await client.GetStringAsync($"blueprints?page%5Bnumber%5D={page}&page%5Bsize%5D=50", ct);
                 var paged = JsonSerializer.Deserialize<WikiPagedResponseDto<WikiBlueprintListItemDto>>(json, WikiJsonOptions);
 
                 if (paged?.Data == null || paged.Data.Count == 0)
@@ -56,7 +57,9 @@ public sealed class WikiSyncService : IWikiSyncService
                     try
                     {
                         var detailJson = await client.GetStringAsync($"blueprints/{item.Uuid}", ct);
-                        var detail = JsonSerializer.Deserialize<WikiBlueprintDetailDto>(detailJson, WikiJsonOptions);
+                        // API wraps single items in {"data": {...}}
+                        var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(detailJson, WikiJsonOptions);
+                        var detail = wrapper?.Data;
 
                         if (detail == null)
                         {
@@ -136,7 +139,7 @@ public sealed class WikiSyncService : IWikiSyncService
         {
             ct.ThrowIfCancellationRequested();
             var separator = baseQuery.Contains('?') ? "&" : "?";
-            var json = await client.GetStringAsync($"{baseQuery}{separator}page={page}&limit=50", ct);
+            var json = await client.GetStringAsync($"{baseQuery}{separator}page%5Bnumber%5D={page}&page%5Bsize%5D=50", ct);
             var paged = JsonSerializer.Deserialize<WikiPagedResponseDto<WikiItemDto>>(json, WikiJsonOptions);
 
             if (paged?.Data == null || paged.Data.Count == 0)
@@ -165,8 +168,12 @@ public sealed class WikiSyncService : IWikiSyncService
 
     private async Task<bool> UpsertBlueprintAsync(WikiBlueprintDetailDto detail, CancellationToken ct)
     {
-        var outputName = detail.Output?.Name ?? detail.Uuid;
+        var outputName = detail.Output?.Name ?? detail.OutputName ?? detail.Uuid;
+        var category = detail.Output?.Type ?? detail.Output?.Subtype ?? detail.Output?.Class ?? "Unknown";
+        var isAvailable = detail.Availability?.Default ?? detail.IsAvailableByDefault;
+        var sourceVersion = detail.GameVersion ?? "star-citizen-wiki";
         var syncedAt = DateTime.UtcNow.ToString("O");
+        var description = BuildDescription(detail.Output);
 
         var existing = await _db.Blueprints
             .FirstOrDefaultAsync(x => x.WikiUuid == detail.Uuid, ct);
@@ -179,8 +186,10 @@ public sealed class WikiSyncService : IWikiSyncService
             blueprint = existing;
             blueprint.CraftedItemName = outputName;
             blueprint.BlueprintName = $"{outputName} Blueprint";
-            blueprint.Category = detail.Output?.Type ?? detail.Output?.Class ?? "Unknown";
-            blueprint.IsInGameAvailable = detail.IsAvailableByDefault;
+            blueprint.Category = category;
+            blueprint.Description = description;
+            blueprint.IsInGameAvailable = isAvailable;
+            blueprint.SourceVersion = sourceVersion;
             blueprint.WikiLastSyncedAt = syncedAt;
             blueprint.UpdatedAt = DateTime.UtcNow;
             _db.Blueprints.Update(blueprint);
@@ -194,14 +203,14 @@ public sealed class WikiSyncService : IWikiSyncService
                 Slug = Slugify(outputName),
                 BlueprintName = $"{outputName} Blueprint",
                 CraftedItemName = outputName,
-                Category = detail.Output?.Type ?? detail.Output?.Class ?? "Unknown",
-                IsInGameAvailable = detail.IsAvailableByDefault,
+                Category = category,
+                Description = description,
+                IsInGameAvailable = isAvailable,
                 DataConfidence = "WikiSync",
-                SourceVersion = "star-citizen-wiki",
+                SourceVersion = sourceVersion,
                 WikiLastSyncedAt = syncedAt
             };
 
-            // Ensure slug is unique by appending the uuid suffix if needed
             if (await _db.Blueprints.AnyAsync(x => x.Slug == blueprint.Slug, ct))
                 blueprint.Slug = $"{blueprint.Slug}-{detail.Uuid[..8]}";
 
@@ -235,7 +244,7 @@ public sealed class WikiSyncService : IWikiSyncService
             await _db.SaveChangesAsync(ct);
         }
 
-        // Replace recipe materials from wiki data
+        // Replace recipe materials — aggregate quantities from requirement_groups.children
         var existingRecipeMaterials = await _db.BlueprintRecipeMaterials
             .Where(x => x.BlueprintRecipeId == recipe.Id)
             .ToListAsync(ct);
@@ -243,36 +252,63 @@ public sealed class WikiSyncService : IWikiSyncService
         _db.BlueprintRecipeMaterials.RemoveRange(existingRecipeMaterials);
         await _db.SaveChangesAsync(ct);
 
-        foreach (var ingredient in detail.Ingredients)
+        // Aggregate resource quantities across all requirement groups by UUID (or name as fallback)
+        var resourceTotals = new Dictionary<string, (string Name, string? Uuid, double Quantity, string Unit)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in detail.RequirementGroups)
         {
-            var material = await UpsertMaterialAsync(ingredient, ct);
+            foreach (var child in group.Children.Where(c => string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase)))
+            {
+                var key = child.Uuid ?? child.Name ?? "unknown";
+                var qty = child.QuantityScu ?? child.Quantity ?? 0;
+                var unit = child.QuantityScu.HasValue ? "SCU" : "Units";
+
+                if (resourceTotals.TryGetValue(key, out var existing2))
+                    resourceTotals[key] = (existing2.Name, existing2.Uuid, existing2.Quantity + qty, existing2.Unit);
+                else
+                    resourceTotals[key] = (child.Name ?? "Unknown", child.Uuid, qty, unit);
+            }
+        }
+
+        // Fall back to ingredients list if no requirement_groups are present
+        if (resourceTotals.Count == 0)
+        {
+            foreach (var ingredient in detail.Ingredients)
+            {
+                var key = ingredient.ResourceTypeUuid ?? ingredient.Name;
+                if (!resourceTotals.ContainsKey(key))
+                    resourceTotals[key] = (ingredient.Name, ingredient.ResourceTypeUuid, 0, "Units");
+            }
+        }
+
+        foreach (var (_, (name, uuid, quantity, unit)) in resourceTotals)
+        {
+            var material = await UpsertMaterialAsync(name, uuid, ct);
 
             _db.BlueprintRecipeMaterials.Add(new BlueprintRecipeMaterial
             {
                 BlueprintRecipeId = recipe.Id,
                 MaterialId = material.Id,
-                QuantityRequired = ingredient.Quantity,
-                Unit = "Units",
+                QuantityRequired = quantity,
+                Unit = unit,
                 IsOptional = false,
                 IsIntermediateCraftable = false
             });
         }
 
-        if (detail.Ingredients.Count > 0)
+        if (resourceTotals.Count > 0)
             await _db.SaveChangesAsync(ct);
 
         return isNew;
     }
 
-    private async Task<Material> UpsertMaterialAsync(WikiBlueprintIngredientDto ingredient, CancellationToken ct)
+    private async Task<Material> UpsertMaterialAsync(string name, string? uuid, CancellationToken ct)
     {
-        if (!string.IsNullOrWhiteSpace(ingredient.Uuid))
+        if (!string.IsNullOrWhiteSpace(uuid))
         {
-            var byUuid = await _db.Materials.FirstOrDefaultAsync(x => x.WikiUuid == ingredient.Uuid, ct);
+            var byUuid = await _db.Materials.FirstOrDefaultAsync(x => x.WikiUuid == uuid, ct);
             if (byUuid != null)
             {
-                byUuid.Name = ingredient.Name;
-                byUuid.MaterialType = ingredient.Type ?? byUuid.MaterialType;
+                byUuid.Name = name;
                 byUuid.UpdatedAt = DateTime.UtcNow;
                 _db.Materials.Update(byUuid);
                 await _db.SaveChangesAsync(ct);
@@ -280,30 +316,29 @@ public sealed class WikiSyncService : IWikiSyncService
             }
         }
 
-        var byName = await _db.Materials.FirstOrDefaultAsync(x => x.Name == ingredient.Name, ct);
+        var byName = await _db.Materials.FirstOrDefaultAsync(x => x.Name == name, ct);
         if (byName != null)
         {
-            if (!string.IsNullOrWhiteSpace(ingredient.Uuid))
-                byName.WikiUuid = ingredient.Uuid;
-            byName.MaterialType = ingredient.Type ?? byName.MaterialType;
+            if (!string.IsNullOrWhiteSpace(uuid))
+                byName.WikiUuid = uuid;
             byName.UpdatedAt = DateTime.UtcNow;
             _db.Materials.Update(byName);
             await _db.SaveChangesAsync(ct);
             return byName;
         }
 
-        var slug = Slugify(ingredient.Name);
+        var slug = Slugify(name);
         if (await _db.Materials.AnyAsync(x => x.Slug == slug, ct))
-            slug = string.IsNullOrWhiteSpace(ingredient.Uuid)
+            slug = string.IsNullOrWhiteSpace(uuid)
                 ? $"{slug}-{Guid.NewGuid():N}"
-                : $"{slug}-{ingredient.Uuid[..8]}";
+                : $"{slug}-{uuid[..8]}";
 
         var newMaterial = new Material
         {
-            Name = ingredient.Name,
+            Name = name,
             Slug = slug,
-            WikiUuid = ingredient.Uuid,
-            MaterialType = ingredient.Type ?? "Component",
+            WikiUuid = uuid,
+            MaterialType = "Resource",
             Tier = string.Empty,
             SourceType = MaterialSourceType.Unknown
         };
@@ -344,6 +379,18 @@ public sealed class WikiSyncService : IWikiSyncService
         _db.Materials.Add(newMaterial);
         await _db.SaveChangesAsync(ct);
         return true;
+    }
+
+    private static string? BuildDescription(WikiBlueprintOutputDto? output)
+    {
+        if (output is null)
+            return null;
+
+        var parts = new[] { output.Type, output.Subtype, output.Grade }
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToArray();
+
+        return parts.Length == 0 ? null : string.Join(" / ", parts);
     }
 
     private static string Slugify(string value)

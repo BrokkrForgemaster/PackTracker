@@ -6,6 +6,11 @@ public class WikiPagedResponseDto<T>
     public WikiPagedMetaDto? Meta { get; set; }
 }
 
+public class WikiSingleResponseDto<T>
+{
+    public T? Data { get; set; }
+}
+
 public class WikiPagedMetaDto
 {
     public int CurrentPage { get; set; }

@@ -5,7 +5,16 @@
       "Bash(dotnet build:*)",
       "Read(//home/ravenadmin/**)",
       "Bash(find / -name \"dotnet\" -type f)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(curl -s \"https://api.star-citizen.wiki/api/blueprints\")",
+      "Bash(curl -s \"https://api.star-citizen.wiki/api/blueprints/categories\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2\\)\\)\")",
+      "Bash(curl -s \"https://api.star-citizen.wiki/api/blueprints?page[number]=1&page[size]=5\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('links:', json.dumps\\(d.get\\('links',{}\\), indent=2\\)\\)\")",
+      "Bash(curl -s \"https://api.star-citizen.wiki/api/blueprints/b627e348-29b5-44c8-a836-258df60bcd08\")",
+      "Bash(curl -s \"https://api.star-citizen.wiki/api/blueprints?page%5Bnumber%5D=1\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('count:', len\\(d['data']\\)\\); print\\('meta last_page:', d['meta']['last_page']\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d['data'].get\\('requirement_groups', []\\), indent=2\\)\\)\")"
     ],
     "deny": [],
     "ask": []

@@ -15,4 +15,6 @@ public class WikiBlueprintOutputDto
     public string Name { get; set; } = string.Empty;
     public string? Type { get; set; }
     public string? Class { get; set; }
+    public string? Subtype { get; set; }
+    public string? Grade { get; set; }
 }
