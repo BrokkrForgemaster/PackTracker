@@ -10,8 +10,8 @@
 
     <UserControl.Resources>
         <!-- Color converter for job status -->
-        <global:StatusToColorConverter x:Key="StatusToColorConverter" />
-        <global:ProcessingToVisibleConverter x:Key="ProcessingToVisibleConverter" />
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+        <converters:ProcessingToVisibleConverter x:Key="ProcessingToVisibleConverter" />
     </UserControl.Resources>
 
     <Grid Margin="24">
@@ -223,7 +223,7 @@
                                                            Foreground="#666"
                                                            FontSize="11"/>
                                                 <TextBlock Grid.Column="1"
-                                                           Text="{Binding SubmittedAt, StringFormat='{0:g}'}"
+                                                           Text="{Binding SubmittedAt, StringFormat='{}{0:g}'}"
                                                            Foreground="#888"
                                                            FontSize="11"/>
                                             </Grid>
