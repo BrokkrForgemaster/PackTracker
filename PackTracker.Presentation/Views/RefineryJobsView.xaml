@@ -223,7 +223,7 @@
                                                            Foreground="#666"
                                                            FontSize="11"/>
                                                 <TextBlock Grid.Column="1"
-                                                           Text="{Binding SubmittedAt, StringFormat='{}{0:g}'}"
+                                                           Text="{Binding SubmittedAt, StringFormat='{0:g}'}"
                                                            Foreground="#888"
                                                            FontSize="11"/>
                                             </Grid>

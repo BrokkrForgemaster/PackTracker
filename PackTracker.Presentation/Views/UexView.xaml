@@ -139,11 +139,11 @@
                             <StackPanel>
                                 <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12">
                                     <Run Text="Profit potential: "/>
-                                    <Run Text="{Binding BestRoute.Profit, StringFormat='{}{0:N0} aUEC'}" Foreground="{StaticResource OpTextPrimaryBrush}" FontWeight="Bold"/>
+                                    <Run Text="{Binding BestRoute.Profit, StringFormat='{0:N0} aUEC'}" Foreground="{StaticResource OpTextPrimaryBrush}" FontWeight="Bold"/>
                                 </TextBlock>
                                 <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,4,0,0">
                                     <Run Text="Quantum distance: "/>
-                                    <Run Text="{Binding BestRoute.Distance, StringFormat='{}{0:N1} km'}" Foreground="{StaticResource OpTextPrimaryBrush}"/>
+                                    <Run Text="{Binding BestRoute.Distance, StringFormat='{0:N1} km'}" Foreground="{StaticResource OpTextPrimaryBrush}"/>
                                 </TextBlock>
                             </StackPanel>
                         </StackPanel>
@@ -196,12 +196,12 @@
                                     </TextBlock>
                                     <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,4,0,10">
                                         <Run Text="Cargo Capacity: "/>
-                                        <Run Text="{Binding SelectedShip.Scu, StringFormat='{}{0:N0} SCU'}" Foreground="{StaticResource OpTextPrimaryBrush}"/>
+                                        <Run Text="{Binding SelectedShip.Scu, StringFormat='{0:N0} SCU'}" Foreground="{StaticResource OpTextPrimaryBrush}"/>
                                     </TextBlock>
                                     <Border Background="#1D1813" BorderBrush="#3E3023" BorderThickness="1" CornerRadius="6" Padding="12,8">
                                         <TextBlock HorizontalAlignment="Center">
                                             <Run Text="EST. TRIP PROFIT: " Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold"/>
-                                            <Run Text="{Binding EstimatedProfit, StringFormat='{}{0:N0} aUEC'}" Foreground="#E8A020" FontSize="16" FontWeight="Bold"/>
+                                            <Run Text="{Binding EstimatedProfit, StringFormat='{0:N0} aUEC'}" Foreground="#E8A020" FontSize="16" FontWeight="Bold"/>
                                         </TextBlock>
                                     </Border>
                                 </StackPanel>
