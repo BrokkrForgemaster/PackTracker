@@ -36,36 +36,6 @@
                                        Foreground="White"/>
                         </StackPanel>
                     </Border>
-
-                    <Border Style="{StaticResource GlassPanelStyle}" Padding="16"
-                            Visibility="Collapsed"
-                            x:Name="UpdatePanel">
-                        <StackPanel>
-                            <TextBlock Text="Update channel"
-                                       FontSize="13"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            <Button x:Name="UpdateButton"
-                                    Content="Update Now"
-                                    Height="40"
-                                    Margin="0,12,0,0"
-                                    Style="{StaticResource SecondaryActionButtonStyle}"
-                                    Click="UpdateButton_Click"
-                                    Visibility="Collapsed"/>
-                            <ProgressBar x:Name="UpdateProgressBar"
-                                         Height="14"
-                                         Margin="0,12,0,0"
-                                         Minimum="0"
-                                         Maximum="100"
-                                         Visibility="Collapsed"
-                                         Background="#30FFFFFF"
-                                         Foreground="{StaticResource AccentBrush}"/>
-                            <TextBlock x:Name="UpdateStatusText"
-                                       Margin="0,8,0,0"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       Visibility="Collapsed"/>
-                        </StackPanel>
-                    </Border>
                 </StackPanel>
 
                 <StackPanel>
@@ -131,18 +101,65 @@
 
                     <Border Style="{StaticResource GlassPanelStyle}" Padding="16">
                         <StackPanel>
-                            <TextBlock Text="Operational posture"
+                            <TextBlock x:Name="PostureTitle"
+                                       Text="Operational posture"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource AccentGoldBrush}"
                                        Margin="0,0,0,12"/>
-                            <TextBlock Text="Use this shell to move between dashboard, logistics, requests, and system configuration."
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            <Button Content="Exit"
-                                    Style="{StaticResource SecondaryActionButtonStyle}"
-                                    Margin="0,16,0,0"
-                                    Click="Exit_Click"/>
+
+                            <!-- Normal state -->
+                            <StackPanel x:Name="NormalPostureContent">
+                                <TextBlock Text="Use this shell to move between dashboard, logistics, requests, and system configuration."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <Button Content="Exit"
+                                        Style="{StaticResource SecondaryActionButtonStyle}"
+                                        Margin="0,16,0,0"
+                                        Click="Exit_Click"/>
+                            </StackPanel>
+
+                            <!-- Update available state (hidden until an update is found) -->
+                            <StackPanel x:Name="UpdatePostureContent" Visibility="Collapsed">
+                                <TextBlock x:Name="UpdateVersionLabel"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,0,0,6"
+                                           TextWrapping="Wrap"/>
+                                <Border Background="#0D1A0D"
+                                        BorderBrush="#1E4A1E"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="10,8"
+                                        Margin="0,0,0,12">
+                                    <ScrollViewer MaxHeight="100"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <TextBlock x:Name="UpdateNotesText"
+                                                   FontSize="11"
+                                                   Foreground="#A8C8A8"
+                                                   TextWrapping="Wrap"/>
+                                    </ScrollViewer>
+                                </Border>
+                                <Button x:Name="DownloadUpdateButton"
+                                        Content="DOWNLOAD UPDATE"
+                                        Style="{StaticResource SecondaryActionButtonStyle}"
+                                        Margin="0,0,0,8"
+                                        Click="DownloadUpdate_Click"/>
+                                <ProgressBar x:Name="DownloadProgressBar"
+                                             Height="8"
+                                             Minimum="0"
+                                             Maximum="100"
+                                             Visibility="Collapsed"
+                                             Background="#30FFFFFF"
+                                             Foreground="{StaticResource AccentBrush}"
+                                             Margin="0,0,0,6"/>
+                                <TextBlock x:Name="DownloadStatusText"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Visibility="Collapsed"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </StackPanel>

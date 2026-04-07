@@ -126,18 +126,26 @@
 
                             <StackPanel>
                                 <TextBlock Text="REQUEST SUMMARY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
-                                <TextBlock Text="{Binding SelectedRequest.RequesterUsername, StringFormat=Requester: {0}}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
-                                <TextBlock Text="{Binding SelectedRequest.AssignedToUsername, StringFormat=Assigned: {0}, TargetNullValue=Assigned: Unassigned}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
-                                <TextBlock Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6">
-                                    <TextBlock.Text>
-                                        <MultiBinding StringFormat="Quantity: {0} {1}">
-                                            <Binding Path="SelectedRequest.QuantityRequested"/>
-                                            <Binding Path="SelectedRequest.Unit"/>
-                                        </MultiBinding>
-                                    </TextBlock.Text>
-                                </TextBlock>
-                                <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat=Location: {0}, TargetNullValue=Location: Not specified}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
-                                <TextBlock Text="{Binding SelectedRequest.RewardOffered, StringFormat=Reward: {0}, TargetNullValue=Reward: None specified}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+
+                                <!-- Status + Priority badges -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <Border Background="#3E3023" BorderBrush="#7A5C2A" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
+                                        <TextBlock Text="{Binding SelectedRequest.Status}" Foreground="#E8A020" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                    <Border Background="#1D2B1D" BorderBrush="#3A5C3A" BorderThickness="1" CornerRadius="3" Padding="8,3">
+                                        <TextBlock Text="{Binding SelectedRequest.Priority}" Foreground="#7FBF7F" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <TextBlock Text="{Binding SelectedRequest.AssignedToUsername, StringFormat='Assigned To: {0}', TargetNullValue='Assigned To: Unassigned'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.QuantityRequested, StringFormat='Quantity Requested: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.QuantityDelivered, StringFormat='Quantity Delivered: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.PreferredForm, StringFormat='Preferred Form: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.NumberOfHelpersNeeded, StringFormat='Helpers Needed: {0}', TargetNullValue='Helpers Needed: Any'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat='Delivery: {0}', TargetNullValue='Delivery: Not specified'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.RewardOffered, StringFormat='Reward: {0}', TargetNullValue='Reward: None'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.LinkedCraftingRequestId, StringFormat='Linked Request: {0}', TargetNullValue='Linked Request: None'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.CreatedAt, StringFormat='Submitted: {0:MMM d, yyyy h:mm tt}'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="0,0,0,6"/>
 
                                 <TextBlock Text="NOTES" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"
                                            Visibility="{Binding SelectedRequest.Notes, Converter={StaticResource NullToVisibilityConverter}}"/>

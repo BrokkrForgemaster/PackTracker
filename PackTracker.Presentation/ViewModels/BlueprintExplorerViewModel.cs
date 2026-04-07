@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -16,6 +15,11 @@ public class BlueprintComponentModifierPreview
 {
     public string PropertyKey { get; set; } = string.Empty;
     public double CalculatedValue { get; set; }
+
+    public string DisplayName => PropertyKey
+        .Replace("weapon_", "")
+        .Replace("_", " ")
+        .Trim();
 }
 
 public partial class BlueprintExplorerViewModel : ObservableObject
@@ -26,10 +30,9 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
     public ObservableCollection<BlueprintSearchItemDto> Results { get; } = new();
     public ObservableCollection<BlueprintRecipeMaterialDto> Materials { get; } = new();
-    public ObservableCollection<BlueprintOwnerDto> Owners { get; } = new();
-    public ObservableCollection<string> Categories { get; } = new();
     public ObservableCollection<ComponentViewModel> Components { get; } = new();
     public ObservableCollection<BlueprintComponentModifierPreview> CombinedModifiers { get; } = new();
+    public ObservableCollection<string> Categories { get; } = new();
 
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private string? selectedCategory;
@@ -39,7 +42,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
     [ObservableProperty] private BlueprintRecipeMaterialDto? selectedMaterial;
-    [ObservableProperty] private MemberBlueprintInterestType selectedInterestType = MemberBlueprintInterestType.Owns;
+
+    // Final stats
+    [ObservableProperty] private int baseRpm = 650;
+    [ObservableProperty] private int finalRpm;
 
     public bool HasSelectedBlueprintDetail => SelectedBlueprintDetail is not null;
 
@@ -56,6 +62,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         _apiClientProvider = apiClientProvider;
         _wikiBlueprints = wikiBlueprints;
         _logger = logger;
+
         _ = InitializeAsync();
     }
 
@@ -72,6 +79,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         Categories.Add(AllCategoriesLabel);
         foreach (var cat in WikiBlueprintService.KnownCategories)
             Categories.Add(cat);
+
         SelectedCategory = AllCategoriesLabel;
     }
 
@@ -143,17 +151,14 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Loading blueprint detail...";
+            StatusMessage = "Loading blueprint components and modifiers...";
 
-            // Fetch blueprint data from wiki API
             var detail = await _wikiBlueprints.GetDetailAsync(blueprintId);
 
             SelectedBlueprintDetail = detail;
             Materials.Clear();
-            Owners.Clear();
             Components.Clear();
             CombinedModifiers.Clear();
-            SelectedMaterial = null;
 
             if (detail is null)
             {
@@ -161,35 +166,45 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 return;
             }
 
+            // Load recipe materials
             foreach (var material in detail.Materials)
                 Materials.Add(material);
 
-            foreach (var component in detail.Components)
+            // Load components + converter stats (modifiers) from API
+            if (detail.Components != null && detail.Components.Any())
             {
-                var vm = new ComponentViewModel
+                foreach (var component in detail.Components)
                 {
-                    Parent = this,
-                    PartName = component.PartName,
-                    MaterialName = component.MaterialName,
-                    Quantity = component.Quantity,
-                    QualityValue = component.DefaultQuality
-                };
+                    var vm = new ComponentViewModel
+                    {
+                        Parent = this,
+                        PartName = component.PartName ?? "Unknown Part",
+                        MaterialName = component.MaterialName ?? "Unknown Material",
+                        Scu = component.Scu,
+                        Quantity = (int)(component.Quantity > 0 ? component.Quantity : 1),
+                        QualityValue = component.DefaultQuality
+                    };
 
-                foreach (var modifier in component.Modifiers)
-                {
-                    var averaged = (modifier.AtMinQuality + modifier.AtMaxQuality) / 2d;
-                    vm.Modifiers.Add(new StatModifier(modifier.PropertyKey, averaged, vm));
+                    // Add modifiers from API
+                    if (component.Modifiers != null)
+                    {
+                        foreach (var mod in component.Modifiers)
+                        {
+                            double baseValue = mod.ValueAt1000 > 0
+                                ? mod.ValueAt1000
+                                : (mod.AtMinQuality + mod.AtMaxQuality) / 2.0;
+
+                            vm.Modifiers.Add(new StatModifier(mod.PropertyKey, baseValue, vm));
+                        }
+                    }
+
+                    Components.Add(vm);
                 }
-
-                Components.Add(vm);
             }
 
             UpdateCombinedModifiers();
 
-            // Load ownership records from local API (non-fatal if unavailable)
-            await LoadOwnersFromLocalAsync(blueprintId);
-
-            StatusMessage = $"Loaded {detail.BlueprintName}.";
+            StatusMessage = $"Loaded {detail.BlueprintName} with {Components.Count} components.";
         }
         catch (Exception ex)
         {
@@ -202,254 +217,136 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         }
     }
 
-    private async Task LoadOwnersFromLocalAsync(Guid blueprintId)
-    {
-        try
-        {
-            using var client = _apiClientProvider.CreateClient();
-            if (client.BaseAddress is null) return;
-
-            var response = await client.GetAsync($"api/v1/blueprints/{blueprintId}");
-            if (!response.IsSuccessStatusCode) return;
-
-            var body = await response.Content.ReadAsStringAsync();
-            var local = JsonSerializer.Deserialize<BlueprintDetailDto>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (local?.Owners == null) return;
-
-            Owners.Clear();
-            foreach (var owner in local.Owners)
-                Owners.Add(owner);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not load owners from local API for {BlueprintId}", blueprintId);
-        }
-    }
-
-    [RelayCommand]
-    private async Task RegisterOwnershipAsync()
-    {
-        if (SelectedBlueprintDetail is null)
-        {
-            StatusMessage = "Select a blueprint before saving status.";
-            return;
-        }
-
-        try
-        {
-            IsLoading = true;
-            StatusMessage = "Saving blueprint status...";
-
-            using var client = _apiClientProvider.CreateClient();
-            using var response = await client.PostAsJsonAsync(
-                $"api/v1/blueprints/{SelectedBlueprintDetail.Id}/ownership",
-                new RegisterBlueprintOwnershipRequest
-                {
-                    InterestType = SelectedInterestType,
-                    AvailabilityStatus = SelectedInterestType == MemberBlueprintInterestType.Wants
-                        ? "Seeking Acquisition" : "Available",
-                    Notes = SelectedInterestType == MemberBlueprintInterestType.Wants
-                        ? "Marked as wanted from Blueprint Explorer"
-                        : "Registered from Blueprint Explorer"
-                });
-
-            var body = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("RegisterOwnership response. StatusCode={StatusCode} Body={Body}",
-                (int)response.StatusCode, TrimForDisplay(body));
-
-            response.EnsureSuccessStatusCode();
-            await LoadBlueprintDetailAsync(SelectedBlueprintDetail.Id);
-
-            StatusMessage = SelectedInterestType == MemberBlueprintInterestType.Wants
-                ? $"Marked {SelectedBlueprintDetail.BlueprintName} as wanted."
-                : $"Ownership registered for {SelectedBlueprintDetail.BlueprintName}.";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save blueprint status.");
-            StatusMessage = $"Failed to save blueprint status: {ex.GetType().Name} — {ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task MarkWantedAsync()
-    {
-        SelectedInterestType = MemberBlueprintInterestType.Wants;
-        await RegisterOwnershipAsync();
-    }
-
-    [RelayCommand]
-    private async Task MarkOwnedAsync()
-    {
-        SelectedInterestType = MemberBlueprintInterestType.Owns;
-        await RegisterOwnershipAsync();
-    }
-
-    [RelayCommand]
-    private async Task CreateCraftingRequestAsync()
-    {
-        if (SelectedBlueprintDetail is null)
-        {
-            StatusMessage = "Select a blueprint before creating a crafting request.";
-            return;
-        }
-
-        try
-        {
-            IsLoading = true;
-            StatusMessage = "Creating crafting request...";
-
-            using var client = _apiClientProvider.CreateClient();
-            using var response = await client.PostAsJsonAsync(
-                "api/v1/crafting/requests",
-                new CreateCraftingRequestDto
-                {
-                    BlueprintId = SelectedBlueprintDetail.Id,
-                    QuantityRequested = 1,
-                    Priority = RequestPriority.Normal,
-                    DeliveryLocation = "House Wolf Coordination",
-                    Notes = BuildCraftingRequestNote(SelectedBlueprintDetail)
-                });
-
-            var body = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("CreateCraftingRequest response. StatusCode={StatusCode} Body={Body}",
-                (int)response.StatusCode, TrimForDisplay(body));
-
-            response.EnsureSuccessStatusCode();
-            StatusMessage = $"Crafting request created for {SelectedBlueprintDetail.CraftedItemName}.";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create crafting request.");
-            StatusMessage = $"Failed to create crafting request: {ex.GetType().Name} — {ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task CreateProcurementRequestAsync()
-    {
-        if (SelectedBlueprintDetail is null)
-        {
-            StatusMessage = "Select a blueprint before creating a procurement request.";
-            return;
-        }
-
-        if (SelectedMaterial is null)
-        {
-            StatusMessage = "Select a recipe material before creating a procurement request.";
-            return;
-        }
-
-        try
-        {
-            IsLoading = true;
-            StatusMessage = "Creating procurement request...";
-
-            using var client = _apiClientProvider.CreateClient();
-            using var response = await client.PostAsJsonAsync(
-                "api/v1/crafting/procurement-requests",
-                new CreateMaterialProcurementRequestDto
-                {
-                    MaterialId = SelectedMaterial.MaterialId,
-                    QuantityRequested = (decimal)(SelectedMaterial.QuantityRequired > 0
-                        ? SelectedMaterial.QuantityRequired
-                        : SelectedMaterial.Quantity),
-                    PreferredForm = MaterialFormPreference.Any,
-                    Priority = RequestPriority.Normal,
-                    DeliveryLocation = "House Wolf Coordination",
-                    NumberOfHelpersNeeded = 1,
-                    Notes = BuildProcurementRequestNote(SelectedBlueprintDetail, SelectedMaterial)
-                });
-
-            var body = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("CreateProcurementRequest response. StatusCode={StatusCode} Body={Body}",
-                (int)response.StatusCode, TrimForDisplay(body));
-
-            response.EnsureSuccessStatusCode();
-            StatusMessage = $"Procurement request created for {SelectedMaterial.MaterialName}.";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create procurement request.");
-            StatusMessage = $"Failed to create procurement request: {ex.GetType().Name} — {ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
     public void UpdateCombinedModifiers()
     {
         CombinedModifiers.Clear();
 
         var grouped = Components
-            .SelectMany(component => component.Modifiers)
-            .GroupBy(modifier => modifier.StatName);
+            .SelectMany<ComponentViewModel, StatModifier>(c => c.Modifiers)
+            .GroupBy<StatModifier, string>(m => m.StatName);
 
         foreach (var group in grouped)
         {
-            var combined = group.Sum(modifier => modifier.Percentage * (modifier.ParentComponent.QualityValue / 1000.0));
+            double total = group.Sum<StatModifier>(m => m.BaseValue * (m.ParentComponent.QualityValue / 1000.0));
+
             CombinedModifiers.Add(new BlueprintComponentModifierPreview
             {
                 PropertyKey = group.Key,
-                CalculatedValue = combined
+                CalculatedValue = total
             });
         }
+
+        // Calculate Final RPM based on fire rate modifier
+        var fireRateMod = CombinedModifiers.FirstOrDefault(m =>
+            m.PropertyKey.Contains("fire_rate", StringComparison.OrdinalIgnoreCase))?.CalculatedValue ?? 0;
+
+        FinalRpm = (int)Math.Round(BaseRpm * (1 + fireRateMod / 100.0));
     }
 
-    // ─── HELPERS ────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Action commands
+    // ─────────────────────────────────────────────────────────────
 
-    private static bool IsJsonResponse(HttpResponseMessage response)
+    [RelayCommand]
+    private async Task MarkOwnedAsync()
     {
-        var mediaType = response.Content.Headers.ContentType?.MediaType;
-        return string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase)
-               || string.Equals(mediaType, "text/json", StringComparison.OrdinalIgnoreCase)
-               || (mediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) ?? false);
+        await PostOwnershipAsync(MemberBlueprintInterestType.Owns, "Marked as Owned.");
     }
+
+    [RelayCommand]
+    private async Task MarkWantedAsync()
+    {
+        await PostOwnershipAsync(MemberBlueprintInterestType.Wants, "Marked as Wanted.");
+    }
+
+    [RelayCommand]
+    private async Task CreateCraftingRequestAsync()
+    {
+        if (SelectedBlueprintDetail is null) return;
+        try
+        {
+            IsLoading = true;
+            using var client = _apiClientProvider.CreateClient();
+            var dto = new CreateCraftingRequestDto
+            {
+                BlueprintId = SelectedBlueprintDetail.Id,
+                QuantityRequested = 1,
+                Priority = RequestPriority.Normal
+            };
+            var response = await client.PostAsJsonAsync("api/v1/crafting/requests", dto);
+            StatusMessage = response.IsSuccessStatusCode
+                ? $"Crafting request created for {SelectedBlueprintDetail.BlueprintName}."
+                : $"Error {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "CreateCraftingRequest failed.");
+            StatusMessage = $"Failed to create crafting request: {ex.Message}";
+        }
+        finally { IsLoading = false; }
+    }
+
+    [RelayCommand]
+    private async Task CreateProcurementRequestAsync()
+    {
+        if (SelectedMaterial is null) return;
+        try
+        {
+            IsLoading = true;
+            using var client = _apiClientProvider.CreateClient();
+            var dto = new CreateMaterialProcurementRequestDto
+            {
+                MaterialId = SelectedMaterial.MaterialId,
+                QuantityRequested = (decimal)SelectedMaterial.QuantityRequired,
+                Priority = RequestPriority.Normal
+            };
+            var response = await client.PostAsJsonAsync("api/v1/crafting/procurement-requests", dto);
+            StatusMessage = response.IsSuccessStatusCode
+                ? $"Procurement request created for {SelectedMaterial.MaterialName}."
+                : $"Error {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "CreateProcurementRequest failed.");
+            StatusMessage = $"Failed to create procurement request: {ex.Message}";
+        }
+        finally { IsLoading = false; }
+    }
+
+    private async Task PostOwnershipAsync(MemberBlueprintInterestType interestType, string successMessage)
+    {
+        if (SelectedBlueprintDetail is null) return;
+        try
+        {
+            IsLoading = true;
+            using var client = _apiClientProvider.CreateClient();
+            var dto = new RegisterBlueprintOwnershipRequest
+            {
+                InterestType = interestType,
+                AvailabilityStatus = "Available"
+            };
+            var response = await client.PostAsJsonAsync(
+                $"api/v1/blueprints/{SelectedBlueprintDetail.Id}/ownership", dto);
+            StatusMessage = response.IsSuccessStatusCode
+                ? successMessage
+                : $"Error {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PostOwnership failed.");
+            StatusMessage = $"Failed: {ex.Message}";
+        }
+        finally { IsLoading = false; }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helper methods
+    // ─────────────────────────────────────────────────────────────
 
     private static string TrimForDisplay(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return "<empty response>";
         var compact = value.Replace("\r", " ").Replace("\n", " ").Trim();
         return compact.Length <= 300 ? compact : compact[..300] + "...";
-    }
-
-    private static string BuildCraftingRequestNote(BlueprintDetailDto detail)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"Blueprint: {detail.BlueprintName}");
-        sb.AppendLine($"Crafted Item: {detail.CraftedItemName}");
-        if (!string.IsNullOrWhiteSpace(detail.AcquisitionSummary))
-            sb.AppendLine($"Acquisition: {detail.AcquisitionSummary}");
-        if (detail.Materials.Count > 0)
-        {
-            sb.AppendLine("Required materials:");
-            foreach (var material in detail.Materials)
-                sb.AppendLine($"- {material.MaterialName}: {(material.QuantityRequired > 0 ? material.QuantityRequired : material.Quantity):N2} {material.Unit}");
-        }
-        return sb.ToString().Trim();
-    }
-
-    private static string BuildProcurementRequestNote(BlueprintDetailDto detail, BlueprintRecipeMaterialDto material)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"Blueprint support request for: {detail.BlueprintName}");
-        sb.AppendLine($"Crafted item: {detail.CraftedItemName}");
-        sb.AppendLine($"Requested material: {material.MaterialName}");
-        sb.AppendLine($"Required quantity: {(material.QuantityRequired > 0 ? material.QuantityRequired : material.Quantity):N2} {material.Unit}");
-        if (!string.IsNullOrWhiteSpace(detail.AcquisitionSummary))
-            sb.AppendLine($"Blueprint acquisition: {detail.AcquisitionSummary}");
-        return sb.ToString().Trim();
     }
 }

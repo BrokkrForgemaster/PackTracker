@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -46,16 +47,19 @@ namespace PackTracker.Presentation.Views
 
         private readonly IServiceProvider _serviceProvider;
         private readonly ISettingsService _settingsService;
+        private readonly IUpdateService _updateService;
         private readonly DispatcherTimer _timer;
+        private UpdateInfo? _pendingUpdate;
 
         #endregion
 
         #region Constructor
 
-        public MainWindow(IServiceProvider serviceProvider, ISettingsService settingsService)
+        public MainWindow(IServiceProvider serviceProvider, ISettingsService settingsService, IUpdateService updateService)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
             InitializeComponent();
 
             WindowState = WindowState.Maximized;
@@ -70,6 +74,9 @@ namespace PackTracker.Presentation.Views
             _timer.Start();
 
             NavigateToFirstView();
+
+            // Check for updates in the background after the window loads
+            _ = CheckForUpdateAsync();
         }
 
         #endregion
@@ -273,32 +280,70 @@ namespace PackTracker.Presentation.Views
             System.Windows.Application.Current.Shutdown();
         }
 
-        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+        #endregion
+
+        #region Auto-Update
+
+        private async Task CheckForUpdateAsync()
         {
             try
             {
-                UpdateButton.IsEnabled = false;
-                UpdateProgressBar.Visibility = Visibility.Visible;
-                UpdateStatusText.Visibility = Visibility.Visible;
-                UpdateStatusText.Text = "Updating...";
+                var update = await _updateService.CheckForUpdateAsync(CancellationToken.None);
+                if (update is not null)
+                    Dispatcher.Invoke(() => ShowUpdateAvailable(update));
+            }
+            catch
+            {
+                // Update check is best-effort — never crash the app
+            }
+        }
 
-                for (int i = 0; i <= 100; i += 10)
+        private void ShowUpdateAvailable(UpdateInfo update)
+        {
+            _pendingUpdate = update;
+
+            PostureTitle.Text = "UPDATE AVAILABLE";
+            PostureTitle.Foreground = System.Windows.Media.Brushes.LightGreen;
+
+            UpdateVersionLabel.Text = $"v{update.Version}  ·  {update.PublishedAt:MMM d, yyyy}";
+            UpdateNotesText.Text = string.IsNullOrWhiteSpace(update.ReleaseNotes)
+                ? "No release notes provided."
+                : update.ReleaseNotes.Trim();
+
+            NormalPostureContent.Visibility = Visibility.Collapsed;
+            UpdatePostureContent.Visibility = Visibility.Visible;
+        }
+
+        private async void DownloadUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            if (_pendingUpdate is null) return;
+
+            DownloadUpdateButton.IsEnabled = false;
+            DownloadProgressBar.Visibility = Visibility.Visible;
+            DownloadStatusText.Visibility = Visibility.Visible;
+            DownloadStatusText.Text = "Downloading…";
+
+            try
+            {
+                var progress = new Progress<int>(pct =>
                 {
-                    UpdateProgressBar.Value = i;
-                    await Task.Delay(200);
-                }
+                    DownloadProgressBar.Value = pct;
+                    DownloadStatusText.Text = $"Downloading… {pct}%";
+                });
 
-                UpdateStatusText.Text = "Update completed!";
+                var filePath = await _updateService.DownloadUpdateAsync(
+                    _pendingUpdate, progress, CancellationToken.None);
+
+                DownloadStatusText.Text = "Download complete. Launching installer…";
+                await Task.Delay(800);
+
+                await _updateService.InstallAndRestartAsync(filePath);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Update failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                UpdateStatusText.Text = "Update failed.";
-            }
-            finally
-            {
-                UpdateProgressBar.Visibility = Visibility.Collapsed;
-                UpdateButton.IsEnabled = true;
+                DownloadStatusText.Text = $"Download failed: {ex.Message}";
+                DownloadUpdateButton.IsEnabled = true;
+                DownloadProgressBar.Visibility = Visibility.Collapsed;
             }
         }
 

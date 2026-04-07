@@ -18,7 +18,7 @@ public class VersionService : IVersionService
     {
         try
         {
-            var assembly = Assembly.GetExecutingAssembly();
+            var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
 
             if (version != null)
@@ -42,7 +42,7 @@ public class VersionService : IVersionService
     {
         try
         {
-            var assembly = Assembly.GetExecutingAssembly();
+            var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 
             // Try to get build date from assembly metadata
             var buildDate = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)

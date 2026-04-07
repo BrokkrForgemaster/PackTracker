@@ -33,12 +33,8 @@ public static class LoggingConfiguration
         this IServiceCollection services,
         ISettingsService? settingsService)
     {
-        var s = settingsService.GetSettings();
-
-        // You can make these come from AppSettings (add properties if you like)
-        var logPath = string.IsNullOrWhiteSpace(s.GameLogFilePath)
-            ? "Logs/packtracker-.log"
-            : s.GameLogFilePath; // or add AppSettings.LogFilePath
+        // GameLogFilePath is the Star Citizen game log — never use it as the app log path.
+        const string logPath = "Logs/packtracker-.log";
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()

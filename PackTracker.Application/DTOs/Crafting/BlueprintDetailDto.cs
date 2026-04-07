@@ -26,6 +26,7 @@ public sealed class BlueprintComponentDto
 {
     public string PartName { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
+    public double Scu { get; set; }
     public double Quantity { get; set; }
     public int DefaultQuality { get; set; } = 500;
     public IReadOnlyList<BlueprintModifierDto> Modifiers { get; set; } = Array.Empty<BlueprintModifierDto>();
@@ -36,4 +37,5 @@ public sealed class BlueprintModifierDto
     public string PropertyKey { get; set; } = string.Empty;
     public double AtMinQuality { get; set; }
     public double AtMaxQuality { get; set; }
+    public double ValueAt1000 { get; set; }
 }

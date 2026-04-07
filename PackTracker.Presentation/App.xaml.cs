@@ -36,11 +36,11 @@ public partial class App : System.Windows.Application
         var services = new ServiceCollection();
 
         // 1️⃣ Logging configuration
+        // appsettings.json owns the sink definitions (File + Console) and Enrich list.
+        // Only add enrichers that are not expressible via appsettings here.
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(cfg)
-            .Enrich.FromLogContext()
-            .WriteTo.File("Logs/PackTracker.log", rollingInterval: RollingInterval.Day)
-            .WriteTo.Console()
+            .Enrich.WithProperty("Application", "PackTracker")
             .CreateLogger();
 
         services.AddLogging(b => b.AddSerilog());
@@ -68,6 +68,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IThemeManager, ThemeManager>();
         services.AddSingleton<IApiClientProvider, ApiClientProvider>();
         services.AddSingleton<WikiBlueprintService>();
+        services.AddSingleton<IVersionService, VersionService>();
+        services.AddSingleton<IUpdateService, UpdateService>();
 
         // 7️⃣ Views + ViewModels
         services.AddSingleton<MainWindow>();

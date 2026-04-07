@@ -132,11 +132,6 @@ public class ApiHostedService : IHostedService
                                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                                     "packtracker", "apihosted")));
 
-                        services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
-                        services.AddInfrastructure(_settingsService);
-
-                        // Logging & Core
-                        services.AddPackTrackerLogging(_settingsService);
                         services.AddInfrastructure(_settingsService);
                         services.AddHealthChecks();
                         services.AddMemoryCache();

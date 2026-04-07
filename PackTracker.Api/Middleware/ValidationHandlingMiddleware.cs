@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PackTracker.Common.DTOs;
 using System.Text.Json;
 
@@ -10,21 +9,28 @@ namespace PackTracker.Api.Middleware;
 public class ValidationHandlingMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<ValidationHandlingMiddleware> _logger;
 
-    public ValidationHandlingMiddleware(RequestDelegate next)
+    public ValidationHandlingMiddleware(RequestDelegate next, ILogger<ValidationHandlingMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
         await _next(context);
 
-        // Check if model validation failed
         if (context.Response.StatusCode == StatusCodes.Status400BadRequest &&
             context.Items.TryGetValue("ValidationProblemDetails", out var problemObj) &&
             problemObj is ValidationProblemDetails problem)
         {
+            _logger.LogWarning(
+                "Validation failed. Path={Path} TraceId={TraceId} Errors={Errors}",
+                context.Request.Path,
+                context.TraceIdentifier,
+                string.Join("; ", problem.Errors.Select(e => $"{e.Key}: {string.Join(", ", e.Value)}")));
+
             var errorResponse = new ErrorResponse
             {
                 Message = "Validation failed",

@@ -56,8 +56,13 @@
                 <ComboBox Width="320"
                           ItemsSource="{Binding Commodities}"
                           SelectedItem="{Binding SelectedCommodity, Mode=TwoWay}"
-                          DisplayMemberPath="Name"
-                          Style="{StaticResource OpComboBoxStyle}" />
+                          Style="{StaticResource OpComboBoxStyle}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
         </Border>
 
@@ -157,161 +162,103 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- FS-9 LMG STYLE COMPONENT BREAKDOWN -->
+                    <!-- Ship Profit Estimator -->
                     <Border Style="{StaticResource OpPanelBorderStyle}" Padding="16" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="COMPONENT BREAKDOWN"
+                            <TextBlock Text="PROFIT ESTIMATOR"
                                        Foreground="{StaticResource OpTextTitleBrush}"
                                        FontSize="16" FontWeight="Bold" Margin="0,0,0,16" />
 
-                            <!-- Frame -->
-                            <Border Style="{StaticResource OpItemBorderStyle}" Margin="0,0,0,12" Padding="14">
-                                <StackPanel>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Frame" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource OpTextTitleBrush}" />
-                                        <TextBlock Grid.Column="2" Text="Required: 1"
-                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" />
-                                    </Grid>
-                                    <TextBlock Text="Lindinium" Foreground="#4ADE80" FontSize="15" FontWeight="Medium"
-                                               Margin="0,4,0,6" />
-                                    <TextBlock Text="{Binding FrameScu, StringFormat='{}{0:0.0000} SCU'}"
-                                               Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="13" />
+                            <TextBlock Text="SHIP" Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="10" FontWeight="Bold" Margin="0,0,0,6" />
+                            <ComboBox ItemsSource="{Binding Ships}"
+                                      SelectedItem="{Binding SelectedShip, Mode=TwoWay}"
+                                      Style="{StaticResource OpComboBoxStyle}"
+                                      Margin="0,0,0,16">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding NameFull}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
 
-                                    <Slider Minimum="0" Maximum="2000" Value="{Binding FrameQuality}"
-                                            Margin="0,10,0,8" TickFrequency="100" IsSnapToTickEnabled="True" />
-
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="QUALITY" Foreground="{StaticResource OpTextMutedBrush}"
-                                                   FontSize="10" />
-                                        <TextBlock Grid.Column="1" Text="{Binding FrameQuality}" Foreground="#E8A020"
-                                                   FontWeight="Bold" />
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Stock -->
-                            <Border Style="{StaticResource OpItemBorderStyle}" Margin="0,0,0,12" Padding="14">
-                                <StackPanel>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Stock" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource OpTextTitleBrush}" />
-                                        <TextBlock Grid.Column="2" Text="Required: 1"
-                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" />
-                                    </Grid>
-                                    <TextBlock Text="Hephaestane" Foreground="#4ADE80" FontSize="15"
-                                               FontWeight="Medium" Margin="0,4,0,6" />
-                                    <TextBlock Text="{Binding StockScu, StringFormat='{}{0:0.0000} SCU'}"
-                                               Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="13" />
-
-                                    <Slider Minimum="0" Maximum="2000" Value="{Binding StockQuality}"
-                                            Margin="0,10,0,8" TickFrequency="100" IsSnapToTickEnabled="True" />
-
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="QUALITY" Foreground="{StaticResource OpTextMutedBrush}"
-                                                   FontSize="10" />
-                                        <TextBlock Grid.Column="1" Text="{Binding StockQuality}" Foreground="#E8A020"
-                                                   FontWeight="Bold" />
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Barrel -->
-                            <Border Style="{StaticResource OpItemBorderStyle}" Margin="0,0,0,16" Padding="14">
-                                <StackPanel>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Barrel" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource OpTextTitleBrush}" />
-                                        <TextBlock Grid.Column="2" Text="Required: 1"
-                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" />
-                                    </Grid>
-                                    <TextBlock Text="Iron" Foreground="#4ADE80" FontSize="15" FontWeight="Medium"
-                                               Margin="0,4,0,6" />
-                                    <TextBlock Text="{Binding BarrelScu, StringFormat='{}{0:0.0000} SCU'}"
-                                               Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="13" />
-
-                                    <Slider Minimum="0" Maximum="2000" Value="{Binding BarrelQuality}"
-                                            Margin="0,10,0,8" TickFrequency="100" IsSnapToTickEnabled="True" />
-
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="QUALITY" Foreground="{StaticResource OpTextMutedBrush}"
-                                                   FontSize="10" />
-                                        <TextBlock Grid.Column="1" Text="{Binding BarrelQuality}" Foreground="#E8A020"
-                                                   FontWeight="Bold" />
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Final Combined Modifiers -->
                             <Border Style="{StaticResource OpItemBorderStyle}" Background="#1D1813" Padding="14">
                                 <StackPanel>
-                                    <TextBlock Text="FINAL COMBINED MODIFIERS"
-                                               Foreground="{StaticResource OpTextTitleBrush}"
-                                               FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
-
-                                    <ItemsControl ItemsSource="{Binding CombinedModifiers}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,4,0,4">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Name}"
-                                                               Foreground="{StaticResource OpTextSecondaryBrush}" />
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Value, StringFormat='{}{0:+0.00;-0.00;0}%'}"
-                                                               Foreground="{Binding Value, Converter={StaticResource ModifierColorConverter}}"
-                                                               FontWeight="SemiBold" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-
-                                    <Separator Margin="0,12,0,8" Background="#31271E" />
-
-                                    <Grid>
-                                        <TextBlock Text="BASE RPM" Foreground="{StaticResource OpTextMutedBrush}"
-                                                   FontSize="12" />
-                                        <TextBlock HorizontalAlignment="Right" Text="650"
+                                    <Grid Margin="0,0,0,8">
+                                        <TextBlock Text="CARGO CAPACITY"
+                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" />
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   Text="{Binding SelectedShip.Scu, StringFormat='{}{0} SCU', TargetNullValue='—'}"
                                                    Foreground="{StaticResource OpTextPrimaryBrush}" FontWeight="Medium" />
                                     </Grid>
-                                    <Grid Margin="0,4,0,0">
-                                        <TextBlock Text="FINAL RPM" Foreground="{StaticResource OpTextMutedBrush}"
-                                                   FontSize="12" />
+                                    <Grid Margin="0,0,0,8">
+                                        <TextBlock Text="PROFIT PER UNIT"
+                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" />
                                         <TextBlock HorizontalAlignment="Right"
-                                                   Text="{Binding FinalRpm, StringFormat='{}{0}'}"
+                                                   Text="{Binding BestRoute.PriceMargin, StringFormat='{}{0:N0} aUEC', TargetNullValue='—'}"
+                                                   Foreground="{StaticResource OpTextPrimaryBrush}" FontWeight="Medium" />
+                                    </Grid>
+                                    <Separator Margin="0,8,0,8" Background="#31271E" />
+                                    <Grid>
+                                        <TextBlock Text="ESTIMATED PROFIT"
+                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" />
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   Text="{Binding EstimatedProfit, StringFormat='{}{0:N0} aUEC', TargetNullValue='—'}"
                                                    Foreground="#4ADE80" FontWeight="Bold" FontSize="15" />
                                     </Grid>
                                 </StackPanel>
                             </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Top Routes -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="TOP ROUTES"
+                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                       FontSize="16" FontWeight="Bold" Margin="0,0,0,12" />
+                            <ItemsControl ItemsSource="{Binding TopRoutes}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource OpItemBorderStyle}" Margin="0,0,0,8" Padding="12">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding OriginTerminalName}"
+                                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                                               FontWeight="SemiBold" FontSize="12"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <Border Grid.Column="1"
+                                                            Background="{StaticResource OpBackgroundPillBrush}"
+                                                            BorderBrush="{StaticResource OpBorderPillBrush}"
+                                                            BorderThickness="1" CornerRadius="3" Padding="6,2">
+                                                        <TextBlock Text="{Binding PriceRoi, StringFormat='{}{0:N1}%'}"
+                                                                   Foreground="#E8A020" FontSize="11" FontWeight="Bold" />
+                                                    </Border>
+                                                </Grid>
+                                                <TextBlock Text="{Binding DestinationTerminalName}"
+                                                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                           FontSize="11" Margin="0,4,0,4"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding PriceOrigin, StringFormat='Buy: {0:N0}'}"
+                                                               Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Profit, StringFormat='Profit: {0:N0}'}"
+                                                               Foreground="#4ADE80" FontSize="11" HorizontalAlignment="Right" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
 

@@ -290,43 +290,31 @@
                     </Grid>
 
                     <Border Margin="0,16,0,0" Style="{StaticResource OpPanelBorderStyle}" Padding="18">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="RECIPE MATERIALS" Foreground="{StaticResource OpTextTitleBrush}" FontSize="16" FontWeight="Bold"/>
-                                <TextBlock Text="Select a material to create a procurement request."
-                                           Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,4,0,12"/>
-                                <ListBox ItemsSource="{Binding Materials}"
-                                         SelectedItem="{Binding SelectedMaterial}"
-                                         Style="{StaticResource OpListBoxStyle}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Style="{StaticResource OpItemBorderStyle}" Padding="10">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding MaterialName}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="SemiBold" FontSize="13"/>
-                                                    <TextBlock Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" Margin="0,4,0,0">
-                                                        <Run Text="Qty: "/>
-                                                        <Run Text="{Binding QuantityRequired}"/>
-                                                        <Run Text=" "/>
-                                                        <Run Text="{Binding Unit}"/>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding SourceType}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" Margin="0,4,0,0"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="OPERATIONAL NOTES" Foreground="{StaticResource OpTextTitleBrush}" FontSize="16" FontWeight="Bold"/>
-                                <TextBlock Text="{Binding SelectedBlueprintDetail.Notes}"
-                                           Foreground="#AC977B" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Grid>
+                        <StackPanel>
+                            <TextBlock Text="RECIPE MATERIALS" Foreground="{StaticResource OpTextTitleBrush}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="Select a material to create a procurement request."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,4,0,12"/>
+                            <ListBox ItemsSource="{Binding Materials}"
+                                     SelectedItem="{Binding SelectedMaterial}"
+                                     Style="{StaticResource OpListBoxStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource OpItemBorderStyle}" Padding="10">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding MaterialName}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" Margin="0,4,0,0">
+                                                    <Run Text="Qty: "/>
+                                                    <Run Text="{Binding QuantityRequired}"/>
+                                                    <Run Text=" "/>
+                                                    <Run Text="{Binding Unit}"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding SourceType}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>

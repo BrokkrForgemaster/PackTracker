@@ -1,0 +1,102 @@
+name: Build and Release
+
+# Triggers on a version tag push (e.g. git tag v1.2.3 && git push --tags)
+# or manually from the Actions tab.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 1.2.3)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # needed to create the GitHub release
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── .NET Setup ────────────────────────────────────────────────
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # ── Resolve version ───────────────────────────────────────────
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            # Strip the leading 'v' from the tag name
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Restore ───────────────────────────────────────────────────
+      - name: Restore
+        run: dotnet restore PackTracker.Presentation/PackTracker.Presentation.csproj
+
+      # ── Publish single-file self-contained win-x64 exe ────────────
+      - name: Publish
+        shell: pwsh
+        run: |
+          dotnet publish PackTracker.Presentation/PackTracker.Presentation.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:Version=${{ steps.version.outputs.VERSION }} `
+            --output publish/
+
+      # ── SignPath cloud signing ────────────────────────────────────
+      # Prerequisites (one-time setup):
+      #   1. SignPath dashboard → Projects → PackTracker → Artifact Configurations
+      #      Create config named "PackTracker-exe", add a PE_FILE element for PackTracker.exe
+      #   2. SignPath dashboard → Projects → PackTracker → Signing Policies
+      #      Create policy named "release-signing", attach your Open Source certificate
+      #   3. GitHub repo → Settings → Secrets → Actions:
+      #        SIGNPATH_API_TOKEN          (SignPath → User menu → API token)
+      #        SIGNPATH_ORGANIZATION_ID    (SignPath → Settings → Organization, the GUID)
+      - name: Upload artifact for signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-exe
+          path: publish/PackTracker.exe
+
+      - name: Sign via SignPath
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: PackTracker
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: PackTracker-exe
+          github-artifact-id: unsigned-exe
+          wait-for-completion: true
+          output-artifact-directory: publish/
+
+      # ── Create GitHub Release ─────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: PackTracker v${{ steps.version.outputs.VERSION }}
+          files: publish/PackTracker.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

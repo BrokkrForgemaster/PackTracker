@@ -26,8 +26,8 @@ public class UpdateService : IUpdateService
     private readonly IVersionService _versionService;
 
     // Configure your GitHub repository
-    private const string GitHubOwner = "housewolf"; // Change to your GitHub username/org
-    private const string GitHubRepo = "PackTracker"; // Change to your repo name
+    private const string GitHubOwner = "BrokkrForgemaster";
+    private const string GitHubRepo = "PackTracker";
     private const string GitHubApiUrl = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
 
     public UpdateService(

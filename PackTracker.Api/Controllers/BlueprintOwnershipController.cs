@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
@@ -15,10 +16,12 @@ namespace PackTracker.Api.Controllers;
 public class BlueprintOwnershipController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<BlueprintOwnershipController> _logger;
 
-    public BlueprintOwnershipController(AppDbContext db)
+    public BlueprintOwnershipController(AppDbContext db, ILogger<BlueprintOwnershipController> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     [HttpPost]
@@ -26,11 +29,17 @@ public class BlueprintOwnershipController : ControllerBase
     {
         var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(discordId))
+        {
+            _logger.LogWarning("Blueprint ownership registration rejected — no DiscordId claim.");
             return Unauthorized();
+        }
 
         var profile = await _db.Profiles.FirstOrDefaultAsync(x => x.DiscordId == discordId, ct);
         if (profile is null)
+        {
+            _logger.LogWarning("Blueprint ownership registration rejected — profile not found for DiscordId={DiscordId}.", discordId);
             return Unauthorized();
+        }
 
         var blueprintExists = await _db.Blueprints.AnyAsync(x => x.Id == blueprintId, ct);
         if (!blueprintExists)
@@ -74,6 +83,10 @@ public class BlueprintOwnershipController : ControllerBase
         }
 
         await _db.SaveChangesAsync(ct);
+        _logger.LogInformation(
+            "Blueprint ownership registered. BlueprintId={BlueprintId} Profile={Username} InterestType={InterestType} Status={Status}",
+            blueprintId, profile.Username, request.InterestType, existing.AvailabilityStatus);
+
         return Ok(new { message = "Blueprint ownership registered.", ownershipId = existing.Id });
     }
 }

@@ -12,6 +12,8 @@ public sealed class CraftingRequestListItemDto
     public string Priority { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? DeliveryLocation { get; set; }
+    public string? RewardOffered { get; set; }
+    public DateTime? RequiredBy { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
 }

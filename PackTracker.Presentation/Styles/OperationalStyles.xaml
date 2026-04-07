@@ -28,6 +28,7 @@
     <Color x:Key="OpTextMutedColor">#7E6B56</Color>
     <Color x:Key="OpTextAccentColor">#CBB293</Color>
 
+    <!-- Brushes -->
     <SolidColorBrush x:Key="OpBackgroundHeaderBrush" Color="{StaticResource OpBackgroundHeaderColor}"/>
     <SolidColorBrush x:Key="OpBackgroundPanelBrush" Color="{StaticResource OpBackgroundPanelColor}"/>
     <SolidColorBrush x:Key="OpBackgroundItemBrush" Color="{StaticResource OpBackgroundItemColor}"/>
@@ -48,7 +49,7 @@
     <SolidColorBrush x:Key="OpTextAccentBrush" Color="{StaticResource OpTextAccentColor}"/>
 
     <!-- ══════════════════════════════════════
-         BASE PANEL STYLE
+         BASE STYLES
     ══════════════════════════════════════ -->
     <Style x:Key="OpHeaderBorderStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource OpBackgroundHeaderBrush}"/>
@@ -76,8 +77,9 @@
     </Style>
 
     <!-- ══════════════════════════════════════
-         COMBO BOX STYLES (Extracted from BlueprintExplorer)
+         COMBO BOX STYLES
     ══════════════════════════════════════ -->
+    <!-- Item style defined FIRST -->
     <Style x:Key="OpComboBoxItemStyle" TargetType="ComboBoxItem">
         <Setter Property="Background" Value="{StaticResource OpBackgroundInputBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}"/>
@@ -114,7 +116,8 @@
         <Setter Property="Height" Value="34"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="ItemContainerStyle" Value="{StaticResource OpComboBoxItemStyle}"/>
+        <!-- Use DynamicResource to avoid compile-time forward reference issues -->
+        <Setter Property="ItemContainerStyle" Value="{DynamicResource OpComboBoxItemStyle}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
@@ -203,7 +206,7 @@
     </Style>
 
     <!-- ══════════════════════════════════════
-         LISTBOX ITEM STYLE
+         LISTBOX STYLES
     ══════════════════════════════════════ -->
     <Style x:Key="OpListBoxItemStyle" TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent"/>
@@ -222,7 +225,6 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <!-- We don't want a default background for selection if we're using card-based items -->
                             <Setter Property="Foreground" Value="{StaticResource OpTextTitleBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
