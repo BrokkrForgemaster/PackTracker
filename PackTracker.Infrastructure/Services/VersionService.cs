@@ -23,7 +23,7 @@ public class VersionService : IVersionService
 
             if (version != null)
             {
-                return $"v{version.Major}.{version.Minor}";
+                return $"v{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
             }
 
             // Fallback
