@@ -25,15 +25,19 @@
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,20,0,0">
                     <Border Style="{StaticResource GlassPanelStyle}" Padding="16" Margin="0,0,0,14">
-                        <StackPanel>
-                            <TextBlock Text="Local time"
-                                       FontSize="13"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <StackPanel HorizontalAlignment="Center">
                             <TextBlock x:Name="TxtLocalTime"
-                                       FontSize="18"
+                                       FontSize="20"
                                        FontWeight="Bold"
-                                       Margin="0,8,0,0"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
                                        Foreground="White"/>
+                            <TextBlock x:Name="TxtTimeZone"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -68,34 +72,43 @@
                                        Foreground="{DynamicResource AccentGoldBrush}"
                                        Margin="0,0,0,12"/>
 
-                            <Button Content="Dashboard"
-                                    Tag="Dashboard"
-                                    Style="{StaticResource SidebarButtonStyle}"
-                                    Click="Navigate_Click"/>
-                            <Button Content="Trading Hub"
-                                    Tag="TradingHub"
-                                    Style="{StaticResource SidebarButtonStyle}"
-                                    Click="Navigate_Click"/>
-                            <Button Content="Blueprints"
-                                    Tag="Blueprints"
-                                    Style="{StaticResource SidebarButtonStyle}"
-                                    Click="Navigate_Click"/>
-                            <Button Content="Crafting Queue"
-                                    Tag="CraftingQueue"
-                                    Style="{StaticResource SidebarButtonStyle}"
-                                    Click="Navigate_Click"/>
-                            <Button Content="Procurement"
-                                    Tag="ProcurementQueue"
-                                    Style="{StaticResource SidebarButtonStyle}"
-                                    Click="Navigate_Click"/>
-                            <Button Content="Request Hub"
-                                    Tag="RequestHub"
-                                    Style="{StaticResource SidebarButtonStyle}"
-                                    Click="Navigate_Click"/>
-                            <Button Content="Settings"
-                                    Tag="Settings"
-                                    Style="{StaticResource SidebarButtonStyle}"
-                                    Click="Navigate_Click"/>
+                            <Grid>
+                                <StackPanel x:Name="NavButtonPanel">
+                                    <Button Content="Dashboard"
+                                            Tag="Dashboard"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="Navigate_Click"/>
+                                    <Button Content="Trading Hub"
+                                            Tag="TradingHub"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="Navigate_Click"/>
+                                    <Button Content="Blueprints"
+                                            Tag="Blueprints"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="Navigate_Click"/>
+                                    <Button Content="Crafting Queue"
+                                            Tag="CraftingQueue"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="Navigate_Click"/>
+                                    <Button Content="Procurement"
+                                            Tag="ProcurementQueue"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="Navigate_Click"/>
+                                    <Button Content="Request Hub"
+                                            Tag="RequestHub"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="Navigate_Click"/>
+                                    <Button Content="Settings"
+                                            Tag="Settings"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="Navigate_Click"/>
+                                </StackPanel>
+                                <!-- Transparent overlay blocks all mouse input when user is not authenticated -->
+                                <Border x:Name="NavBlocker"
+                                        Background="Transparent"
+                                        Visibility="Collapsed"
+                                        IsHitTestVisible="True"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
 

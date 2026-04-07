@@ -161,6 +161,8 @@
     <UserSecretsId>9b1659a3-1932-4390-b910-0caf7750a9fe</UserSecretsId>
     <!-- Version — bump this for every release; the GitHub Actions workflow overrides via -p:Version -->
     <Version>1.0.0</Version>
+    <!-- Presentation owns appsettings.json — suppress conflict with PackTracker.Api's copy -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <AssemblyTitle>PackTracker</AssemblyTitle>

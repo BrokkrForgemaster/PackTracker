@@ -48,7 +48,7 @@ jobs:
       - name: Restore
         run: dotnet restore PackTracker.Presentation/PackTracker.Presentation.csproj
 
-      # ── Publish single-file self-contained win-x64 exe ────────────
+      # ── Publish all output to publish/ (no single-file — WebView2 requires loose DLLs)
       - name: Publish
         shell: pwsh
         run: |
@@ -56,37 +56,50 @@ jobs:
             --configuration Release `
             --runtime win-x64 `
             --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:Version=${{ steps.version.outputs.VERSION }} `
             --output publish/
+
+      # ── Build installer (Inno Setup) ──────────────────────────────
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            /DAppVersion=${{ steps.version.outputs.VERSION }} `
+            installer\PackTrackerSetup.iss
+          # Confirm output
+          Get-Item installer/output/PackTrackerSetup-${{ steps.version.outputs.VERSION }}.exe
 
       # ── SignPath cloud signing ────────────────────────────────────
       # Prerequisites (one-time setup):
       #   1. SignPath dashboard → Projects → PackTracker → Artifact Configurations
-      #      Create config named "PackTracker-exe", add a PE_FILE element for PackTracker.exe
+      #      Create config named "PackTracker-installer", add a PE_FILE element for
+      #      PackTrackerSetup-*.exe  (use a wildcard or exact name)
       #   2. SignPath dashboard → Projects → PackTracker → Signing Policies
       #      Create policy named "release-signing", attach your Open Source certificate
       #   3. GitHub repo → Settings → Secrets → Actions:
       #        SIGNPATH_API_TOKEN          (SignPath → User menu → API token)
       #        SIGNPATH_ORGANIZATION_ID    (SignPath → Settings → Organization, the GUID)
-      - name: Upload artifact for signing
+      - name: Upload installer for signing
         uses: actions/upload-artifact@v4
         with:
-          name: unsigned-exe
-          path: publish/PackTracker.exe
+          name: unsigned-installer
+          path: installer/output/PackTrackerSetup-${{ steps.version.outputs.VERSION }}.exe
 
-      - name: Sign via SignPath
+      - name: Sign installer via SignPath
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
         uses: signpath/github-action-submit-signing-request@v1
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
           project-slug: PackTracker
           signing-policy-slug: release-signing
-          artifact-configuration-slug: PackTracker-exe
-          github-artifact-id: unsigned-exe
+          artifact-configuration-slug: PackTracker-installer
+          github-artifact-id: unsigned-installer
           wait-for-completion: true
-          output-artifact-directory: publish/
+          output-artifact-directory: installer/output/
 
       # ── Create GitHub Release ─────────────────────────────────────
       - name: Create GitHub Release
@@ -94,7 +107,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: PackTracker v${{ steps.version.outputs.VERSION }}
-          files: publish/PackTracker.exe
+          files: installer/output/PackTrackerSetup-${{ steps.version.outputs.VERSION }}.exe
           generate_release_notes: true
           draft: false
           prerelease: false

@@ -93,27 +93,11 @@ using (var scope = app.Services.CreateScope())
 {
     var scopedServices = scope.ServiceProvider;
     var db = scopedServices.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
-
-    // Apply wiki sync columns idempotently — safe for both fresh installs and
-    // existing EnsureCreated-based databases that predate EF migration management.
+    
     var schemaLogger = scopedServices.GetRequiredService<ILogger<AppDbContext>>();
-    try
+    try 
     {
-        await db.Database.ExecuteSqlRawAsync(
-            @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
-        await db.Database.ExecuteSqlRawAsync(
-            @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)");
-        await db.Database.ExecuteSqlRawAsync(
-            @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)");
-        await db.Database.ExecuteSqlRawAsync(
-            @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)");
-        await db.Database.ExecuteSqlRawAsync(
-            @"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")");
-        await db.Database.ExecuteSqlRawAsync(
-            @"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")");
-
-        // All seeded/synced blueprints are in-game craftable.
+        // Fix incorrect data where blueprints were incorrectly marked as unavailable.
         var fixedCount = await db.Database.ExecuteSqlRawAsync(
             @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE");
         if (fixedCount > 0)
@@ -147,7 +131,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        schemaLogger.LogError(ex, "❌ Failed to apply wiki sync schema columns — wiki sync will fail until columns are added manually");
+        schemaLogger.LogWarning(ex, "Failed to apply blueprint cleanup scripts. This is normal if the tables do not exist yet.");
     }
 
     var seedService = scopedServices.GetRequiredService<CraftingSeedService>();
@@ -174,12 +158,10 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapHub<RequestsHub>(RequestsHub.Route);
-    endpoints.MapHealthChecks("/health");
-});
+
+app.MapControllers();
+app.MapHub<RequestsHub>(RequestsHub.Route);
+app.MapHealthChecks("/health");
 
 try
 {

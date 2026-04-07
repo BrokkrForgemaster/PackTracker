@@ -205,8 +205,7 @@ public partial class LoginView : UserControl
             if (Window.GetWindow(this) is not MainWindow window)
                 return;
 
-            var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
-            window.ContentFrame.Navigate(dashboardView);
+            window.NavigateToDashboard();
         });
     }
 

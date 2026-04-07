@@ -19,7 +19,8 @@
       "Bash(python3:*)",
       "Read(//usr/share/dotnet/**)",
       "Read(//opt/**)",
-      "Bash(xargs -I {} bash -c 'echo \"=== {} ===\" && grep -n \"ILogger\\\\|ILoggingService\" {}')"
+      "Bash(xargs -I {} bash -c 'echo \"=== {} ===\" && grep -n \"ILogger\\\\|ILoggingService\" {}')",
+      "Bash(dotnet clean:*)"
     ],
     "deny": [],
     "ask": []

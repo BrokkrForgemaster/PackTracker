@@ -140,6 +140,7 @@
                                 <TextBlock Text="{Binding SelectedRequest.AssignedToUsername, StringFormat='Assigned To: {0}', TargetNullValue='Assigned To: Unassigned'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.QuantityRequested, StringFormat='Quantity Requested: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.QuantityDelivered, StringFormat='Quantity Delivered: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.MinimumQuality, StringFormat='Minimum Quality: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.PreferredForm, StringFormat='Preferred Form: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.NumberOfHelpersNeeded, StringFormat='Helpers Needed: {0}', TargetNullValue='Helpers Needed: Any'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat='Delivery: {0}', TargetNullValue='Delivery: Not specified'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
@@ -161,6 +162,12 @@
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#2B4E2E" Foreground="#EEF6EE"
                                         BorderBrush="#5C8B5E" BorderThickness="1"/>
+                                <Button Content="REFUSE REQUEST"
+                                        Command="{Binding RefuseCommand}"
+                                        IsEnabled="{Binding CanRefuse}"
+                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                        Background="#4A2424" Foreground="#F8E8E8"
+                                        BorderBrush="#844F4F" BorderThickness="1"/>
                                 <Button Content="MARK IN PROGRESS"
                                         Command="{Binding MarkInProgressCommand}"
                                         IsEnabled="{Binding CanMarkInProgress}"
@@ -181,6 +188,50 @@
                                         BorderBrush="#B15B34" BorderThickness="1"/>
                             </StackPanel>
                         </Grid>
+                    </Border>
+
+                    <!-- Comments Section -->
+                    <Border Grid.Row="2" Style="{StaticResource OpPanelBorderStyle}" Margin="0,18,0,0">
+                        <DockPanel Margin="16">
+                            <TextBlock Text="COMMENTS / LOG" DockPanel.Dock="Top" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
+                            
+                            <!-- Comment Input -->
+                            <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding NewCommentText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource OpTextBoxStyle}"
+                                         Tag="Type a comment..."
+                                         Padding="10,8"/>
+                                <Button Grid.Column="1" Content="POST" 
+                                        Command="{Binding AddCommentCommand}"
+                                        Padding="20,0" Margin="8,0,0,0"
+                                        Background="#24374A" Foreground="#E8F0F8"
+                                        BorderBrush="#4F6A84" BorderThickness="1"/>
+                            </Grid>
+
+                            <!-- Comment List -->
+                            <ListBox ItemsSource="{Binding Comments}"
+                                     Style="{StaticResource OpListBoxStyle}"
+                                     BorderThickness="0" Background="Transparent"
+                                     HorizontalContentAlignment="Stretch">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,8" Padding="10" Background="#1A1A1A" CornerRadius="4">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding AuthorUsername}" Foreground="{StaticResource OpTextAccentBrush}" FontWeight="Bold" FontSize="12" DockPanel.Dock="Left"/>
+                                                    <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:HH:mm}'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" DockPanel.Dock="Right" VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding Content}" Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
                     </Border>
                 </Grid>
                 </Grid>

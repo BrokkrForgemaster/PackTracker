@@ -36,6 +36,7 @@ public partial class UexViewModel : ObservableObject
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         RefreshDataCommand = new AsyncRelayCommand(LoadDataAsync);
+        _ = LoadDataAsync();
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

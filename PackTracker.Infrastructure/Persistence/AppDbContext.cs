@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<MemberBlueprintOwnership> MemberBlueprintOwnerships => Set<MemberBlueprintOwnership>();
     public DbSet<CraftingRequest> CraftingRequests => Set<CraftingRequest>();
     public DbSet<MaterialProcurementRequest> MaterialProcurementRequests => Set<MaterialProcurementRequest>();
+    public DbSet<RequestComment> RequestComments => Set<RequestComment>();
     public DbSet<OrgInventoryItem> OrgInventoryItems => Set<OrgInventoryItem>();
     
     public DbSet<GuideRequest> GuideRequests { get; set; } = null!;
@@ -363,6 +364,17 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.MaterialId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RequestComment>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Content).HasMaxLength(2000).IsRequired();
+            entity.HasOne(x => x.AuthorProfile)
+                .WithMany()
+                .HasForeignKey(x => x.AuthorProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.RequestId);
         });
     }
 }

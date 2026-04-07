@@ -9,6 +9,7 @@ public class MaterialProcurementRequest
     public Guid MaterialId { get; set; }
     public decimal QuantityRequested { get; set; }
     public decimal QuantityDelivered { get; set; }
+    public int MinimumQuality { get; set; } = 1;
     public MaterialFormPreference PreferredForm { get; set; } = MaterialFormPreference.Any;
     public RequestPriority Priority { get; set; } = RequestPriority.Normal;
     public RequestStatus Status { get; set; } = RequestStatus.Open;

@@ -11,7 +11,31 @@
         <Style x:Key="RightAlignCell" TargetType="{x:Type TextBlock}">
             <Setter Property="TextAlignment" Value="Right" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+        </Style>
+        <!-- Header style for right-aligned numeric columns -->
+        <Style x:Key="RightAlignHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#1A1108"/>
+            <Setter Property="Foreground" Value="#C9A458"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Padding" Value="0,6,12,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="BorderBrush" Value="#3A2D22"/>
+            <Setter Property="BorderThickness" Value="1,0,0,2"/>
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   TextAlignment="Right"
+                                   HorizontalAlignment="Stretch"
+                                   Foreground="#C9A458"
+                                   FontWeight="Bold"
+                                   FontSize="10"
+                                   Margin="0,0,4,0"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -93,30 +117,51 @@
                               Background="Transparent"
                               Foreground="{StaticResource OpTextPrimaryBrush}"
                               BorderThickness="0"
-                              RowBackground="Transparent"
-                              AlternatingRowBackground="#191510"
+                              RowBackground="#17120E"
+                              AlternatingRowBackground="#211812"
+                              RowHeight="34"
                               FontSize="12"
-                              GridLinesVisibility="None">
+                              GridLinesVisibility="Vertical"
+                              VerticalGridLinesBrush="#2A1F16">
 
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#211912" />
-                                <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
-                                <Setter Property="FontWeight" Value="Bold" />
-                                <Setter Property="FontSize" Value="10" />
-                                <Setter Property="Padding" Value="8,6" />
-                                <Setter Property="BorderBrush" Value="#31271E" />
-                                <Setter Property="BorderThickness" Value="0,0,0,1" />
+                                <Setter Property="Background" Value="#1A1108"/>
+                                <Setter Property="Foreground" Value="#C9A458"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontSize" Value="10"/>
+                                <Setter Property="Padding" Value="8,6"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                <Setter Property="BorderBrush" Value="#3A2D22"/>
+                                <Setter Property="BorderThickness" Value="1,0,0,2"/>
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
 
-                        <DataGrid.CellStyle>
-                            <Style TargetType="DataGridCell">
-                                <Setter Property="Padding" Value="8,6" />
-                                <Setter Property="BorderThickness" Value="0" />
+                        <!-- Row separator via bottom border -->
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="BorderBrush" Value="#2A1F16"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#3E3023" />
+                                        <Setter Property="Background" Value="#3E3023"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#2A1E14"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Padding" Value="8,0" />
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="Transparent" />
                                         <Setter Property="Foreground" Value="White" />
                                     </Trigger>
                                 </Style.Triggers>
@@ -124,18 +169,36 @@
                         </DataGrid.CellStyle>
 
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="ORIGIN" Binding="{Binding OriginTerminalName}" Width="1.5*" />
-                            <DataGridTextColumn Header="DESTINATION" Binding="{Binding DestinationTerminalName}"
-                                                Width="1.5*" />
-                            <DataGridTextColumn Header="BUY" Binding="{Binding PriceOrigin, StringFormat={}{0:N0}}"
-                                                Width="0.8*" ElementStyle="{StaticResource RightAlignCell}" />
-                            <DataGridTextColumn Header="SELL"
-                                                Binding="{Binding PriceDestination, StringFormat={}{0:N0}}"
-                                                Width="0.8*" ElementStyle="{StaticResource RightAlignCell}" />
-                            <DataGridTextColumn Header="ROI %" Binding="{Binding PriceRoi, StringFormat={}{0:N1}}"
-                                                Width="0.7*" ElementStyle="{StaticResource RightAlignCell}" />
-                            <DataGridTextColumn Header="PROFIT" Binding="{Binding Profit, StringFormat={}{0:N0}}"
-                                                Width="0.8*" ElementStyle="{StaticResource RightAlignCell}" />
+                            <DataGridTextColumn Header="ORIGIN"
+                                                Binding="{Binding OriginTerminalName}"
+                                                Width="1.5*"/>
+                            <DataGridTextColumn Header="DESTINATION"
+                                                Binding="{Binding DestinationTerminalName}"
+                                                Width="1.5*"/>
+                            <DataGridTextColumn Binding="{Binding PriceOrigin, StringFormat={}{0:N0}}"
+                                                Width="0.8*"
+                                                ElementStyle="{StaticResource RightAlignCell}"
+                                                HeaderStyle="{StaticResource RightAlignHeader}">
+                                <DataGridTextColumn.Header>BUY</DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Binding="{Binding PriceDestination, StringFormat={}{0:N0}}"
+                                                Width="0.8*"
+                                                ElementStyle="{StaticResource RightAlignCell}"
+                                                HeaderStyle="{StaticResource RightAlignHeader}">
+                                <DataGridTextColumn.Header>SELL</DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Binding="{Binding PriceRoi, StringFormat={}{0:N1}%}"
+                                                Width="0.7*"
+                                                ElementStyle="{StaticResource RightAlignCell}"
+                                                HeaderStyle="{StaticResource RightAlignHeader}">
+                                <DataGridTextColumn.Header>ROI %</DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Binding="{Binding Profit, StringFormat={}{0:N0}}"
+                                                Width="0.8*"
+                                                ElementStyle="{StaticResource RightAlignCell}"
+                                                HeaderStyle="{StaticResource RightAlignHeader}">
+                                <DataGridTextColumn.Header>PROFIT</DataGridTextColumn.Header>
+                            </DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

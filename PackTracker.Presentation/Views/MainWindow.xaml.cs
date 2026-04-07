@@ -65,11 +65,12 @@ namespace PackTracker.Presentation.Views
             WindowState = WindowState.Maximized;
 
             // Sidebar real-time clock
+            TxtTimeZone.Text = TimeZoneInfo.Local.StandardName;
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (_, _) =>
             {
                 TxtLocalTime.Text = DateTime.Now.ToString("MMMM d, yyyy") + "\n" +
-                                    DateTime.Now.ToString("       HH:mm:ss");
+                                    DateTime.Now.ToString("HH:mm:ss");
             };
             _timer.Start();
 
@@ -135,14 +136,32 @@ namespace PackTracker.Presentation.Views
             }
         }
 
+        private bool _isAuthenticated;
+
+        private void SetNavigationEnabled(bool enabled)
+        {
+            _isAuthenticated = enabled;
+            foreach (UIElement child in NavButtonPanel.Children)
+            {
+                if (child is Button btn)
+                {
+                    btn.IsEnabled = enabled;
+                    btn.Opacity = enabled ? 1.0 : 0.35;
+                }
+            }
+        }
+
         private void NavigateToLogin()
         {
+            SetNavigationEnabled(false);
             var loginView = _serviceProvider.GetRequiredService<LoginView>();
             ContentFrame.Navigate(loginView);
         }
 
         private void Navigate_Click(object sender, RoutedEventArgs e)
         {
+            if (!_isAuthenticated) return;
+
             if (sender is System.Windows.Controls.Button btn && btn.Tag is string tag)
             {
                 switch (tag)
@@ -172,8 +191,9 @@ namespace PackTracker.Presentation.Views
             }
         }
 
-        private void NavigateToDashboard()
+        internal void NavigateToDashboard()
         {
+            SetNavigationEnabled(true);
             var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
             ContentFrame.Navigate(dashboardView);
         }

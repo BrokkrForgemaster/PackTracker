@@ -9,6 +9,8 @@ public class CraftingRequest
     public Guid RequesterProfileId { get; set; }
     public Guid? AssignedCrafterProfileId { get; set; }
     public int QuantityRequested { get; set; } = 1;
+    public int MinimumQuality { get; set; } = 1;
+    public string? RefusalReason { get; set; }
     public RequestPriority Priority { get; set; } = RequestPriority.Normal;
     public RequestStatus Status { get; set; } = RequestStatus.Open;
     public string? DeliveryLocation { get; set; }

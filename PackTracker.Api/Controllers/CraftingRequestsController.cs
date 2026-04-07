@@ -28,13 +28,43 @@ public class CraftingRequestsController : ControllerBase
     [HttpGet("requests")]
     public async Task<ActionResult<IReadOnlyList<CraftingRequestListItemDto>>> GetRequests(CancellationToken ct)
     {
-        var items = await _db.CraftingRequests
+        var craftingRequests = await _db.CraftingRequests
             .AsNoTracking()
             .Include(x => x.Blueprint)
             .Include(x => x.RequesterProfile)
             .Include(x => x.AssignedCrafterProfile)
             .OrderByDescending(x => x.CreatedAt)
-            .Select(x => new CraftingRequestListItemDto
+            .ToListAsync(ct);
+
+        var blueprintIds = craftingRequests.Select(x => x.BlueprintId).Distinct().ToList();
+        var recipes = await _db.BlueprintRecipes
+            .AsNoTracking()
+            .Where(x => blueprintIds.Contains(x.BlueprintId))
+            .ToListAsync(ct);
+        
+        var recipeIds = recipes.Select(x => x.Id).ToList();
+        var allMaterials = await _db.BlueprintRecipeMaterials
+            .AsNoTracking()
+            .Where(x => recipeIds.Contains(x.BlueprintRecipeId))
+            .Include(x => x.Material)
+            .ToListAsync(ct);
+
+        var items = craftingRequests.Select(x =>
+        {
+            var recipe = recipes.FirstOrDefault(r => r.BlueprintId == x.BlueprintId);
+            var materials = recipe == null 
+                ? new List<BlueprintRecipeMaterialDto>() 
+                : allMaterials
+                    .Where(m => m.BlueprintRecipeId == recipe.Id)
+                    .Select(m => new BlueprintRecipeMaterialDto
+                    {
+                        MaterialId = m.MaterialId,
+                        MaterialName = m.Material?.Name ?? "Unknown",
+                        QuantityRequired = m.QuantityRequired,
+                        Unit = m.Unit
+                    }).ToList();
+
+            return new CraftingRequestListItemDto
             {
                 Id = x.Id,
                 BlueprintId = x.BlueprintId,
@@ -43,17 +73,20 @@ public class CraftingRequestsController : ControllerBase
                 RequesterUsername = x.RequesterProfile != null ? x.RequesterProfile.Username : string.Empty,
                 AssignedCrafterUsername = x.AssignedCrafterProfile != null ? x.AssignedCrafterProfile.Username : null,
                 QuantityRequested = x.QuantityRequested,
+                MinimumQuality = x.MinimumQuality,
+                RefusalReason = x.RefusalReason,
                 Priority = x.Priority.ToString(),
                 Status = x.Status.ToString(),
                 DeliveryLocation = x.DeliveryLocation,
                 RewardOffered = x.RewardOffered,
                 RequiredBy = x.RequiredBy,
                 Notes = x.Notes,
-                CreatedAt = x.CreatedAt
-            })
-            .ToListAsync(ct);
+                CreatedAt = x.CreatedAt,
+                Materials = materials
+            };
+        }).ToList();
 
-        _logger.LogInformation("Crafting requests listed. Count={Count}", items.Count);
+        _logger.LogInformation("Crafting requests listed with materials. Count={Count}", items.Count);
         return Ok(items);
     }
 
@@ -98,6 +131,7 @@ public class CraftingRequestsController : ControllerBase
             BlueprintId = blueprint.Id,
             RequesterProfileId = profile.Id,
             QuantityRequested = request.QuantityRequested <= 0 ? 1 : request.QuantityRequested,
+            MinimumQuality = request.MinimumQuality,
             Priority = request.Priority,
             DeliveryLocation = request.DeliveryLocation,
             RewardOffered = request.RewardOffered,
@@ -131,6 +165,7 @@ public class CraftingRequestsController : ControllerBase
                 MaterialName = x.Material != null ? x.Material.Name : string.Empty,
                 QuantityRequested = x.QuantityRequested,
                 QuantityDelivered = x.QuantityDelivered,
+                MinimumQuality = x.MinimumQuality,
                 PreferredForm = x.PreferredForm.ToString(),
                 Priority = x.Priority.ToString(),
                 Status = x.Status.ToString(),
@@ -181,6 +216,7 @@ public class CraftingRequestsController : ControllerBase
             MaterialId = request.MaterialId,
             LinkedCraftingRequestId = request.LinkedCraftingRequestId,
             QuantityRequested = request.QuantityRequested,
+            MinimumQuality = request.MinimumQuality,
             PreferredForm = request.PreferredForm,
             Priority = request.Priority,
             DeliveryLocation = request.DeliveryLocation,
@@ -256,15 +292,89 @@ public class CraftingRequestsController : ControllerBase
         }
 
         request.AssignedCrafterProfileId = profile.Id;
-        request.Status = RequestStatus.InProgress;
+        request.Status = RequestStatus.Accepted;
         request.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation(
-            "Crafting request assigned. RequestId={RequestId} AssignedTo={Username}",
+            "Crafting request assigned/accepted. RequestId={RequestId} AssignedTo={Username}",
             id, profile.Username);
 
-        return Ok(new { message = $"Crafting request assigned to {profile.Username}.", requestId = id });
+        return Ok(new { message = $"Crafting request accepted by {profile.Username}.", requestId = id });
+    }
+
+    // ─── CRAFTING: REFUSE ───────────────────────────────────────────────────────
+    [HttpPatch("requests/{id:guid}/refuse")]
+    public async Task<IActionResult> RefuseCraftingRequest(Guid id, [FromBody] RefuseRequestDto dto, CancellationToken ct)
+    {
+        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(discordId)) return Unauthorized();
+
+        var profile = await _db.Profiles.FirstOrDefaultAsync(x => x.DiscordId == discordId, ct);
+        if (profile is null) return Unauthorized();
+
+        var request = await _db.CraftingRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (request is null) return NotFound();
+
+        // Only the assigned crafter can refuse, OR any crafter can refuse an Open request?
+        // Let's say any crafter can refuse an Open request if they don't want to do it, 
+        // but typically "Refuse" implies it was either assigned or they are saying "I won't do this".
+        // For simplicity: only if assigned OR if it's currently Open (any crafter can 'reject' a bad request).
+        
+        request.Status = RequestStatus.Refused;
+        request.RefusalReason = dto.Reason;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("Crafting request refused. RequestId={RequestId} Reason={Reason}", id, dto.Reason);
+
+        return Ok(new { message = "Crafting request refused.", requestId = id });
+    }
+
+    // ─── COMMENTS ───────────────────────────────────────────────────────────────
+    [HttpGet("requests/{id:guid}/comments")]
+    [HttpGet("procurement-requests/{id:guid}/comments")]
+    public async Task<ActionResult<IReadOnlyList<RequestCommentDto>>> GetRequestComments(Guid id, CancellationToken ct)
+    {
+        var comments = await _db.RequestComments
+            .AsNoTracking()
+            .Where(x => x.RequestId == id)
+            .Include(x => x.AuthorProfile)
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new RequestCommentDto
+            {
+                Id = x.Id,
+                RequestId = x.RequestId,
+                AuthorUsername = x.AuthorProfile != null ? x.AuthorProfile.Username : "Unknown",
+                Content = x.Content,
+                CreatedAt = x.CreatedAt
+            })
+            .ToListAsync(ct);
+
+        return Ok(comments);
+    }
+
+    [HttpPost("requests/{id:guid}/comments")]
+    [HttpPost("procurement-requests/{id:guid}/comments")]
+    public async Task<IActionResult> AddRequestComment(Guid id, [FromBody] AddRequestCommentDto dto, CancellationToken ct)
+    {
+        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(discordId)) return Unauthorized();
+
+        var profile = await _db.Profiles.FirstOrDefaultAsync(x => x.DiscordId == discordId, ct);
+        if (profile is null) return Unauthorized();
+
+        var comment = new RequestComment
+        {
+            RequestId = id,
+            AuthorProfileId = profile.Id,
+            Content = dto.Content
+        };
+
+        _db.RequestComments.Add(comment);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new { message = "Comment added.", commentId = comment.Id });
     }
 
     // ─── PROCUREMENT: UPDATE STATUS ─────────────────────────────────────────────
@@ -333,5 +443,21 @@ public class CraftingRequestsController : ControllerBase
             id, profile.Username);
 
         return Ok(new { message = $"Procurement request claimed by {profile.Username}.", requestId = id });
+    }
+
+    [HttpPatch("procurement-requests/{id:guid}/refuse")]
+    public async Task<IActionResult> RefuseProcurementRequest(Guid id, [FromBody] RefuseRequestDto dto, CancellationToken ct)
+    {
+        var request = await _db.MaterialProcurementRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (request is null) return NotFound();
+
+        request.Status = RequestStatus.Refused;
+        request.Notes = (string.IsNullOrWhiteSpace(request.Notes) ? "" : request.Notes + "\n") + "Refusal Reason: " + dto.Reason;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("Procurement request refused. RequestId={RequestId} Reason={Reason}", id, dto.Reason);
+
+        return Ok(new { message = "Procurement request refused.", requestId = id });
     }
 }

@@ -11,6 +11,9 @@ public sealed class CreateCraftingRequestDto
     [Range(1, 1000)]
     public int QuantityRequested { get; set; } = 1;
 
+    [Range(1, 5)]
+    public int MinimumQuality { get; set; } = 1;
+
     [Required]
     public RequestPriority Priority { get; set; } = RequestPriority.Normal;
 

@@ -22,6 +22,37 @@ public class BlueprintComponentModifierPreview
         .Trim();
 }
 
+public record QualityTier(string Label, int MinValue);
+
+public partial class MaterialSelectionViewModel : ObservableObject
+{
+    public Guid MaterialId => _data.MaterialId;
+    public string MaterialName => _data.MaterialName;
+    public double QuantityRequired => _data.QuantityRequired;
+    public string Unit => _data.Unit;
+    public string SourceType => _data.SourceType;
+
+    public static IReadOnlyList<QualityTier> QualityTiers { get; } = new[]
+    {
+        new QualityTier("500 – 699",   500),
+        new QualityTier("700 – 750",   700),
+        new QualityTier("751 – 799",   751),
+        new QualityTier("800 – 850",   800),
+        new QualityTier("851 – 900",   851),
+        new QualityTier("901 – 950",  901),
+        new QualityTier("951 – 999",  951),
+    };
+
+    [ObservableProperty] private bool isSelected;
+    [ObservableProperty] private QualityTier selectedQualityTier = QualityTiers[^1];
+
+    public int RequestedQuality => SelectedQualityTier.MinValue;
+
+    private readonly BlueprintRecipeMaterialDto _data;
+
+    public MaterialSelectionViewModel(BlueprintRecipeMaterialDto data) => _data = data;
+}
+
 public partial class BlueprintExplorerViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
@@ -29,7 +60,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     private readonly ILogger<BlueprintExplorerViewModel> _logger;
 
     public ObservableCollection<BlueprintSearchItemDto> Results { get; } = new();
-    public ObservableCollection<BlueprintRecipeMaterialDto> Materials { get; } = new();
+    public ObservableCollection<MaterialSelectionViewModel> Materials { get; } = new();
     public ObservableCollection<ComponentViewModel> Components { get; } = new();
     public ObservableCollection<BlueprintComponentModifierPreview> CombinedModifiers { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
@@ -41,7 +72,6 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private string statusMessage = "Loading blueprints...";
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
-    [ObservableProperty] private BlueprintRecipeMaterialDto? selectedMaterial;
 
     // Final stats
     [ObservableProperty] private int baseRpm = 650;
@@ -82,7 +112,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
         SelectedCategory = AllCategoriesLabel;
     }
-
+ 
     private async Task LoadWikiCacheAsync()
     {
         try
@@ -168,7 +198,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
             // Load recipe materials
             foreach (var material in detail.Materials)
-                Materials.Add(material);
+                Materials.Add(new MaterialSelectionViewModel(material));
 
             // Load components + converter stats (modifiers) from API
             if (detail.Components != null && detail.Components.Any())
@@ -260,6 +290,18 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SelectAllMaterials()
+    {
+        foreach (var m in Materials) m.IsSelected = true;
+    }
+
+    [RelayCommand]
+    private void ClearAllMaterials()
+    {
+        foreach (var m in Materials) m.IsSelected = false;
+    }
+
+    [RelayCommand]
     private async Task CreateCraftingRequestAsync()
     {
         if (SelectedBlueprintDetail is null) return;
@@ -289,26 +331,35 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [RelayCommand]
     private async Task CreateProcurementRequestAsync()
     {
-        if (SelectedMaterial is null) return;
+        var selected = Materials.Where(m => m.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            StatusMessage = "Select at least one material to request.";
+            return;
+        }
         try
         {
             IsLoading = true;
             using var client = _apiClientProvider.CreateClient();
-            var dto = new CreateMaterialProcurementRequestDto
+            int success = 0;
+            foreach (var material in selected)
             {
-                MaterialId = SelectedMaterial.MaterialId,
-                QuantityRequested = (decimal)SelectedMaterial.QuantityRequired,
-                Priority = RequestPriority.Normal
-            };
-            var response = await client.PostAsJsonAsync("api/v1/crafting/procurement-requests", dto);
-            StatusMessage = response.IsSuccessStatusCode
-                ? $"Procurement request created for {SelectedMaterial.MaterialName}."
-                : $"Error {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+                var dto = new CreateMaterialProcurementRequestDto
+                {
+                    MaterialId = material.MaterialId,
+                    QuantityRequested = (decimal)material.QuantityRequired,
+                    MinimumQuality = material.RequestedQuality,
+                    Priority = RequestPriority.Normal
+                };
+                var response = await client.PostAsJsonAsync("api/v1/crafting/procurement-requests", dto);
+                if (response.IsSuccessStatusCode) success++;
+            }
+            StatusMessage = $"Created {success}/{selected.Count} procurement requests.";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "CreateProcurementRequest failed.");
-            StatusMessage = $"Failed to create procurement request: {ex.Message}";
+            StatusMessage = $"Failed to create procurement requests: {ex.Message}";
         }
         finally { IsLoading = false; }
     }

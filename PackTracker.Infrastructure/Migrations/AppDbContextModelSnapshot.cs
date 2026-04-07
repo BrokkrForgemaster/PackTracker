@@ -381,6 +381,9 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("MinimumQuality")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
@@ -389,6 +392,9 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<int>("QuantityRequested")
                         .HasColumnType("integer");
+
+                    b.Property<string>("RefusalReason")
+                        .HasColumnType("text");
 
                     b.Property<Guid>("RequesterProfileId")
                         .HasColumnType("uuid");
@@ -619,6 +625,9 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("MinimumQuality")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Notes")
                         .HasColumnType("text");
@@ -966,6 +975,35 @@ namespace PackTracker.Infrastructure.Migrations
                     b.ToTable("RegolithRefineryJobs");
                 });
 
+            modelBuilder.Entity("PackTracker.Domain.Entities.RequestComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorProfileId");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("RequestComments");
+                });
+
             modelBuilder.Entity("PackTracker.Domain.Entities.RequestTicket", b =>
                 {
                     b.Property<int>("Id")
@@ -1250,6 +1288,17 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasForeignKey("ProfileId");
 
                     b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.RequestComment", b =>
+                {
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "AuthorProfile")
+                        .WithMany()
+                        .HasForeignKey("AuthorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AuthorProfile");
                 });
 
             modelBuilder.Entity("PackTracker.Domain.Entities.Commodity", b =>

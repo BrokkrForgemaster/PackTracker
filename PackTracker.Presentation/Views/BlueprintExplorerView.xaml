@@ -107,15 +107,10 @@
 
         <!-- ── Right Panel ── -->
         <Grid Grid.Row="1" Grid.Column="2">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ScrollViewer.Style>
-                    <Style TargetType="ScrollViewer">
+                    <Style TargetType="ScrollViewer" BasedOn="{StaticResource OpScrollViewerStyle}">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding HasSelectedBlueprintDetail}" Value="True">
@@ -178,11 +173,6 @@
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#8B1A0F" Foreground="#F4EBDD"
                                         BorderBrush="#B15B34" BorderThickness="1"/>
-                                <Button Content="REQUEST SELECTED MATERIAL"
-                                        Command="{Binding CreateProcurementRequestCommand}"
-                                        Padding="12,8" FontWeight="Bold"
-                                        Background="#24374A" Foreground="#E8F0F8"
-                                        BorderBrush="#4F6A84" BorderThickness="1"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -291,29 +281,79 @@
 
                     <Border Margin="0,16,0,0" Style="{StaticResource OpPanelBorderStyle}" Padding="18">
                         <StackPanel>
-                            <TextBlock Text="RECIPE MATERIALS" Foreground="{StaticResource OpTextTitleBrush}" FontSize="16" FontWeight="Bold"/>
-                            <TextBlock Text="Select a material to create a procurement request."
-                                       Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,4,0,12"/>
-                            <ListBox ItemsSource="{Binding Materials}"
-                                     SelectedItem="{Binding SelectedMaterial}"
-                                     Style="{StaticResource OpListBoxStyle}">
+                            <DockPanel Margin="0,0,0,6">
+                                <TextBlock Text="RECIPE MATERIALS" Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="SELECT ALL"
+                                            Command="{Binding SelectAllMaterialsCommand}"
+                                            Padding="8,4" FontSize="10" FontWeight="Bold" Margin="0,0,6,0"
+                                            Background="#2B3A2B" Foreground="#B0D4B0"
+                                            BorderBrush="#4A6B4A" BorderThickness="1"/>
+                                    <Button Content="CLEAR ALL"
+                                            Command="{Binding ClearAllMaterialsCommand}"
+                                            Padding="8,4" FontSize="10" FontWeight="Bold"
+                                            Background="#3A2B2B" Foreground="#D4B0B0"
+                                            BorderBrush="#6B4A4A" BorderThickness="1"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <TextBlock Text="Check materials, set minimum quality tier, then request procurement."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,0,0,10"/>
+                            <ListBox ItemsSource="{Binding Materials}" Style="{StaticResource OpListBoxStyle}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Border Style="{StaticResource OpItemBorderStyle}" Padding="10">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding MaterialName}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="SemiBold" FontSize="13"/>
-                                                <TextBlock Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" Margin="0,4,0,0">
-                                                    <Run Text="Qty: "/>
-                                                    <Run Text="{Binding QuantityRequired}"/>
-                                                    <Run Text=" "/>
-                                                    <Run Text="{Binding Unit}"/>
-                                                </TextBlock>
-                                                <TextBlock Text="{Binding SourceType}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" Margin="0,4,0,0"/>
-                                            </StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox Grid.Column="0"
+                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,10,0"/>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding MaterialName}"
+                                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                                               FontWeight="SemiBold" FontSize="13"/>
+                                                    <TextBlock Foreground="{StaticResource OpTextAccentBrush}"
+                                                               FontSize="11" Margin="0,3,0,0">
+                                                        <Run Text="Qty: "/>
+                                                        <Run Text="{Binding QuantityRequired, Mode=OneWay}"/>
+                                                        <Run Text=" "/>
+                                                        <Run Text="{Binding Unit, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding SourceType}"
+                                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                                               FontSize="10" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
+                                                    <TextBlock Text="MIN QUALITY" Foreground="{StaticResource OpTextMutedBrush}"
+                                                               FontSize="9" FontWeight="Bold" Margin="0,0,0,4"/>
+                                                    <ComboBox ItemsSource="{Binding QualityTiers}"
+                                                              SelectedItem="{Binding SelectedQualityTier, Mode=TwoWay}"
+                                                              Style="{StaticResource OpComboBoxStyle}"
+                                                              Width="110">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding Label}"
+                                                                           Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                                           FontSize="12"/>
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                                </StackPanel>
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+                            <Button Content="REQUEST SELECTED MATERIALS"
+                                    Command="{Binding CreateProcurementRequestCommand}"
+                                    Margin="0,12,0,0" Padding="12,8" FontWeight="Bold"
+                                    Background="#24374A" Foreground="#E8F0F8"
+                                    BorderBrush="#4F6A84" BorderThickness="1"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
