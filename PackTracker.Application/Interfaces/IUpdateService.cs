@@ -36,6 +36,15 @@ public interface IUpdateService
     /// </summary>
     string GetCurrentVersion();
 }
+public enum UpdateState
+{
+    Normal,
+    Checking,
+    UpdateAvailable,
+    Downloading,
+    Installing,
+    Failed
+}
 
 /// <summary>
 /// Information about an available update.
