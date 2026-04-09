@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -13,19 +11,38 @@ namespace PackTracker.Presentation.ViewModels;
 
 public class BlueprintComponentModifierPreview
 {
+    private static readonly System.Globalization.TextInfo TextInfo =
+        System.Globalization.CultureInfo.CurrentCulture.TextInfo;
+
     public string PropertyKey { get; set; } = string.Empty;
     public double CalculatedValue { get; set; }
 
-    public string DisplayName => PropertyKey
-        .Replace("weapon_", "")
-        .Replace("_", " ")
-        .Trim();
+    public string DisplayName => TextInfo.ToTitleCase(
+        PropertyKey
+            .Replace("weapon_", "")
+            .Replace("firerate", "fire rate")
+            .Replace("_", " ")
+            .Trim());
+
+    public bool IsInverseBenefitStat =>
+        PropertyKey.Contains("recoil", StringComparison.OrdinalIgnoreCase) ||
+        PropertyKey.Contains("kick", StringComparison.OrdinalIgnoreCase) ||
+        PropertyKey.Contains("spread", StringComparison.OrdinalIgnoreCase) ||
+        PropertyKey.Contains("sway", StringComparison.OrdinalIgnoreCase) ||
+        PropertyKey.Contains("bloom", StringComparison.OrdinalIgnoreCase);
+
+    public double DisplayValue => IsInverseBenefitStat ? -CalculatedValue : CalculatedValue;
+
+    public bool IsPositive => DisplayValue > 0;
+    public bool IsNegative => DisplayValue < 0;
 }
 
-public record QualityTier(string Label, int MinValue);
+public partial record QualityTier(string Label, int MinValue);
 
 public partial class MaterialSelectionViewModel : ObservableObject
 {
+    private readonly BlueprintRecipeMaterialDto _data;
+
     public Guid MaterialId => _data.MaterialId;
     public string MaterialName => _data.MaterialName;
     public double QuantityRequired => _data.QuantityRequired;
@@ -34,30 +51,39 @@ public partial class MaterialSelectionViewModel : ObservableObject
 
     public static IReadOnlyList<QualityTier> QualityTiers { get; } = new[]
     {
-        new QualityTier("500 – 699",   500),
-        new QualityTier("700 – 750",   700),
-        new QualityTier("751 – 799",   751),
-        new QualityTier("800 – 850",   800),
-        new QualityTier("851 – 900",   851),
-        new QualityTier("901 – 950",  901),
-        new QualityTier("951 – 999",  951),
+        new QualityTier("500 - 699", 500),
+        new QualityTier("700 - 750", 700),
+        new QualityTier("751 - 799", 751),
+        new QualityTier("800 - 850", 800),
+        new QualityTier("851 - 900", 851),
+        new QualityTier("901 - 950", 901),
+        new QualityTier("951 - 999", 951),
     };
 
-    [ObservableProperty] private bool isSelected;
-    [ObservableProperty] private QualityTier selectedQualityTier = QualityTiers[^1];
+    [ObservableProperty] private bool isSelected = false;
+    [ObservableProperty] private QualityTier selectedQualityTier = QualityTiers[0];
 
     public int RequestedQuality => SelectedQualityTier.MinValue;
 
-    private readonly BlueprintRecipeMaterialDto _data;
-
-    public MaterialSelectionViewModel(BlueprintRecipeMaterialDto data) => _data = data;
+    public MaterialSelectionViewModel(BlueprintRecipeMaterialDto data)
+    {
+        _data = data;
+    }
 }
 
 public partial class BlueprintExplorerViewModel : ObservableObject
 {
+    #region Fields
+
     private readonly IApiClientProvider _apiClientProvider;
     private readonly WikiBlueprintService _wikiBlueprints;
     private readonly ILogger<BlueprintExplorerViewModel> _logger;
+
+    private const string AllCategoriesLabel = "All Categories";
+
+    #endregion
+
+    #region Collections
 
     public ObservableCollection<BlueprintSearchItemDto> Results { get; } = new();
     public ObservableCollection<MaterialSelectionViewModel> Materials { get; } = new();
@@ -65,24 +91,33 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     public ObservableCollection<BlueprintComponentModifierPreview> CombinedModifiers { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
 
+    #endregion
+
+    #region State
+
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private string? selectedCategory;
-    [ObservableProperty] private bool inGameOnly = false;
+    [ObservableProperty] private bool inGameOnly;
     [ObservableProperty] private bool isLoading;
     [ObservableProperty] private string statusMessage = "Loading blueprints...";
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
 
-    // Final stats
     [ObservableProperty] private int baseRpm = 650;
     [ObservableProperty] private int finalRpm;
 
     public bool HasSelectedBlueprintDetail => SelectedBlueprintDetail is not null;
-
-    private const string AllCategoriesLabel = "All Categories";
+    public bool HasRewardPools => SelectedBlueprintDetail?.RewardPools.GetType().GetProperty("pools") != null;
+    public bool HasComponents => Components.Count > 0;
+    public bool HasMaterials => Materials.Count > 0;
+    public bool HasCombinedModifiers => CombinedModifiers.Count > 0;
 
     public IReadOnlyList<MemberBlueprintInterestType> InterestTypeOptions { get; } =
         Enum.GetValues<MemberBlueprintInterestType>();
+
+    #endregion
+
+    #region Constructor
 
     public BlueprintExplorerViewModel(
         IApiClientProvider apiClientProvider,
@@ -96,6 +131,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         _ = InitializeAsync();
     }
 
+    #endregion
+
+    #region Initialization
+
     private async Task InitializeAsync()
     {
         LoadCategoriesFromWiki();
@@ -105,20 +144,33 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
     private void LoadCategoriesFromWiki()
     {
+        var selected = SelectedCategory;
+
         Categories.Clear();
         Categories.Add(AllCategoriesLabel);
-        foreach (var cat in WikiBlueprintService.KnownCategories)
-            Categories.Add(cat);
 
-        SelectedCategory = AllCategoriesLabel;
+        var dynamicCategories = _wikiBlueprints.GetCategories();
+        foreach (var cat in dynamicCategories)
+        {
+            if (!string.IsNullOrWhiteSpace(cat))
+                Categories.Add(cat);
+        }
+
+        if (selected != null && Categories.Contains(selected))
+            SelectedCategory = selected;
+        else
+            SelectedCategory = AllCategoriesLabel;
     }
- 
+
     private async Task LoadWikiCacheAsync()
     {
         try
         {
             StatusMessage = "Loading blueprints from Star Citizen wiki...";
             var count = await _wikiBlueprints.LoadAllAsync();
+
+            LoadCategoriesFromWiki();
+
             StatusMessage = count > 0
                 ? $"Loaded {count} blueprints. Use search to filter."
                 : "Could not reach Star Citizen wiki API.";
@@ -129,6 +181,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             StatusMessage = $"Wiki load error: {ex.Message}";
         }
     }
+
+    #endregion
+
+    #region Search / Selection
 
     [RelayCommand]
     private async Task SearchAsync()
@@ -144,7 +200,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             }
 
             var effectiveCategory = SelectedCategory == AllCategoriesLabel ? null : SelectedCategory;
-            var items = _wikiBlueprints.Search(SearchText, effectiveCategory);
+            var items = _wikiBlueprints.Search(SearchText, effectiveCategory, InGameOnly);
 
             Results.Clear();
             foreach (var item in items)
@@ -165,6 +221,11 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         }
     }
 
+    partial void OnSelectedCategoryChanged(string? value)
+    {
+        _ = SearchAsync();
+    }
+
     partial void OnSelectedBlueprintChanged(BlueprintSearchItemDto? value)
     {
         if (value is not null)
@@ -174,6 +235,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     partial void OnSelectedBlueprintDetailChanged(BlueprintDetailDto? value)
     {
         OnPropertyChanged(nameof(HasSelectedBlueprintDetail));
+        OnPropertyChanged(nameof(HasRewardPools));
     }
 
     private async Task LoadBlueprintDetailAsync(Guid blueprintId)
@@ -185,7 +247,11 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
             var detail = await _wikiBlueprints.GetDetailAsync(blueprintId);
 
+            System.Diagnostics.Debug.WriteLine(
+                $"Blueprint detail refreshed. Id={blueprintId}, OwnerCount={detail?.OwnerCount}");
+
             SelectedBlueprintDetail = detail;
+
             Materials.Clear();
             Components.Clear();
             CombinedModifiers.Clear();
@@ -193,14 +259,13 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             if (detail is null)
             {
                 StatusMessage = "Blueprint detail not found.";
+                RaiseDetailFlags();
                 return;
             }
 
-            // Load recipe materials
             foreach (var material in detail.Materials)
                 Materials.Add(new MaterialSelectionViewModel(material));
 
-            // Load components + converter stats (modifiers) from API
             if (detail.Components != null && detail.Components.Any())
             {
                 foreach (var component in detail.Components)
@@ -215,16 +280,18 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                         QualityValue = component.DefaultQuality
                     };
 
-                    // Add modifiers from API
                     if (component.Modifiers != null)
                     {
                         foreach (var mod in component.Modifiers)
                         {
-                            double baseValue = mod.ValueAt1000 > 0
-                                ? mod.ValueAt1000
-                                : (mod.AtMinQuality + mod.AtMaxQuality) / 2.0;
+                            System.Diagnostics.Debug.WriteLine(
+                                $"Part={component.PartName}, Material={component.MaterialName}, Stat={mod.PropertyKey}, AtMin={mod.AtMinQuality}, AtMax={mod.AtMaxQuality}");
 
-                            vm.Modifiers.Add(new StatModifier(mod.PropertyKey, baseValue, vm));
+                            vm.Modifiers.Add(new StatModifier(
+                                mod.PropertyKey,
+                                mod.AtMinQuality,
+                                mod.AtMaxQuality,
+                                vm));
                         }
                     }
 
@@ -233,6 +300,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             }
 
             UpdateCombinedModifiers();
+            RaiseDetailFlags();
 
             StatusMessage = $"Loaded {detail.BlueprintName} with {Components.Count} components.";
         }
@@ -240,6 +308,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Blueprint detail failed for {BlueprintId}", blueprintId);
             StatusMessage = $"Error loading blueprint: {ex.Message}";
+            RaiseDetailFlags();
         }
         finally
         {
@@ -247,17 +316,29 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         }
     }
 
+    private void RaiseDetailFlags()
+    {
+        OnPropertyChanged(nameof(HasComponents));
+        OnPropertyChanged(nameof(HasMaterials));
+        OnPropertyChanged(nameof(HasCombinedModifiers));
+        OnPropertyChanged(nameof(HasRewardPools));
+    }
+
+    #endregion
+
+    #region Combined Modifiers
+
     public void UpdateCombinedModifiers()
     {
         CombinedModifiers.Clear();
 
         var grouped = Components
-            .SelectMany<ComponentViewModel, StatModifier>(c => c.Modifiers)
-            .GroupBy<StatModifier, string>(m => m.StatName);
+            .SelectMany(c => c.Modifiers)
+            .GroupBy(m => m.StatName);
 
         foreach (var group in grouped)
         {
-            double total = group.Sum<StatModifier>(m => m.BaseValue * (m.ParentComponent.QualityValue / 1000.0));
+            double total = group.Sum(m => m.EffectiveAtQuality(m.ParentComponent.QualityValue));
 
             CombinedModifiers.Add(new BlueprintComponentModifierPreview
             {
@@ -266,16 +347,18 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             });
         }
 
-        // Calculate Final RPM based on fire rate modifier
         var fireRateMod = CombinedModifiers.FirstOrDefault(m =>
-            m.PropertyKey.Contains("fire_rate", StringComparison.OrdinalIgnoreCase))?.CalculatedValue ?? 0;
+            m.PropertyKey.Contains("fire_rate", StringComparison.OrdinalIgnoreCase) ||
+            m.PropertyKey.Contains("firerate", StringComparison.OrdinalIgnoreCase))?.CalculatedValue ?? 0;
 
         FinalRpm = (int)Math.Round(BaseRpm * (1 + fireRateMod / 100.0));
+
+        OnPropertyChanged(nameof(HasCombinedModifiers));
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Action commands
-    // ─────────────────────────────────────────────────────────────
+    #endregion
+
+    #region Actions
 
     [RelayCommand]
     private async Task MarkOwnedAsync()
@@ -284,48 +367,70 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task MarkWantedAsync()
-    {
-        await PostOwnershipAsync(MemberBlueprintInterestType.Wants, "Marked as Wanted.");
-    }
-
-    [RelayCommand]
     private void SelectAllMaterials()
     {
-        foreach (var m in Materials) m.IsSelected = true;
+        foreach (var m in Materials)
+            m.IsSelected = true;
     }
 
     [RelayCommand]
     private void ClearAllMaterials()
     {
-        foreach (var m in Materials) m.IsSelected = false;
+        foreach (var m in Materials)
+            m.IsSelected = false;
     }
 
     [RelayCommand]
     private async Task CreateCraftingRequestAsync()
     {
-        if (SelectedBlueprintDetail is null) return;
+        if (SelectedBlueprintDetail is null)
+            return;
+
+        var formVm = new CraftingRequestFormViewModel(
+            SelectedBlueprintDetail.Id,
+            SelectedBlueprintDetail.BlueprintName);
+
+        var dialog = new PackTracker.Presentation.Views.CraftingRequestFormDialog(formVm)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
         try
         {
             IsLoading = true;
+
             using var client = _apiClientProvider.CreateClient();
             var dto = new CreateCraftingRequestDto
             {
                 BlueprintId = SelectedBlueprintDetail.Id,
-                QuantityRequested = 1,
-                Priority = RequestPriority.Normal
+                CraftedItemName = SelectedBlueprintDetail.CraftedItemName,
+                QuantityRequested = formVm.QuantityRequested,
+                MinimumQuality = formVm.MinimumQuality,
+                Priority = formVm.Priority,
+                MaterialSupplyMode = formVm.MaterialSupplyMode,
+                RewardOffered = formVm.RewardOffered,
+                DeliveryLocation = formVm.DeliveryLocation,
+                Notes = formVm.Notes
             };
+
             var response = await client.PostAsJsonAsync("api/v1/crafting/requests", dto);
+
             StatusMessage = response.IsSuccessStatusCode
-                ? $"Crafting request created for {SelectedBlueprintDetail.BlueprintName}."
-                : $"Error {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+                ? $"Crafting request submitted for {SelectedBlueprintDetail.BlueprintName}."
+                : $"Error {(int)response.StatusCode}: {TrimForDisplay(await response.Content.ReadAsStringAsync())}";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "CreateCraftingRequest failed.");
             StatusMessage = $"Failed to create crafting request: {ex.Message}";
         }
-        finally { IsLoading = false; }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     [RelayCommand]
@@ -337,67 +442,110 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             StatusMessage = "Select at least one material to request.";
             return;
         }
+
         try
         {
             IsLoading = true;
+
             using var client = _apiClientProvider.CreateClient();
             int success = 0;
+
+            var errors = new List<string>();
+
             foreach (var material in selected)
             {
                 var dto = new CreateMaterialProcurementRequestDto
                 {
                     MaterialId = material.MaterialId,
+                    MaterialName = material.MaterialName,
                     QuantityRequested = (decimal)material.QuantityRequired,
                     MinimumQuality = material.RequestedQuality,
-                    Priority = RequestPriority.Normal
+                    Priority = RequestPriority.Normal,
+                    PreferredForm = MaterialFormPreference.Any
                 };
+
                 var response = await client.PostAsJsonAsync("api/v1/crafting/procurement-requests", dto);
-                if (response.IsSuccessStatusCode) success++;
+                if (response.IsSuccessStatusCode)
+                    success++;
+                else
+                    errors.Add($"{material.MaterialName}: {(int)response.StatusCode}");
             }
-            StatusMessage = $"Created {success}/{selected.Count} procurement requests.";
+
+            StatusMessage = success == selected.Count
+                ? $"Created {success}/{selected.Count} procurement requests."
+                : $"Created {success}/{selected.Count}. Failed: {string.Join(", ", errors)}";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "CreateProcurementRequest failed.");
             StatusMessage = $"Failed to create procurement requests: {ex.Message}";
         }
-        finally { IsLoading = false; }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task PostOwnershipAsync(MemberBlueprintInterestType interestType, string successMessage)
     {
-        if (SelectedBlueprintDetail is null) return;
+        if (SelectedBlueprintDetail is null)
+            return;
+
         try
         {
             IsLoading = true;
+
+            var blueprintId = SelectedBlueprintDetail.Id;
+
             using var client = _apiClientProvider.CreateClient();
             var dto = new RegisterBlueprintOwnershipRequest
             {
                 InterestType = interestType,
                 AvailabilityStatus = "Available"
             };
+
             var response = await client.PostAsJsonAsync(
-                $"api/v1/blueprints/{SelectedBlueprintDetail.Id}/ownership", dto);
-            StatusMessage = response.IsSuccessStatusCode
-                ? successMessage
-                : $"Error {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+                $"api/v1/blueprints/{blueprintId}/ownership",
+                dto);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusMessage = $"Error {(int)response.StatusCode}: {TrimForDisplay(await response.Content.ReadAsStringAsync())}";
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"Ownership post succeeded for blueprint {blueprintId}");
+
+            await LoadBlueprintDetailAsync(blueprintId);
+
+            System.Diagnostics.Debug.WriteLine(
+                $"After refresh, OwnerCount={SelectedBlueprintDetail?.OwnerCount}");
+
+            StatusMessage = successMessage;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "PostOwnership failed.");
             StatusMessage = $"Failed: {ex.Message}";
         }
-        finally { IsLoading = false; }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Helper methods
-    // ─────────────────────────────────────────────────────────────
+    #endregion
+
+    #region Helpers
 
     private static string TrimForDisplay(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return "<empty response>";
+        if (string.IsNullOrWhiteSpace(value))
+            return "<empty response>";
+
         var compact = value.Replace("\r", " ").Replace("\n", " ").Trim();
         return compact.Length <= 300 ? compact : compact[..300] + "...";
     }
+
+    #endregion
 }

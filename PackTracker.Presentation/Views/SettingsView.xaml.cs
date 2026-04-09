@@ -38,7 +38,6 @@ public partial class SettingsView : UserControl
         // Bind only the fields your app uses
         CmbThemes.ItemsSource = _themeManager.AvailableThemes;
         CmbThemes.SelectedItem = _current.Theme ?? _themeManager.CurrentTheme;
-        TxtRegolithApiKey.Text = _current.RegolithApiKey ?? string.Empty;
         TxtUexcorpApiKey.Text = _current.UexCorpApiKey ?? string.Empty;
         TxtGameLogFilePath.Text = _current.GameLogFilePath ?? string.Empty;
     }
@@ -61,7 +60,6 @@ public partial class SettingsView : UserControl
     private async void Save_Click(object sender, RoutedEventArgs e)
     {
         var selectedTheme = (CmbThemes.SelectedItem as string) ?? _themeManager.CurrentTheme;
-        var regolith = TxtRegolithApiKey.Text.Trim();
         var uex = TxtUexcorpApiKey.Text.Trim();
         var logPath = TxtGameLogFilePath.Text.Trim();
 
@@ -70,7 +68,6 @@ public partial class SettingsView : UserControl
             await _settingsService.UpdateSettingsAsync(settings =>
             {
                 settings.Theme = selectedTheme;
-                settings.RegolithApiKey = regolith;
                 settings.UexCorpApiKey = uex;
                 settings.GameLogFilePath = logPath;
                 _current = settings;
@@ -101,7 +98,6 @@ public partial class SettingsView : UserControl
 
             _current = _settingsService.GetSettings();
             CmbThemes.SelectedItem = _current.Theme ?? _themeManager.CurrentTheme;
-            TxtRegolithApiKey.Text = _current.RegolithApiKey ?? string.Empty;
         TxtUexcorpApiKey.Text = _current.UexCorpApiKey ?? string.Empty;
         TxtGameLogFilePath.Text = _current.GameLogFilePath ?? string.Empty;
     }

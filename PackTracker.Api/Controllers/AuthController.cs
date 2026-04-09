@@ -1,18 +1,16 @@
 using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using PackTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using PackTracker.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Caching.Memory;
-using PackTracker.Application.Interfaces;
-using PackTracker.Domain.Entities;
-using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Api.Controllers;
 
-/// <summary>
+/// <summary name="AuthController">
 /// Handles Discord OAuth login and JWT/refresh token issuance.
 /// </summary>
 [ApiController]
@@ -21,23 +19,23 @@ public class AuthController : ControllerBase
 {
     private readonly ISettingsService _settingsService;
     private readonly JwtTokenService _jwt;
+    private readonly IProfileService _profiles;
     private readonly AppDbContext _db;
     private readonly ILogger<AuthController> _logger;
     private readonly IMemoryCache _cache;
 
-    public AuthController(ISettingsService settingsService, JwtTokenService jwt, AppDbContext db, ILogger<AuthController> logger,
+    public AuthController(ISettingsService settingsService, JwtTokenService jwt, IProfileService profiles, AppDbContext db, ILogger<AuthController> logger,
         IMemoryCache cache)
     {
         _settingsService = settingsService;
         _jwt = jwt;
+        _profiles = profiles;
         _db = db;
         _logger = logger;
         _cache = cache;
     }
 
-    // =====================================================================
-    // STEP 1: Initiate Discord OAuth login
-    // =====================================================================
+
     [AllowAnonymous]
     [HttpGet("login")]
     public async Task<IActionResult> Login([FromQuery] string? clientState,
@@ -49,8 +47,7 @@ public class AuthController : ControllerBase
         var scheme = await schemes.GetSchemeAsync("Discord");
         if (scheme is null)
             return HtmlMessage("❌ Discord auth scheme is not registered. Check startup configuration.");
-
-        // Ensure credentials exist (defensive; startup already fails fast)
+        
         var settings = _settingsService.GetSettings();
         var clientId = settings.DiscordClientId;
         var clientSecret = settings.DiscordClientSecret;
@@ -74,10 +71,7 @@ public class AuthController : ControllerBase
         return Challenge(props, "Discord"); // should 302 to Discord now
     }
 
-
-    // =====================================================================
-    // STEP 2: Discord redirects here after successful login
-    // =====================================================================
+ 
     [Authorize(AuthenticationSchemes = "Cookies")]
     [HttpGet("complete")]
     public async Task<IActionResult> Complete(CancellationToken ct)
@@ -94,37 +88,36 @@ public class AuthController : ControllerBase
 
             var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var username = User.Identity?.Name ?? "(unknown)";
-
-            _logger.LogInformation("✅ Authenticated Discord user {User} ({Id})", username, discordId);
-
-            var profile = await _db.Profiles.FirstOrDefaultAsync(p => p.DiscordId == discordId, ct);
+            var displayName = User.FindFirstValue("urn:discord:displayname");
             var avatarUrl = User.FindFirstValue("urn:discord:avatar:url");
             var discriminator = User.FindFirstValue("urn:discord:discriminator") ?? string.Empty;
 
-            if (profile is null)
+            _logger.LogInformation("✅ Authenticated Discord user {User} ({Id})", username, discordId);
+
+            var accessToken = await HttpContext.GetTokenAsync("access_token");
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
-                profile = new Profile
-                {
-                    Id = Guid.NewGuid(),
-                    DiscordId = discordId!,
-                    Username = username ?? "(unknown)",
-                    Discriminator = discriminator,
-                    AvatarUrl = avatarUrl ?? string.Empty,
-                    CreatedAt = DateTime.UtcNow,
-                    LastLogin = DateTime.UtcNow
-                };
-                _db.Profiles.Add(profile);
-                _logger.LogInformation("Created profile for DiscordId={DiscordId}", discordId);
-            }
-            else
-            {
-                profile.Username = username ?? profile.Username;
-                profile.Discriminator = discriminator;
-                profile.AvatarUrl = avatarUrl ?? profile.AvatarUrl;
-                profile.LastLogin = DateTime.UtcNow;
-                _logger.LogInformation("Updated profile for DiscordId={DiscordId}", discordId);
+                _logger.LogWarning("⚠️ Missing Discord access token in context.");
+                return HtmlMessage("⚠️ Internal error: Missing Discord access token.");
             }
 
+            // Use ProfileService to handle the heavy lifting (guild check, rank fetch, etc.)
+            var profile = await _profiles.UpsertFromDiscordAsync(
+                accessToken,
+                discordId!,
+                username,
+                avatarUrl,
+                ct);
+
+            if (profile is null)
+            {
+                _logger.LogWarning("🚫 User {User} ({Id}) is not in the required Discord guild.", username, discordId);
+                return HtmlMessage("🚫 Access Denied: You must be a member of the required Discord guild to use PackTracker.");
+            }
+
+            // Sync display name and discriminator if they changed
+            profile.DiscordDisplayName = displayName ?? profile.DiscordDisplayName;
+            profile.Discriminator = discriminator;
             await _db.SaveChangesAsync(ct);
 
             // Generate token pair

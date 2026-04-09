@@ -1,6 +1,5 @@
 using System.IO;
 using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Claims;
 using System.Text;
@@ -18,13 +17,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PackTracker.Api.Controllers;
+using PackTracker.Api.Hubs;
 using PackTracker.Api.Middleware;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
-using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure;
-using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
+using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
 using Serilog;
 
@@ -43,8 +42,8 @@ public class ApiHostedService : IHostedService
 
     public ApiHostedService(ISettingsService settingsService, ILogger<ApiHostedService> logger)
     {
-        _settingsService = settingsService;
-        _logger = logger;
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -54,37 +53,31 @@ public class ApiHostedService : IHostedService
 
         try
         {
-            _baseUrl = "http://localhost:5001"; // hardcode for testing
+            _baseUrl = "http://localhost:5001";
 
+            _logger.LogInformation("Initializing embedded PackTracker API on {Url}...", _baseUrl);
 
-            _logger.LogInformation("🚀 Initializing embedded PackTracker API on {Url}...", _baseUrl);
             var config = new ConfigurationBuilder()
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true,
-                    reloadOnChange: true)
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true, reloadOnChange: true)
                 .AddUserSecrets<ApiHostedService>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();
 
             var settings = _settingsService.GetSettings();
 
-            // Merge config priorities (Environment > appsettings > user settings)
             settings.JwtKey = config["Jwt:Key"] ?? settings.JwtKey;
             settings.JwtIssuer = config["Jwt:Issuer"] ?? settings.JwtIssuer ?? "PackTracker";
             settings.JwtAudience = config["Jwt:Audience"] ?? settings.JwtAudience ?? "PackTrackerClient";
 
             settings.ConnectionString = config.GetConnectionString("DefaultConnection") ?? settings.ConnectionString;
             settings.DiscordClientId = config["Discord:ClientId"] ?? settings.DiscordClientId;
-            settings.DiscordClientSecret =
-                config["Discord:ClientSecret"] ?? settings.DiscordClientSecret;
-            settings.DiscordCallbackPath = config["Discord:CallbackPath"] ??
-                                           settings.DiscordCallbackPath ?? "/signin-discord";
-            settings.DiscordRequiredGuildId =
-                config["Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
+            settings.DiscordClientSecret = config["Discord:ClientSecret"] ?? settings.DiscordClientSecret;
+            settings.DiscordCallbackPath = config["Discord:CallbackPath"] ?? settings.DiscordCallbackPath ?? "/signin-discord";
+            settings.DiscordRequiredGuildId = config["Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
             settings.RegolithApiKey = config["Regolith:ApiKey"] ?? settings.RegolithApiKey;
             settings.UexCorpApiKey = config["Uex:ApiKey"] ?? settings.UexCorpApiKey;
             settings.UexBaseUrl = config["Uex:BaseUrl"] ?? settings.UexBaseUrl;
 
-            // Validate essentials
             if (string.IsNullOrWhiteSpace(settings.ConnectionString))
                 throw new InvalidOperationException("Database connection string missing.");
 
@@ -94,21 +87,24 @@ public class ApiHostedService : IHostedService
             if (string.IsNullOrWhiteSpace(settings.DiscordClientId) ||
                 string.IsNullOrWhiteSpace(settings.DiscordClientSecret))
                 throw new InvalidOperationException("Discord OAuth credentials missing.");
+
             if (string.IsNullOrWhiteSpace(settings.DiscordCallbackPath))
                 throw new InvalidOperationException("Discord callback path missing.");
+
             if (string.IsNullOrWhiteSpace(settings.DiscordRequiredGuildId))
                 throw new InvalidOperationException("Discord required guild ID missing.");
+
             if (string.IsNullOrWhiteSpace(settings.RegolithApiKey))
                 throw new InvalidOperationException("Regolith API key missing.");
+
             if (string.IsNullOrWhiteSpace(settings.UexCorpApiKey))
                 throw new InvalidOperationException("Uex Corp API key missing.");
+
             if (string.IsNullOrWhiteSpace(settings.UexBaseUrl))
                 throw new InvalidOperationException("Uex Base URL missing.");
-            
-            _logger.LogInformation(@"✅ Configuration loaded and validated successfully. Starting API host...");  
 
+            _logger.LogInformation("Configuration loaded and validated successfully. Starting API host...");
 
-            // Build the self-hosted API
             _apiHost = Host.CreateDefaultBuilder()
                 .ConfigureLogging(builder =>
                 {
@@ -118,49 +114,66 @@ public class ApiHostedService : IHostedService
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseUrls(_baseUrl);
-                    _logger.LogInformation("✅ Embedded API running on {Url}/api/v1/Auth/login", _baseUrl);
-
-                    // Configure services
-
                     webBuilder.UseContentRoot(AppContext.BaseDirectory);
                     webBuilder.UseWebRoot(Path.Combine(AppContext.BaseDirectory, "wwwroot"));
+
                     webBuilder.ConfigureServices(services =>
                     {
                         services.AddSingleton(_settingsService);
+
                         services.AddDataProtection()
                             .PersistKeysToFileSystem(new DirectoryInfo(
-                                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                                    "packtracker", "apihosted")));
+                                Path.Combine(
+                                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                    "packtracker",
+                                    "apihosted")));
 
-                        services.AddInfrastructure(_settingsService);
+                        services.AddHttpClient();
                         services.AddHealthChecks();
                         services.AddMemoryCache();
 
-                        // Options pattern
-                        services.Configure<RegolithOptions>(o =>
-                        {
-                            o.ApiKey = settings.RegolithApiKey;
-                            o.BaseUrl = settings.RegolithBaseUrl;
-                        });
                         services.Configure<UexOptions>(o =>
                         {
                             o.ApiKey = settings.UexCorpApiKey;
                             o.BaseUrl = settings.UexBaseUrl;
                         });
 
-                        // EF Core
+                        // EF Core DbContext is Scoped by design
                         services.AddDbContext<AppDbContext>(options =>
                             options.UseNpgsql(settings.ConnectionString));
 
-                        // Authentication
+                        // Infrastructure registrations
+                        services.AddInfrastructure(_settingsService);
+
+                        // IMPORTANT:
+                        // Anything using AppDbContext must be Scoped, not Singleton.
+                        services.AddScoped<JwtTokenService>();
+                        services.AddScoped<CraftingSeedService>();
+
                         services.AddAuthentication(o =>
                             {
-                                o.DefaultScheme = "Cookies";
+                                // Smart scheme: picks JWT for API/SignalR, Cookies for browser flows
+                                o.DefaultScheme = "Smart";
                                 o.DefaultChallengeScheme = "Discord";
+                            })
+                            .AddPolicyScheme("Smart", "JWT or Cookie", o =>
+                            {
+                                o.ForwardDefaultSelector = ctx =>
+                                {
+                                    var auth = ctx.Request.Headers["Authorization"].FirstOrDefault();
+                                    if (!string.IsNullOrEmpty(auth) && auth.StartsWith("Bearer "))
+                                        return JwtBearerDefaults.AuthenticationScheme;
+
+                                    if (ctx.Request.Query.ContainsKey("access_token") &&
+                                        ctx.Request.Path.StartsWithSegments("/hubs"))
+                                        return JwtBearerDefaults.AuthenticationScheme;
+
+                                    return "Cookies";
+                                };
                             })
                             .AddCookie("Cookies", o =>
                             {
-                                o.Cookie.SameSite = SameSiteMode.Lax;   // OK for local OAuth
+                                o.Cookie.SameSite = SameSiteMode.Lax;
                                 o.Cookie.SecurePolicy = CookieSecurePolicy.None;
                             })
                             .AddDiscord("Discord", o =>
@@ -171,10 +184,25 @@ public class ApiHostedService : IHostedService
                                 o.SaveTokens = true;
                                 o.Scope.Add("identify");
                                 o.Scope.Add("guilds");
+                                o.Scope.Add("guilds.members.read");
 
                                 o.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
                                 o.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
-                                o.ClaimActions.MapJsonKey("urn:discord:avatar:url", "avatar");
+                                o.ClaimActions.MapJsonKey("urn:discord:displayname", "global_name");
+                                o.ClaimActions.MapJsonKey("urn:discord:avatar", "avatar");
+                                o.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
+
+                                o.Events.OnCreatingTicket = ctx =>
+                                {
+                                    var userId = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                                    var avatar = ctx.User.GetProperty("avatar").GetString();
+                                    if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(avatar))
+                                    {
+                                        var avatarUrl = $"https://cdn.discordapp.com/avatars/{userId}/{avatar}.png";
+                                        ctx.Identity?.AddClaim(new Claim("urn:discord:avatar:url", avatarUrl));
+                                    }
+                                    return Task.CompletedTask;
+                                };
                             })
                             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                             {
@@ -186,29 +214,46 @@ public class ApiHostedService : IHostedService
                                     ValidateIssuerSigningKey = true,
                                     ValidIssuer = settings.JwtIssuer,
                                     ValidAudience = settings.JwtAudience,
-                                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.JwtKey))
+                                    IssuerSigningKey = new SymmetricSecurityKey(
+                                        Encoding.UTF8.GetBytes(settings.JwtKey))
+                                };
+
+                                // SignalR WebSocket connections can't send headers —
+                                // read the JWT from the access_token query parameter instead.
+                                options.Events = new JwtBearerEvents
+                                {
+                                    OnMessageReceived = ctx =>
+                                    {
+                                        var token = ctx.Request.Query["access_token"].ToString();
+                                        if (!string.IsNullOrEmpty(token) &&
+                                            ctx.Request.Path.StartsWithSegments("/hubs"))
+                                        {
+                                            ctx.Token = token;
+                                        }
+                                        return Task.CompletedTask;
+                                    }
                                 };
                             });
 
-                        // Authorization
                         services.AddAuthorization(options =>
                         {
                             options.AddPolicy("HouseWolfOnly", policy =>
                                 policy.RequireClaim(ClaimTypes.Role, "HouseWolfMember"));
                         });
 
-                        // MVC & Swagger
-                        services.AddScoped<CraftingSeedService>();
-                        services.AddControllers().AddApplicationPart(typeof(ProfilesController).Assembly);
+                        services.AddSignalR();
+
+                        services.AddControllers()
+                            .AddApplicationPart(typeof(ProfilesController).Assembly);
+
                         services.AddEndpointsApiExplorer();
                         services.AddSwaggerGen(c =>
                         {
                             c.SwaggerDoc("v1", new OpenApiInfo
                             {
-                                Title = "🐺 PackTracker API",
+                                Title = "PackTracker API",
                                 Version = "v1",
-                                Description =
-                                    "Embedded API powering PackTracker — House Wolf’s logistics and data system.",
+                                Description = "Embedded API powering PackTracker.",
                                 Contact = new OpenApiContact
                                 {
                                     Name = "House Wolf",
@@ -218,36 +263,41 @@ public class ApiHostedService : IHostedService
                         });
                     });
 
-                    // Configure HTTP pipeline
                     webBuilder.Configure(app =>
                     {
                         var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
-                        
+
+                        if (env.IsDevelopment())
+                        {
+                            app.UseSwagger();
+                            app.UseSwaggerUI();
+                        }
+
                         app.UseRouting();
                         app.UseAuthentication();
                         app.UseAuthorization();
                         app.UseMiddleware<ExceptionHandlingMiddleware>();
-                        
+
                         app.UseEndpoints(endpoints =>
                         {
                             endpoints.MapControllers();
+                            endpoints.MapHub<RequestsHub>(RequestsHub.Route);
                             endpoints.MapHealthChecks("/health");
                         });
                     });
                 })
                 .Build();
 
-            // ── Database initialization & data cleanup ─────────────────────────────
             await InitializeDatabaseAsync(cancellationToken);
 
             await _apiHost.StartAsync(cancellationToken);
             await _settingsService.UpdateSettingsAsync(s => s.ApiBaseUrl = _baseUrl);
 
-            _logger.LogInformation("✅ Embedded API running at {Url}", _baseUrl);
+            _logger.LogInformation("Embedded API running at {Url}", _baseUrl);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Failed to start embedded API host.");
+            _logger.LogError(ex, "Failed to start embedded API host.");
             throw;
         }
     }
@@ -263,22 +313,52 @@ public class ApiHostedService : IHostedService
         {
             db.Database.EnsureCreated();
 
-            // Add wiki sync columns idempotently (safe for both fresh and existing DBs)
-            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
-            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)", ct);
-            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
-            await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)", ct);
-            await db.Database.ExecuteSqlRawAsync(@"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")", ct);
-            await db.Database.ExecuteSqlRawAsync(@"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")", ct);
 
-            // Remove corrupt records created by a previous broken wiki sync
-            // (all fields deserialized as empty/default because the {"data":{}} wrapper was missed)
-            await db.Database.ExecuteSqlRawAsync(@"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''", ct);
 
-            // Fix any leftover IsInGameAvailable=false rows — all wiki/scunpacked blueprints are in-game
-            await db.Database.ExecuteSqlRawAsync(@"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE", ct);
 
-            // Remap raw game type identifiers to user-friendly category names
+            // Schema additions added after initial EnsureCreated — safe to run repeatedly
+            await db.Database.ExecuteSqlRawAsync(
+                @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""MaterialSupplyMode"" integer NOT NULL DEFAULT 2", ct);
+            await db.Database.ExecuteSqlRawAsync(
+                @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""ItemName"" character varying(300)", ct);
+
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""AssistanceRequests"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""Kind"" integer NOT NULL DEFAULT 0,
+                    ""Title"" character varying(120) NOT NULL,
+                    ""Description"" character varying(4000),
+                    ""Priority"" integer NOT NULL DEFAULT 1,
+                    ""Status"" integer NOT NULL DEFAULT 0,
+                    ""CreatedByProfileId"" uuid NOT NULL,
+                    ""AssignedToProfileId"" uuid,
+                    ""MaterialName"" character varying(100),
+                    ""QuantityNeeded"" integer,
+                    ""MeetingLocation"" character varying(100),
+                    ""RewardOffered"" character varying(100),
+                    ""NumberOfHelpersNeeded"" integer,
+                    ""DueAt"" timestamp with time zone,
+                    ""CreatedAt"" timestamp with time zone NOT NULL,
+                    ""UpdatedAt"" timestamp with time zone NOT NULL,
+                    ""CompletedAt"" timestamp with time zone
+                )", ct);
+
             await db.Database.ExecuteSqlRawAsync(@"
                 UPDATE ""Blueprints"" SET ""Category"" = CASE ""Category""
                     WHEN 'WeaponPersonal'        THEN 'Personal Weapon'
@@ -297,30 +377,33 @@ public class ApiHostedService : IHostedService
                     'Char_Armor_Helmet','Char_Armor_Undersuit','Char_Armor_Backpack'
                 )", ct);
 
-            log.LogInformation("✅ Database initialization and cleanup complete.");
+            log.LogInformation("Database initialization and cleanup complete.");
         }
         catch (Exception ex)
         {
-            log.LogError(ex, "❌ Database initialization failed — wiki sync or seed may not work correctly.");
+            log.LogError(ex, "Database initialization failed.");
         }
 
-        // Seed blueprint data from scunpacked local file
         try
         {
             var seedService = sp.GetRequiredService<CraftingSeedService>();
 
-            // Try solution-root path (dev layout: 4 directories up from bin output)
             var blueprintPath = Path.GetFullPath(
-                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scunpacked-data", "blueprints.json"));
+                Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..", "..", "..", "..",
+                    "scunpacked-data",
+                    "blueprints.json"));
 
-            // Fallback: wwwroot/data/crafting-seed.json alongside the executable
             var fallbackPath = Path.Combine(AppContext.BaseDirectory, "data", "crafting-seed.json");
 
-            await seedService.SeedAsync(File.Exists(blueprintPath) ? blueprintPath : fallbackPath, ct);
+            await seedService.SeedAsync(
+                File.Exists(blueprintPath) ? blueprintPath : fallbackPath,
+                ct);
         }
         catch (Exception ex)
         {
-            log.LogError(ex, "❌ Crafting seed failed.");
+            log.LogError(ex, "Crafting seed failed.");
         }
     }
 
@@ -330,12 +413,12 @@ public class ApiHostedService : IHostedService
         {
             try
             {
-                var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
+                var listener = new TcpListener(IPAddress.Loopback, port);
                 listener.Start();
                 listener.Stop();
                 return port;
             }
-            catch (System.Net.Sockets.SocketException)
+            catch (SocketException)
             {
                 continue;
             }
@@ -352,7 +435,7 @@ public class ApiHostedService : IHostedService
         var port = uri.Port;
         if (!IsPortAvailable(port))
         {
-            _logger.LogWarning("Port {Port} is unavailable. Selecting an alternate port for the embedded API.", port);
+            _logger.LogWarning("Port {Port} is unavailable. Selecting alternate port.", port);
             port = GetAvailablePort(port + 1, port + 1000);
         }
 
@@ -381,15 +464,14 @@ public class ApiHostedService : IHostedService
 
         try
         {
-            _logger.LogInformation("🛑 Stopping embedded API...");
+            _logger.LogInformation("Stopping embedded API...");
             await _apiHost.StopAsync(cancellationToken);
-            await _apiHost.WaitForShutdownAsync(cancellationToken);
             _apiHost.Dispose();
-            _logger.LogInformation("✅ Embedded API stopped cleanly.");
+            _logger.LogInformation("Embedded API stopped cleanly.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "⚠️ Error during embedded API shutdown.");
+            _logger.LogError(ex, "Error during embedded API shutdown.");
         }
     }
 }

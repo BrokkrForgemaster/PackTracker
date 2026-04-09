@@ -69,7 +69,88 @@ public class UexService : IUexService
     // ============================================================
     public async Task<List<Commodity>> CommoditiesAsync(CancellationToken ct)
     {
+        var dbCount = await _db.Commodities.CountAsync(ct);
+        if (dbCount == 0)
+        {
+            _logger.LogInformation("📦 No commodities found in DB. Triggering initial sync from UEX...");
+            await SyncCommoditiesAsync(ct);
+        }
+
         return await _db.Commodities.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct);
+    }
+
+    public async Task SyncCommoditiesAsync(CancellationToken ct)
+    {
+        try
+        {
+            _logger.LogInformation("🌐 Fetching all commodities from UEX...");
+            var result = await _httpClient.GetFromJsonAsync<UexApiResponse<List<CommodityDto>>>("commodities", JsonOptions, ct);
+
+            if (result?.Data == null || result.Data.Count == 0)
+            {
+                _logger.LogWarning("⚠️ No commodities returned from UEX.");
+                return;
+            }
+
+            _logger.LogInformation("✅ Retrieved {Count} commodities from UEX. Syncing to DB...", result.Data.Count);
+
+            foreach (var dto in result.Data)
+            {
+                var existing = await _db.Commodities.FirstOrDefaultAsync(c => c.Id == dto.Id, ct);
+                if (existing != null)
+                {
+                    UpdateCommodityFromDto(existing, dto);
+                    _db.Commodities.Update(existing);
+                }
+                else
+                {
+                    var newCommodity = new Commodity { Id = dto.Id };
+                    UpdateCommodityFromDto(newCommodity, dto);
+                    _db.Commodities.Add(newCommodity);
+                }
+            }
+
+            await _db.SaveChangesAsync(ct);
+            _logger.LogInformation("✅ Successfully synced {Count} commodities to DB.", result.Data.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error syncing commodities from UEX.");
+            throw;
+        }
+    }
+
+    private static void UpdateCommodityFromDto(Commodity entity, CommodityDto dto)
+    {
+        entity.ParentId = dto.Id_Parent;
+        entity.Name = dto.Name;
+        entity.Code = dto.Code;
+        entity.Slug = dto.Slug ?? dto.Code.ToLowerInvariant();
+        entity.Kind = dto.Kind;
+        entity.WeightScu = (int?)dto.Weight_Scu;
+        entity.IsAvailable = dto.Is_Available == 1;
+        entity.IsAvailableLive = dto.Is_Available_Live == 1;
+        entity.IsVisible = dto.Is_Visible == 1;
+        entity.IsExtractable = dto.Is_Extractable == 1;
+        entity.IsMineral = dto.Is_Mineral == 1;
+        entity.IsRaw = dto.Is_Raw == 1;
+        entity.IsPure = dto.Is_Pure == 1;
+        entity.IsRefined = dto.Is_Refined == 1;
+        entity.IsRefinable = dto.Is_Refinable == 1;
+        entity.IsHarvestable = dto.Is_Harvestable == 1;
+        entity.IsBuyable = dto.Is_Buyable == 1;
+        entity.IsSellable = dto.Is_Sellable == 1;
+        entity.IsTemporary = dto.Is_Temporary == 1;
+        entity.IsIllegal = dto.Is_Illegal == 1;
+        entity.IsVolatileQt = dto.Is_Volatile_Qt == 1;
+        entity.IsVolatileTime = dto.Is_Volatile_Time == 1;
+        entity.IsInert = dto.Is_Inert == 1;
+        entity.IsExplosive = dto.Is_Explosive == 1;
+        entity.IsFuel = dto.Is_Fuel == 1;
+        entity.IsBuggy = dto.Is_Buggy == 1;
+        entity.Wiki = dto.Wiki;
+        entity.DateAdded = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Added).UtcDateTime;
+        entity.DateModified = DateTimeOffset.FromUnixTimeSeconds(dto.Date_Modified).UtcDateTime;
     }
 
     // ============================================================

@@ -1,74 +1,132 @@
-using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
-using PackTracker.Application.Options;
 using PackTracker.Infrastructure.BackgroundServices;
+using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
 
 namespace PackTracker.Infrastructure;
 
-/// <summary name="DependencyInjection">
-/// Extension methods for setting up the infrastructure services in an <see cref="IServiceCollection"/>.
+/// <summary>
+/// Provides extension methods for registering PackTracker infrastructure services.
 /// </summary>
 public static class DependencyInjection
 {
+    #region Public Methods
+
+    /// <summary>
+    /// Registers infrastructure services, persistence, external clients, caching, and background services.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="settings">The application settings service.</param>
+    /// <returns>The updated service collection.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the database connection string is missing or invalid.
+    /// </exception>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         ISettingsService settings)
     {
-        var connectionString = settings?.GetSettings().ConnectionString;
+        if (settings is null)
+            throw new ArgumentNullException(nameof(settings));
+
+        var appSettings = settings.GetSettings();
+        var connectionString = appSettings.ConnectionString;
+
         if (string.IsNullOrWhiteSpace(connectionString))
-            throw new InvalidOperationException("❌ No database connection string configured. Set it via the Settings view or user secrets.");
+        {
+            throw new InvalidOperationException(
+                "No database connection string configured. Set it via the Settings view or user secrets.");
+        }
 
-        Console.WriteLine($"✅ Using connection: {connectionString.Substring(0, Math.Min(40, connectionString.Length))}...");
+        RegisterPersistence(services, connectionString);
+        RegisterCoreServices(services, settings);
+        RegisterHttpClients(services, appSettings);
+        RegisterBackgroundServices(services);
 
+        services.AddMemoryCache();
+
+        return services;
+    }
+
+    #endregion
+
+    #region Private Registration Methods
+
+    /// <summary>
+    /// Registers the Entity Framework database context and persistence options.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="connectionString">The PostgreSQL connection string.</param>
+    private static void RegisterPersistence(IServiceCollection services, string connectionString)
+    {
         services.AddDbContext<AppDbContext>(options =>
         {
             options.UseNpgsql(connectionString);
             options.EnableDetailedErrors();
         });
+    }
 
+    /// <summary>
+    /// Registers core infrastructure services used across the application.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="settings">The settings service.</param>
+    private static void RegisterCoreServices(IServiceCollection services, ISettingsService settings)
+    {
         services.AddSingleton(settings);
+
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IWikiSyncService, WikiSyncService>();
         services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+
         services.AddSingleton<JwtTokenService>();
-
-        // 7️⃣ HttpClients
-        services.AddHttpClient<IRegolithService, RegolithService>(client =>
-        {
-            var regolithBaseUrl = settings?.GetSettings().RegolithBaseUrl;
-            if (regolithBaseUrl != null) client.BaseAddress = new Uri(regolithBaseUrl);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
-        });
-
-        services.AddHttpClient<IUexService, UexService>(client =>
-        {
-            var uexBaseUrl = settings?.GetSettings().UexBaseUrl;
-            if (uexBaseUrl != null) client.BaseAddress = new Uri(uexBaseUrl);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
-        });
-        services.AddTransient<JwtTokenService>();
         services.AddSingleton<IRequestsService, RequestsService>();
-        services.AddSingleton<IKillEventService, KillEventService>();
-        services.AddSingleton<IGameLogService, GameLogService>();
+    }
+
+    /// <summary>
+    /// Registers named and typed HTTP clients for supported external integrations.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="appSettings">The resolved application settings.</param>
+    private static void RegisterHttpClients(IServiceCollection services, dynamic appSettings)
+    {
+        if (!string.IsNullOrWhiteSpace((string?)appSettings.UexBaseUrl))
+        {
+            services.AddHttpClient<IUexService, UexService>(client =>
+            {
+                client.BaseAddress = new Uri(appSettings.UexBaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/0.1.3 (+https://housewolf.io)");
+            });
+        }
+        else
+        {
+            services.AddHttpClient<IUexService, UexService>(client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/0.1.3 (+https://housewolf.io)");
+            });
+        }
+
         services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
 
         services.AddHttpClient("WikiApi", client =>
         {
             client.BaseAddress = new Uri("https://api.star-citizen.wiki/api/");
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/1.0 (+https://housewolf.io)");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("PackTracker/0.1.3 (+https://housewolf.io)");
         });
-
-        services.AddScoped<IWikiSyncService, WikiSyncService>();
-        services.AddHostedService<WikiSyncBackgroundService>();
-
-        services.AddMemoryCache();
-        return services;
     }
-}
 
+    /// <summary>
+    /// Registers hosted background services.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    private static void RegisterBackgroundServices(IServiceCollection services)
+    {
+        services.AddHostedService<WikiSyncBackgroundService>();
+    }
+
+    #endregion
+}

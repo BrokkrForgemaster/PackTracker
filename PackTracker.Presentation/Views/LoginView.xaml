@@ -4,51 +4,90 @@
              Background="Transparent">
 
     <Grid>
-        <Border Background="{DynamicResource AppBackgroundBrush}"/>
+        <Border Background="{DynamicResource AppBackgroundBrush}" />
 
         <Grid HorizontalAlignment="Center"
               VerticalAlignment="Center"
               Width="400">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- Logo / Wordmark -->
             <StackPanel Grid.Row="0"
                         HorizontalAlignment="Center"
                         Margin="0,0,0,40">
-                <Border Width="72"
-                        Height="72"
+                <Border Width="200"
+                        Height="200"
                         CornerRadius="18"
-                        Background="{DynamicResource SurfaceAltBrush}"
-                        BorderBrush="{DynamicResource PanelStrokeBrush}"
+                        Background="Transparent"
                         BorderThickness="1"
                         HorizontalAlignment="Center"
                         Margin="0,0,0,16">
+
+                    <Border.Effect>
+                        <DropShadowEffect x:Name="PulseShadow"
+                                          Color="#FFD6B25E"
+                                          BlurRadius="15"
+                                          ShadowDepth="0"
+                                          Opacity="0.6" />
+                    </Border.Effect>
+
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+
+                                    <!-- Bigger glow -->
+                                    <DoubleAnimation Storyboard.TargetName="PulseShadow"
+                                                     Storyboard.TargetProperty="BlurRadius"
+                                                     From="15" To="40"
+                                                     Duration="0:0:1.2" />
+
+                                    <!-- Stronger brightness -->
+                                    <DoubleAnimation Storyboard.TargetName="PulseShadow"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     From="0.5" To="1.0"
+                                                     Duration="0:0:1.2" />
+
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+
                     <Image Source="/Assets/HWiconnew.png"
-                           Width="52"
-                           Height="52"
+                           Width="200"
+                           Height="200"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            RenderOptions.BitmapScalingMode="HighQuality"
-                           Stretch="Uniform"/>
+                           Stretch="Uniform" />
                 </Border>
 
                 <TextBlock Text="PackTracker"
-                           FontSize="22"
+                           FontSize="52"
                            FontWeight="SemiBold"
-                           Foreground="White"
-                           HorizontalAlignment="Center"/>
+                           Foreground="#FFF8F8F8"
+                           HorizontalAlignment="Center">
+
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="#AA000000"
+                                          BlurRadius="6"
+                                          ShadowDepth="1"
+                                          Opacity="0.6"/>
+                    </TextBlock.Effect>
+
+                </TextBlock>
 
                 <TextBlock Text="House Wolf Operations"
-                           FontSize="13"
+                           FontSize="23"
                            Foreground="{DynamicResource TextMutedBrush}"
                            HorizontalAlignment="Center"
-                           Margin="0,4,0,0"/>
+                           Margin="0,4,0,0" />
             </StackPanel>
 
             <!-- Status pill -->
@@ -67,11 +106,11 @@
                              Height="7"
                              Fill="LightGreen"
                              VerticalAlignment="Center"
-                             Margin="0,0,8,0"/>
+                             Margin="0,0,8,0" />
                     <TextBlock x:Name="DiscordStatus"
                                FontSize="13"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               VerticalAlignment="Center"/>
+                               VerticalAlignment="Center" />
                 </StackPanel>
             </Border>
 
@@ -81,22 +120,24 @@
                     BorderBrush="{DynamicResource PanelStrokeBrush}"
                     BorderThickness="1"
                     CornerRadius="16"
+                    Opacity="0.95"
                     Padding="28">
                 <StackPanel>
                     <TextBlock Text="Sign in to continue"
                                FontSize="17"
                                FontWeight="SemiBold"
                                Foreground="White"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center" />
 
-                    <TextBlock Text="PackTracker uses Discord OAuth to verify your House Wolf membership. No passwords stored."
-                               FontSize="13"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               TextWrapping="Wrap"
-                               TextAlignment="Center"
-                               HorizontalAlignment="Center"
-                               MaxWidth="300"
-                               Margin="0,8,0,24"/>
+                    <TextBlock
+                        Text="PackTracker uses Discord OAuth to verify your House Wolf membership. No passwords stored."
+                        FontSize="13"
+                        Foreground="{DynamicResource TextMutedBrush}"
+                        TextWrapping="Wrap"
+                        TextAlignment="Center"
+                        HorizontalAlignment="Center"
+                        MaxWidth="300"
+                        Margin="0,8,0,24" />
 
                     <Button x:Name="DiscordLoginButton"
                             Click="DiscordLogin_Click"
@@ -113,21 +154,21 @@
                                 <TextBlock Text="D"
                                            FontSize="12"
                                            FontWeight="Black"
-                                           Foreground="White"/>
+                                           Foreground="White" />
                             </Border>
                             <TextBlock Text="Continue with Discord"
-                                       VerticalAlignment="Center"/>
+                                       VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
                     <Grid Margin="0,20,0,20">
-                        <Separator Background="{DynamicResource PanelStrokeBrush}" VerticalAlignment="Center"/>
+                        <Separator Background="{DynamicResource PanelStrokeBrush}" VerticalAlignment="Center" />
                         <Border Background="{DynamicResource SurfaceAltBrush}"
                                 HorizontalAlignment="Center"
                                 Padding="10,0">
                             <TextBlock Text="having trouble?"
                                        FontSize="12"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                                       Foreground="{DynamicResource TextMutedBrush}" />
                         </Border>
                     </Grid>
 
@@ -135,7 +176,7 @@
                             Click="RetryApi_Click"
                             Height="38"
                             FontSize="13"
-                            Style="{StaticResource SecondaryActionButtonStyle}"/>
+                            Style="{StaticResource SecondaryActionButtonStyle}" />
                 </StackPanel>
             </Border>
 
@@ -152,23 +193,23 @@
                            FontWeight="Bold"
                            Foreground="LimeGreen"
                            VerticalAlignment="Center"
-                           Margin="0,0,6,0"/>
+                           Margin="0,0,6,0" />
                 <TextBlock Text="Authenticated — redirecting to dashboard"
                            FontSize="13"
                            Foreground="{DynamicResource TextMutedBrush}"
-                           VerticalAlignment="Center"/>
+                           VerticalAlignment="Center" />
             </StackPanel>
 
             <!-- Footer note -->
             <TextBlock Grid.Row="4"
-                       Text="A browser window will open for OAuth. It will close automatically."
-                       FontSize="12"
+                       Text="A browser window will open for OAuth login. Once authenticated, you'll be redirected back to the app, and can safely close the browser tab."
+                       FontSize="14"
                        Foreground="{DynamicResource TextMutedBrush}"
                        HorizontalAlignment="Center"
                        TextAlignment="Center"
                        TextWrapping="Wrap"
                        MaxWidth="320"
-                       Margin="0,24,0,0"/>
+                       Margin="0,24,0,0" />
         </Grid>
     </Grid>
 </UserControl>

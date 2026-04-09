@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Application.DTOs.Request;
+using PackTracker.Domain.Enums;
 using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.ViewModels;
@@ -11,52 +13,101 @@ namespace PackTracker.Presentation.ViewModels;
 public partial class ProcurementRequestsViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
+    private CancellationTokenSource? _loadCommentsCts;
+    private string _currentUsername = string.Empty;
 
     public ObservableCollection<MaterialProcurementRequestListItemDto> Requests { get; } = new();
+    public ObservableCollection<RequestCommentDto> Comments { get; } = new();
 
     [ObservableProperty] private MaterialProcurementRequestListItemDto? selectedRequest;
     [ObservableProperty] private bool isLoading;
-    [ObservableProperty] private string statusMessage = "Loading material procurement requests...";
+    [ObservableProperty] private string statusMessage = "Ready";
     [ObservableProperty] private string newCommentText = string.Empty;
 
-    public ObservableCollection<RequestCommentDto> Comments { get; } = new();
+    #region Command Execution Logic
 
-    public bool CanClaim => SelectedRequest is not null && SelectedRequest.Status == "Open";
-    public bool CanRefuse => SelectedRequest is not null && (SelectedRequest.Status == "Open" || SelectedRequest.Status == "InProgress");
-    public bool CanMarkInProgress => SelectedRequest is not null && SelectedRequest.Status == "Open";
-    public bool CanMarkCompleted => SelectedRequest is not null
-        && (SelectedRequest.Status == "Open" || SelectedRequest.Status == "InProgress");
-    public bool CanCancel => SelectedRequest is not null
-        && SelectedRequest.Status != "Completed" && SelectedRequest.Status != "Cancelled";
+    public bool CanClaim => SelectedRequest?.Status == RequestStatus.Open;
+
+    
+
+    public bool CanMarkInProgress => SelectedRequest?.Status == RequestStatus.Open;
+
+    public bool CanMarkCompleted => SelectedRequest is not null &&
+                                   (SelectedRequest.Status == RequestStatus.Open ||
+                                    SelectedRequest.Status == RequestStatus.InProgress);
+
+    // Only the original requester may cancel
+    public bool CanCancel => SelectedRequest is not null &&
+                             SelectedRequest.Status != RequestStatus.Completed &&
+                             SelectedRequest.Status != RequestStatus.Cancelled &&
+                             SelectedRequest.RequesterUsername == _currentUsername;
+
+    #endregion
 
     public ProcurementRequestsViewModel(IApiClientProvider apiClientProvider)
     {
         _apiClientProvider = apiClientProvider;
-        StatusMessage = "Loading material procurement requests...";
-        _ = RefreshAsync();
+        _ = LoadCurrentUserAsync();
     }
 
-    partial void OnSelectedRequestChanged(MaterialProcurementRequestListItemDto? value)
-    {
-        OnPropertyChanged(nameof(CanClaim));
-        OnPropertyChanged(nameof(CanRefuse));
-        OnPropertyChanged(nameof(CanMarkInProgress));
-        OnPropertyChanged(nameof(CanMarkCompleted));
-        OnPropertyChanged(nameof(CanCancel));
-
-        if (value is not null)
-            _ = LoadCommentsAsync(value.Id);
-        else
-            Comments.Clear();
-    }
-
-    private async Task LoadCommentsAsync(Guid requestId)
+    private async Task LoadCurrentUserAsync()
     {
         try
         {
             using var client = _apiClientProvider.CreateClient();
-            var comments = await client.GetFromJsonAsync<List<RequestCommentDto>>($"api/v1/crafting/procurement-requests/{requestId}/comments");
-            
+            using var response = await client.GetAsync("api/v1/profiles/me");
+            if (response.IsSuccessStatusCode)
+            {
+                var profile = await response.Content.ReadFromJsonAsync<ProfileSummary>();
+                _currentUsername = profile?.Username ?? string.Empty;
+            }
+        }
+        catch { /* non-fatal — CanCancel will just stay false */ }
+        finally
+        {
+            await RefreshAsync();
+        }
+    }
+
+    private record ProfileSummary(string Username);
+
+    partial void OnSelectedRequestChanged(MaterialProcurementRequestListItemDto? value)
+    {
+        ClaimCommand.NotifyCanExecuteChanged();
+        MarkInProgressCommand.NotifyCanExecuteChanged();
+        MarkCompletedCommand.NotifyCanExecuteChanged();
+        CancelCommand.NotifyCanExecuteChanged();
+
+        OnPropertyChanged(nameof(CanClaim));
+        OnPropertyChanged(nameof(CanMarkInProgress));
+        OnPropertyChanged(nameof(CanMarkCompleted));
+        OnPropertyChanged(nameof(CanCancel));
+
+        // Cancel pending comment loads to prevent race conditions
+        _loadCommentsCts?.Cancel();
+        _loadCommentsCts = new CancellationTokenSource();
+
+        if (value is not null)
+        {
+            _ = LoadCommentsAsync(value.Id, _loadCommentsCts.Token);
+        }
+        else
+        {
+            Comments.Clear();
+        }
+    }
+
+    private async Task LoadCommentsAsync(Guid requestId, CancellationToken ct)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.GetAsync($"api/v1/crafting/procurement-requests/{requestId}/comments", ct);
+            if (!response.IsSuccessStatusCode) return;
+            var comments = await response.Content.ReadFromJsonAsync<List<RequestCommentDto>>();
+
+            if (ct.IsCancellationRequested) return;
+
             Comments.Clear();
             if (comments != null)
             {
@@ -64,6 +115,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
                     Comments.Add(c);
             }
         }
+        catch (OperationCanceledException) { /* Normal during rapid selection */ }
         catch (Exception ex)
         {
             StatusMessage = $"Comment load failed: {ex.Message}";
@@ -76,23 +128,32 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Refreshing procurement requests...";
+            StatusMessage = "Refreshing procurement queue...";
 
             using var client = _apiClientProvider.CreateClient();
-            var items = await client.GetFromJsonAsync<List<MaterialProcurementRequestListItemDto>>("api/v1/crafting/procurement-requests")
+            using var response = await client.GetAsync("api/v1/crafting/procurement-requests");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusMessage = $"Server Error: {(int)response.StatusCode}";
+                return;
+            }
+
+            var items = await response.Content.ReadFromJsonAsync<List<MaterialProcurementRequestListItemDto>>()
                         ?? new List<MaterialProcurementRequestListItemDto>();
 
             Requests.Clear();
             foreach (var item in items)
                 Requests.Add(item);
 
-            StatusMessage = Requests.Count == 0
-                ? "No procurement requests yet."
-                : $"Loaded {Requests.Count} procurement requests.";
+            StatusMessage = Requests.Count == 0 ? "No active procurements." : $"Found {Requests.Count} items.";
+            
+            // Ensure UI updates if the list refresh changed the selected item's status
+            OnSelectedRequestChanged(SelectedRequest);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Failed to load procurement requests: {ex.Message}";
+            StatusMessage = $"Refresh failed: {ex.Message}";
         }
         finally
         {
@@ -108,13 +169,14 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         try
         {
             using var client = _apiClientProvider.CreateClient();
-            var response = await client.PostAsJsonAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/comments", 
+            var response = await client.PostAsJsonAsync(
+                $"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/comments",
                 new AddRequestCommentDto { Content = NewCommentText });
 
             if (response.IsSuccessStatusCode)
             {
                 NewCommentText = string.Empty;
-                await LoadCommentsAsync(SelectedRequest.Id);
+                await LoadCommentsAsync(SelectedRequest.Id, CancellationToken.None);
             }
         }
         catch (Exception ex)
@@ -123,87 +185,66 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    #region Action Commands
+
+    [RelayCommand(CanExecute = nameof(CanClaim))]
     private async Task ClaimAsync()
     {
-        if (SelectedRequest is null) return;
-        await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/claim", null,
-            "Request claimed — status set to In Progress.");
+        await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest!.Id}/claim", null, "Claimed.");
     }
 
-    [RelayCommand]
-    private async Task RefuseAsync()
-    {
-        if (SelectedRequest is null) return;
-        
-        var reason = "Cannot fulfill procurement at this time.";
-        
-        await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/refuse", 
-            new RefuseRequestDto { Reason = reason },
-            $"Request refused.");
-    }
+   
+    [RelayCommand(CanExecute = nameof(CanMarkInProgress))]
+    private async Task MarkInProgressAsync() => await PatchStatusAsync(RequestStatus.InProgress, "In Progress.");
 
-    [RelayCommand]
-    private async Task MarkInProgressAsync()
-    {
-        if (SelectedRequest is null) return;
-        await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/status",
-            new UpdateRequestStatusDto { Status = "InProgress" },
-            "Request marked as In Progress.");
-    }
+    [RelayCommand(CanExecute = nameof(CanMarkCompleted))]
+    private async Task MarkCompletedAsync() => await PatchStatusAsync(RequestStatus.Completed, "Completed.");
 
-    [RelayCommand]
-    private async Task MarkCompletedAsync()
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    private async Task CancelAsync() => await PatchStatusAsync(RequestStatus.Cancelled, "Cancelled.");
+
+    #endregion
+
+    #region Helpers
+
+    private async Task PatchStatusAsync(string status, string message)
     {
         if (SelectedRequest is null) return;
         await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/status",
-            new UpdateRequestStatusDto { Status = "Completed" },
-            "Request marked as Completed.");
+            new UpdateRequestStatusDto { Status = status }, message);
     }
-
-    [RelayCommand]
-    private async Task CancelAsync()
-    {
-        if (SelectedRequest is null) return;
-        await PatchAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}/status",
-            new UpdateRequestStatusDto { Status = "Cancelled" },
-            "Request cancelled.");
-    }
-
-    // ─── HELPERS ────────────────────────────────────────────────────────────────
 
     private async Task PatchAsync(string url, object? body, string successMessage)
     {
         try
         {
             IsLoading = true;
-            StatusMessage = "Updating request...";
-
             using var client = _apiClientProvider.CreateClient();
-            HttpResponseMessage response;
+            
+            var response = body is null 
+                ? await client.PatchAsync(url, null) 
+                : await client.PatchAsJsonAsync(url, body);
 
-            if (body is null)
-                response = await client.PatchAsync(url, null);
-            else
-                response = await client.PatchAsJsonAsync(url, body);
-
-            if (!response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
-                var detail = await response.Content.ReadAsStringAsync();
-                StatusMessage = $"Error {(int)response.StatusCode}: {detail}";
-                return;
+                StatusMessage = successMessage;
+                await RefreshAsync();
             }
-
-            StatusMessage = successMessage;
-            await RefreshAsync();
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                StatusMessage = $"Error: {response.StatusCode}";
+            }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Action failed: {ex.Message}";
+            StatusMessage = $"Update failed: {ex.Message}";
         }
         finally
         {
             IsLoading = false;
         }
     }
+
+    #endregion
 }

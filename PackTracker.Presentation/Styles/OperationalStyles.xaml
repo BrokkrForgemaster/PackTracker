@@ -168,7 +168,10 @@
                                     MinWidth="{TemplateBinding ActualWidth}"
                                     MaxHeight="300"
                                     SnapsToDevicePixels="True">
-                                <ScrollViewer SnapsToDevicePixels="True">
+                                <ScrollViewer SnapsToDevicePixels="True"
+                                              Style="{DynamicResource OpScrollViewerStyle}"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel IsItemsHost="True"
                                                 KeyboardNavigation.DirectionalNavigation="Contained"/>
                                 </ScrollViewer>

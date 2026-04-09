@@ -1,33 +1,82 @@
+using System.ComponentModel.DataAnnotations;
 using PackTracker.Domain.Enums;
 
 namespace PackTracker.Application.DTOs.Request;
 
-public class RequestCreateDto
+/// <summary>
+/// Represents the payload used to create a general request ticket.
+/// </summary>
+public sealed class RequestCreateDto
 {
-    public string Title { get; set; } = "";
-    public string Description { get; set; } = "";
+    #region Core Request Data
+
+    /// <summary>
+    /// Gets or sets the title of the request.
+    /// </summary>
+    [Required]
+    [MaxLength(120)]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the description of the request.
+    /// </summary>
+    [MaxLength(4000)]
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the request kind.
+    /// </summary>
+    [Required]
     public RequestKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the request priority.
+    /// </summary>
+    [Required]
     public RequestPriority Priority { get; set; } = RequestPriority.Normal;
+
+    #endregion
+
+    #region Scheduling
+
+    /// <summary>
+    /// Gets or sets the optional due date/time for the request.
+    /// </summary>
     public DateTime? DueAt { get; set; }
 
-    public string SkillObjective { get; set; } = "";
-    public string GameBuild { get; set; } = "";
-    public string PlayerHandle { get; set; } = "";
-    public string TimeZone { get; set; } = "";
-    public bool HasMic { get; set; }
-    public string PlatformSpecs { get; set; } = "";
-    public string Availability { get; set; } = "";
-    public string CurrentBaseline { get; set; } = "";
-    public string AssetsShips { get; set; } = "";
-    public string Urgency { get; set; } = "";
-    public string GroupPreference { get; set; } = "";
-    public string SuccessCriteria { get; set; } = "";
-    public string RecordingPermission { get; set; } = "";
+    #endregion
 
-    // Material/Resource fields
+    #region Material / Logistics
+
+    /// <summary>
+    /// Gets or sets the material name, if this request is material-related.
+    /// </summary>
+    [MaxLength(100)]
     public string? MaterialName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the quantity needed, if applicable.
+    /// </summary>
+    [Range(1, int.MaxValue)]
     public int? QuantityNeeded { get; set; }
+
+    /// <summary>
+    /// Gets or sets the meeting or delivery location, if applicable.
+    /// </summary>
+    [MaxLength(200)]
     public string? MeetingLocation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reward offered, if applicable.
+    /// </summary>
+    [MaxLength(100)]
     public string? RewardOffered { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of helpers needed, if applicable.
+    /// </summary>
+    [Range(1, 100)]
     public int? NumberOfHelpersNeeded { get; set; }
+
+    #endregion
 }

@@ -1,121 +1,99 @@
-using PackTracker.Domain.Enums;
-using Microsoft.AspNetCore.Mvc;
-using PackTracker.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using PackTracker.Api.Hubs;
+using RequestsHub = PackTracker.Api.Hubs.RequestsHub;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
+using PackTracker.Domain.Enums;
 using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Api.Controllers;
 
-/// <summary name="RequestsController"> 
-/// Controller for managing request tickets in the House Wolf community.
-/// Requests can be created, updated, completed, and deleted.
+/// <summary>
+/// Handles general request ticket operations (legacy/general request system).
 /// </summary>
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/requests")]
 [Authorize(Roles = "HouseWolfMember")]
 public class RequestsController : ControllerBase
 {
-    #region Fields and Constructor
+    #region Fields
+
     private readonly AppDbContext _db;
     private readonly ILogger<RequestsController> _logger;
-    private readonly IDiscordNotifier _notifier;
-    [FromServices] public IHubContext<RequestsHub> _hub { get; set; } = null;
+    private readonly IDiscordNotifier _discord;
+    private readonly IHubContext<RequestsHub> _hub;
 
-    public RequestsController(AppDbContext db, ILogger<RequestsController> logger, IDiscordNotifier notifier)
+    #endregion
+
+    #region Constructor
+
+    public RequestsController(
+        AppDbContext db,
+        ILogger<RequestsController> logger,
+        IDiscordNotifier discord,
+        IHubContext<RequestsHub> hub)
     {
         _db = db;
         _logger = logger;
-        _notifier = notifier;
+        _discord = discord;
+        _hub = hub;
     }
+
     #endregion
 
-    
-    #region Endpoints
-    /// <summary name="Query">
-    /// Query request tickets with optional filters for status, kind, and ownership.
-    /// <param name="status">
-    /// Filter by request status (e.g., Open, Completed).
-    /// </param>
-    /// <param name="kind">
-    /// Filter by request kind (e.g., Bug, Feature).
-    /// </param>
-    /// <param name="mine">
-    /// If true, only return requests assigned to or created by the current user.
-    /// </param>
-    /// <param name="top">
-    /// Maximum number of results to return (default 100, max 500).
-    /// </param>
-    /// <param name="ct">
-    /// Cancellation token for the request.
-    /// </param>
-    /// <returns>
-    /// A list of request tickets matching the specified filters.
-    /// Each ticket includes details such as title, description, kind, priority, status, and timestamps.
-    /// The response also includes a success flag and the total count of returned tickets.
-    /// </returns>
-    /// </summary>
+    #region Query
+
     [HttpGet]
-    public async Task<IActionResult> Query([FromQuery] RequestStatus? status, [FromQuery] RequestKind? kind,
-        [FromQuery] bool? mine, [FromQuery] int top = 100, CancellationToken ct = default)
+    public async Task<IActionResult> Query(
+        [FromQuery] RequestStatus? status,
+        [FromQuery] RequestKind? kind,
+        [FromQuery] bool? mine,
+        [FromQuery] int top = 100,
+        CancellationToken ct = default)
     {
-        var q = _db.RequestTickets.AsNoTracking().OrderByDescending(r => r.CreatedAt).AsQueryable();
-        
-        if (status.HasValue) q = q.Where(r => r.Status == status);
-        if (kind.HasValue) q = q.Where(r => r.Kind == kind);
+        var query = _db.RequestTickets.AsNoTracking().AsQueryable();
+
+        if (status.HasValue)
+            query = query.Where(x => x.Status == status);
+
+        if (kind.HasValue)
+            query = query.Where(x => x.Kind == kind);
+
         if (mine == true)
         {
             var me = User.Identity?.Name ?? "";
-            q = q.Where(r => r.AssignedToDisplayName == me || r.CreatedByDisplayName == me);
+            query = query.Where(x =>
+                x.AssignedToDisplayName == me ||
+                x.CreatedByDisplayName == me);
         }
 
-        var items = await q.Take(Math.Clamp(top, 1, 500)).ToListAsync(ct);
+        var items = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(Math.Clamp(top, 1, 500))
+            .ToListAsync(ct);
 
+        _logger.LogInformation("Requests queried. Count={Count}", items.Count);
 
-        var data = items.Select(Map).ToList();
-        return Ok(new { success = true, count = data.Count, data });
+        return Ok(new
+        {
+            success = true,
+            count = items.Count,
+            data = items.Select(Map).ToList()
+        });
     }
 
-    /// <summary name="GetById">
-    /// Get a specific request ticket by its ID.
-    /// </summary>
-    /// <param name="id">
-    /// The ID of the request ticket to retrieve.
-    /// </param>
-    /// <param name="ct">
-    /// Cancellation token for the request.
-    /// </param>
-    /// <returns>
-    /// If found, returns the request ticket details including title, description, kind, priority, status, and timestamps.
-    /// If not found, returns a 404 Not Found response.
-    /// The response also includes a success flag.
-    /// </returns>
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById([FromRoute] int id, CancellationToken ct)
-    {
-        var entity = await _db.RequestTickets.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (entity == null) return NotFound();
-        return Ok(new { success = true, data = Map(entity) });
-    }
+    #endregion
 
-    /// <summary name="Create">
-    /// Create a new request ticket, setting the creator based on the authenticated user.
-    /// The request will be initialized with an "Open" status.
-    /// </summary>
-    /// <param name="dto">
-    /// The details of the request ticket to create, including title, description, kind, priority, and due date.
-    /// </param>
-    /// <param name="ct">
-    /// Cancellation token for the request.
-    /// </param>
-    /// <returns>
-    /// On success, returns a 201 Created response with the details of the newly created request ticket.
-    /// </returns>
+    #region Create
+
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] RequestCreateDto dto, CancellationToken ct)
+    public async Task<IActionResult> Create(
+        [FromBody] RequestCreateDto dto,
+        CancellationToken ct)
     {
         var userId = User.FindFirst("sub")?.Value ?? "unknown";
         var display = User.Identity?.Name ?? "Unknown";
@@ -136,35 +114,23 @@ public class RequestsController : ControllerBase
             RewardOffered = dto.RewardOffered,
             NumberOfHelpersNeeded = dto.NumberOfHelpersNeeded
         };
-        
+
         _db.RequestTickets.Add(entity);
         await _db.SaveChangesAsync(ct);
-        await _hub.Clients.All.SendAsync("RequestUpdated", Map(entity), ct);
 
+        await BroadcastUpdate(entity, ct);
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, new { success = true, data = Map(entity) });
+        _logger.LogInformation("Request created. Id={Id} Title={Title}", entity.Id, entity.Title);
+
+        return Ok(Map(entity));
     }
 
-    /// <summary name="Update">
-    /// Update an existing request ticket by its ID.
-    /// Only certain fields can be updated, and the ticket must exist.
-    /// </summary>
-    /// <param name="id">
-    /// The ID of the request ticket to update.
-    /// </param>
-    /// <param name="dto">
-    /// The updated details for the request ticket, including title, description, kind, priority, status, assigned user, and due date.
-    /// </param>
-    /// <param name="ct">
-    /// Cancellation token for the request.
-    /// </param>
-    /// <returns>
-    /// If the ticket is found and updated, returns the updated ticket details.
-    /// If not found, returns a 404 Not Found response.
-    /// The response also includes a success flag.
-    /// </returns>
+    #endregion
+
+    #region Update
+
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update([FromRoute] int id, [FromBody] RequestUpdateDto dto, CancellationToken ct)
+    public async Task<IActionResult> Update(int id, [FromBody] RequestUpdateDto dto, CancellationToken ct)
     {
         var entity = await _db.RequestTickets.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity == null) return NotFound();
@@ -185,108 +151,45 @@ public class RequestsController : ControllerBase
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
-        await _hub.Clients.All.SendAsync("RequestUpdated", Map(entity), ct);
-        return Ok(new { success = true, data = Map(entity) });
+        await BroadcastUpdate(entity, ct);
+
+        return Ok(Map(entity));
     }
 
-    /// <summary name="Claim">
-    /// Claim a request ticket by assigning it to yourself.
-    /// This sets the ticket's status to "InProgress" and assigns it to the current user.
-    /// </summary>
-    /// <param name="id">
-    /// The ID of the request ticket to claim.
-    /// </param>
-    /// <param name="ct">
-    /// Cancellation token for the request.
-    /// </param>
-    /// <returns>
-    /// If the ticket is found and claimed, returns the updated ticket details.
-    /// If not found, returns a 404 Not Found response.
-    /// If already assigned, returns a 400 Bad Request response.
-    /// The response also includes a success flag.
-    /// </returns>
+    #endregion
+
+    #region Actions
+
     [HttpPatch("{id:int}/claim")]
-    public async Task<IActionResult> Claim([FromRoute] int id, CancellationToken ct)
+    public async Task<IActionResult> Claim(int id, CancellationToken ct)
     {
         var entity = await _db.RequestTickets.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity == null) return NotFound();
 
         if (!string.IsNullOrEmpty(entity.AssignedToUserId))
-            return BadRequest(new { success = false, error = "Request is already claimed" });
-
-        var userId = User.FindFirst("sub")?.Value ?? "unknown";
-        var display = User.Identity?.Name ?? "Unknown";
+            return BadRequest("Already claimed");
 
         entity.Status = RequestStatus.InProgress;
-        entity.AssignedToUserId = userId;
-        entity.AssignedToDisplayName = display;
+        entity.AssignedToUserId = User.FindFirst("sub")?.Value;
+        entity.AssignedToDisplayName = User.Identity?.Name;
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
-        await _hub.Clients.All.SendAsync("RequestUpdated", Map(entity), ct);
-        return Ok(new { success = true, data = Map(entity) });
+        await BroadcastUpdate(entity, ct);
+
+        return Ok(Map(entity));
     }
 
-    /// <summary name="Complete">
-    /// Mark a specific request ticket as completed by its ID.
-    /// This sets the ticket's status to "Completed" and records the completion timestamp and user
-    /// based on the authenticated user.
-    /// </summary>
-    /// <param name="id">
-    /// The ID of the request ticket to mark as completed.
-    /// </param>
-    /// <param name="ct">
-    /// Cancellation token for the request.
-    /// </param>
-    /// <returns>
-    /// If the ticket is found and marked as completed, returns the updated ticket details.
-    /// If not found, returns a 404 Not Found response.
-    /// The response also includes a success flag.
-    /// </returns>
-    [HttpPatch("{id:int}/complete")]
-    public async Task<IActionResult> Complete([FromRoute] int id, CancellationToken ct)
-    {
-        var entity = await _db.RequestTickets.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (entity == null) return NotFound();
-
-        entity.Status = RequestStatus.Completed;
-        entity.CompletedAt = DateTime.UtcNow;
-        entity.CompletedByUserId = User.FindFirst("sub")?.Value;
-        entity.UpdatedAt = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync(ct);
-        await _hub.Clients.All.SendAsync("RequestUpdated", Map(entity), ct);
-        return Ok(new { success = true, data = Map(entity) });
-    }
-
-    /// <summary name="Delete">
-    /// Delete a specific request ticket by its ID.
-    /// </summary>
-    /// <param name="id">
-    /// The ID of the request ticket to delete.
-    /// </param>
-    /// <param name="ct">
-    /// Cancellation token for the request.
-    /// </param>
-    /// <returns>
-    /// If the ticket is found and deleted, returns a success flag.
-    /// If not found, returns a 404 Not Found response.
-    /// </returns> 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken ct)
-    {
-        var entity = await _db.RequestTickets.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (entity == null) return NotFound();
-
-        _db.RequestTickets.Remove(entity);
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true });
-    }
     #endregion
 
+    #region Helpers
 
-    #region Methods
-    private static RequestDto Map(RequestTicket e) => new()
+    private async Task BroadcastUpdate(RequestTicket entity, CancellationToken ct)
+    {
+        await _hub.Clients.All.SendAsync("RequestUpdated", Map(entity), ct);
+    }
+
+    private static RequestTicketDto Map(RequestTicket e) => new()
     {
         Id = e.Id,
         Title = e.Title,

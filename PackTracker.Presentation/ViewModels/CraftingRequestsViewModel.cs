@@ -4,44 +4,89 @@ using System.Net.Http.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Application.DTOs.Request;
 using PackTracker.Domain.Enums;
 using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.ViewModels;
 
+/// <summary>
+/// Status constants to avoid magic strings and typos across the VM logic.
+/// </summary>
+public class RequestStatus
+{
+    public const string Open = "Open";
+    public const string Accepted = "Accepted";
+    public const string InProgress = "InProgress";
+    public const string Completed = "Completed";
+    public const string Cancelled = "Cancelled";
+}
+
 public partial class CraftingRequestsViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
+    private readonly SignalRChatService _signalR;
+    
+    private string? _currentRequestRoomId;
+    private CancellationTokenSource? _switchRoomCts;
 
     public ObservableCollection<CraftingRequestListItemDto> Requests { get; } = new();
+    public ObservableCollection<RequestCommentDto> Comments { get; } = new();
+    public ObservableCollection<BlueprintRecipeMaterialDto> RequiredMaterials { get; } = new();
+    public ObservableCollection<ChatMessageDto> LiveChat { get; } = new();
 
     [ObservableProperty] private CraftingRequestListItemDto? selectedRequest;
     [ObservableProperty] private bool isLoading;
-    [ObservableProperty] private string statusMessage = "Loading crafting requests...";
+    [ObservableProperty] private string statusMessage = "Ready";
     [ObservableProperty] private string newCommentText = string.Empty;
+    [ObservableProperty] private string liveChatInput = string.Empty;
 
-    public ObservableCollection<RequestCommentDto> Comments { get; } = new();
-    public ObservableCollection<BlueprintRecipeMaterialDto> RequiredMaterials { get; } = new();
+    // Logic updated to use Status Constants
+    public bool CanAssign => SelectedRequest?.Status == RequestStatus.Open;
+    public bool CanMarkInProgress => SelectedRequest?.Status == RequestStatus.Accepted;
+    public bool CanMarkCompleted => SelectedRequest is not null && (SelectedRequest.Status == RequestStatus.Accepted || SelectedRequest.Status == RequestStatus.InProgress);
+    public bool CanCancel => SelectedRequest is not null && SelectedRequest.Status != RequestStatus.Completed && SelectedRequest.Status != RequestStatus.Cancelled;
 
-    public bool CanAssign => SelectedRequest is not null && SelectedRequest.Status == "Open";
-    public bool CanRefuse => SelectedRequest is not null && (SelectedRequest.Status == "Open" || SelectedRequest.Status == "Accepted");
-    public bool CanMarkInProgress => SelectedRequest is not null && SelectedRequest.Status == "Accepted";
-    public bool CanMarkCompleted => SelectedRequest is not null
-        && (SelectedRequest.Status == "Accepted" || SelectedRequest.Status == "InProgress");
-    public bool CanCancel => SelectedRequest is not null
-        && SelectedRequest.Status != "Completed" && SelectedRequest.Status != "Cancelled";
-
-    public CraftingRequestsViewModel(IApiClientProvider apiClientProvider)
+    public CraftingRequestsViewModel(IApiClientProvider apiClientProvider, SignalRChatService signalR)
     {
         _apiClientProvider = apiClientProvider;
-        StatusMessage = "Loading crafting requests...";
+        _signalR = signalR;
+        
         _ = RefreshAsync();
+        _ = ConnectSignalRAsync();
+    }
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            await _signalR.ConnectAsync();
+            _signalR.RequestMessageReceived += OnRequestMessageReceived;
+            _signalR.CraftingRequestCreated += id => _ = RefreshAsync();
+            _signalR.CraftingRequestUpdated += id => _ = RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Chat connection failed: {ex.Message}";
+        }
+    }
+
+    private void OnRequestMessageReceived(ChatMessageDto msg)
+    {
+        // Use BeginInvoke to prevent UI thread blocking during high-frequency messaging
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(() => LiveChat.Add(msg));
     }
 
     partial void OnSelectedRequestChanged(CraftingRequestListItemDto? value)
     {
+        // Trigger command re-evaluation for button enabled state
+        AssignToSelfCommand.NotifyCanExecuteChanged(); ;
+        MarkInProgressCommand.NotifyCanExecuteChanged();
+        MarkCompletedCommand.NotifyCanExecuteChanged();
+        CancelCommand.NotifyCanExecuteChanged();
+
+        // Trigger visibility binding updates
         OnPropertyChanged(nameof(CanAssign));
-        OnPropertyChanged(nameof(CanRefuse));
         OnPropertyChanged(nameof(CanMarkInProgress));
         OnPropertyChanged(nameof(CanMarkCompleted));
         OnPropertyChanged(nameof(CanCancel));
@@ -53,10 +98,41 @@ public partial class CraftingRequestsViewModel : ObservableObject
                 RequiredMaterials.Add(m);
         }
 
+        // Cancel any pending room switches if the user clicks a different item quickly
+        _switchRoomCts?.Cancel();
+        _switchRoomCts = new CancellationTokenSource();
+
         if (value is not null)
+        {
             _ = LoadCommentsAsync(value.Id);
+            _ = SwitchRequestRoomAsync(value.Id.ToString(), _switchRoomCts.Token);
+        }
         else
+        {
             Comments.Clear();
+            _ = SwitchRequestRoomAsync(null, _switchRoomCts.Token);
+        }
+    }
+
+    private async Task SwitchRequestRoomAsync(string? newRequestId, CancellationToken ct)
+    {
+        try 
+        {
+            if (_currentRequestRoomId != null)
+                await _signalR.LeaveRequestRoomAsync(_currentRequestRoomId);
+
+            if (ct.IsCancellationRequested) return;
+
+            LiveChat.Clear();
+            _currentRequestRoomId = newRequestId;
+
+            if (newRequestId != null)
+                await _signalR.JoinRequestRoomAsync(newRequestId);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Room switch error: {ex.Message}";
+        }
     }
 
     private async Task LoadCommentsAsync(Guid requestId)
@@ -80,26 +156,30 @@ public partial class CraftingRequestsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task SendLiveChatAsync()
+    {
+        if (string.IsNullOrWhiteSpace(LiveChatInput) || _currentRequestRoomId is null)
+            return;
+
+        var content = LiveChatInput.Trim();
+        LiveChatInput = string.Empty;
+        await _signalR.SendRequestMessageAsync(_currentRequestRoomId, content);
+    }
+
+    [RelayCommand]
     private async Task RefreshAsync()
     {
         try
         {
             IsLoading = true;
-            StatusMessage = "Refreshing crafting requests...";
+            StatusMessage = "Refreshing...";
 
             using var client = _apiClientProvider.CreateClient();
             using var response = await client.GetAsync("api/v1/crafting/requests");
 
             if (!response.IsSuccessStatusCode)
             {
-                StatusMessage = $"Server Error: {(int)response.StatusCode} {response.ReasonPhrase}";
-                return;
-            }
-
-            var contentType = response.Content.Headers.ContentType?.MediaType;
-            if (contentType != "application/json" && !(contentType?.Contains("json") ?? false))
-            {
-                StatusMessage = "API returned HTML instead of JSON. Check your ApiBaseUrl.";
+                StatusMessage = $"Server Error: {(int)response.StatusCode}";
                 return;
             }
 
@@ -110,9 +190,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
             foreach (var item in items)
                 Requests.Add(item);
 
-            StatusMessage = Requests.Count == 0
-                ? "No crafting requests yet."
-                : $"Loaded {Requests.Count} crafting requests.";
+            StatusMessage = Requests.Count == 0 ? "No requests found." : $"Loaded {Requests.Count} requests.";
         }
         catch (Exception ex)
         {
@@ -147,27 +225,14 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanAssign))]
     private async Task AssignToSelfAsync()
     {
         if (SelectedRequest is null) return;
         await PatchAsync($"api/v1/crafting/requests/{SelectedRequest.Id}/assign", null,
-            $"Assigned to self — status set to Accepted.");
+            $"Accepted request.");
     }
-
-    [RelayCommand]
-    private async Task RefuseAsync()
-    {
-        if (SelectedRequest is null) return;
-        
-        // Simple prompt for reason - note: in a real app this would be a better UI
-        var reason = "Insufficient materials or quality level not achievable.";
-        
-        await PatchAsync($"api/v1/crafting/requests/{SelectedRequest.Id}/refuse", 
-            new RefuseRequestDto { Reason = reason },
-            $"Request refused.");
-    }
-
+    
     [RelayCommand]
     private async Task RequestMaterialAsync(BlueprintRecipeMaterialDto material)
     {
@@ -176,8 +241,6 @@ public partial class CraftingRequestsViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = $"Spawning procurement for {material.MaterialName}...";
-
             using var client = _apiClientProvider.CreateClient();
             var dto = new CreateMaterialProcurementRequestDto
             {
@@ -185,28 +248,20 @@ public partial class CraftingRequestsViewModel : ObservableObject
                 LinkedCraftingRequestId = SelectedRequest.Id,
                 QuantityRequested = (decimal)material.QuantityRequired,
                 Priority = RequestPriority.Normal,
-                Notes = $"Auto-spawned for crafting request: {SelectedRequest.CraftedItemName}"
+                Notes = $"Auto-spawned for: {SelectedRequest.CraftedItemName}"
             };
 
             var response = await client.PostAsJsonAsync("api/v1/crafting/procurement-requests", dto);
             if (response.IsSuccessStatusCode)
             {
-                StatusMessage = $"Procurement request spawned for {material.MaterialName}.";
-                
-                // Also post a comment about it
                 await client.PostAsJsonAsync($"api/v1/crafting/requests/{SelectedRequest.Id}/comments", 
-                    new AddRequestCommentDto { Content = $"[System] Spawned procurement request for {material.MaterialName} ({material.QuantityRequired} {material.Unit})." });
-                
+                    new AddRequestCommentDto { Content = $"[System] Spawned procurement for {material.MaterialName}." });
                 await LoadCommentsAsync(SelectedRequest.Id);
-            }
-            else
-            {
-                StatusMessage = $"Failed to spawn procurement: {(int)response.StatusCode}";
             }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Procurement failed: {ex.Message}";
         }
         finally
         {
@@ -214,37 +269,20 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task MarkInProgressAsync()
+    [RelayCommand(CanExecute = nameof(CanMarkInProgress))]
+    private async Task MarkInProgressAsync() => await ChangeStatus(RequestStatus.InProgress, "In progress.");
+
+    [RelayCommand(CanExecute = nameof(CanMarkCompleted))]
+    private async Task MarkCompletedAsync() => await ChangeStatus(RequestStatus.Completed, "Completed.");
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    private async Task CancelAsync() => await ChangeStatus(RequestStatus.Cancelled, "Cancelled.");
+
+    private async Task ChangeStatus(string status, string msg)
     {
         if (SelectedRequest is null) return;
-        await PatchWithStatusAsync(SelectedRequest.Id, "InProgress",
-            "api/v1/crafting/requests", "Marked as In Progress.");
-    }
-
-    [RelayCommand]
-    private async Task MarkCompletedAsync()
-    {
-        if (SelectedRequest is null) return;
-        await PatchWithStatusAsync(SelectedRequest.Id, "Completed",
-            "api/v1/crafting/requests", "Marked as Completed.");
-    }
-
-    [RelayCommand]
-    private async Task CancelAsync()
-    {
-        if (SelectedRequest is null) return;
-        await PatchWithStatusAsync(SelectedRequest.Id, "Cancelled",
-            "api/v1/crafting/requests", "Request cancelled.");
-    }
-
-    // ─── HELPERS ────────────────────────────────────────────────────────────────
-
-    private async Task PatchWithStatusAsync(Guid id, string newStatus, string baseRoute, string successMessage)
-    {
-        await PatchAsync($"{baseRoute}/{id}/status",
-            new UpdateRequestStatusDto { Status = newStatus },
-            successMessage);
+        await PatchAsync($"api/v1/crafting/requests/{SelectedRequest.Id}/status", 
+            new UpdateRequestStatusDto { Status = status }, msg);
     }
 
     private async Task PatchAsync(string url, object? body, string successMessage)
@@ -252,29 +290,24 @@ public partial class CraftingRequestsViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Updating request...";
-
             using var client = _apiClientProvider.CreateClient();
-            HttpResponseMessage response;
+            var response = body is null 
+                ? await client.PatchAsync(url, null) 
+                : await client.PatchAsJsonAsync(url, body);
 
-            if (body is null)
-                response = await client.PatchAsync(url, null);
-            else
-                response = await client.PatchAsJsonAsync(url, body);
-
-            if (!response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
-                var detail = await response.Content.ReadAsStringAsync();
-                StatusMessage = $"Error {(int)response.StatusCode}: {detail}";
-                return;
+                StatusMessage = successMessage;
+                await RefreshAsync();
             }
-
-            StatusMessage = successMessage;
-            await RefreshAsync();
+            else
+            {
+                StatusMessage = $"Update failed ({(int)response.StatusCode})";
+            }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Action failed: {ex.Message}";
+            StatusMessage = $"Error: {ex.Message}";
         }
         finally
         {

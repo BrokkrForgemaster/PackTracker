@@ -1,16 +1,11 @@
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
-using PackTracker.Domain.Entities;
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace PackTracker.Infrastructure.Services;
 
 /// <summary>
-/// GameLogService monitors a game log file for new kill events, parses them,
-/// and raises KillParsed events as new entries are detected.
+/// Monitors a Star Citizen game log file and emits raw log lines for downstream feature parsers.
+/// This service is intentionally generic and does not contain kill-tracking-specific logic.
 /// </summary>
 public class GameLogService : IGameLogService
 {
@@ -18,77 +13,141 @@ public class GameLogService : IGameLogService
 
     private readonly ILogger<GameLogService> _logger;
     private long _lastPosition;
-    public event Action<KillEntity>? KillParsed;
+    private CancellationTokenSource? _internalCancellationTokenSource;
+
+    #endregion
+
+    #region Events
+
+    /// <inheritdoc />
+    public event Action? Connected;
+
+    /// <inheritdoc />
+    public event Action? Disconnected;
+
+    /// <inheritdoc />
+    public event Action<string>? LineReceived;
+
+    #endregion
+
+    #region Properties
+
+    /// <inheritdoc />
+    public bool IsMonitoring { get; private set; }
 
     #endregion
 
     #region Constructor
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GameLogService"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used for structured log output.</param>
     public GameLogService(ILogger<GameLogService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public static bool IsReady { get; set; }
-
     #endregion
 
-    #region Methods
+    #region Public Methods
 
-    /// <summary>
-    /// Starts monitoring the specified log file for new kill events.
-    /// Raises KillParsed for each new entry detected.
-    /// </summary>
-    /// <param name="logFilePath">The path to the game log file.</param>
-    /// <param name="cancellationToken">A cancellation token to stop monitoring.</param>
+    /// <inheritdoc />
     public async Task StartAsync(string logFilePath, CancellationToken cancellationToken)
     {
-        // Diagnostic logging to verify file access
+        if (string.IsNullOrWhiteSpace(logFilePath))
+            throw new ArgumentException("A valid game log file path is required.", nameof(logFilePath));
+
         if (!File.Exists(logFilePath))
         {
-            _logger.LogError("Game log file not found at path: {Path}", logFilePath);
-            KillParsed?.Invoke(new KillEntity { Type = "Info", Summary = "No log file", Timestamp = DateTime.Now });
+            _logger.LogWarning("Game log file not found. Path={Path}", logFilePath);
             return;
         }
 
-        _logger.LogInformation("Starting GameLogService for {Path}", logFilePath);
+        if (IsMonitoring)
+        {
+            _logger.LogInformation("Game log monitor is already running. Path={Path}", logFilePath);
+            return;
+        }
 
-        // Raise Connected event only after confirming file exists and can be opened
-        KillParsed?.Invoke(new KillEntity { Type = "Info", Summary = "Connected", Timestamp = DateTime.Now });
+        _internalCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var linkedToken = _internalCancellationTokenSource.Token;
 
-        await using var stream = new FileStream(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        IsMonitoring = true;
+
+        _logger.LogInformation("Starting game log monitor. Path={Path}", logFilePath);
+
+        await using var stream = new FileStream(
+            logFilePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite);
+
         using var reader = new StreamReader(stream);
+
+        if (_lastPosition > stream.Length)
+        {
+            _logger.LogInformation(
+                "Detected log truncation or rollover. Resetting read position. PreviousPosition={PreviousPosition} CurrentLength={CurrentLength}",
+                _lastPosition,
+                stream.Length);
+
+            _lastPosition = 0;
+        }
 
         stream.Seek(_lastPosition, SeekOrigin.Begin);
 
+        Connected?.Invoke();
+
         try
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (!linkedToken.IsCancellationRequested)
             {
                 var line = await reader.ReadLineAsync();
-                if (line == null)
+
+                if (line is null)
                 {
-                    await Task.Delay(500, cancellationToken);
+                    _lastPosition = stream.Position;
+                    await Task.Delay(500, linkedToken);
                     continue;
                 }
 
                 _lastPosition = stream.Position;
 
-                // Replace this with your actual kill parsing logic
-                var kill = KillParser.ExtractKill(line); // You must implement KillParser.ExtractKill
-                if (kill == null) continue;
-
-                KillParsed?.Invoke(kill);
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    LineReceived?.Invoke(line);
+                }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Game log monitoring cancelled normally.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while monitoring the game log. Path={Path}", logFilePath);
+            throw;
         }
         finally
         {
-            KillParsed?.Invoke(new KillEntity { Type = "Info", Summary = "Disconnected", Timestamp = DateTime.Now });
-            _logger.LogInformation("Stopped GameLogService for {Path}", logFilePath);
+            IsMonitoring = false;
+            Disconnected?.Invoke();
+            _logger.LogInformation("Stopped game log monitor. Path={Path}", logFilePath);
         }
     }
 
-    public Task StopAsync() => Task.CompletedTask;
+    /// <inheritdoc />
+    public Task StopAsync()
+    {
+        if (!IsMonitoring)
+            return Task.CompletedTask;
+
+        _logger.LogInformation("Stop requested for game log monitor.");
+
+        _internalCancellationTokenSource?.Cancel();
+        return Task.CompletedTask;
+    }
 
     #endregion
 }

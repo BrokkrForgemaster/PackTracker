@@ -8,6 +8,7 @@
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <converters:RequestPriorityToColorConverter x:Key="RequestPriorityToColorConverter" />
         <converters:RequestKindToIconConverter x:Key="RequestKindToIconConverter" />
+        <converters:EnumToDisplayNameConverter x:Key="EnumToDisplayNameConverter" NullLabel="All Kinds" />
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -44,7 +45,13 @@
         <Border Grid.Row="1" Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,16" Padding="12">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <TextBlock Text="KIND" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <ComboBox Width="180" ItemsSource="{Binding KindOptions}" SelectedItem="{Binding SelectedKind}" Style="{StaticResource OpComboBoxStyle}" Margin="0,0,24,0"/>
+                <ComboBox Width="180" ItemsSource="{Binding KindOptions}" SelectedItem="{Binding SelectedKind}" Style="{StaticResource OpComboBoxStyle}" Margin="0,0,24,0">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayNameConverter}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
 
                 <TextBlock Text="STATUS" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <ComboBox Width="160" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus}" Style="{StaticResource OpComboBoxStyle}" Margin="0,0,24,0"/>

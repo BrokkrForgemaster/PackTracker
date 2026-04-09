@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <!-- ── Header ── -->
-        <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}">
+        <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
             <StackPanel>
                 <TextBlock Text="SYSTEM CONFIGURATION" Foreground="{StaticResource OpTextTitleBrush}" FontSize="22" FontWeight="Bold"/>
                 <TextBlock Text="Manage operational parameters, API credentials, and game log integration for the House Wolf shell."
@@ -20,7 +20,7 @@
         </Border>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel MaxWidth="800" HorizontalAlignment="Left" Width="800">
+            <StackPanel MaxWidth="800" HorizontalAlignment="Center" VerticalAlignment="Center" Width="800">
 
                 <!-- Appearance Section -->
                 <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,16">
@@ -42,12 +42,6 @@
                     <StackPanel>
                         <TextBlock Text="EXTERNAL API CREDENTIALS" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,16"/>
 
-                        <!-- Regolith API Key -->
-                        <StackPanel Margin="0,0,0,20">
-                            <TextBlock Text="REGOLITH API KEY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBox x:Name="TxtRegolithApiKey" Style="{StaticResource OpTextBoxStyle}"/>
-                            <TextBlock Text="Required for House Wolf refinery coordination and material tracking." Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="4,4,0,0"/>
-                        </StackPanel>
 
                         <!-- UEXCorp API Key -->
                         <StackPanel>
@@ -55,12 +49,7 @@
                             <TextBox x:Name="TxtUexcorpApiKey" Style="{StaticResource OpTextBoxStyle}"/>
                             <TextBlock Text="Required for real-time market data and trade route analysis." Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="4,4,0,0"/>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- Game Integration Section -->
-                <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,16">
-                    <StackPanel>
+                   
                         <TextBlock Text="GAME INTEGRATION" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,16"/>
                         <StackPanel>
                             <TextBlock Text="STAR CITIZEN LOG PATH" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
@@ -69,6 +58,8 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+
+            
             </StackPanel>
         </ScrollViewer>
 

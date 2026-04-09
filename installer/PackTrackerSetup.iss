@@ -3,13 +3,19 @@
 ; House Wolf Operations Shell for Star Citizen
 ;
 ; Build from repo root:
-;   ISCC.exe /DAppVersion=1.0.0 installer\PackTrackerSetup.iss
+;   ISCC.exe /DAppVersion=0.1.4 installer\PackTrackerSetup.iss
 ;
 ; The GitHub Actions workflow passes AppVersion automatically.
+; Version format: MAJOR.MINOR.PATCH  (no leading zeros, e.g. 0.1.4)
+;
+; Desktop icon note:
+;   IconFilename must be a .ico file.  Convert HWiconnew.png → HWiconnew.ico
+;   once (Paint / ImageMagick / any online converter), then place the .ico in
+;   PackTracker.Presentation\Assets\ alongside the PNG.
 ; ============================================================
 
 #ifndef AppVersion
-  #define AppVersion "0.1.2"
+  #define AppVersion "0.1.5"
 #endif
 
 #define AppName        "PackTracker"
@@ -17,6 +23,7 @@
 #define AppURL         "https://github.com/BrokkrForgemaster/PackTracker"
 #define AppExeName     "PackTracker.Presentation.exe"
 #define AppDescription "House Wolf Operations Shell"
+#define AppIconFile    "..\PackTracker.Presentation\Assets\HWiconnew.ico"
 
 [Setup]
 AppId={{A3F2C1D0-5E4B-4F8A-9C2D-1B0E7F3A8D56}
@@ -38,11 +45,11 @@ AllowNoIcons=yes
 OutputDir=output
 OutputBaseFilename=PackTrackerSetup-{#AppVersion}
 
-; Branding
+; Branding — wizard uses the existing housewolf2.ico; shortcuts use the new icon
 SetupIconFile=..\PackTracker.Presentation\Assets\housewolf2.ico
 WizardStyle=modern
 WizardImageFile=..\PackTracker.Presentation\Assets\HousewolfBanner.bmp
-WizardSmallImageFile=..\PackTracker.Presentation\Assets\Pack_Tracker.bmp
+WizardSmallImageFile=..\PackTracker.Presentation\Assets\HWiconnew.png
 WizardImageStretch=yes
 ; Dark background behind the banner image — matches app theme (#1A1410)
 WizardImageBackColor=$10141A
@@ -55,7 +62,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 
 ; Uninstall entry in Add/Remove Programs
-UninstallDisplayIcon={app}\{#AppExeName}
+UninstallDisplayIcon={app}\HWiconnew.ico
 UninstallDisplayName={#AppName} — {#AppDescription}
 
 ; Restart not needed for a standalone exe
@@ -75,11 +82,16 @@ Source: "..\publish\*"; \
   DestDir: "{app}"; \
   Flags: ignoreversion recursesubdirs createallsubdirs
 
+; Desktop/shortcut icon — convert HWiconnew.png to HWiconnew.ico before building
+Source: "..\PackTracker.Presentation\Assets\HWiconnew.ico"; \
+  DestDir: "{app}"; \
+  Flags: ignoreversion
+
 [Icons]
 ; Start menu
 Name: "{group}\{#AppName}"; \
   Filename: "{app}\{#AppExeName}"; \
-  IconFilename: "{app}\{#AppExeName}"; \
+  IconFilename: "{app}\HWiconnew.ico"; \
   Comment: "{#AppDescription}"
 
 Name: "{group}\Uninstall {#AppName}"; \
@@ -88,7 +100,7 @@ Name: "{group}\Uninstall {#AppName}"; \
 ; Desktop (optional task)
 Name: "{autodesktop}\{#AppName}"; \
   Filename: "{app}\{#AppExeName}"; \
-  IconFilename: "{app}\{#AppExeName}"; \
+  IconFilename: "{app}\HWiconnew.ico"; \
   Comment: "{#AppDescription}"; \
   Tasks: desktopicon
 

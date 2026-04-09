@@ -162,12 +162,6 @@
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#2B4E2E" Foreground="#EEF6EE"
                                         BorderBrush="#5C8B5E" BorderThickness="1"/>
-                                <Button Content="REFUSE REQUEST"
-                                        Command="{Binding RefuseCommand}"
-                                        IsEnabled="{Binding CanRefuse}"
-                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
-                                        Background="#4A2424" Foreground="#F8E8E8"
-                                        BorderBrush="#844F4F" BorderThickness="1"/>
                                 <Button Content="MARK IN PROGRESS"
                                         Command="{Binding MarkInProgressCommand}"
                                         IsEnabled="{Binding CanMarkInProgress}"

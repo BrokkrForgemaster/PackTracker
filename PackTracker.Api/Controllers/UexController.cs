@@ -52,6 +52,28 @@ public class UexController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// 🔄 SYNC COMMODITIES 
+    /// Manually triggers a sync of commodities from UEX to the local database.
+    /// </summary>
+    [HttpPost("sync")]
+    public async Task<IActionResult> SyncCommodities(CancellationToken ct)
+    {
+        var traceId = Guid.NewGuid().ToString();
+        _logger.LogInformation("🔄 [{Trace}] Triggering manual UEX commodity sync...", traceId);
+
+        try
+        {
+            await _uex.SyncCommoditiesAsync(ct);
+            return Ok(new { traceId, success = true, message = "Commodities synced successfully." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ [{Trace}] Error syncing commodities.", traceId);
+            return StatusCode(500, new { traceId, success = false, error = ex.Message });
+        }
+    }
+
     /// <summary name="GetPricesByCode">
     /// 💰 GET PRICES BY COMMODITY CODE 
     /// </summary>

@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
@@ -7,16 +8,23 @@ using PackTracker.Application.DTOs.Wiki;
 namespace PackTracker.Presentation.Services;
 
 /// <summary>
-/// Loads blueprint data directly from the Star Citizen wiki API.
-/// Used for all read operations in the blueprint explorer — the local DB
-/// is only used for ownership tracking.
+/// Provides blueprint data sourced from the Star Citizen Wiki API.
+/// Maintains an in-memory cache for fast querying and filtering.
+/// Enriches wiki detail with org/self-reported ownership data from the local API.
 /// </summary>
 public class WikiBlueprintService
 {
+    #region Fields
+
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IApiClientProvider _apiClientProvider;
     private readonly ILogger<WikiBlueprintService> _logger;
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
 
     private List<WikiBlueprintListItemDto> _cache = new();
+
+    private DateTime _lastLoaded = DateTime.MinValue;
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(30);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -24,90 +32,213 @@ public class WikiBlueprintService
         PropertyNameCaseInsensitive = true
     };
 
-    public bool IsLoaded => _cache.Count > 0;
+    #endregion
 
-    public WikiBlueprintService(IHttpClientFactory httpClientFactory, ILogger<WikiBlueprintService> logger)
+    #region Properties
+
+    /// <summary>
+    /// Indicates whether the cache is currently loaded and still fresh.
+    /// </summary>
+    public bool IsLoaded => _cache.Count > 0 && DateTime.UtcNow - _lastLoaded < CacheDuration;
+
+    #endregion
+
+    #region Constructor
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="WikiBlueprintService"/>.
+    /// </summary>
+    public WikiBlueprintService(
+        IHttpClientFactory httpClientFactory,
+        IApiClientProvider apiClientProvider,
+        ILogger<WikiBlueprintService> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _apiClientProvider = apiClientProvider;
         _logger = logger;
     }
 
-    // ── Static category list (derived from known game type values) ──────────────
+    #endregion
+
+    #region Static Data
+
     public static IReadOnlyList<string> KnownCategories { get; } = new[]
     {
-        "Personal Weapon", "Weapon Attachment",
-        "Armor - Torso", "Armor - Arms", "Armor - Legs",
-        "Armor - Helmet", "Armor - Undersuit", "Armor - Backpack"
+        "Personal Weapon",
+        "Weapon Attachment",
+        "Armor - Torso",
+        "Armor - Arms",
+        "Armor - Legs",
+        "Armor - Helmet",
+        "Armor - Undersuit",
+        "Armor - Backpack"
     };
 
-    // ── Load all blueprints into memory (call once on startup) ──────────────────
+    #endregion
+
+    #region Load
+
     public async Task<int> LoadAllAsync(CancellationToken ct = default)
     {
-        var client = _httpClientFactory.CreateClient("WikiApi");
-        var all = new List<WikiBlueprintListItemDto>();
-        var page = 1;
-        var lastPage = 1;
+        if (IsLoaded)
+        {
+            _logger.LogInformation("Wiki blueprint cache already loaded and fresh.");
+            return _cache.Count;
+        }
+
+        await _loadLock.WaitAsync(ct);
 
         try
         {
+            if (IsLoaded)
+                return _cache.Count;
+
+            var client = _httpClientFactory.CreateClient("WikiApi");
+
+            var all = new List<WikiBlueprintListItemDto>();
+            var page = 1;
+            var lastPage = 1;
+
+            _logger.LogInformation("Starting wiki blueprint load.");
+
             do
             {
                 ct.ThrowIfCancellationRequested();
-                var json = await client.GetStringAsync(
-                    $"blueprints?page%5Bnumber%5D={page}&page%5Bsize%5D=50", ct);
 
-                var paged = JsonSerializer.Deserialize<WikiPagedResponseDto<WikiBlueprintListItemDto>>(json, JsonOptions);
+                var response = await client.GetAsync(
+                    $"blueprints?page%5Bnumber%5D={page}&page%5Bsize%5D=50",
+                    ct);
+
+                response.EnsureSuccessStatusCode();
+
+                var json = await response.Content.ReadAsStringAsync(ct);
+
+                var paged = JsonSerializer.Deserialize<WikiPagedResponseDto<WikiBlueprintListItemDto>>(
+                    json,
+                    JsonOptions);
+
                 if (paged?.Data == null || paged.Data.Count == 0)
                     break;
 
                 lastPage = paged.Meta?.LastPage ?? page;
                 all.AddRange(paged.Data);
+
+                _logger.LogDebug(
+                    "Loaded wiki blueprint page {Page}/{LastPage}. Total so far: {Count}",
+                    page,
+                    lastPage,
+                    all.Count);
+
                 page++;
-            } while (page <= lastPage);
+            }
+            while (page <= lastPage);
 
             _cache = all;
-            _logger.LogInformation("Wiki blueprint cache loaded: {Count} blueprints across {Pages} pages", all.Count, lastPage);
+            _lastLoaded = DateTime.UtcNow;
+
+            _logger.LogInformation(
+                "Wiki blueprint cache loaded successfully. Count={Count}, Pages={Pages}",
+                all.Count,
+                lastPage);
+
+            return _cache.Count;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load blueprints from wiki API");
+            _logger.LogError(ex, "Failed to load blueprint cache from Wiki API.");
+            return 0;
         }
-
-        return _cache.Count;
+        finally
+        {
+            _loadLock.Release();
+        }
     }
 
-    // ── Search / filter cached list ──────────────────────────────────────────────
-    public IReadOnlyList<BlueprintSearchItemDto> Search(string? query, string? category)
+    #endregion
+
+    #region Search
+
+    public IReadOnlyList<string> GetCategories()
+    {
+        return _cache
+            .Select(x => MapCategory(x.Output?.Type ?? x.Output?.Class))
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    public IReadOnlyList<BlueprintSearchItemDto> Search(string? query, string? category, bool inGameOnly = false)
     {
         var results = _cache.AsEnumerable();
 
+        if (inGameOnly)
+            results = results.Where(x => x.IsAvailableByDefault);
+
         if (!string.IsNullOrWhiteSpace(category))
-            results = results.Where(x => MapCategory(x.Output?.Type ?? x.Output?.Class) == category);
+        {
+            results = results.Where(x =>
+                MapCategory(x.Output?.Type ?? x.Output?.Class) == category);
+        }
 
         if (!string.IsNullOrWhiteSpace(query))
         {
             var term = query.Trim();
+
             results = results.Where(x =>
-                (x.Output?.Name ?? "").Contains(term, StringComparison.OrdinalIgnoreCase)
-                || MapCategory(x.Output?.Type ?? x.Output?.Class).Contains(term, StringComparison.OrdinalIgnoreCase));
+                (x.Output?.Name ?? string.Empty).Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                MapCategory(x.Output?.Type ?? x.Output?.Class)
+                    .Contains(term, StringComparison.OrdinalIgnoreCase));
         }
 
         return results
             .Take(200)
-            .Select(x => ToSearchItem(x))
+            .Select(ToSearchItem)
             .ToList();
     }
 
-    // ── Fetch full detail for one blueprint ─────────────────────────────────────
+    #endregion
+
+    #region Detail
+
     public async Task<BlueprintDetailDto?> GetDetailAsync(Guid wikiUuid, CancellationToken ct = default)
     {
         try
         {
             var client = _httpClientFactory.CreateClient("WikiApi");
-            var json = await client.GetStringAsync($"blueprints/{wikiUuid}", ct);
-            var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(json, JsonOptions);
+
+            var response = await client.GetAsync($"blueprints/{wikiUuid}", ct);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+
+            var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(
+                json,
+                JsonOptions);
+
             var detail = wrapper?.Data;
-            return detail is null ? null : MapToDetailDto(detail, wikiUuid);
+            if (detail is null)
+                return null;
+
+            var dto = MapToDetailDto(detail, wikiUuid);
+
+            var allOwnershipRecords = await LoadOrgOwnershipAsync(wikiUuid, ct);
+
+            dto.Owners = allOwnershipRecords
+                .Where(o => string.Equals(o.InterestType, "Owns", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            dto.InterestedUsers = allOwnershipRecords
+                .Where(o => !string.Equals(o.InterestType, "Owns", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            dto.OwnerCount = dto.Owners.Count;
+
+            _logger.LogInformation(
+                "Loaded blueprint detail {Uuid} with OwnerCount={OwnerCount}",
+                wikiUuid,
+                dto.OwnerCount);
+
+            return dto;
         }
         catch (Exception ex)
         {
@@ -116,77 +247,110 @@ public class WikiBlueprintService
         }
     }
 
-    // ── Mapping helpers ─────────────────────────────────────────────────────────
-
-    private static BlueprintSearchItemDto ToSearchItem(WikiBlueprintListItemDto x)
+    private async Task<IReadOnlyList<BlueprintOwnerDto>> LoadOrgOwnershipAsync(Guid blueprintId, CancellationToken ct)
     {
-        var name = x.Output?.Name ?? x.Uuid;
-        return new BlueprintSearchItemDto
+        try
         {
-            Id = Guid.TryParse(x.Uuid, out var g) ? g : Guid.NewGuid(),
-            BlueprintName = $"{name} Blueprint",
-            CraftedItemName = name,
-            Category = MapCategory(x.Output?.Type ?? x.Output?.Class),
-            IsInGameAvailable = true,
-            AcquisitionSummary = null,
-            DataConfidence = "WikiAPI",
-            VerifiedOwnerCount = 0
-        };
+            using var client = _apiClientProvider.CreateClient();
+
+            var response = await client.GetAsync($"api/v1/blueprints/{blueprintId}/ownership", ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Ownership lookup failed for blueprint {BlueprintId}. Status={StatusCode}",
+                    blueprintId,
+                    (int)response.StatusCode);
+
+                return Array.Empty<BlueprintOwnerDto>();
+            }
+
+            var owners = await response.Content.ReadFromJsonAsync<List<BlueprintOwnerDto>>(cancellationToken: ct);
+            return owners;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Ownership lookup failed for blueprint {BlueprintId}", blueprintId);
+            return Array.Empty<BlueprintOwnerDto>();
+        }
     }
+
+
+    #endregion
+
+    #region Mapping
 
     private static BlueprintDetailDto MapToDetailDto(WikiBlueprintDetailDto d, Guid wikiUuid)
     {
         var outputName = d.Output?.Name ?? d.OutputName ?? wikiUuid.ToString();
         var category = MapCategory(d.Output?.Type ?? d.Output?.Class);
 
-        // Aggregate material quantities from requirement_groups.children
-        var resourceTotals = new Dictionary<string, (string Name, Guid? Uuid, double Qty, string Unit)>(StringComparer.OrdinalIgnoreCase);
-        foreach (var group in d.RequirementGroups)
+        var resourceTotals = new Dictionary<string, (string Name, Guid? Uuid, double Qty, string Unit)>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in d.RequirementGroups ?? Enumerable.Empty<WikiRequirementGroupDto>())
         {
-            foreach (var child in group.Children.Where(c =>
-                         string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase)))
+            foreach (var child in group.Children?.Where(c =>
+                         string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase))
+                     ?? Enumerable.Empty<WikiRequirementChildDto>())
             {
                 var key = child.Uuid ?? child.Name ?? "unknown";
                 var qty = child.QuantityScu ?? child.Quantity ?? 0;
                 var unit = child.QuantityScu.HasValue ? "SCU" : "Units";
-                var uuid = child.Uuid != null && Guid.TryParse(child.Uuid, out var cg) ? cg : (Guid?)null;
 
-                if (resourceTotals.TryGetValue(key, out var ex))
-                    resourceTotals[key] = (ex.Name, ex.Uuid, ex.Qty + qty, ex.Unit);
+                var uuid = child.Uuid != null && Guid.TryParse(child.Uuid, out var parsed)
+                    ? parsed
+                    : (Guid?)null;
+
+                if (resourceTotals.TryGetValue(key, out var existing))
+                {
+                    resourceTotals[key] = (
+                        existing.Name,
+                        existing.Uuid,
+                        existing.Qty + qty,
+                        existing.Unit
+                    );
+                }
                 else
-                    resourceTotals[key] = (child.Name ?? "Unknown", uuid, qty, unit);
+                {
+                    resourceTotals[key] = (
+                        child.Name ?? "Unknown",
+                        uuid,
+                        qty,
+                        unit
+                    );
+                }
             }
         }
 
         var materials = resourceTotals.Values
-            .OrderBy(r => r.Name)
-            .Select(r => new BlueprintRecipeMaterialDto
+            .OrderBy(x => x.Name)
+            .Select(x => new BlueprintRecipeMaterialDto
             {
-                MaterialId = r.Uuid ?? Guid.NewGuid(),
-                MaterialName = r.Name,
+                MaterialId = x.Uuid ?? Guid.NewGuid(),
+                MaterialName = x.Name,
                 MaterialType = "Resource",
                 Tier = string.Empty,
-                QuantityRequired = r.Qty,
-                Quantity = r.Qty,
-                Unit = r.Unit,
+                QuantityRequired = x.Qty,
+                Unit = x.Unit,
                 SourceType = "Unknown"
             })
             .ToList();
 
-        // Build per-group component view (part name + material + modifiers)
-        var components = d.RequirementGroups
+        var components = (d.RequirementGroups ?? Enumerable.Empty<WikiRequirementGroupDto>())
             .Select(group =>
             {
-                var firstChild = group.Children.FirstOrDefault(c =>
+                var firstResource = group.Children?.FirstOrDefault(c =>
                     string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase));
 
                 return new BlueprintComponentDto
                 {
                     PartName = group.Name ?? group.Key ?? "Component",
-                    MaterialName = firstChild?.Name ?? "Unknown",
-                    Quantity = firstChild?.QuantityScu ?? firstChild?.Quantity ?? 0,
+                    MaterialName = firstResource?.Name ?? "Unknown",
+                    Scu = firstResource?.QuantityScu ?? firstResource?.Quantity ?? 0,
+                    Quantity = group.RequiredCount ?? 1,
                     DefaultQuality = 500,
-                    Modifiers = group.Modifiers
+                    Modifiers = (group.Modifiers ?? Enumerable.Empty<WikiModifierDto>())
                         .Select(m => new BlueprintModifierDto
                         {
                             PropertyKey = m.PropertyKey ?? "modifier",
@@ -199,7 +363,7 @@ public class WikiBlueprintService
             .ToList();
 
         var acquisitionSummary = d.Availability?.Default == true
-            ? "Available by default — no unlock required"
+            ? "Available by default - no unlock required"
             : d.Availability?.RewardPools?.Count > 0
                 ? $"Unlocked via reward pools ({d.Availability.RewardPools.Count})"
                 : null;
@@ -218,29 +382,53 @@ public class WikiBlueprintService
             TimeToCraftSeconds = d.CraftTimeSeconds > 0 ? d.CraftTimeSeconds : null,
             Materials = materials,
             Components = components,
-            Owners = Array.Empty<BlueprintOwnerDto>()  // loaded separately from local API
+            Owners = Array.Empty<BlueprintOwnerDto>(),
+            InterestedUsers = Array.Empty<BlueprintOwnerDto>(),
+            OwnerCount = 0
+        };
+    }
+
+    private static BlueprintSearchItemDto ToSearchItem(WikiBlueprintListItemDto x)
+    {
+        var name = x.Output?.Name ?? x.Uuid;
+
+        return new BlueprintSearchItemDto
+        {
+            Id = Guid.TryParse(x.Uuid, out var g) ? g : Guid.NewGuid(),
+            BlueprintName = $"{name} Blueprint",
+            CraftedItemName = name,
+            Category = MapCategory(x.Output?.Type ?? x.Output?.Class),
+            IsInGameAvailable = true,
+            AcquisitionSummary = null,
+            DataConfidence = "WikiAPI",
+            VerifiedOwnerCount = 0
         };
     }
 
     private static string? BuildDescription(WikiBlueprintOutputDto? output)
     {
-        if (output is null) return null;
+        if (output is null)
+            return null;
+
         var parts = new[] { output.Type, output.Subtype, output.Grade }
             .Where(x => !string.IsNullOrWhiteSpace(x));
+
         var joined = string.Join(" / ", parts);
         return joined.Length > 0 ? joined : null;
     }
 
     public static string MapCategory(string? type) => type switch
     {
-        "WeaponPersonal"       => "Personal Weapon",
-        "WeaponAttachment"     => "Weapon Attachment",
-        "Char_Armor_Torso"     => "Armor - Torso",
-        "Char_Armor_Arms"      => "Armor - Arms",
-        "Char_Armor_Legs"      => "Armor - Legs",
-        "Char_Armor_Helmet"    => "Armor - Helmet",
+        "WeaponPersonal" => "Personal Weapon",
+        "WeaponAttachment" => "Weapon Attachment",
+        "Char_Armor_Torso" => "Armor - Torso",
+        "Char_Armor_Arms" => "Armor - Arms",
+        "Char_Armor_Legs" => "Armor - Legs",
+        "Char_Armor_Helmet" => "Armor - Helmet",
         "Char_Armor_Undersuit" => "Armor - Undersuit",
-        "Char_Armor_Backpack"  => "Armor - Backpack",
-        _                      => type ?? "Unknown"
+        "Char_Armor_Backpack" => "Armor - Backpack",
+        _ => type ?? "Unknown"
     };
+
+    #endregion
 }

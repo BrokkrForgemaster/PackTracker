@@ -72,6 +72,9 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
+                    b.Property<int>("OwnerCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -311,18 +314,21 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasColumnType("real");
 
                     b.Property<float>("ScuBuy")
+                        .HasPrecision(18, 2)
                         .HasColumnType("real");
 
                     b.Property<float>("ScuBuyAvg")
                         .HasColumnType("real");
 
                     b.Property<float>("ScuSell")
+                        .HasPrecision(18, 2)
                         .HasColumnType("real");
 
                     b.Property<float>("ScuSellAvg")
                         .HasColumnType("real");
 
                     b.Property<float>("ScuSellStock")
+                        .HasPrecision(18, 2)
                         .HasColumnType("real");
 
                     b.Property<float>("ScuSellStockAvg")
@@ -354,7 +360,7 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CommodityId");
+                    b.HasIndex("CommodityId", "TerminalId");
 
                     b.ToTable("CommodityPrices");
                 });
@@ -380,6 +386,12 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Property<string>("DeliveryLocation")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ItemName")
+                        .HasColumnType("text");
+
+                    b.Property<int>("MaterialSupplyMode")
+                        .HasColumnType("integer");
 
                     b.Property<int>("MinimumQuality")
                         .HasColumnType("integer");
@@ -469,71 +481,6 @@ namespace PackTracker.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("GuideRequests");
-                });
-
-            modelBuilder.Entity("PackTracker.Domain.Entities.Kill", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Attacker")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("GameLogSource")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsPvp")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsSynced")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<int>("KillType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Location")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Summary")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("SyncedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Target")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Type")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Weapon")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Attacker", "Target", "Timestamp")
-                        .IsUnique();
-
-                    b.ToTable("KillEntries", "public");
                 });
 
             modelBuilder.Entity("PackTracker.Domain.Entities.Material", b =>
@@ -649,6 +596,9 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<Guid?>("RequesterProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("RewardOffered")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -666,6 +616,8 @@ namespace PackTracker.Infrastructure.Migrations
                     b.HasIndex("LinkedCraftingRequestId");
 
                     b.HasIndex("MaterialId");
+
+                    b.HasIndex("RequesterProfileId");
 
                     b.ToTable("MaterialProcurementRequests");
                 });
@@ -793,23 +745,36 @@ namespace PackTracker.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AvatarUrl")
-                        .IsRequired()
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DiscordAvatarUrl")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("DiscordDisplayName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("DiscordId")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("DiscordRank")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Discriminator")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsOnline")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("LastLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Username")
@@ -868,113 +833,6 @@ namespace PackTracker.Infrastructure.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("PackTracker.Domain.Entities.RegolithProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AvatarUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("ScName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("SyncedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("RegolithProfiles");
-                });
-
-            modelBuilder.Entity("PackTracker.Domain.Entities.RegolithRefineryJob", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Efficiency")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Eta")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("JobId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Material")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Progress")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime>("SubmittedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<DateTime>("SyncedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Yield")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JobId")
-                        .IsUnique();
-
-                    b.ToTable("RegolithRefineryJobs");
-                });
-
             modelBuilder.Entity("PackTracker.Domain.Entities.RequestComment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1014,7 +872,8 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("AssetsShips")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("AssignedToDisplayName")
                         .HasMaxLength(64)
@@ -1026,13 +885,15 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("Availability")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CompletedByUserId")
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -1051,7 +912,8 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("CurrentBaseline")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("Description")
                         .HasMaxLength(4000)
@@ -1062,11 +924,13 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("GameBuild")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("GroupPreference")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<bool>("HasMic")
                         .HasColumnType("boolean");
@@ -1087,11 +951,13 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("PlatformSpecs")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("PlayerHandle")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
@@ -1101,7 +967,8 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("RecordingPermission")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("RewardOffered")
                         .HasMaxLength(100)
@@ -1109,18 +976,21 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("SkillObjective")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<string>("SuccessCriteria")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("TimeZone")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1134,7 +1004,8 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<string>("Urgency")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
@@ -1226,11 +1097,18 @@ namespace PackTracker.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "RequesterProfile")
+                        .WithMany()
+                        .HasForeignKey("RequesterProfileId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("AssignedToProfile");
 
                     b.Navigation("LinkedCraftingRequest");
 
                     b.Navigation("Material");
+
+                    b.Navigation("RequesterProfile");
                 });
 
             modelBuilder.Entity("PackTracker.Domain.Entities.MaterialSource", b =>

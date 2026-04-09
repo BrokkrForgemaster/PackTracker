@@ -4,386 +4,1004 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
+             xmlns:vm="clr-namespace:PackTracker.Presentation.ViewModels"
              mc:Ignorable="d"
              Background="Transparent">
 
     <UserControl.Resources>
-        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <converters:QualityColorConverter x:Key="QualityColorConverter" />
+
+        <Style x:Key="BpActionButtonStyle" TargetType="Button">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.68" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BpHeaderButtonStyle" TargetType="Button">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform />
+                            </Border.RenderTransform>
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
+                            </Trigger>
+                            <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                         To="0.92" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                         To="0.92" Duration="0:0:0.07" />
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.75" Duration="0:0:0.07" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                         To="1" Duration="0:0:0.14" />
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                         To="1" Duration="0:0:0.14" />
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                         To="1" Duration="0:0:0.1" />
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                         To="1" Duration="0:0:0.1" />
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="QualityAdjustButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.72" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <SolidColorBrush x:Key="ModPositiveBrush" Color="#5CB85C" />
+        <SolidColorBrush x:Key="ModNegativeBrush" Color="#D9534F" />
+        <SolidColorBrush x:Key="ModNeutralBrush" Color="#85745E" />
+
+        <Style x:Key="ModValueTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource ModNeutralBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPositive}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource ModPositiveBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsNegative}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource ModNegativeBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="QualitySliderStyle" TargetType="{x:Type Slider}">
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <Grid VerticalAlignment="Center">
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge"
+                                                  Focusable="False"
+                                                  Height="6">
+                                        <RepeatButton.Style>
+                                            <Style TargetType="RepeatButton">
+                                                <Setter Property="Background"
+                                                        Value="{Binding Value,
+                                                                RelativeSource={RelativeSource AncestorType={x:Type Slider}},
+                                                                Converter={StaticResource QualityColorConverter}}" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="RepeatButton">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="3,0,0,3"
+                                                                    Height="6" />
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </RepeatButton.Style>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+
+                                <Track.Thumb>
+                                    <Thumb Width="14" Height="20" Focusable="False">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Background="#E0E8F0"
+                                                        BorderBrush="#6A7A8A"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3"
+                                                        Width="10"
+                                                        Height="18" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge"
+                                                  Focusable="False"
+                                                  Height="6">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="#1A2030"
+                                                        CornerRadius="0,3,3,0"
+                                                        Height="6" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="320"/>
-            <ColumnDefinition Width="16"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- ── Header ── -->
+        <!-- Header -->
         <Border Grid.Row="0" Grid.ColumnSpan="3" Style="{StaticResource OpHeaderBorderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+
                 <StackPanel>
-                    <TextBlock Text="BLUEPRINT OPERATIONS" Style="{x:Null}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="22" FontWeight="Bold"/>
-                    <TextBlock Text="Search imported Star Citizen blueprint data, inspect part requirements, evaluate modifiers, and dispatch House Wolf workflow actions."
-                               Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    <TextBlock Text="BLUEPRINT OPERATIONS"
+                               Foreground="{StaticResource OpTextTitleBrush}"
+                               FontSize="22"
+                               FontWeight="Bold" />
+                    <TextBlock
+                        Text="Search imported Star Citizen blueprint data, inspect part requirements, evaluate modifiers, and dispatch House Wolf workflow actions."
+                        Foreground="{StaticResource OpTextSecondaryBrush}"
+                        FontSize="12"
+                        Margin="0,4,0,0"
+                        TextWrapping="Wrap" />
                 </StackPanel>
-                <Border Grid.Column="1" Style="{StaticResource OpPanelBorderStyle}"
-                        Background="{StaticResource OpBackgroundPillBrush}" BorderBrush="{StaticResource OpBorderPillBrush}"
-                        Padding="10,6" VerticalAlignment="Center">
+
+                <Border Grid.Column="1"
+                        Style="{StaticResource OpPanelBorderStyle}"
+                        Background="{StaticResource OpBackgroundPillBrush}"
+                        BorderBrush="{StaticResource OpBorderPillBrush}"
+                        Padding="10,6"
+                        VerticalAlignment="Center">
                     <StackPanel>
-                        <TextBlock Text="STATUS" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="9" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="11" Width="260" TextWrapping="Wrap"/>
+                        <TextBlock Text="STATUS"
+                                   Foreground="{StaticResource OpTextSecondaryBrush}"
+                                   FontSize="9"
+                                   FontWeight="Bold" />
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Foreground="{StaticResource OpTextPrimaryBrush}"
+                                   FontSize="11"
+                                   Width="260"
+                                   TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </Grid>
         </Border>
 
-        <!-- ── Left Panel ── -->
+        <!-- Left search pane -->
         <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource OpPanelBorderStyle}">
-            <DockPanel Margin="12">
-                <StackPanel DockPanel.Dock="Top">
-                    <TextBlock Text="SEARCH" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold"/>
-                    <TextBox Margin="0,6,0,10"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource OpTextBoxStyle}"/>
+            <StackPanel Margin="12">
+                <TextBlock Text="SEARCH"
+                           Foreground="{StaticResource OpTextMutedBrush}"
+                           FontSize="10"
+                           FontWeight="Bold" />
+                <TextBox Margin="0,5,0,10"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource OpTextBoxStyle}" />
 
-                    <TextBlock Text="CATEGORY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold"/>
-                    <ComboBox Margin="0,6,0,10"
-                              ItemsSource="{Binding Categories}"
-                              SelectedItem="{Binding SelectedCategory}"
-                              Style="{StaticResource OpComboBoxStyle}"/>
+                <TextBlock Text="CATEGORY"
+                           Foreground="{StaticResource OpTextMutedBrush}"
+                           FontSize="10"
+                           FontWeight="Bold" />
+                <ComboBox Margin="0,5,0,10"
+                          ItemsSource="{Binding Categories}"
+                          SelectedItem="{Binding SelectedCategory}"
+                          Style="{StaticResource OpComboBoxStyle}" />
 
-                    <CheckBox Content="Only show default-unlock blueprints"
-                              IsChecked="{Binding InGameOnly}"
-                              Foreground="{StaticResource OpTextPrimaryBrush}"
-                              Margin="0,0,0,12"/>
+                <CheckBox Content="Default-unlock blueprints only"
+                          IsChecked="{Binding InGameOnly}"
+                          Foreground="{StaticResource OpTextPrimaryBrush}"
+                          Margin="0,0,0,10" />
 
-                    <Button Content="SEARCH BLUEPRINTS"
-                            Command="{Binding SearchCommand}"
-                            Padding="12,8"
-                            FontWeight="Bold"
-                            Background="#8B1A0F"
-                            Foreground="#F4EBDD"
-                            BorderBrush="#B15B34"
-                            BorderThickness="1"/>
+                <Button Content="SEARCH BLUEPRINTS"
+                        Command="{Binding SearchCommand}"
+                        Style="{StaticResource BpActionButtonStyle}"
+                        Background="#8B1A0F"
+                        Foreground="#F4EBDD"
+                        BorderBrush="#B15B34"
+                        BorderThickness="1"
+                        Margin="0,0,0,25" />
 
-                    <TextBlock Margin="0,6,0,6"
-                               Foreground="{StaticResource OpTextMutedBrush}" FontSize="11"
-                               Text="{Binding Results.Count, StringFormat=Results: {0}}"/>
-
-                    <TextBlock Text="SELECT BLUEPRINT" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold"/>
-                    <ComboBox Margin="0,6,0,0"
-                              ItemsSource="{Binding Results}"
-                              SelectedItem="{Binding SelectedBlueprint}"
-                              Style="{StaticResource OpComboBoxStyle}"
-                              MaxDropDownHeight="420">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="2,4">
-                                    <TextBlock Text="{Binding BlueprintName}"
-                                               Foreground="{StaticResource OpTextTitleBrush}" FontWeight="SemiBold" FontSize="13"
-                                               TextWrapping="Wrap"/>
-                                    <DockPanel Margin="0,3,0,0">
-                                        <TextBlock Text="{Binding Category}"
-                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" DockPanel.Dock="Left"/>
-                                        <TextBlock Text="{Binding VerifiedOwnerCount, StringFormat=Owners: {0}}"
-                                                   Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" DockPanel.Dock="Right"/>
-                                    </DockPanel>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-            </DockPanel>
+                <ComboBox ItemsSource="{Binding Results}"
+                          SelectedItem="{Binding SelectedBlueprint}"
+                          Style="{StaticResource OpComboBoxStyle}"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,3">
+                                <TextBlock Text="{Binding CraftedItemName}"
+                                           Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontWeight="SemiBold"
+                                           FontSize="12"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Category}"
+                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="10" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
         </Border>
 
-        <!-- ── Right Panel ── -->
+        <!-- Right main workspace -->
         <Grid Grid.Row="1" Grid.Column="2">
-
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
                 <ScrollViewer.Style>
                     <Style TargetType="ScrollViewer" BasedOn="{StaticResource OpScrollViewerStyle}">
-                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="Visibility" Value="Collapsed" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding HasSelectedBlueprintDetail}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
+                                <Setter Property="Visibility" Value="Visible" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </ScrollViewer.Style>
-                <StackPanel>
-                    <Border Style="{StaticResource OpHeaderBorderStyle}" Margin="0" Padding="18">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="{Binding SelectedBlueprintDetail.BlueprintName}"
-                                           FontSize="24" FontWeight="Bold" Foreground="{StaticResource OpTextTitleBrush}"/>
-                                <TextBlock Text="{Binding SelectedBlueprintDetail.CraftedItemName}"
-                                           FontSize="14" Foreground="{StaticResource OpTextAccentBrush}" Margin="0,4,0,0"/>
-                                <WrapPanel Margin="0,10,0,0">
-                                    <Border Background="{StaticResource OpBackgroundPillBrush}" BorderBrush="{StaticResource OpBorderPillBrush}" BorderThickness="1"
-                                            CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
-                                        <TextBlock Text="{Binding SelectedBlueprintDetail.Category}"
-                                                   Foreground="{StaticResource OpTextAccentBrush}" FontSize="11"/>
-                                    </Border>
-                                    <Border Background="{StaticResource OpBackgroundPillBrush}" BorderBrush="{StaticResource OpBorderPillBrush}" BorderThickness="1"
-                                            CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
-                                        <TextBlock Text="{Binding SelectedBlueprintDetail.DataConfidence}"
-                                                   Foreground="{StaticResource OpTextAccentBrush}" FontSize="11"/>
-                                    </Border>
-                                    <Border Background="{StaticResource OpBackgroundPillBrush}" BorderBrush="{StaticResource OpBorderPillBrush}" BorderThickness="1"
-                                            CornerRadius="5" Padding="8,4" Margin="0,0,8,8">
-                                        <TextBlock Foreground="{StaticResource OpTextAccentBrush}" FontSize="11">
-                                            <Run Text="Craft Time: "/>
-                                            <Run Text="{Binding SelectedBlueprintDetail.TimeToCraftSeconds}"/>
-                                            <Run Text="s"/>
+
+                <!-- Centered workspace canvas -->
+                <Grid HorizontalAlignment="Center" MaxWidth="1220">
+                    <StackPanel>
+
+                        <!-- Blueprint header -->
+                        <Border Style="{StaticResource OpHeaderBorderStyle}" Padding="18" Margin="0,0,0,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="200" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Left: Blueprint info -->
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Left">
+                                    <TextBlock Text="{Binding SelectedBlueprintDetail.BlueprintName}"
+                                               FontSize="22"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource OpTextTitleBrush}" />
+
+                                    <TextBlock Text="{Binding SelectedBlueprintDetail.CraftedItemName}"
+                                               FontSize="13"
+                                               Foreground="{StaticResource OpTextAccentBrush}"
+                                               Margin="0,3,0,0" />
+
+                                    <WrapPanel Margin="0,10,0,0">
+                                        <Border Background="{StaticResource OpBackgroundPillBrush}"
+                                                BorderBrush="{StaticResource OpBorderPillBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="5"
+                                                Padding="8,4"
+                                                Margin="0,0,8,5">
+                                            <TextBlock Text="{Binding SelectedBlueprintDetail.Category}"
+                                                       Foreground="{StaticResource OpTextAccentBrush}"
+                                                       FontSize="11" />
+                                        </Border>
+
+                                        <Border Background="#1E1400"
+                                                BorderBrush="#C8860A"
+                                                BorderThickness="1"
+                                                CornerRadius="5"
+                                                Padding="10,5"
+                                                Margin="0,0,8,5"
+                                                Visibility="{Binding SelectedBlueprintDetail.TimeToCraftSeconds, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <TextBlock FontSize="11" FontWeight="SemiBold">
+                                                <Run Text="⏱ " Foreground="#CFAF5A" />
+                                                <Run Text="Craft Time: " Foreground="#B89B4A" />
+                                                <Run Text="{Binding SelectedBlueprintDetail.TimeToCraftSeconds}"
+                                                     Foreground="#E6D3A3"
+                                                     FontWeight="Bold" />
+                                                <Run Text=" s" Foreground="#B89B4A" />
+                                            </TextBlock>
+                                        </Border>
+                                    </WrapPanel>
+
+                                    <TextBlock Text="{Binding SelectedBlueprintDetail.Description}"
+                                               Foreground="{StaticResource OpTextSecondaryBrush}"
+                                               FontSize="12"
+                                               Margin="0,10,0,0"
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding SelectedBlueprintDetail.Description, Converter={StaticResource NullToVisibilityConverter}}" />
+                                </StackPanel>
+
+                                <!-- Center-left: Org ownership summary -->
+                                <Border Grid.Column="1"
+                                        Background="#16181C"
+                                        BorderBrush="#2B313A"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12,10"
+                                        Margin="8,0,8,0"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Left"
+                                        Width="170">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock HorizontalAlignment="Center"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#AFA79A"
+                                                   Text="Org Owners:" />
+
+                                        <TextBlock
+                                            Text="{Binding SelectedBlueprintDetail.OwnerCount, TargetNullValue=0, FallbackValue=0}"
+                                            FontSize="18"
+                                            FontWeight="Bold"
+                                            Margin="0,4,0,0"
+                                            HorizontalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#FF6B6B" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="0">
+                                                            <Setter Property="Foreground" Value="#FF6B6B" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="{x:Null}">
+                                                            <Setter Property="Foreground" Value="#FF6B6B" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="1">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="2">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="3">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="4">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="5">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="6">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="7">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="8">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                        <DataTrigger
+                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
+                                                            Value="9">
+                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
                                         </TextBlock>
-                                    </Border>
-                                </WrapPanel>
-                                <TextBlock Text="{Binding SelectedBlueprintDetail.Description}"
-                                           Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding SelectedBlueprintDetail.AcquisitionSummary}"
-                                           Foreground="{StaticResource OpTextAccentBrush}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
-                            </StackPanel>
 
-                            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top">
-                                <Button Content="MARK OWNED"
-                                        Command="{Binding MarkOwnedCommand}"
-                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
-                                        Background="#2B4E2E" Foreground="#EEF6EE"
-                                        BorderBrush="#5C8B5E" BorderThickness="1"/>
-                                <Button Content="MARK WANTED"
-                                        Command="{Binding MarkWantedCommand}"
-                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
-                                        Background="#5A3A14" Foreground="#F8E9D4"
-                                        BorderBrush="#A36E2F" BorderThickness="1"/>
-                                <Button Content="CREATE CRAFTING REQUEST"
-                                        Command="{Binding CreateCraftingRequestCommand}"
-                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
-                                        Background="#8B1A0F" Foreground="#F4EBDD"
-                                        BorderBrush="#B15B34" BorderThickness="1"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                                        <TextBlock Text="Self-reported ownership only."
+                                                   Foreground="#7C838C"
+                                                   FontSize="10"
+                                                   Margin="0,4,0,0"
+                                                   TextAlignment="Center"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
 
-                    <Grid Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                                <!-- Right: Action buttons -->
+                                <StackPanel Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            Margin="24,0,0,0"
+                                            Width="160">
+                                    <Button Content="Mark Owned"
+                                            Command="{Binding MarkOwnedCommand}"
+                                            Style="{StaticResource BpHeaderButtonStyle}"
+                                            Background="#2B4E2E"
+                                            Foreground="#EEF6EE"
+                                            BorderBrush="#5C8B5E"
+                                            BorderThickness="1"
+                                            Margin="0,0,0,12" />
 
-                        <Border Grid.Column="0" Style="{StaticResource OpPanelBorderStyle}" Padding="14">
-                            <StackPanel>
-                                <TextBlock Text="COMPONENT BREAKDOWN" Foreground="{StaticResource OpTextTitleBrush}" FontSize="16" FontWeight="Bold"/>
-                                <TextBlock Text="Part-level crafting breakdown derived from source blueprint groups and modifier ranges."
-                                           Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,4,0,12"/>
+                                    <Button Content="Request Crafting"
+                                            Command="{Binding CreateCraftingRequestCommand}"
+                                            Style="{StaticResource BpHeaderButtonStyle}"
+                                            Background="#8B1A0F"
+                                            Foreground="#F4EBDD"
+                                            BorderBrush="#B15B34"
+                                            BorderThickness="1" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Balanced two-column workspace -->
+                        <Grid HorizontalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="540" />
+                                <ColumnDefinition Width="32" />
+                                <ColumnDefinition Width="540" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left cards -->
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Left">
                                 <ItemsControl ItemsSource="{Binding Components}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Style="{StaticResource OpItemBorderStyle}">
+                                        <DataTemplate DataType="{x:Type vm:ComponentViewModel}">
+                                            <Border Style="{StaticResource OpPanelBorderStyle}"
+                                                    Padding="12,10"
+                                                    Margin="0,0,0,10"
+                                                    Width="540"
+                                                    HorizontalAlignment="Left">
                                                 <StackPanel>
-                                                    <DockPanel>
-                                                        <TextBlock Text="{Binding PartName}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="Bold" FontSize="14" DockPanel.Dock="Left"/>
-                                                        <TextBlock Text="{Binding QualityValue, StringFormat=Quality: {0}}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" DockPanel.Dock="Right"/>
-                                                    </DockPanel>
-                                                    <TextBlock Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" Margin="0,6,0,0">
-                                                        <Run Text="Material: "/>
-                                                        <Run Text="{Binding MaterialName}"/>
-                                                    </TextBlock>
-                                                    <TextBlock Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" Margin="0,2,0,0">
-                                                        <Run Text="Quantity: "/>
-                                                        <Run Text="{Binding Quantity, StringFormat={}{0:N2}}"/>
-                                                    </TextBlock>
-                                                    <TextBlock Text="QUALITY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,10,0,4"/>
-                                                    <Slider Minimum="0" Maximum="1000" Value="{Binding QualityValue, Mode=TwoWay}"/>
-                                                    <ItemsControl ItemsSource="{Binding Modifiers}" Margin="0,10,0,0">
+
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Text="{Binding PartName}"
+                                                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                                                       FontWeight="Bold"
+                                                                       FontSize="14"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock
+                                                                Text="{Binding Quantity, StringFormat=Required: {0}}"
+                                                                Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                                FontSize="10"
+                                                                Margin="0,2,0,0" />
+                                                        </StackPanel>
+
+                                                        <Border Grid.Column="1"
+                                                                Background="#113A2F"
+                                                                BorderBrush="#145E4C"
+                                                                BorderThickness="1"
+                                                                CornerRadius="4"
+                                                                Padding="7,3"
+                                                                VerticalAlignment="Top">
+                                                            <TextBlock Text="{Binding QualityValue}"
+                                                                       Foreground="#00F5B0"
+                                                                       FontWeight="Bold"
+                                                                       FontSize="11" />
+                                                        </Border>
+                                                    </Grid>
+
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Text="RESOURCE"
+                                                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                                                       FontSize="9"
+                                                                       FontWeight="Bold" />
+                                                            <TextBlock Text="{Binding MaterialName}"
+                                                                       Foreground="#00F5B0"
+                                                                       FontWeight="Bold"
+                                                                       FontSize="12"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,2,0,0" />
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                                            <TextBlock Text="SCU"
+                                                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                                                       FontSize="9"
+                                                                       FontWeight="Bold" />
+                                                            <TextBlock Text="{Binding ScuDisplay}"
+                                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                                       FontWeight="Bold"
+                                                                       FontSize="11"
+                                                                       Margin="0,2,0,0" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <TextBlock Text="QUALITY"
+                                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                                               FontSize="9"
+                                                               FontWeight="Bold"
+                                                               Margin="0,0,0,4" />
+
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+
+                                                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <Slider Grid.Column="0"
+                                                                    Style="{StaticResource QualitySliderStyle}"
+                                                                    Minimum="0"
+                                                                    Maximum="1000"
+                                                                    Value="{Binding QualityValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="0,0,8,0" />
+                                                        </Grid>
+
+                                                        <Border Grid.Row="1"
+                                                                Background="#12161E"
+                                                                BorderBrush="#2A3240"
+                                                                BorderThickness="1"
+                                                                CornerRadius="7"
+                                                                HorizontalAlignment="Right">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="38" />
+                                                                    <ColumnDefinition Width="60" />
+                                                                    <ColumnDefinition Width="38" />
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <Button Grid.Column="0"
+                                                                        Content="−"
+                                                                        Tag="{Binding}"
+                                                                        Click="DecreaseQuality_Click"
+                                                                        Style="{StaticResource QualityAdjustButtonStyle}"
+                                                                        Background="#3A1E1E"
+                                                                        Foreground="#FF6B6B"
+                                                                        BorderBrush="#5A2A2A"
+                                                                        BorderThickness="0,0,1,0" />
+
+                                                                <Border Grid.Column="1" Background="#12161E">
+                                                                    <TextBlock Text="{Binding QualityValue}"
+                                                                               HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               Foreground="White"
+                                                                               FontWeight="Bold"
+                                                                               FontSize="14" />
+                                                                </Border>
+
+                                                                <Button Grid.Column="2"
+                                                                        Content="+"
+                                                                        Tag="{Binding}"
+                                                                        Click="IncreaseQuality_Click"
+                                                                        Style="{StaticResource QualityAdjustButtonStyle}"
+                                                                        Background="#1E3A2F"
+                                                                        Foreground="#00F5B0"
+                                                                        BorderBrush="#2A5A4A"
+                                                                        BorderThickness="1,0,0,0" />
+                                                            </Grid>
+                                                        </Border>
+                                                    </Grid>
+
+                                                    <ItemsControl ItemsSource="{Binding Modifiers}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
                                                         <ItemsControl.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <Border Margin="0,0,0,6" Padding="8,6"
-                                                                        Background="#211912" BorderBrush="#3A2D22"
-                                                                        BorderThickness="1" CornerRadius="6">
-                                                                    <DockPanel>
-                                                                        <TextBlock Text="{Binding StatName}" Foreground="#DCC6A4" FontSize="11" DockPanel.Dock="Left"/>
-                                                                        <TextBlock Text="{Binding Percentage, StringFormat={}{0:+0.##;-0.##;0.##}}" Foreground="#D58A57" FontWeight="SemiBold" FontSize="11" DockPanel.Dock="Right"/>
-                                                                    </DockPanel>
+                                                            <DataTemplate DataType="{x:Type vm:StatModifier}">
+                                                                <Border Margin="0,0,5,5"
+                                                                        Padding="8,5"
+                                                                        Background="{StaticResource OpBackgroundInputBrush}"
+                                                                        BorderBrush="{StaticResource OpBorderInputBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="4">
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                            Foreground="{StaticResource OpTextMutedBrush}"
+                                                                            FontSize="9"
+                                                                            FontWeight="Bold"
+                                                                            TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock
+                                                                            Text="{Binding DisplayValue, StringFormat={}{0:+0.##;-0.##;0}%}"
+                                                                            Style="{StaticResource ModValueTextStyle}"
+                                                                            FontSize="12"
+                                                                            FontWeight="Bold"
+                                                                            Margin="0,2,0,0" />
+                                                                    </StackPanel>
                                                                 </Border>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
+
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
-                        </Border>
 
-                        <StackPanel Grid.Column="2">
-                            <Border Style="{StaticResource OpPanelBorderStyle}" Padding="14">
-                                <StackPanel>
-                                    <TextBlock Text="COMBINED MODIFIERS" Foreground="{StaticResource OpTextTitleBrush}" FontSize="16" FontWeight="Bold"/>
-                                    <TextBlock Text="Aggregate effect preview from current part quality settings."
-                                               Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,4,0,12"/>
-                                    <ItemsControl ItemsSource="{Binding CombinedModifiers}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Style="{StaticResource OpItemBorderStyle}" Padding="10">
-                                                    <DockPanel>
-                                                        <TextBlock Text="{Binding PropertyKey}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="SemiBold" FontSize="12" DockPanel.Dock="Left"/>
-                                                        <TextBlock Text="{Binding CalculatedValue, StringFormat={}{0:+0.##;-0.##;0.##}}" Foreground="#D58A57" FontWeight="Bold" FontSize="12" DockPanel.Dock="Right"/>
-                                                    </DockPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
+                            <!-- Right cards -->
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Left">
 
-                            <Border Margin="0,16,0,0" Style="{StaticResource OpPanelBorderStyle}" Padding="14">
-                                <StackPanel>
-                                    <TextBlock Text="OWNERS / INTEREST" Foreground="{StaticResource OpTextTitleBrush}" FontSize="16" FontWeight="Bold"/>
-                                    <TextBlock Text="Members who own or want this blueprint."
-                                               Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,4,0,12"/>
-                                    <ItemsControl ItemsSource="{Binding Owners}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Style="{StaticResource OpItemBorderStyle}" Padding="10">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Username}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="SemiBold" FontSize="13"/>
-                                                        <TextBlock Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" Margin="0,4,0,0">
-                                                            <Run Text="Interest: "/>
-                                                            <Run Text="{Binding InterestType}"/>
-                                                            <Run Text=" | Status: "/>
-                                                            <Run Text="{Binding OwnershipStatus}"/>
-                                                        </TextBlock>
-                                                        <TextBlock Text="{Binding AvailabilityStatus}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" Margin="0,4,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Grid>
+                                <!-- Procurement materials -->
+                                <Border Style="{StaticResource OpPanelBorderStyle}"
+                                        Padding="14"
+                                        Margin="0,0,0,10"
+                                        Width="540"
+                                        HorizontalAlignment="Left">
+                                    <StackPanel>
 
-                    <Border Margin="0,16,0,0" Style="{StaticResource OpPanelBorderStyle}" Padding="18">
-                        <StackPanel>
-                            <DockPanel Margin="0,0,0,6">
-                                <TextBlock Text="RECIPE MATERIALS" Foreground="{StaticResource OpTextTitleBrush}"
-                                           FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Content="SELECT ALL"
-                                            Command="{Binding SelectAllMaterialsCommand}"
-                                            Padding="8,4" FontSize="10" FontWeight="Bold" Margin="0,0,6,0"
-                                            Background="#2B3A2B" Foreground="#B0D4B0"
-                                            BorderBrush="#4A6B4A" BorderThickness="1"/>
-                                    <Button Content="CLEAR ALL"
-                                            Command="{Binding ClearAllMaterialsCommand}"
-                                            Padding="8,4" FontSize="10" FontWeight="Bold"
-                                            Background="#3A2B2B" Foreground="#D4B0B0"
-                                            BorderBrush="#6B4A4A" BorderThickness="1"/>
-                                </StackPanel>
-                            </DockPanel>
-                            <TextBlock Text="Check materials, set minimum quality tier, then request procurement."
-                                       Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,0,0,10"/>
-                            <ListBox ItemsSource="{Binding Materials}" Style="{StaticResource OpListBoxStyle}">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Style="{StaticResource OpItemBorderStyle}" Padding="10">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <CheckBox Grid.Column="0"
-                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                          VerticalAlignment="Center"
-                                                          Margin="0,0,10,0"/>
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding MaterialName}"
-                                                               Foreground="{StaticResource OpTextTitleBrush}"
-                                                               FontWeight="SemiBold" FontSize="13"/>
-                                                    <TextBlock Foreground="{StaticResource OpTextAccentBrush}"
-                                                               FontSize="11" Margin="0,3,0,0">
-                                                        <Run Text="Qty: "/>
-                                                        <Run Text="{Binding QuantityRequired, Mode=OneWay}"/>
-                                                        <Run Text=" "/>
-                                                        <Run Text="{Binding Unit, Mode=OneWay}"/>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding SourceType}"
-                                                               Foreground="{StaticResource OpTextMutedBrush}"
-                                                               FontSize="10" Margin="0,2,0,0"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
-                                                    <TextBlock Text="MIN QUALITY" Foreground="{StaticResource OpTextMutedBrush}"
-                                                               FontSize="9" FontWeight="Bold" Margin="0,0,0,4"/>
-                                                    <ComboBox ItemsSource="{Binding QualityTiers}"
-                                                              SelectedItem="{Binding SelectedQualityTier, Mode=TwoWay}"
-                                                              Style="{StaticResource OpComboBoxStyle}"
-                                                              Width="110">
-                                                        <ComboBox.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <TextBlock Text="{Binding Label}"
-                                                                           Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                                           FontSize="12"/>
-                                                            </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                            <Button Content="REQUEST SELECTED MATERIALS"
-                                    Command="{Binding CreateProcurementRequestCommand}"
-                                    Margin="0,12,0,0" Padding="12,8" FontWeight="Bold"
-                                    Background="#24374A" Foreground="#E8F0F8"
-                                    BorderBrush="#4F6A84" BorderThickness="1"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Text="PROCUREMENT MATERIALS"
+                                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                                       FontSize="14"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Center" />
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <Button Content="SELECT ALL"
+                                                        Command="{Binding SelectAllMaterialsCommand}"
+                                                        Style="{StaticResource BpActionButtonStyle}"
+                                                        Padding="10,6"
+                                                        FontSize="9"
+                                                        Background="#2B3A2B"
+                                                        Foreground="#B0D4B0"
+                                                        BorderBrush="#4A6B4A"
+                                                        BorderThickness="1"
+                                                        Margin="0,0,5,0" />
+                                                <Button Content="CLEAR ALL"
+                                                        Command="{Binding ClearAllMaterialsCommand}"
+                                                        Style="{StaticResource BpActionButtonStyle}"
+                                                        Padding="10,6"
+                                                        FontSize="9"
+                                                        Background="#3A2B2B"
+                                                        Foreground="#D4B0B0"
+                                                        BorderBrush="#6B4A4A"
+                                                        BorderThickness="1" />
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <ItemsControl ItemsSource="{Binding Materials}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:MaterialSelectionViewModel}">
+                                                    <Border Style="{StaticResource OpItemBorderStyle}"
+                                                            Padding="12"
+                                                            Margin="0,0,8,8"
+                                                            HorizontalAlignment="Stretch">
+                                                        <StackPanel>
+
+                                                            <DockPanel Margin="0,0,0,8">
+                                                                <CheckBox DockPanel.Dock="Left"
+                                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                          VerticalAlignment="Top"
+                                                                          Margin="0,2,8,0" />
+                                                                <TextBlock Text="{Binding MaterialName}"
+                                                                           Foreground="#E8D7B0"
+                                                                           FontWeight="SemiBold"
+                                                                           FontSize="13"
+                                                                           TextWrapping="Wrap" />
+                                                            </DockPanel>
+
+                                                            <StackPanel Margin="0,0,0,8">
+                                                                <TextBlock Text="QUANTITY"
+                                                                           Foreground="#8F7A5A"
+                                                                           FontSize="10"
+                                                                           FontWeight="Bold" />
+                                                                <TextBlock FontSize="12"
+                                                                           FontWeight="SemiBold"
+                                                                           Margin="0,3,0,0">
+                                                                    <Run Text="{Binding QuantityRequired, Mode=OneWay}"
+                                                                         Foreground="#F1E7D0" />
+                                                                    <Run Text=" " />
+                                                                    <Run Text="{Binding Unit, Mode=OneWay}"
+                                                                         Foreground="#B89B4A" />
+                                                                </TextBlock>
+                                                            </StackPanel>
+
+                                                            <TextBlock Text="MIN QUALITY"
+                                                                       Foreground="#8F7A5A"
+                                                                       FontSize="10"
+                                                                       FontWeight="Bold"
+                                                                       Margin="0,0,0,4"
+                                                                       HorizontalAlignment="Right" />
+
+                                                            <ComboBox ItemsSource="{Binding QualityTiers}"
+                                                                      SelectedItem="{Binding SelectedQualityTier, Mode=TwoWay}"
+                                                                      Style="{StaticResource OpComboBoxStyle}"
+                                                                      Width="110"
+                                                                      HorizontalAlignment="Right">
+
+                                                                <ComboBox.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock Text="{Binding Label}"
+                                                                            Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                                            FontSize="11" />
+                                                                    </DataTemplate>
+                                                                </ComboBox.ItemTemplate>
+                                                            </ComboBox>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <Button Content="Request Materials"
+                                                Command="{Binding CreateProcurementRequestCommand}"
+                                                Style="{StaticResource BpActionButtonStyle}"
+                                                Background="#24374A"
+                                                Foreground="#E8F0F8"
+                                                BorderBrush="#4F6A84"
+                                                BorderThickness="1"
+                                                HorizontalAlignment="Right"
+                                                Margin="0,10,0,0" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Combined modifiers -->
+                                <Border Style="{StaticResource OpPanelBorderStyle}"
+                                        Padding="14"
+                                        Width="540"
+                                        HorizontalAlignment="Left">
+                                    <StackPanel>
+                                        <TextBlock Text="COMBINED MODIFIERS"
+                                                   Foreground="{StaticResource OpTextTitleBrush}"
+                                                   FontSize="14"
+                                                   FontWeight="Bold"
+                                                   Margin="0,0,0,10" />
+
+                                        <ItemsControl ItemsSource="{Binding CombinedModifiers}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:BlueprintComponentModifierPreview}">
+                                                    <Border Background="{StaticResource OpBackgroundInputBrush}"
+                                                            BorderBrush="{StaticResource OpBorderInputBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Padding="14,10"
+                                                            Margin="0,0,0,6">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Text="{Binding DisplayName}"
+                                                                       Foreground="#A89270"
+                                                                       FontSize="12"
+                                                                       FontWeight="SemiBold"
+                                                                       VerticalAlignment="Center" />
+
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding DisplayValue, StringFormat={}{0:+0.##;-0.##;0}%}"
+                                                                       Style="{StaticResource ModValueTextStyle}"
+                                                                       FontSize="14"
+                                                                       FontWeight="Bold"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="No modifiers for this blueprint."
+                                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                                   FontStyle="Italic"
+                                                   FontSize="10"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,4,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasCombinedModifiers}"
+                                                                     Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
             </ScrollViewer>
 
             <!-- Empty state -->
             <Border Padding="22">
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource OpPanelBorderStyle}">
-                        <Setter Property="Visibility" Value="Visible"/>
+                        <Setter Property="Visibility" Value="Visible" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding HasSelectedBlueprintDetail}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Setter Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
+
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="SELECT A BLUEPRINT" Foreground="#B9A07D"
-                               FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Choose a blueprint from the registry to inspect components, materials, modifiers, ownership, and workflow actions."
-                               Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" Margin="0,8,0,0"
-                               TextAlignment="Center" TextWrapping="Wrap" Width="360"/>
+                    <TextBlock Text="SELECT A BLUEPRINT"
+                               Foreground="{StaticResource OpTextAccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock
+                        Text="Choose a blueprint from the list to inspect components, modifiers, materials, and workflow options."
+                        Foreground="{StaticResource OpTextMutedBrush}"
+                        FontSize="12"
+                        Margin="0,8,0,0"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
+                        Width="360" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <!-- ── Footer status bar ── -->
-        <Border Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource OpHeaderBorderStyle}" Margin="0,16,0,0" Padding="12,10">
-            <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="12" TextWrapping="Wrap"/>
+        <!-- Count badge -->
+        <Border Grid.Row="2" Grid.Column="0"
+                Background="{StaticResource OpBackgroundInputBrush}"
+                BorderBrush="{StaticResource OpBorderInputBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="10,6"
+                Margin="0,8,0,0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="BLUEPRINT"
+                           Foreground="{StaticResource OpTextMutedBrush}"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="  |  "
+                           Foreground="{StaticResource OpBorderInputBrush}"
+                           FontSize="10"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Results.Count}"
+                           Foreground="{StaticResource OpTextAccentBrush}"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center" />
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

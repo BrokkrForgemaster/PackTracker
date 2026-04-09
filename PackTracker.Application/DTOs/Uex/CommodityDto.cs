@@ -13,6 +13,7 @@ public class CommodityDto
     public int? Id_Parent { get; set; }
     public string Name { get; set; } = default!;
     public string Code { get; set; } = default!;
+    public string Slug { get; set; } = default!;
     public string Kind { get; set; } = default!;
     public double? Weight_Scu { get; set; }
 

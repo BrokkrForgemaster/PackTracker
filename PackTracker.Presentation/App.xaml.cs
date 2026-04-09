@@ -70,25 +70,27 @@ public partial class App : System.Windows.Application
         services.AddSingleton<WikiBlueprintService>();
         services.AddSingleton<IVersionService, VersionService>();
         services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<SignalRChatService>();
 
         // 7️⃣ Views + ViewModels
-        services.AddSingleton<MainWindow>();
+        services.AddTransient<MainWindow>();
         services.AddSingleton<WelcomeView>();
         services.AddSingleton<LoginView>();
+        services.AddTransient<DashboardViewModel>();
         services.AddSingleton<DashboardView>();
-        services.AddTransient<RequestsView>();
         services.AddTransient<RequestsViewModel>();
-        services.AddTransient<UexView>();
+        services.AddTransient<RequestsView>();
         services.AddTransient<UexViewModel>(sp =>
             new UexViewModel(
                 sp.GetRequiredService<IUexService>(),
                 sp.GetRequiredService<ILogger<UexViewModel>>()));
-        services.AddTransient<BlueprintExplorerView>();
+        services.AddTransient<UexView>();
         services.AddTransient<BlueprintExplorerViewModel>();
-        services.AddTransient<CraftingRequestsView>();
+        services.AddTransient<BlueprintExplorerView>();
         services.AddTransient<CraftingRequestsViewModel>();
-        services.AddTransient<ProcurementRequestsView>();
+        services.AddTransient<CraftingRequestsView>();
         services.AddTransient<ProcurementRequestsViewModel>();
+        services.AddTransient<ProcurementRequestsView>();
         services.AddTransient<ComponentViewModel>();
         // Bind GuideRequest and Api options from configuration
         services.Configure<GuideRequestOptions>(cfg.GetSection(GuideRequestOptions.SectionName));

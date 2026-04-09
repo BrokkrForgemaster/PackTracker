@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Input;
 using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views;
@@ -14,7 +15,6 @@ public partial class NewRequestDialog : Window
         _viewModel = viewModel;
         DataContext = _viewModel;
 
-        // Subscribe to success event to close dialog
         _viewModel.RequestSubmitted += OnRequestSubmitted;
     }
 
@@ -30,9 +30,14 @@ public partial class NewRequestDialog : Window
         Close();
     }
 
+    private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+            DragMove();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
-        // Unsubscribe to prevent memory leaks
         _viewModel.RequestSubmitted -= OnRequestSubmitted;
         base.OnClosed(e);
     }

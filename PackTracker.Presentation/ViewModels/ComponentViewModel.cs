@@ -19,6 +19,9 @@ public partial class ComponentViewModel : ObservableObject
         {
             if (SetProperty(ref _qualityValue, value))
             {
+                foreach (var mod in Modifiers)
+                    mod.NotifyEffectiveValueChanged();
+
                 Parent?.UpdateCombinedModifiers();
             }
         }
@@ -28,6 +31,5 @@ public partial class ComponentViewModel : ObservableObject
 
     public BlueprintExplorerViewModel? Parent { get; set; }
 
-    // Helper for XAML
     public string ScuDisplay => $"{Scu:0.0000} SCU";
 }

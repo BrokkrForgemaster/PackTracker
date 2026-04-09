@@ -24,8 +24,6 @@ public class BlueprintsController : ControllerBase
         _logger = logger;
     }
 
-    // ─── DIAGNOSTIC PING ────────────────────────────────────────────────────────
-    // Hit GET /api/v1/blueprints/ping to verify DB connectivity without auth.
     [HttpGet("ping")]
     [AllowAnonymous]
     public async Task<IActionResult> Ping(CancellationToken ct)
@@ -58,7 +56,6 @@ public class BlueprintsController : ControllerBase
         }
     }
 
-    // ─── SEARCH ─────────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<BlueprintSearchItemDto>>> Search(
         [FromQuery] string? q,
@@ -71,70 +68,6 @@ public class BlueprintsController : ControllerBase
             HttpContext.Request.Path, q, category, inGameOnly,
             User?.Identity?.Name ?? "<anonymous>");
 
-        // ── Step 1: Verify DB connectivity ──────────────────────────────────────
-        bool canConnect;
-        try
-        {
-            canConnect = await _db.Database.CanConnectAsync(ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "DB connectivity check threw an exception.");
-            return StatusCode(500, new
-            {
-                message = "Database connectivity check failed.",
-                detail = ex.Message,
-                inner = ex.InnerException?.Message,
-                type = ex.GetType().FullName
-            });
-        }
-
-        if (!canConnect)
-        {
-            _logger.LogError("Database.CanConnectAsync returned false. ConnectionString preview={Preview}",
-                PreviewConnectionString(_db.Database.GetConnectionString()));
-
-            return StatusCode(500, new
-            {
-                message = "Cannot connect to the database. Check your connection string and ensure the server is running.",
-                connectionStringPreview = PreviewConnectionString(_db.Database.GetConnectionString())
-            });
-        }
-
-        // ── Step 2: Check for pending migrations ────────────────────────────────
-        try
-        {
-            var pending = (await _db.Database.GetPendingMigrationsAsync(ct)).ToList();
-            if (pending.Count > 0)
-            {
-                _logger.LogWarning("There are {Count} pending migrations: {Migrations}", pending.Count, string.Join(", ", pending));
-            }
-        }
-        catch (Exception ex)
-        {
-            // Non-fatal — log and continue
-            _logger.LogWarning(ex, "Could not check pending migrations (non-fatal).");
-        }
-
-        // ── Step 3: Check that the Blueprints table is queryable ────────────────
-        try
-        {
-            var tableExists = await _db.Blueprints.AnyAsync(ct);
-            _logger.LogInformation("Blueprints table reachable. HasRows={HasRows}", tableExists);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Blueprints table query threw. This usually means the table doesn't exist or migrations haven't been applied.");
-            return StatusCode(500, new
-            {
-                message = "Blueprints table is not accessible. You may need to run 'dotnet ef database update'.",
-                detail = ex.Message,
-                inner = ex.InnerException?.Message,
-                type = ex.GetType().FullName
-            });
-        }
-
-        // ── Step 4: Run the actual search ───────────────────────────────────────
         try
         {
             IQueryable<Blueprint> query = _db.Blueprints.AsNoTracking();
@@ -150,8 +83,6 @@ public class BlueprintsController : ControllerBase
                 .Take(200)
                 .ToListAsync(ct);
 
-            _logger.LogInformation("Blueprint search loaded {Count} candidate blueprints before text filtering.", blueprints.Count);
-
             if (!string.IsNullOrWhiteSpace(q))
             {
                 var term = q.Trim();
@@ -163,6 +94,15 @@ public class BlueprintsController : ControllerBase
                     .ToList();
             }
 
+            var blueprintIds = blueprints.Select(x => x.Id).ToList();
+
+            var ownerCounts = await _db.MemberBlueprintOwnerships
+                .AsNoTracking()
+                .Where(x => blueprintIds.Contains(x.BlueprintId) && x.InterestType == MemberBlueprintInterestType.Owns)
+                .GroupBy(x => x.BlueprintId)
+                .Select(g => new { BlueprintId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BlueprintId, x => x.Count, ct);
+
             var items = blueprints
                 .Select(x => new BlueprintSearchItemDto
                 {
@@ -173,17 +113,16 @@ public class BlueprintsController : ControllerBase
                     IsInGameAvailable = x.IsInGameAvailable,
                     AcquisitionSummary = x.AcquisitionSummary,
                     DataConfidence = x.DataConfidence,
-                    VerifiedOwnerCount = 0
+                    VerifiedOwnerCount = ownerCounts.TryGetValue(x.Id, out var count) ? count : 0
                 })
                 .Take(100)
                 .ToList();
 
-            _logger.LogInformation("Blueprint search returning {Count} results.", items.Count);
             return Ok(items);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Blueprint search query failed. QueryQ={QueryQ} Category={Category} InGameOnly={InGameOnly}", q, category, inGameOnly);
+            _logger.LogError(ex, "Blueprint search query failed.");
             return StatusCode(500, new
             {
                 message = "Blueprint search query failed.",
@@ -194,12 +133,14 @@ public class BlueprintsController : ControllerBase
         }
     }
 
-    // ─── GET BY ID ──────────────────────────────────────────────────────────────
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<BlueprintDetailDto>> GetById(Guid id, CancellationToken ct)
     {
-        _logger.LogInformation("Blueprint detail endpoint hit. Path={Path} BlueprintId={BlueprintId} User={User}",
-            HttpContext.Request.Path, id, User?.Identity?.Name ?? "<anonymous>");
+        _logger.LogInformation(
+            "Blueprint detail endpoint hit. Path={Path} BlueprintId={BlueprintId} User={User}",
+            HttpContext.Request.Path,
+            id,
+            User?.Identity?.Name ?? "<anonymous>");
 
         try
         {
@@ -209,21 +150,8 @@ public class BlueprintsController : ControllerBase
 
             if (blueprint is null)
             {
-                _logger.LogWarning("Blueprint {Id} not found in database. Creating placeholder record.", id);
-
-                var placeholder = new Blueprint
-                {
-                    Id = id,
-                    BlueprintName = "New Discovery (Syncing...)",
-                    CraftedItemName = "Unknown Item",
-                    Category = "Unknown",
-                    IsInGameAvailable = true,
-                    DataConfidence = "0.1"
-                };
-
-                _db.Blueprints.Add(placeholder);
-                await _db.SaveChangesAsync(ct);
-                blueprint = placeholder;
+                _logger.LogWarning("Blueprint {Id} not found in database.", id);
+                return NotFound(new { message = "Blueprint not found.", id });
             }
 
             var recipe = await _db.BlueprintRecipes
@@ -279,7 +207,6 @@ public class BlueprintsController : ControllerBase
                 Category = blueprint.Category,
                 Description = blueprint.Description,
                 IsInGameAvailable = blueprint.IsInGameAvailable,
-                AcquisitionSummary = blueprint.AcquisitionSummary,
                 AcquisitionLocation = blueprint.AcquisitionLocation,
                 AcquisitionMethod = blueprint.AcquisitionMethod,
                 SourceVersion = blueprint.SourceVersion,
@@ -290,6 +217,11 @@ public class BlueprintsController : ControllerBase
                 TimeToCraftSeconds = recipe?.TimeToCraftSeconds,
                 Materials = materials,
                 Owners = owners,
+                OwnerCount = owners.Count(x =>
+                    string.Equals(
+                        x.InterestType,
+                        MemberBlueprintInterestType.Owns.ToString(),
+                        StringComparison.OrdinalIgnoreCase)),
                 Components = components
             };
 
@@ -312,7 +244,9 @@ public class BlueprintsController : ControllerBase
     {
         try
         {
-            var sourcePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scunpacked-data", "blueprints.json"));
+            var sourcePath = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory, "..", "..", "..", "..", "scunpacked-data", "blueprints.json"));
+
             if (!System.IO.File.Exists(sourcePath))
                 return Array.Empty<BlueprintComponentDto>();
 
@@ -330,20 +264,28 @@ public class BlueprintsController : ControllerBase
                     continue;
                 }
 
-                if (!record.TryGetProperty("tiers", out var tiersElement) || tiersElement.ValueKind != JsonValueKind.Array || tiersElement.GetArrayLength() == 0)
+                if (!record.TryGetProperty("tiers", out var tiersElement)
+                    || tiersElement.ValueKind != JsonValueKind.Array
+                    || tiersElement.GetArrayLength() == 0)
+                {
                     return Array.Empty<BlueprintComponentDto>();
+                }
 
                 var tier = tiersElement.EnumerateArray().FirstOrDefault();
                 if (!tier.TryGetProperty("requirements", out var requirementsElement))
                     return Array.Empty<BlueprintComponentDto>();
 
                 var components = new List<BlueprintComponentDto>();
-                if (requirementsElement.TryGetProperty("children", out var rootChildren) && rootChildren.ValueKind == JsonValueKind.Array)
+                if (requirementsElement.TryGetProperty("children", out var rootChildren)
+                    && rootChildren.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var child in rootChildren.EnumerateArray())
                     {
-                        if (!child.TryGetProperty("kind", out var kindElement) || !string.Equals(kindElement.GetString(), "group", StringComparison.OrdinalIgnoreCase))
+                        if (!child.TryGetProperty("kind", out var kindElement)
+                            || !string.Equals(kindElement.GetString(), "group", StringComparison.OrdinalIgnoreCase))
+                        {
                             continue;
+                        }
 
                         components.Add(BuildComponent(child));
                     }
@@ -362,14 +304,19 @@ public class BlueprintsController : ControllerBase
 
     private static BlueprintComponentDto BuildComponent(JsonElement groupNode)
     {
-        var partName = groupNode.TryGetProperty("name", out var nameElement) ? nameElement.GetString() ?? "Component" : "Component";
+        var partName = groupNode.TryGetProperty("name", out var nameElement)
+            ? nameElement.GetString() ?? "Component"
+            : "Component";
+
         var materialName = "Unknown Material";
         double quantity = 0;
 
-        if (groupNode.TryGetProperty("children", out var childrenElement) && childrenElement.ValueKind == JsonValueKind.Array)
+        if (groupNode.TryGetProperty("children", out var childrenElement)
+            && childrenElement.ValueKind == JsonValueKind.Array)
         {
             var firstResource = childrenElement.EnumerateArray().FirstOrDefault(x =>
-                x.TryGetProperty("kind", out var childKind) && string.Equals(childKind.GetString(), "resource", StringComparison.OrdinalIgnoreCase));
+                x.TryGetProperty("kind", out var childKind)
+                && string.Equals(childKind.GetString(), "resource", StringComparison.OrdinalIgnoreCase));
 
             if (firstResource.ValueKind != JsonValueKind.Undefined)
             {
@@ -377,15 +324,22 @@ public class BlueprintsController : ControllerBase
                     ? materialNameElement.GetString() ?? materialName
                     : materialName;
 
-                if (firstResource.TryGetProperty("quantity_scu", out var quantityScuElement) && quantityScuElement.TryGetDouble(out var scuValue))
+                if (firstResource.TryGetProperty("quantity_scu", out var quantityScuElement)
+                    && quantityScuElement.TryGetDouble(out var scuValue))
+                {
                     quantity = scuValue;
-                else if (firstResource.TryGetProperty("quantity", out var quantityElement) && quantityElement.TryGetDouble(out var quantityValue))
+                }
+                else if (firstResource.TryGetProperty("quantity", out var quantityElement)
+                         && quantityElement.TryGetDouble(out var quantityValue))
+                {
                     quantity = quantityValue;
+                }
             }
         }
 
         var modifiers = new List<BlueprintModifierDto>();
-        if (groupNode.TryGetProperty("modifiers", out var modifiersElement) && modifiersElement.ValueKind == JsonValueKind.Array)
+        if (groupNode.TryGetProperty("modifiers", out var modifiersElement)
+            && modifiersElement.ValueKind == JsonValueKind.Array)
         {
             foreach (var modifierElement in modifiersElement.EnumerateArray())
             {
@@ -395,12 +349,20 @@ public class BlueprintsController : ControllerBase
 
                 var atMin = 0d;
                 var atMax = 0d;
+
                 if (modifierElement.TryGetProperty("modifier_range", out var modifierRangeElement))
                 {
-                    if (modifierRangeElement.TryGetProperty("at_min_quality", out var minElement) && minElement.TryGetDouble(out var minValue))
+                    if (modifierRangeElement.TryGetProperty("at_min_quality", out var minElement)
+                        && minElement.TryGetDouble(out var minValue))
+                    {
                         atMin = minValue;
-                    if (modifierRangeElement.TryGetProperty("at_max_quality", out var maxElement) && maxElement.TryGetDouble(out var maxValue))
+                    }
+
+                    if (modifierRangeElement.TryGetProperty("at_max_quality", out var maxElement)
+                        && maxElement.TryGetDouble(out var maxValue))
+                    {
                         atMax = maxValue;
+                    }
                 }
 
                 modifiers.Add(new BlueprintModifierDto
@@ -422,14 +384,14 @@ public class BlueprintsController : ControllerBase
         };
     }
 
-    // ─── HELPERS ────────────────────────────────────────────────────────────────
     private static string PreviewConnectionString(string? cs)
     {
-        if (string.IsNullOrWhiteSpace(cs)) return "<null or empty>";
-        // Show only the first 60 chars to avoid leaking credentials in logs
+        if (string.IsNullOrWhiteSpace(cs))
+            return "<null or empty>";
+
         return cs.Length > 60 ? cs[..60] + "..." : cs;
     }
-    
+
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<string>>> GetCategories(CancellationToken ct)
     {

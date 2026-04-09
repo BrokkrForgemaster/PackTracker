@@ -20,7 +20,18 @@
       "Read(//usr/share/dotnet/**)",
       "Read(//opt/**)",
       "Bash(xargs -I {} bash -c 'echo \"=== {} ===\" && grep -n \"ILogger\\\\|ILoggingService\" {}')",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Read(//c/Users/**)",
+      "Bash(grep -r \"Role\\\\|Permission\\\\|Claim\" /b/PackTracker/PackTracker.Api/Program.cs /b/PackTracker/PackTracker.Api/Controllers/*.cs)",
+      "Bash(git -C \"B:/PackTracker\" diff --stat HEAD)",
+      "Bash(git -C \"B:/PackTracker\" status --short)",
+      "Bash(curl -s \"https://api.star-citizen.wiki/api/blueprints?page%5Bnumber%5D=1&page%5Bsize%5D=2\" -H \"User-Agent: PackTracker/0.1.3\")",
+      "Bash(curl -s \"https://api.star-citizen.wiki/api/blueprints/b627e348-29b5-44c8-a836-258df60bcd08\" -H \"User-Agent: PackTracker/0.1.3\")",
+      "Bash(sed -n '316,337p' \"B:\\\\PackTracker\\\\PackTracker.Presentation\\\\ViewModels\\\\BlueprintExplorerViewModel.cs\")",
+      "Bash(sed -n '266,278p' \"B:\\\\PackTracker\\\\PackTracker.Presentation\\\\ViewModels\\\\BlueprintExplorerViewModel.cs\")",
+      "Bash(rm:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -E \"\\\\.cs$\")"
     ],
     "deny": [],
     "ask": []

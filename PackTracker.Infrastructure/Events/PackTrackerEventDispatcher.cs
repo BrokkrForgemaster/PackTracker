@@ -28,47 +28,6 @@ namespace PackTracker.Infrastructure.Events;
 /// </remarks>
 public static class PackTrackerEventDispatcher
 {
-    #region Kill Events
-
-    /// <summary>
-    /// Fired when an actor (player) dies. PRIMARY EVENT for kill tracking.
-    /// </summary>
-    /// <remarks>
-    /// This is the core event that triggers:
-    /// - UI kill feed updates
-    /// - Database persistence
-    /// - API kill submission
-    /// - Statistics calculations
-    /// </remarks>
-    public static event Action<ActorDeathData>? ActorDeathEvent;
-
-    /// <summary>
-    /// Publishes an actor death event to all subscribers.
-    /// </summary>
-    public static void OnActorDeathEvent(ActorDeathData data)
-    {
-        ActorDeathEvent?.Invoke(data);
-    }
-
-    #endregion
-
-    #region Vehicle Events
-
-    /// <summary>
-    /// Fired when a vehicle (ship) is destroyed.
-    /// </summary>
-    public static event Action<VehicleDestructionData>? VehicleDestructionEvent;
-
-    /// <summary>
-    /// Publishes a vehicle destruction event to all subscribers.
-    /// </summary>
-    public static void OnVehicleDestructionEvent(VehicleDestructionData data)
-    {
-        VehicleDestructionEvent?.Invoke(data);
-    }
-
-    #endregion
-
     #region Player State Events
 
     /// <summary>
