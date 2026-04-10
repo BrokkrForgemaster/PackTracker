@@ -43,7 +43,13 @@ CodeCoverage/
 
 # MSBuild Binary and Structured Log
 *.binlog
-
+publish/
+installer/output/
+*.exe
+*.msi
+*.zip
+bin/
+obj/
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
