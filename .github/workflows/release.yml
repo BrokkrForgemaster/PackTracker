@@ -48,6 +48,27 @@ jobs:
       - name: Restore
         run: dotnet restore PackTracker.Presentation/PackTracker.Presentation.csproj
 
+      # ── Inject production secrets into appsettings.json ───────────
+      # These values are stored as GitHub Actions secrets and are never
+      # committed to the repo.  They replace the empty placeholder values
+      # so that every user who installs the app connects to the shared backend.
+      - name: Inject secrets into appsettings.json
+        shell: pwsh
+        env:
+          CONN:     ${{ secrets.NEON_CONNECTION_STRING }}
+          JWT_KEY:  ${{ secrets.JWT_KEY }}
+          REGO_KEY: ${{ secrets.REGOLITH_API_KEY }}
+          UEX_KEY:  ${{ secrets.UEX_API_KEY }}
+        run: |
+          $path = "PackTracker.Presentation/appsettings.json"
+          $json = Get-Content $path -Raw | ConvertFrom-Json
+          $json.ConnectionStrings.DefaultConnection = $env:CONN
+          $json.Jwt.Key                             = $env:JWT_KEY
+          $json.Regolith.ApiKey                     = $env:REGO_KEY
+          $json.Uex.ApiKey                          = $env:UEX_KEY
+          $json | ConvertTo-Json -Depth 10 | Set-Content $path
+          Write-Host "appsettings.json patched."
+
       # ── Publish all output to publish/ (no single-file — WebView2 requires loose DLLs)
       - name: Publish
         shell: pwsh

@@ -33,8 +33,14 @@ public static class LoggingConfiguration
         this IServiceCollection services,
         ISettingsService? settingsService)
     {
-        // GameLogFilePath is the Star Citizen game log — never use it as the app log path.
-        const string logPath = "Logs/packtracker-.log";
+        var logDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PackTracker",
+            "Logs");
+
+        Directory.CreateDirectory(logDir);
+
+        var logPath = Path.Combine(logDir, "packtracker-.log");
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -48,12 +54,11 @@ public static class LoggingConfiguration
                     path: logPath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 7,
-                    fileSizeLimitBytes: 32 * 1024 * 1024, // numeric here
+                    fileSizeLimitBytes: 32 * 1024 * 1024,
                     rollOnFileSizeLimit: true,
                     shared: true,
                     outputTemplate:
-                    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}"
-                );
+                    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}");
             })
             .CreateLogger();
 

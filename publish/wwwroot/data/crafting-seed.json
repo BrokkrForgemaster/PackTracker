@@ -1,0 +1,112 @@
+{
+  "sourceVersion": "initial-house-wolf-seed",
+  "dataConfidence": "Seeded",
+  "blueprints": [
+    {
+      "slug": "rsi-atls-geo-mining-attachment",
+      "blueprintName": "RSI ATLS GEO Mining Attachment Blueprint",
+      "craftedItemName": "ATLS GEO Mining Attachment",
+      "category": "Vehicle Component",
+      "description": "Starter seed blueprint used to validate blueprint explorer, crafting requests, and procurement flows.",
+      "isInGameAvailable": true,
+      "acquisitionSummary": "Seed data placeholder — replace with verified in-game acquisition source.",
+      "acquisitionLocation": "To Be Verified",
+      "acquisitionMethod": "In-Game Vendor",
+      "outputQuantity": 1,
+      "craftingStationType": "Vehicle Component Fabricator",
+      "timeToCraftSeconds": 1800,
+      "materials": [
+        {
+          "materialName": "Quantanium",
+          "slug": "quantanium",
+          "materialType": "Ore",
+          "tier": "High",
+          "sourceType": "Mined",
+          "quantityRequired": 24,
+          "unit": "SCU",
+          "isRawOre": true,
+          "isRefinedMaterial": false,
+          "isCraftedComponent": false
+        },
+        {
+          "materialName": "Tungsten Composite",
+          "slug": "tungsten-composite",
+          "materialType": "Refined Material",
+          "tier": "Medium",
+          "sourceType": "Refined",
+          "quantityRequired": 12,
+          "unit": "Units",
+          "isRawOre": false,
+          "isRefinedMaterial": true,
+          "isCraftedComponent": false
+        },
+        {
+          "materialName": "Industrial Circuit Matrix",
+          "slug": "industrial-circuit-matrix",
+          "materialType": "Crafted Component",
+          "tier": "Medium",
+          "sourceType": "Crafted",
+          "quantityRequired": 4,
+          "unit": "Units",
+          "isRawOre": false,
+          "isRefinedMaterial": false,
+          "isCraftedComponent": true,
+          "isIntermediateCraftable": true
+        }
+      ]
+    },
+    {
+      "slug": "misc-utility-drone-frame",
+      "blueprintName": "MISC Utility Drone Frame Blueprint",
+      "craftedItemName": "Utility Drone Frame",
+      "category": "Industrial Equipment",
+      "description": "Seed record for testing blueprint ownership and material support requests.",
+      "isInGameAvailable": true,
+      "acquisitionSummary": "Seed data placeholder — replace with verified acquisition source.",
+      "acquisitionLocation": "To Be Verified",
+      "acquisitionMethod": "Mission Reward",
+      "outputQuantity": 1,
+      "craftingStationType": "Industrial Assembly Bench",
+      "timeToCraftSeconds": 2400,
+      "materials": [
+        {
+          "materialName": "Bexalite",
+          "slug": "bexalite",
+          "materialType": "Ore",
+          "tier": "High",
+          "sourceType": "Mined",
+          "quantityRequired": 16,
+          "unit": "SCU",
+          "isRawOre": true,
+          "isRefinedMaterial": false,
+          "isCraftedComponent": false
+        },
+        {
+          "materialName": "Titanium Alloy Plate",
+          "slug": "titanium-alloy-plate",
+          "materialType": "Refined Material",
+          "tier": "Medium",
+          "sourceType": "Refined",
+          "quantityRequired": 10,
+          "unit": "Units",
+          "isRawOre": false,
+          "isRefinedMaterial": true,
+          "isCraftedComponent": false
+        },
+        {
+          "materialName": "Control Servo Bundle",
+          "slug": "control-servo-bundle",
+          "materialType": "Crafted Component",
+          "tier": "Low",
+          "sourceType": "Crafted",
+          "quantityRequired": 6,
+          "unit": "Units",
+          "isRawOre": false,
+          "isRefinedMaterial": false,
+          "isCraftedComponent": true,
+          "isIntermediateCraftable": true
+        }
+      ]
+    }
+  ]
+}

@@ -119,7 +119,7 @@ public partial class App : System.Windows.Application
             // Load configuration
             var cfg = new ConfigurationBuilder()
                 .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
                 .AddUserSecrets<App>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();

@@ -22,8 +22,8 @@
 #define AppPublisher   "House Wolf"
 #define AppURL         "https://github.com/BrokkrForgemaster/PackTracker"
 #define AppExeName     "PackTracker.Presentation.exe"
-#define AppDescription "House Wolf Operations Shell"
-#define AppIconFile    "..\PackTracker.Presentation\Assets\HWiconnew.ico"
+#define AppDescription "House Wolf Operations Center"
+#define AppIconFile    "..\PackTracker.Presentation\Assets\housewolf2.ico"
 
 [Setup]
 AppId={{A3F2C1D0-5E4B-4F8A-9C2D-1B0E7F3A8D56}
@@ -48,8 +48,8 @@ OutputBaseFilename=PackTrackerSetup-{#AppVersion}
 ; Branding — wizard uses the existing housewolf2.ico; shortcuts use the new icon
 SetupIconFile=..\PackTracker.Presentation\Assets\housewolf2.ico
 WizardStyle=modern
-WizardImageFile=..\PackTracker.Presentation\Assets\HousewolfBanner.bmp
-WizardSmallImageFile=..\PackTracker.Presentation\Assets\HWiconnew.png
+WizardImageFile=..\PackTracker.Presentation\Assets\HousewolfBanner_installer.bmp
+WizardSmallImageFile=..\PackTracker.Presentation\Assets\Pack_Tracker_installer.bmp
 WizardImageStretch=yes
 ; Dark background behind the banner image — matches app theme (#1A1410)
 WizardImageBackColor=$10141A
@@ -83,7 +83,7 @@ Source: "..\publish\*"; \
   Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Desktop/shortcut icon — convert HWiconnew.png to HWiconnew.ico before building
-Source: "..\PackTracker.Presentation\Assets\HWiconnew.ico"; \
+Source: "..\PackTracker.Presentation\Assets\housewolf2.ico"; \
   DestDir: "{app}"; \
   Flags: ignoreversion
 
