@@ -1,6 +1,6 @@
 <!-- PackTracker Social Preview -->
 <p align="center">
-  <img src="https://raw.githubusercontent.com/PackTracker.Presentation/Assets/Pack_Tracker.png" alt="PackTracker Banner"/>
+  <img src="[https://raw.githubusercontent.com/PackTracker.Presentation/Assets/Pack_Tracker.png](https://github.com/BrokkrForgemaster/PackTracker/blob/main/PackTracker.Presentation/Assets/Pack_Tracker.png)" alt="PackTracker Banner"/>
 </p>
 
 # 🐺 PackTracker
