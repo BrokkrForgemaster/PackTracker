@@ -63,8 +63,7 @@ jobs:
           $path = "PackTracker.Presentation/appsettings.json"
           $json = Get-Content $path -Raw | ConvertFrom-Json
           $json.ConnectionStrings.DefaultConnection = $env:CONN
-          $json.Jwt.Key                             = $env:JWT_KEY
-          $json.Regolith.ApiKey                     = $env:REGO_KEY
+          $json.Authentication.Jwt.Key              = $env:JWT_KEY
           $json.Uex.ApiKey                          = $env:UEX_KEY
           $json | ConvertTo-Json -Depth 10 | Set-Content $path
           Write-Host "appsettings.json patched."

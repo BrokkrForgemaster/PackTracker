@@ -34,9 +34,24 @@ public static class DependencyInjection
 
         var appSettings = settings.GetSettings();
         var connectionString = appSettings.ConnectionString;
+        var apiBaseUrl = appSettings.ApiBaseUrl;
+
+        // Determine if we are using a remote API (Render deployment)
+        bool isRemoteApi = Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var uri)
+                           && !uri.IsLoopback
+                           && uri.Host != "localhost";
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
+            if (isRemoteApi)
+            {
+                // Running against Render - local database is not needed/expected
+                RegisterCoreServices(services, settings);
+                RegisterHttpClients(services, appSettings);
+                services.AddMemoryCache();
+                return services;
+            }
+
             throw new InvalidOperationException(
                 "No database connection string configured. Set it via the Settings view or user secrets.");
         }

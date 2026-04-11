@@ -1,5 +1,5 @@
 ; ============================================================
-; PackTracker — Inno Setup Script
+; PackTracker ï¿½ Inno Setup Script
 ; House Wolf Operations Shell for Star Citizen
 ;
 ; Build from repo root:
@@ -91,17 +91,33 @@ Name: "desktopicon"; \
   GroupDescription: "Additional shortcuts:"
 
 [Files]
-; Entire publish output
+; Primary publish output (from CI/CD or root publish folder)
 Source: "..\publish\*"; \
   DestDir: "{app}"; \
-  Flags: ignoreversion recursesubdirs createallsubdirs
+  Flags: ignoreversion recursesubdirs createallsubdirs; \
+  Check: DirExists(ExpandConstant('{src}\..\publish'))
+
+; Failsafe for local dev builds (Rider/VS default output)
+Source: "..\PackTracker.Presentation\bin\Release\net9.0-windows\win-x64\publish\*"; \
+  DestDir: "{app}"; \
+  Flags: ignoreversion recursesubdirs createallsubdirs; \
+  Check: not DirExists(ExpandConstant('{src}\..\publish'))
+
+; Explicitly ensure appsettings.json is included (prevents it being missed by wildcards)
+Source: "..\PackTracker.Presentation\appsettings.json"; \
+  DestDir: "{app}"; \
+  Flags: ignoreversion
 
 ; Installer/app icon used for shortcuts and uninstall entry
 Source: "{#AppIconFile}"; \
   DestDir: "{app}"; \
   Flags: ignoreversion
 
-[Icons]
+[Code]
+function DirExists(DirName: String): Boolean;
+begin
+  Result := DirectoryExists(DirName);
+end;
 ; Start menu shortcut
 Name: "{group}\{#AppName}"; \
   Filename: "{app}\{#AppExeName}"; \
