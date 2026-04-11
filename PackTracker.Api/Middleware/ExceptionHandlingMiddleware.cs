@@ -52,9 +52,13 @@ public class ExceptionHandlingMiddleware
 
             var error = new ErrorResponse
             {
-                Message = "An unexpected error occurred",
+                Message = ex.Message,
                 TraceId = traceId,
-                StatusCode = (int)HttpStatusCode.InternalServerError
+                StatusCode = (int)HttpStatusCode.InternalServerError,
+                Errors = new Dictionary<string, string[]>
+                {
+                    ["StackTrace"] = new[] { ex.StackTrace ?? "No stack trace available" }
+                }
             };
 
             context.Response.ContentType = "application/json";

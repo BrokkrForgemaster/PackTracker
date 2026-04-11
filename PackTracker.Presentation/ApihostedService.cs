@@ -198,11 +198,15 @@ public class ApiHostedService : IHostedService
                                 o.Events.OnCreatingTicket = ctx =>
                                 {
                                     var userId = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-                                    var avatar = ctx.User.GetProperty("avatar").GetString();
-                                    if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(avatar))
+                                    if (!string.IsNullOrEmpty(userId) &&
+                                        ctx.User.TryGetProperty("avatar", out var avatarProp))
                                     {
-                                        var avatarUrl = $"https://cdn.discordapp.com/avatars/{userId}/{avatar}.png";
-                                        ctx.Identity?.AddClaim(new Claim("urn:discord:avatar:url", avatarUrl));
+                                        var avatar = avatarProp.GetString();
+                                        if (!string.IsNullOrEmpty(avatar))
+                                        {
+                                            var avatarUrl = $"https://cdn.discordapp.com/avatars/{userId}/{avatar}.png";
+                                            ctx.Identity?.AddClaim(new Claim("urn:discord:avatar:url", avatarUrl));
+                                        }
                                     }
                                     return Task.CompletedTask;
                                 };
