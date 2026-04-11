@@ -13,6 +13,8 @@ public class ChatWindowViewModel : ViewModelBase
     private readonly Action<ChatWindowViewModel> _bringToFrontAction;
     private readonly Action<ChatWindowViewModel> _expandedAction;
 
+    public event Action<string, string>? MessageSent;
+
     private double _left;
     private double _top;
     private double _width = 380;
@@ -172,6 +174,7 @@ public class ChatWindowViewModel : ViewModelBase
         });
 
         DraftMessage = string.Empty;
+        MessageSent?.Invoke(ChannelKey, text);
         _bringToFrontAction(this);
     }
 

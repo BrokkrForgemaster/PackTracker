@@ -20,8 +20,8 @@ public class DashboardViewModel : ViewModelBase
     
     private int _nextZIndex = 1;
     private bool _isConnected = true;
-    private string? _currentUserDisplayName = "Sentinel_Wolf";
-    private string? _currentUserRole = "Leadership";
+    private string? _currentUserDisplayName = "Loading...";
+    private string? _currentUserRole = "Member";
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
@@ -43,7 +43,6 @@ public class DashboardViewModel : ViewModelBase
         CollapseAllChatWindowsCommand = new RelayCommand(CollapseAllWindows);
         ExpandAllChatWindowsCommand = new RelayCommand(ExpandAllWindows);
 
-        SeedOnlineUsers();
         LoadChatChannelsForRole(CurrentUserRole);
         OpenDefaultWindows();
 
@@ -54,17 +53,26 @@ public class DashboardViewModel : ViewModelBase
     {
         try
         {
+            await LoadCurrentUserAsync();
             await _signalR.ConnectAsync();
+
+            // Join any channels whose windows were already opened in the constructor
+            foreach (var window in OpenChatWindows)
+                await _signalR.JoinChannelAsync(window.ChannelKey);
+
             await RefreshDataAsync();
-            
+
+            _signalR.MessageReceived += OnMessageReceived;
+            _signalR.PresenceUpdated += OnPresenceUpdated;
+
             _signalR.AssistanceRequestCreated += id => _ = RefreshDataAsync();
             _signalR.AssistanceRequestUpdated += id => _ = RefreshDataAsync();
             _signalR.CraftingRequestCreated += id => _ = RefreshDataAsync();
             _signalR.CraftingRequestUpdated += id => _ = RefreshDataAsync();
             _signalR.ProcurementRequestCreated += id => _ = RefreshDataAsync();
             _signalR.ProcurementRequestUpdated += id => _ = RefreshDataAsync();
-            
-            _signalR.ConnectionStateChanged += state => 
+
+            _signalR.ConnectionStateChanged += state =>
             {
                 IsConnected = state;
                 if (state) _ = RefreshDataAsync();
@@ -74,6 +82,58 @@ public class DashboardViewModel : ViewModelBase
         {
             // Log or handle
         }
+    }
+
+    private async Task LoadCurrentUserAsync()
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            var profile = await client.GetFromJsonAsync<CurrentUserDto>("api/v1/profiles/me");
+            if (profile != null)
+            {
+                CurrentUserDisplayName = !string.IsNullOrWhiteSpace(profile.DiscordDisplayName)
+                    ? profile.DiscordDisplayName
+                    : profile.Username;
+                CurrentUserRole = !string.IsNullOrWhiteSpace(profile.DiscordRank)
+                    ? profile.DiscordRank
+                    : "Member";
+                // Rebuild the available channel list for the real role.
+                // Already-open windows are unaffected; new role-gated channels
+                // become available for the user to open manually.
+                LoadChatChannelsForRole(CurrentUserRole);
+            }
+        }
+        catch
+        {
+            // Non-fatal — fall back to defaults already set in constructor
+        }
+    }
+
+    private void OnMessageReceived(ChatMessageDto msg)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == msg.Channel);
+            window?.ReceiveMessage(msg.SenderDisplayName, msg.Content);
+        });
+    }
+
+    private void OnPresenceUpdated(IReadOnlyList<OnlineUserDto> users)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            OnlineUsers.Clear();
+            foreach (var u in users)
+            {
+                OnlineUsers.Add(new OnlineUserViewModel
+                {
+                    DisplayName = u.DisplayName,
+                    Role = u.Role,
+                    RoleColorBrush = BrushFromHex("#B89C78")
+                });
+            }
+        });
     }
 
     public async Task RefreshDataAsync()
@@ -218,37 +278,13 @@ public class DashboardViewModel : ViewModelBase
         };
 
         window.Messages.CollectionChanged += (_, _) => SyncUnreadState(window, channel);
-        SeedWindowMessages(window);
+        window.MessageSent += (channelKey, content) => _ = _signalR.SendMessageAsync(channelKey, content);
 
         OpenChatWindows.Add(window);
         RefreshCollapsedAlerts();
-    }
 
-    private void SeedWindowMessages(ChatWindowViewModel window)
-    {
-        window.Messages.Add(new ChatMessageViewModel
-        {
-            SenderDisplayName = "System",
-            Content = $"{window.Title} channel ready.",
-            SentAt = DateTime.Now.AddMinutes(-5)
-        });
-
-        window.Messages.Add(new ChatMessageViewModel
-        {
-            SenderDisplayName = "Sentinel_Wolf",
-            Content = $"Monitoring {window.Title} comms.",
-            SentAt = DateTime.Now.AddMinutes(-2)
-        });
-
-        if (window.ChannelKey == "general")
-        {
-            window.Messages.Add(new ChatMessageViewModel
-            {
-                SenderDisplayName = "Dragon",
-                Content = "General check-in complete.",
-                SentAt = DateTime.Now.AddMinutes(-1)
-            });
-        }
+        if (_signalR.IsConnected)
+            _ = _signalR.JoinChannelAsync(channel.Key);
     }
 
     private void SyncUnreadState(ChatWindowViewModel window, AvailableChannelViewModel channel)
@@ -348,16 +384,6 @@ public class DashboardViewModel : ViewModelBase
         return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)!);
     }
 
-    private void SeedOnlineUsers()
-    {
-        OnlineUsers.Add(new OnlineUserViewModel
-        {
-            DisplayName = "Sentinel_Wolf",
-            Role = "Hand of the Clan",
-            RoleColorBrush = BrushFromHex("#B89C78")
-        });
-    }
-
     // optional test helper
     public void SimulateIncomingMessage(string channelKey, string sender, string content)
     {
@@ -376,4 +402,9 @@ public class DashboardViewModel : ViewModelBase
 
         RefreshCollapsedAlerts();
     }
+
+    private record CurrentUserDto(
+        string Username,
+        string? DiscordDisplayName,
+        string? DiscordRank);
 }
