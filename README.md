@@ -1,6 +1,6 @@
 <!-- PackTracker Social Preview -->
 <p align="center">
-  <img src="[Imgur](https://imgur.com/waGK8Nc)" alt="PackTracker Banner"/>
+  <img src="[[Imgur](https://imgur.com/waGK8Nc)](https://imgur.com/waGK8Nc)" alt="PackTracker Banner"/>
 </p>
 
 # 🐺 PackTracker
