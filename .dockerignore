@@ -1,0 +1,20 @@
+**/.git
+**/.vs
+**/.idea
+**/bin
+**/obj
+**/node_modules
+
+# Windows-only / desktop projects — not built in Docker
+PackTracker.Presentation/
+installer/
+tools/
+tests/
+
+# Secrets — injected via environment variables at runtime
+.env
+*.env
+
+# Docs / misc
+*.md
+publish/

@@ -1,5 +1,5 @@
 ; ============================================================
-; PackTracker â€” Inno Setup Script
+; PackTracker — Inno Setup Script
 ; House Wolf Operations Shell for Star Citizen
 ;
 ; Build from repo root:
@@ -34,7 +34,7 @@ AppSupportURL={#AppURL}/issues
 AppUpdatesURL={#AppURL}/releases
 AppCopyright=Copyright (C) House Wolf
 
-; Helps Windows show cleaner metadata
+; Cleaner Windows metadata
 VersionInfoVersion={#AppVersion}
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription={#AppName} Installer
@@ -65,6 +65,10 @@ PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 RestartIfNeededByRun=no
+
+; Helps with upgrades/uninstalls when app is still running
+CloseApplications=yes
+RestartApplications=no
 
 ; These do not remove SmartScreen, but help installer quality/reputation signals
 SetupLogging=yes
@@ -120,6 +124,24 @@ Name: "{autodesktop}\{#AppName}"; \
 Filename: "{app}\{#AppExeName}"; \
   Description: "Launch {#AppName}"; \
   Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+; Remove common runtime leftovers in install directory
+Type: files; Name: "{app}\*.log"
+Type: files; Name: "{app}\*.tmp"
+Type: files; Name: "{app}\*.bak"
+
+; Remove Logs folder contents if your app creates them under {app}
+Type: files; Name: "{app}\Logs\*"
+Type: dirifempty; Name: "{app}\Logs"
+
+; Remove empty folders that may remain after uninstall
+Type: dirifempty; Name: "{app}\Assets"
+
+; If your app writes runtime data under LocalAppData, clean it here too
+; Uncomment if appropriate
+; Type: filesandordirs; Name: "{localappdata}\PackTracker\Logs"
+; Type: filesandordirs; Name: "{localappdata}\PackTracker\Cache"
 
 [Code]
 procedure InitializeWizard;

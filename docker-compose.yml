@@ -1,0 +1,59 @@
+services:
+  packtracker-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: packtracker-api:latest
+    container_name: packtracker-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-5199}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Database — points at the postgres service below.
+      # If you want to keep using Neon instead, replace this with your Neon connection string
+      # and remove the postgres service entirely.
+      ConnectionStrings__DefaultConnection: Host=ep-purple-wave-ad7i9yyi-pooler.c-2.us-east-1.aws.neon.tech;Port=5432;Database=neondb;Username=neondb_owner;Password=npg_4E3TOmnPrwSL;SSL Mode=Require;Trust Server Certificate=true
+      # JWT
+      Authentication__Jwt__Key: ${JWT_KEY}
+      Authentication__Jwt__Issuer: PackTracker
+      Authentication__Jwt__Audience: PackTrackerClients
+      Authentication__Jwt__ExpiresInMinutes: "60"
+      # Discord OAuth
+      Authentication__Discord__ClientId: ${DISCORD_CLIENT_ID}
+      Authentication__Discord__ClientSecret: ${DISCORD_CLIENT_SECRET}
+      Authentication__Discord__CallbackPath: /signin-discord
+      Authentication__Discord__RequiredGuildId: ${DISCORD_GUILD_ID}
+      # External APIs
+      Uex__ApiBaseUrl: https://api.uexcorp.uk/2.0
+      Uex__ApiKey: ${UEX_API_KEY:-}
+    volumes:
+      # Logs persist across container restarts
+      - /mnt/user/appdata/packtracker/logs:/app/Logs
+    depends_on:
+      packtracker-postgres:
+        condition: service_healthy
+    networks:
+      - packtracker
+
+  packtracker-postgres:
+    image: postgres:16-alpine
+    container_name: packtracker-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: packtracker
+      POSTGRES_USER: packtracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /mnt/user/appdata/packtracker/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U packtracker -d packtracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - packtracker
+
+networks:
+  packtracker:
+    driver: bridge
