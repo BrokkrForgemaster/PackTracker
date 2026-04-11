@@ -16,9 +16,6 @@ COPY PackTracker.Application/  PackTracker.Application/
 COPY PackTracker.Infrastructure/ PackTracker.Infrastructure/
 COPY PackTracker.Api/          PackTracker.Api/
 
-# Copy seed data (used by the crafting seed service at startup)
-COPY PackTracker.Presentation/wwwroot/data/crafting-seed.json /seed/crafting-seed.json
-
 RUN dotnet publish PackTracker.Api/PackTracker.Api.csproj \
     -c Release \
     -o /app/publish \
