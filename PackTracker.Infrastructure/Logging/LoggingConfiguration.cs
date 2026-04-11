@@ -25,7 +25,6 @@ public static class LoggingConfiguration
                 .Enrich.WithProperty("Application", "PackTracker")
                 .Enrich.WithMachineName()
                 .Enrich.WithProcessId()
-                .Enrich.WithThreadId()
-                .Enrich.WithCorrelationId();
+                .Enrich.WithThreadId();
         });
 }
