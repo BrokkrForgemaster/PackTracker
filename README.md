@@ -1,3 +1,8 @@
+<!-- PackTracker Social Preview -->
+<p align="center">
+  <img src="https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/Pack_Tracker.png" alt="PackTracker Banner"/>
+</p>
+
 # 🐺 PackTracker
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-blue?logo=dotnet)](https://dotnet.microsoft.com/)
