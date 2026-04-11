@@ -7,25 +7,39 @@
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     </UserControl.Resources>
 
-    <Grid Margin="24">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Margin="0,0,0,18">
-            <TextBlock Text="Welcome to PackTracker"
-                       FontSize="34"
-                       FontWeight="Black"
-                       Foreground="White"/>
-            <TextBlock Text="Establish integrations, secure your local signals, and prepare the desktop client for House Wolf operations."
-                       FontSize="15"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       Margin="0,6,0,0"
-                       TextWrapping="Wrap"/>
-        </StackPanel>
+        <!-- ── Header ── -->
+        <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}">
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="FIRST-RUN CONFIGURATION"
+                               Foreground="{StaticResource OpTextTitleBrush}"
+                               FontSize="22" FontWeight="Bold"/>
+                    <TextBlock Text="Establish integrations, configure credentials, and prepare the desktop client for House Wolf operations."
+                               Foreground="{StaticResource OpTextSecondaryBrush}"
+                               FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Border DockPanel.Dock="Right"
+                        Background="{StaticResource OpBackgroundPillBrush}"
+                        BorderBrush="{StaticResource OpBorderPillBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="10,4"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="SETUP WIZARD"
+                               Foreground="{StaticResource OpTextAccentBrush}"
+                               FontSize="10" FontWeight="Bold"/>
+                </Border>
+            </DockPanel>
+        </Border>
 
+        <!-- ── Body ── -->
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
@@ -35,332 +49,286 @@
                     <ColumnDefinition Width="1*"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Margin="0,0,18,0">
-                    <Border Style="{StaticResource SectionCardStyle}"
-                            Background="{DynamicResource HeroGradientBrush}"
-                            Padding="28"
-                            Margin="0,0,0,18">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                <!-- ── Left column: integration forms ── -->
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
 
-                            <StackPanel>
-                                <Border Background="{DynamicResource SurfaceGlassStrongBrush}"
-                                        BorderBrush="{DynamicResource GlassBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="999"
-                                        Padding="12,6"
-                                        HorizontalAlignment="Left">
-                                    <TextBlock Text="FIRST-RUN CONFIGURATION"
-                                               Style="{StaticResource StatusPillTextStyle}"
-                                               Foreground="{DynamicResource AccentGoldBrush}"/>
-                                </Border>
-
-                                <TextBlock Text="Connect the services that power logistics, refinery tracking, and combat telemetry."
-                                           FontSize="28"
-                                           FontWeight="Bold"
-                                           Foreground="White"
-                                           Margin="0,18,0,10"
-                                           TextWrapping="Wrap"/>
-                                <TextBlock Text="You can skip individual integrations temporarily, but capability will remain limited until the corresponding key or path is provided."
-                                           FontSize="15"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           TextWrapping="Wrap"
-                                           MaxWidth="720"/>
-                            </StackPanel>
-
-                            <UniformGrid Grid.Row="1" Columns="3" Margin="0,24,0,0">
-                                <Border Style="{StaticResource GlassPanelStyle}" Margin="0,0,12,0">
-                                    <StackPanel>
-                                        <TextBlock Text="Regolith"
-                                                   FontSize="16"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="Refinery and profile sync support"
-                                                   Margin="0,8,0,0"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Style="{StaticResource GlassPanelStyle}" Margin="0,0,12,0">
-                                    <StackPanel>
-                                        <TextBlock Text="UEXCorp"
-                                                   FontSize="16"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="Commodity, route, and trading data services"
-                                                   Margin="0,8,0,0"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Style="{StaticResource GlassPanelStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="Game Log"
-                                                   FontSize="16"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="Kill/event parsing from Star Citizen output"
-                                                   Margin="0,8,0,0"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Border>
-                            </UniformGrid>
-                        </Grid>
-                    </Border>
-
-                    <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,18">
+                    <!-- Regolith -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,12">
                         <StackPanel>
-                            <DockPanel LastChildFill="False" Margin="0,0,0,14">
-                                <TextBlock Text="Regolith.rocks API Key"
-                                           FontSize="22"
-                                           FontWeight="Bold"
+                            <DockPanel LastChildFill="False" Margin="0,0,0,12">
+                                <TextBlock Text="REGOLITH.ROCKS API KEY"
+                                           Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontSize="14" FontWeight="Bold"
                                            DockPanel.Dock="Left"/>
                                 <TextBlock x:Name="RegolithCheck"
-                                           Text="✓"
-                                           FontSize="22"
-                                           FontWeight="Bold"
-                                           Foreground="LimeGreen"
+                                           Text="✓ CONFIGURED"
+                                           Foreground="{StaticResource OpTextAccentBrush}"
+                                           FontSize="11" FontWeight="Bold"
                                            Visibility="Collapsed"
+                                           VerticalAlignment="Center"
                                            DockPanel.Dock="Right"/>
                             </DockPanel>
-                            <TextBlock Text="Paste your Regolith API key to enable refinery and org-adjacent profile workflows."
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap">
-                                <Run Text="Need a key? "/>
+
+                            <TextBlock Text="Enables refinery and org-adjacent profile workflows."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                       FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Margin="0,6,0,0" FontSize="11">
+                                <Run Text="Need a key? " Foreground="{StaticResource OpTextMutedBrush}"/>
                                 <Hyperlink NavigateUri="https://regolith.rocks" RequestNavigate="RegolithLink_RequestNavigate">
                                     <Run Text="Open regolith.rocks"/>
                                 </Hyperlink>
                             </TextBlock>
-                            <Grid Margin="0,16,0,0">
+
+                            <TextBlock Text="API KEY" Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="10" FontWeight="Bold" Margin="0,16,0,6"/>
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="RegolithApiKeyBox"
                                          Grid.Column="0"
-                                         Height="42"
-                                         FontSize="15"
-                                         Margin="0,0,12,0"/>
+                                         Style="{StaticResource OpTextBoxStyle}"
+                                         Margin="0,0,10,0"/>
                                 <Button Grid.Column="1"
-                                        Content="Save"
-                                        Width="110"
+                                        Content="SAVE"
+                                        Width="90"
                                         Click="SaveRegolithApiKey_Click"
                                         Style="{StaticResource PrimaryActionButtonStyle}"/>
                             </Grid>
+
                             <CheckBox x:Name="RegolithOptOutCheckBox"
                                       Content="Skip Regolith for now"
-                                      Margin="0,16,0,0"
+                                      Margin="0,14,0,0"
                                       Checked="OptOutCheckBox_Checked"
                                       Unchecked="OptOutCheckBox_Unchecked"
-                                      Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                      Foreground="{StaticResource OpTextSecondaryBrush}"/>
+
                             <TextBlock x:Name="RegolithStatus"
-                                       FontSize="13"
-                                       Margin="0,10,0,0"
-                                       Foreground="LightGreen"
+                                       FontSize="11" Margin="0,8,0,0"
+                                       Foreground="{StaticResource OpTextAccentBrush}"
                                        TextWrapping="Wrap"/>
+
                             <Border Background="{DynamicResource WarningFillBrush}"
-                                    BorderBrush="#33FFB347"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="12"
-                                    Margin="0,12,0,0"
+                                    BorderBrush="#33FFB347" BorderThickness="1"
+                                    CornerRadius="4" Padding="12" Margin="0,10,0,0"
                                     Visibility="{Binding IsChecked, ElementName=RegolithOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="Skipping Regolith disables parts of refinery/profile workflow until the key is added later."
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="Skipping Regolith disables parts of refinery and profile workflow until the key is added later."
+                                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                                           FontSize="11" TextWrapping="Wrap"/>
                             </Border>
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,18">
+                    <!-- UEXCorp -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,12">
                         <StackPanel>
-                            <DockPanel LastChildFill="False" Margin="0,0,0,14">
-                                <TextBlock Text="UEXCorp API Key"
-                                           FontSize="22"
-                                           FontWeight="Bold"
+                            <DockPanel LastChildFill="False" Margin="0,0,0,12">
+                                <TextBlock Text="UEXCORP API KEY"
+                                           Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontSize="14" FontWeight="Bold"
                                            DockPanel.Dock="Left"/>
                                 <TextBlock x:Name="UexcorpCheck"
-                                           Text="✓"
-                                           FontSize="22"
-                                           FontWeight="Bold"
-                                           Foreground="LimeGreen"
+                                           Text="✓ CONFIGURED"
+                                           Foreground="{StaticResource OpTextAccentBrush}"
+                                           FontSize="11" FontWeight="Bold"
                                            Visibility="Collapsed"
+                                           VerticalAlignment="Center"
                                            DockPanel.Dock="Right"/>
                             </DockPanel>
-                            <TextBlock Text="Paste your UEXCorp API key to enable commodity and route intelligence inside the trading hub."
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap">
-                                <Run Text="Need a key? "/>
+
+                            <TextBlock Text="Enables commodity and route intelligence inside the trading hub."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                       FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Margin="0,6,0,0" FontSize="11">
+                                <Run Text="Need a key? " Foreground="{StaticResource OpTextMutedBrush}"/>
                                 <Hyperlink NavigateUri="https://uexcorp.space" RequestNavigate="UexcorpLink_RequestNavigate">
                                     <Run Text="Open uexcorp.space"/>
                                 </Hyperlink>
                             </TextBlock>
-                            <Grid Margin="0,16,0,0">
+
+                            <TextBlock Text="API KEY" Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="10" FontWeight="Bold" Margin="0,16,0,6"/>
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="UexcorpApiKeyBox"
                                          Grid.Column="0"
-                                         Height="42"
-                                         FontSize="15"
-                                         Margin="0,0,12,0"/>
+                                         Style="{StaticResource OpTextBoxStyle}"
+                                         Margin="0,0,10,0"/>
                                 <Button Grid.Column="1"
-                                        Content="Save"
-                                        Width="110"
+                                        Content="SAVE"
+                                        Width="90"
                                         Click="SaveUexCorpApiKey_Click"
                                         Style="{StaticResource PrimaryActionButtonStyle}"/>
                             </Grid>
+
                             <CheckBox x:Name="UexcorpOptOutCheckBox"
                                       Content="Skip UEXCorp for now"
-                                      Margin="0,16,0,0"
+                                      Margin="0,14,0,0"
                                       Checked="OptOutCheckBox_Checked"
                                       Unchecked="OptOutCheckBox_Unchecked"
-                                      Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                      Foreground="{StaticResource OpTextSecondaryBrush}"/>
+
                             <TextBlock x:Name="UexcorpStatus"
-                                       FontSize="13"
-                                       Margin="0,10,0,0"
-                                       Foreground="LightGreen"
+                                       FontSize="11" Margin="0,8,0,0"
+                                       Foreground="{StaticResource OpTextAccentBrush}"
                                        TextWrapping="Wrap"/>
+
                             <Border Background="{DynamicResource WarningFillBrush}"
-                                    BorderBrush="#33FFB347"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="12"
-                                    Margin="0,12,0,0"
+                                    BorderBrush="#33FFB347" BorderThickness="1"
+                                    CornerRadius="4" Padding="12" Margin="0,10,0,0"
                                     Visibility="{Binding IsChecked, ElementName=UexcorpOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <TextBlock Text="Skipping UEXCorp disables trading and commodity enrichment until the key is added later."
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           TextWrapping="Wrap"/>
+                                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                                           FontSize="11" TextWrapping="Wrap"/>
                             </Border>
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource SectionCardStyle}">
+                    <!-- Game Log -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20">
                         <StackPanel>
-                            <DockPanel LastChildFill="False" Margin="0,0,0,14">
-                                <TextBlock Text="Star Citizen Game Log"
-                                           FontSize="22"
-                                           FontWeight="Bold"
+                            <DockPanel LastChildFill="False" Margin="0,0,0,12">
+                                <TextBlock Text="STAR CITIZEN GAME LOG"
+                                           Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontSize="14" FontWeight="Bold"
                                            DockPanel.Dock="Left"/>
                                 <TextBlock x:Name="LogCheck"
-                                           Text="✓"
-                                           FontSize="22"
-                                           FontWeight="Bold"
-                                           Foreground="LimeGreen"
+                                           Text="✓ CONFIGURED"
+                                           Foreground="{StaticResource OpTextAccentBrush}"
+                                           FontSize="11" FontWeight="Bold"
                                            Visibility="Collapsed"
+                                           VerticalAlignment="Center"
                                            DockPanel.Dock="Right"/>
                             </DockPanel>
-                            <TextBlock Text="Provide the Game.log path used for kill/event parsing and future combat telemetry automation."
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="Example: C:\Roberts_Space_Industries\StarCitizen\LIVE\Game.log"
-                                       Margin="0,8,0,0"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"/>
-                            <Grid Margin="0,16,0,0">
+
+                            <TextBlock Text="Required for kill/event parsing and future combat telemetry automation."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                       FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Text="C:\Roberts_Space_Industries\StarCitizen\LIVE\Game.log"
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                            <TextBlock Text="LOG PATH" Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="10" FontWeight="Bold" Margin="0,16,0,6"/>
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="LogLocationBox"
                                          Grid.Column="0"
-                                         Height="42"
-                                         FontSize="15"
-                                         Margin="0,0,12,0"/>
+                                         Style="{StaticResource OpTextBoxStyle}"
+                                         Margin="0,0,10,0"/>
                                 <Button Grid.Column="1"
-                                        Content="Save"
-                                        Width="110"
+                                        Content="SAVE"
+                                        Width="90"
                                         Click="SaveLogLocation_Click"
                                         Style="{StaticResource PrimaryActionButtonStyle}"/>
                             </Grid>
+
                             <CheckBox x:Name="LogOptOutCheckBox"
                                       Content="Skip game log wiring for now"
-                                      Margin="0,16,0,0"
+                                      Margin="0,14,0,0"
                                       Checked="OptOutCheckBox_Checked"
                                       Unchecked="OptOutCheckBox_Unchecked"
-                                      Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                      Foreground="{StaticResource OpTextSecondaryBrush}"/>
+
                             <TextBlock x:Name="LogLocationStatus"
-                                       FontSize="13"
-                                       Margin="0,10,0,0"
-                                       Foreground="LightGreen"
+                                       FontSize="11" Margin="0,8,0,0"
+                                       Foreground="{StaticResource OpTextAccentBrush}"
                                        TextWrapping="Wrap"/>
+
                             <Border Background="{DynamicResource WarningFillBrush}"
-                                    BorderBrush="#33FFB347"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="12"
-                                    Margin="0,12,0,0"
+                                    BorderBrush="#33FFB347" BorderThickness="1"
+                                    CornerRadius="4" Padding="12" Margin="0,10,0,0"
                                     Visibility="{Binding IsChecked, ElementName=LogOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <TextBlock Text="Skipping the game log path disables local telemetry and future automated kill/event ingestion."
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           TextWrapping="Wrap"/>
+                                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                                           FontSize="11" TextWrapping="Wrap"/>
                             </Border>
                         </StackPanel>
                     </Border>
+
                 </StackPanel>
 
-                <StackPanel Grid.Column="1">
-                    <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,18">
+                <!-- ── Right column: context panels ── -->
+                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,12">
                         <StackPanel>
-                            <TextBlock Text="Setup checklist"
-                                       FontSize="22"
-                                       FontWeight="Bold"/>
-                            <TextBlock Text="All three items can be configured now or intentionally skipped. Proceed activates when each category is either configured or explicitly deferred."
-                                       Margin="0,10,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="SETUP CHECKLIST"
+                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock Text="Each integration can be configured now or intentionally skipped. Proceed unlocks when every item is either saved or deferred."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                       FontSize="12" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,18">
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,12">
                         <StackPanel>
-                            <TextBlock Text="Why this matters"
-                                       FontSize="18"
-                                       FontWeight="Bold"/>
-                            <TextBlock Text="• Regolith supports refinery-related workflows&#x0a;• UEXCorp powers trade/market enrichment&#x0a;• Game log access is the future basis for combat telemetry and kill tracking"
-                                       Margin="0,12,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="WHY THIS MATTERS"
+                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <StackPanel>
+                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,0,0,6" TextWrapping="Wrap">
+                                    <Run Text="Regolith" FontWeight="SemiBold" Foreground="{StaticResource OpTextTitleBrush}"/>
+                                    <Run Text=" — refinery and profile workflow support"/>
+                                </TextBlock>
+                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,0,0,6" TextWrapping="Wrap">
+                                    <Run Text="UEXCorp" FontWeight="SemiBold" Foreground="{StaticResource OpTextTitleBrush}"/>
+                                    <Run Text=" — trade and commodity market enrichment"/>
+                                </TextBlock>
+                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" TextWrapping="Wrap">
+                                    <Run Text="Game Log" FontWeight="SemiBold" Foreground="{StaticResource OpTextTitleBrush}"/>
+                                    <Run Text=" — future basis for combat telemetry and kill tracking"/>
+                                </TextBlock>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource SectionCardStyle}">
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20">
                         <StackPanel>
-                            <TextBlock Text="Security posture"
-                                       FontSize="18"
-                                       FontWeight="Bold"/>
-                            <TextBlock Text="Settings are stored locally for the current user profile. Sensitive values are processed through the application’s protected storage helpers before persistence."
-                                       Margin="0,12,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="You can revisit these settings later from the Settings area after first-run is complete."
-                                       Margin="0,10,0,0"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="SECURITY POSTURE"
+                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock Text="Settings are stored locally for the current user profile. Sensitive values are processed through the application's protected storage layer before persistence."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                       FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Text="All credentials can be updated at any time from the Settings area."
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
+
                 </StackPanel>
             </Grid>
         </ScrollViewer>
 
-        <DockPanel Grid.Row="2" Margin="0,18,0,0" LastChildFill="False">
-            <TextBlock Text="Proceed once the required integrations are configured or intentionally skipped."
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       VerticalAlignment="Center"
-                       DockPanel.Dock="Left"/>
-            <Button Content="Proceed to App"
-                    x:Name="ProceedBtn"
-                    Click="ProceedBtn_Click"
-                    IsEnabled="False"
-                    Height="48"
-                    Width="220"
-                    FontSize="18"
-                    DockPanel.Dock="Right"
-                    Style="{StaticResource PrimaryActionButtonStyle}"/>
-        </DockPanel>
+        <!-- ── Footer ── -->
+        <Border Grid.Row="2" Style="{StaticResource OpHeaderBorderStyle}" Margin="0,12,0,0" Padding="12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Proceed activates once every integration is either configured or explicitly skipped."
+                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                           FontSize="12" VerticalAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Content="PROCEED TO APP"
+                        x:Name="ProceedBtn"
+                        Click="ProceedBtn_Click"
+                        IsEnabled="False"
+                        Height="36"
+                        Padding="24,0"
+                        FontSize="13"
+                        Style="{StaticResource PrimaryActionButtonStyle}"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

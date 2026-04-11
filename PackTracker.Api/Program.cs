@@ -181,13 +181,15 @@ var app = builder.Build();
 #region Forwarded Headers / Request Debug
 
 // Must run as early as possible so scheme/host are correct behind Render/proxies.
-// Clear KnownNetworks/KnownProxies so headers are trusted regardless of proxy IP.
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+// KnownNetworks/KnownProxies must be explicitly cleared — the { } initializer syntax
+// is a no-op on existing collections and does NOT clear the default loopback restriction.
+var forwardedOptions = new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-    KnownNetworks = { },
-    KnownProxies = { }
-});
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedOptions.KnownNetworks.Clear();
+forwardedOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedOptions);
 
 app.MapGet("/debug-request", (HttpContext ctx) =>
 {
