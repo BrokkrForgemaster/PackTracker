@@ -120,10 +120,17 @@ public partial class App : System.Windows.Application
         {
             DotNetEnv.Env.TraversePath().Load();
 
-            // Load configuration
+            // Load configuration — OnLoadException ensures a locked/corrupt appsettings.json
+            // never crashes startup; user settings are persisted separately in %AppData%.
             var cfg = new ConfigurationBuilder()
                 .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                .AddJsonFile(src =>
+                {
+                    src.Path = "appsettings.json";
+                    src.Optional = true;
+                    src.ReloadOnChange = false;
+                    src.OnLoadException = ctx => ctx.Ignore = true;
+                })
                 .AddUserSecrets<App>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();

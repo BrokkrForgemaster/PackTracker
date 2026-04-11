@@ -110,7 +110,9 @@ jobs:
           path: installer/output/PackTrackerSetup-${{ steps.version.outputs.VERSION }}.exe
 
       - name: Sign installer via SignPath
-        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        if: ${{ env.SIGNPATH_API_TOKEN != '' }}
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
         uses: signpath/github-action-submit-signing-request@v1
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
