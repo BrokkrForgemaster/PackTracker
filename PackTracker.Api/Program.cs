@@ -128,6 +128,19 @@ builder.Services.AddAuthentication(options =>
         options.ClaimActions.MapJsonKey("urn:discord:avatar", "avatar");
         options.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
 
+        // Behind Render's reverse proxy the detected scheme can still be http even with
+        // forwarded-header middleware. Force https in the redirect_uri we send Discord
+        // so it always matches the registered callback URL regardless of proxy behaviour.
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            var uri = context.RedirectUri.Replace(
+                "redirect_uri=http%3A%2F%2F",
+                "redirect_uri=https%3A%2F%2F",
+                StringComparison.OrdinalIgnoreCase);
+            context.Response.Redirect(uri);
+            return Task.CompletedTask;
+        };
+
         options.Events.OnCreatingTicket = ctx =>
         {
             var userId = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -185,7 +198,7 @@ var app = builder.Build();
 // is a no-op on existing collections and does NOT clear the default loopback restriction.
 var forwardedOptions = new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
 };
 forwardedOptions.KnownNetworks.Clear();
 forwardedOptions.KnownProxies.Clear();

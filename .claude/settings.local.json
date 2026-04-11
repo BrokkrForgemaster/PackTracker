@@ -34,7 +34,8 @@
       "Bash(grep -E \"\\\\.cs$\")",
       "Bash(dotnet restore:*)",
       "Bash(dotnet test:*)",
-      "Bash(dotnet publish:*)"
+      "Bash(dotnet publish:*)",
+      "Bash(xargs wc:*)"
     ],
     "deny": [],
     "ask": []

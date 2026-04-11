@@ -52,74 +52,6 @@
                 <!-- ── Left column: integration forms ── -->
                 <StackPanel Grid.Column="0" Margin="0,0,12,0">
 
-                    <!-- Regolith -->
-                    <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,12">
-                        <StackPanel>
-                            <DockPanel LastChildFill="False" Margin="0,0,0,12">
-                                <TextBlock Text="REGOLITH.ROCKS API KEY"
-                                           Foreground="{StaticResource OpTextTitleBrush}"
-                                           FontSize="14" FontWeight="Bold"
-                                           DockPanel.Dock="Left"/>
-                                <TextBlock x:Name="RegolithCheck"
-                                           Text="✓ CONFIGURED"
-                                           Foreground="{StaticResource OpTextAccentBrush}"
-                                           FontSize="11" FontWeight="Bold"
-                                           Visibility="Collapsed"
-                                           VerticalAlignment="Center"
-                                           DockPanel.Dock="Right"/>
-                            </DockPanel>
-
-                            <TextBlock Text="Enables refinery and org-adjacent profile workflows."
-                                       Foreground="{StaticResource OpTextSecondaryBrush}"
-                                       FontSize="12" TextWrapping="Wrap"/>
-                            <TextBlock Margin="0,6,0,0" FontSize="11">
-                                <Run Text="Need a key? " Foreground="{StaticResource OpTextMutedBrush}"/>
-                                <Hyperlink NavigateUri="https://regolith.rocks" RequestNavigate="RegolithLink_RequestNavigate">
-                                    <Run Text="Open regolith.rocks"/>
-                                </Hyperlink>
-                            </TextBlock>
-
-                            <TextBlock Text="API KEY" Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="10" FontWeight="Bold" Margin="0,16,0,6"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox x:Name="RegolithApiKeyBox"
-                                         Grid.Column="0"
-                                         Style="{StaticResource OpTextBoxStyle}"
-                                         Margin="0,0,10,0"/>
-                                <Button Grid.Column="1"
-                                        Content="SAVE"
-                                        Width="90"
-                                        Click="SaveRegolithApiKey_Click"
-                                        Style="{StaticResource PrimaryActionButtonStyle}"/>
-                            </Grid>
-
-                            <CheckBox x:Name="RegolithOptOutCheckBox"
-                                      Content="Skip Regolith for now"
-                                      Margin="0,14,0,0"
-                                      Checked="OptOutCheckBox_Checked"
-                                      Unchecked="OptOutCheckBox_Unchecked"
-                                      Foreground="{StaticResource OpTextSecondaryBrush}"/>
-
-                            <TextBlock x:Name="RegolithStatus"
-                                       FontSize="11" Margin="0,8,0,0"
-                                       Foreground="{StaticResource OpTextAccentBrush}"
-                                       TextWrapping="Wrap"/>
-
-                            <Border Background="{DynamicResource WarningFillBrush}"
-                                    BorderBrush="#33FFB347" BorderThickness="1"
-                                    CornerRadius="4" Padding="12" Margin="0,10,0,0"
-                                    Visibility="{Binding IsChecked, ElementName=RegolithOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="Skipping Regolith disables parts of refinery and profile workflow until the key is added later."
-                                           Foreground="{StaticResource OpTextSecondaryBrush}"
-                                           FontSize="11" TextWrapping="Wrap"/>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
                     <!-- UEXCorp -->
                     <Border Style="{StaticResource OpPanelBorderStyle}" Padding="20" Margin="0,0,0,12">
                         <StackPanel>
@@ -275,10 +207,6 @@
                                        Foreground="{StaticResource OpTextTitleBrush}"
                                        FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
                             <StackPanel>
-                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,0,0,6" TextWrapping="Wrap">
-                                    <Run Text="Regolith" FontWeight="SemiBold" Foreground="{StaticResource OpTextTitleBrush}"/>
-                                    <Run Text=" — refinery and profile workflow support"/>
-                                </TextBlock>
                                 <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,0,0,6" TextWrapping="Wrap">
                                     <Run Text="UEXCorp" FontWeight="SemiBold" Foreground="{StaticResource OpTextTitleBrush}"/>
                                     <Run Text=" — trade and commodity market enrichment"/>
