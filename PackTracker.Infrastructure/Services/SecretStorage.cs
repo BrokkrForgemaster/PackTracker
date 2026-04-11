@@ -14,9 +14,9 @@ public static class SecretStorage
             var encrypted = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
             return Convert.ToBase64String(encrypted);
         }
-        catch (CryptographicException ex)
+        catch (Exception ex) when (ex is CryptographicException || ex is PlatformNotSupportedException)
         {
-            // DPAPI unavailable (no user profile, service context, etc.)
+            // DPAPI unavailable (non-Windows platform, no user profile, service context, etc.)
             Console.WriteLine($"DPAPI protect failed: {ex.Message}");
             return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
         }
@@ -34,7 +34,7 @@ public static class SecretStorage
             var decrypted = ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
             return Encoding.UTF8.GetString(decrypted);
         }
-        catch (Exception ex) when (ex is CryptographicException || ex is FormatException)
+        catch (Exception ex) when (ex is CryptographicException || ex is FormatException || ex is PlatformNotSupportedException)
         {
             // Fallback: Check if it's a raw base64 string (not DPAPI encrypted)
             try

@@ -10,10 +10,7 @@ services:
       - "${API_PORT:-5199}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      # Database — points at the postgres service below.
-      # If you want to keep using Neon instead, replace this with your Neon connection string
-      # and remove the postgres service entirely.
-      ConnectionStrings__DefaultConnection: Host=ep-purple-wave-ad7i9yyi-pooler.c-2.us-east-1.aws.neon.tech;Port=5432;Database=neondb;Username=neondb_owner;Password=npg_4E3TOmnPrwSL;SSL Mode=Require;Trust Server Certificate=true
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
       # JWT
       Authentication__Jwt__Key: ${JWT_KEY}
       Authentication__Jwt__Issuer: PackTracker
