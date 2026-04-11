@@ -204,41 +204,82 @@ public class WikiBlueprintService
     {
         try
         {
-            var client = _httpClientFactory.CreateClient("WikiApi");
+            BlueprintDetailDto? localResult = null;
 
-            var response = await client.GetAsync($"blueprints/{wikiUuid}", ct);
-            response.EnsureSuccessStatusCode();
+            // Try local API first — it has ownership, materials, and craft-time data from the DB.
+            using var apiClient = _apiClientProvider.CreateClient();
+            var apiResponse = await apiClient.GetAsync($"api/v1/blueprints/{wikiUuid}", ct);
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            if (apiResponse.IsSuccessStatusCode)
+            {
+                localResult = await apiResponse.Content.ReadFromJsonAsync<BlueprintDetailDto>(cancellationToken: ct);
+            }
+            else
+            {
+                _logger.LogWarning("Blueprint detail not found in Local API. Uuid={Uuid} Status={Status}",
+                    wikiUuid, apiResponse.StatusCode);
+            }
 
-            var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(
-                json,
-                JsonOptions);
+            // The local API may be missing components (never stored) or materials (sync not yet run).
+            // Always fetch from the wiki API when either is absent and merge the gaps in.
+            var needsWikiData = localResult is null ||
+                                localResult.Components == null || localResult.Components.Count == 0 ||
+                                localResult.Materials == null  || localResult.Materials.Count == 0;
 
-            var detail = wrapper?.Data;
-            if (detail is null)
-                return null;
+            if (needsWikiData)
+            {
+                var wikiClient = _httpClientFactory.CreateClient("WikiApi");
+                var wikiResponse = await wikiClient.GetAsync($"blueprints/{wikiUuid}", ct);
 
-            var dto = MapToDetailDto(detail, wikiUuid);
+                if (wikiResponse.IsSuccessStatusCode)
+                {
+                    var json = await wikiResponse.Content.ReadAsStringAsync(ct);
+                    var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(json, JsonOptions);
+                    var detail = wrapper?.Data;
 
-            var allOwnershipRecords = await LoadOrgOwnershipAsync(wikiUuid, ct);
+                    if (detail is not null)
+                    {
+                        if (localResult is null)
+                        {
+                            // Full wiki fallback — no local record at all.
+                            var dto = MapToDetailDto(detail, wikiUuid);
+                            var allOwnershipRecords = await LoadOrgOwnershipAsync(wikiUuid, ct);
+                            dto.Owners = allOwnershipRecords
+                                .Where(o => string.Equals(o.InterestType, "Owns", StringComparison.OrdinalIgnoreCase))
+                                .ToList();
+                            dto.InterestedUsers = allOwnershipRecords
+                                .Where(o => !string.Equals(o.InterestType, "Owns", StringComparison.OrdinalIgnoreCase))
+                                .ToList();
+                            dto.OwnerCount = dto.Owners.Count;
+                            return dto;
+                        }
+                        else
+                        {
+                            // Partial merge — fill any missing data from the wiki detail.
+                            var wikiDto = MapToDetailDto(detail, wikiUuid);
 
-            dto.Owners = allOwnershipRecords
-                .Where(o => string.Equals(o.InterestType, "Owns", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+                            if (localResult.Components == null || localResult.Components.Count == 0)
+                                localResult.Components = wikiDto.Components;
 
-            dto.InterestedUsers = allOwnershipRecords
-                .Where(o => !string.Equals(o.InterestType, "Owns", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+                            if (localResult.Materials == null || localResult.Materials.Count == 0)
+                                localResult.Materials = wikiDto.Materials;
 
-            dto.OwnerCount = dto.Owners.Count;
+                            localResult.TimeToCraftSeconds ??= wikiDto.TimeToCraftSeconds;
 
-            _logger.LogInformation(
-                "Loaded blueprint detail {Uuid} with OwnerCount={OwnerCount}",
-                wikiUuid,
-                dto.OwnerCount);
+                            _logger.LogDebug(
+                                "Merged wiki data into local blueprint {Uuid}: {ComponentCount} components, {MaterialCount} materials",
+                                wikiUuid, localResult.Components.Count, localResult.Materials.Count);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Wiki API blueprint detail fetch failed. Uuid={Uuid} Status={Status}",
+                        wikiUuid, wikiResponse.StatusCode);
+                }
+            }
 
-            return dto;
+            return localResult;
         }
         catch (Exception ex)
         {

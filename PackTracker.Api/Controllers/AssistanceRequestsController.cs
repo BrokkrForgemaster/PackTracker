@@ -20,6 +20,15 @@ namespace PackTracker.Api.Controllers;
 [Authorize]
 public class AssistanceRequestsController : ControllerBase
 {
+    private static readonly HashSet<string> ElevatedRequestRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Captain",
+        "Fleet Commander",
+        "Armor",
+        "Hand of the Clan",
+        "Clan Warlord"
+    };
+
     #region Fields
 
     private readonly AppDbContext _db;
@@ -175,6 +184,12 @@ public class AssistanceRequestsController : ControllerBase
         request.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Assistance request claimed. RequestId={RequestId} AssignedToProfileId={ProfileId}",
+            id,
+            profile.Id);
+
         await BroadcastAsync("AssistanceRequestUpdated", id, ct);
 
         return Ok(new { message = "Request claimed.", requestId = id });
@@ -202,6 +217,12 @@ public class AssistanceRequestsController : ControllerBase
         request.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Assistance request completed. RequestId={RequestId} ProfileId={ProfileId}",
+            id,
+            profile.Id);
+
         await BroadcastAsync("AssistanceRequestUpdated", id, ct);
 
         return Ok(new { message = "Request completed.", requestId = id });
@@ -221,7 +242,7 @@ public class AssistanceRequestsController : ControllerBase
         if (request is null)
             return NotFound(new { error = "Assistance request not found." });
 
-        if (request.CreatedByProfileId != profile.Id)
+        if (!CanManageRequest(profile, request.CreatedByProfileId))
             return StatusCode(403, new { error = "Only the creator may cancel this request." });
 
         if (request.Status == RequestStatus.Cancelled)
@@ -231,6 +252,12 @@ public class AssistanceRequestsController : ControllerBase
         request.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Assistance request cancelled. RequestId={RequestId} ProfileId={ProfileId}",
+            id,
+            profile.Id);
+
         await BroadcastAsync("AssistanceRequestUpdated", id, ct);
 
         return Ok(new { message = "Request cancelled.", requestId = id });
@@ -273,6 +300,13 @@ public class AssistanceRequestsController : ControllerBase
 
         await _hub.Clients.All.SendAsync(eventName, id, ct);
     }
+
+    private bool CanManageRequest(Profile profile, Guid creatorProfileId) =>
+        profile.Id == creatorProfileId || UserHasElevatedRequestRole(profile.DiscordRank);
+
+    private bool UserHasElevatedRequestRole(string? profileRole) =>
+        ElevatedRequestRoles.Contains(profileRole ?? string.Empty)
+        || ElevatedRequestRoles.Any(User.IsInRole);
 
     #endregion
 }

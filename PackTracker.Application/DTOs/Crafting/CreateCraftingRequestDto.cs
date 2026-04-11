@@ -73,5 +73,17 @@ public sealed class CreateCraftingRequestDto
     [MaxLength(1000)]
     public string? Notes { get; set; }
 
+    /// <summary>
+    /// Gets or sets the requester's local time zone designation captured by the client.
+    /// Example: "Eastern Daylight Time".
+    /// </summary>
+    [MaxLength(200)]
+    public string? RequesterTimeZoneDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the requester's UTC offset in minutes at the time of submission.
+    /// </summary>
+    public int? RequesterUtcOffsetMinutes { get; set; }
+
     #endregion
 }

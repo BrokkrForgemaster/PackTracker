@@ -16,7 +16,7 @@ namespace PackTracker.Api.Controllers;
 /// Handles general request ticket operations (legacy/general request system).
 /// </summary>
 [ApiController]
-[Route("api/v1/requests")]
+[Route("api/v1/legacy/requests")]
 [Authorize(Roles = "HouseWolfMember")]
 public class RequestsController : ControllerBase
 {

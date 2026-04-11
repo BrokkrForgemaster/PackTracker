@@ -94,6 +94,18 @@ public class CraftingRequest
     /// </summary>
     public MaterialSupplyMode MaterialSupplyMode { get; set; } = MaterialSupplyMode.Negotiable;
 
+    /// <summary>
+    /// Gets or sets the requester's local time zone designation captured at submission time.
+    /// Example: "Eastern Daylight Time".
+    /// </summary>
+    public string? RequesterTimeZoneDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the requester's UTC offset in minutes captured at submission time.
+    /// This preserves the requester's local wall-clock time for the moment the request was created.
+    /// </summary>
+    public int? RequesterUtcOffsetMinutes { get; set; }
+
     #endregion
 
     #region Audit Fields

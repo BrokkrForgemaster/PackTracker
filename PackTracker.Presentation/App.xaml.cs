@@ -55,10 +55,8 @@ public partial class App : System.Windows.Application
         // 3️⃣ Infrastructure (requires settings)
         services.AddInfrastructure(settingsService);
 
-        // 4️⃣ Application + hosted API
+        // 4️⃣ Application shell
         services.AddSingleton<System.Windows.Application>(_ => Current);
-        services.AddSingleton<ApiHostedService>();
-        services.AddHostedService(sp => sp.GetRequiredService<ApiHostedService>());
 
         // 5️⃣ External API configs
         services.Configure<UexOptions>(cfg.GetSection("Uex"));
@@ -92,6 +90,10 @@ public partial class App : System.Windows.Application
         services.AddTransient<ProcurementRequestsViewModel>();
         services.AddTransient<ProcurementRequestsView>();
         services.AddTransient<ComponentViewModel>();
+
+        // Embedded API host — registered as singleton so we can start/stop it manually
+        services.AddSingleton<ApiHostedService>();
+
         // Bind GuideRequest and Api options from configuration
         services.Configure<GuideRequestOptions>(cfg.GetSection(GuideRequestOptions.SectionName));
 
@@ -110,12 +112,14 @@ public partial class App : System.Windows.Application
     // -------------------------------------------------------------
     // 🚀 Application Startup
     // -------------------------------------------------------------
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
         try
         {
+            DotNetEnv.Env.TraversePath().Load();
+
             // Load configuration
             var cfg = new ConfigurationBuilder()
                 .SetBasePath(AppContext.BaseDirectory)
@@ -130,9 +134,9 @@ public partial class App : System.Windows.Application
             var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
             logger.LogInformation("🚀 Starting PackTracker...");
 
-            // Start embedded API host
-            var apiHost = _serviceProvider.GetRequiredService<ApiHostedService>();
-            await apiHost.StartAsync(CancellationToken.None);
+            // Start embedded API (fire-and-forget — LoginView polls /health until it's up)
+            var apiService = _serviceProvider.GetRequiredService<ApiHostedService>();
+            _ = apiService.StartAsync(CancellationToken.None);
 
             // Load user settings
             var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
@@ -169,25 +173,11 @@ public partial class App : System.Windows.Application
     // -------------------------------------------------------------
     // 🛑 Graceful Shutdown
     // -------------------------------------------------------------
-    protected override async void OnExit(ExitEventArgs e)
+    protected override void OnExit(ExitEventArgs e)
     {
-        if (_serviceProvider is not null)
-        {
-            try
-            {
-                var apiHost = _serviceProvider.GetService<ApiHostedService>();
-                if (apiHost is not null)
-                {
-                    Log.Information("🛑 Stopping embedded API host...");
-                    await apiHost.StopAsync(CancellationToken.None);
-                    Log.Information("✅ API host stopped.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "⚠️ Error during shutdown.");
-            }
-        }
+        _serviceProvider?.GetService<ApiHostedService>()
+            ?.StopAsync(CancellationToken.None)
+            .GetAwaiter().GetResult();
 
         Log.CloseAndFlush();
         base.OnExit(e);

@@ -31,7 +31,9 @@
       "Bash(sed -n '266,278p' \"B:\\\\PackTracker\\\\PackTracker.Presentation\\\\ViewModels\\\\BlueprintExplorerViewModel.cs\")",
       "Bash(rm:*)",
       "Bash(xargs grep:*)",
-      "Bash(grep -E \"\\\\.cs$\")"
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet test:*)"
     ],
     "deny": [],
     "ask": []

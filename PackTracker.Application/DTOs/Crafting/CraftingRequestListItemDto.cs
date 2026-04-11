@@ -110,9 +110,58 @@ public sealed class CraftingRequestListItemDto
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets the requester's local time zone designation captured at submission time.
+    /// </summary>
+    public string? RequesterTimeZoneDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the requester's UTC offset in minutes captured at submission time.
+    /// </summary>
+    public int? RequesterUtcOffsetMinutes { get; set; }
+
+    /// <summary>
+    /// Gets the created timestamp converted to the current viewer's local time.
+    /// </summary>
+    public string CreatedAtLocalDisplay => NormalizeUtc(CreatedAt).ToLocalTime().ToString("MMM d, yyyy h:mm tt");
+
+    /// <summary>
+    /// Gets the requester's local wall-clock submission time with zone designation.
+    /// </summary>
+    public string RequesterCreatedAtDisplay
+    {
+        get
+        {
+            if (RequesterUtcOffsetMinutes is null)
+                return CreatedAtLocalDisplay;
+
+            var requesterLocal = NormalizeUtc(CreatedAt).AddMinutes(RequesterUtcOffsetMinutes.Value);
+            return string.IsNullOrWhiteSpace(RequesterTimeZoneDisplayName)
+                ? $"{requesterLocal:MMM d, yyyy h:mm tt} (UTC{FormatOffset(RequesterUtcOffsetMinutes.Value)})"
+                : $"{requesterLocal:MMM d, yyyy h:mm tt} {RequesterTimeZoneDisplayName}";
+        }
+    }
+
+    /// <summary>
     /// Gets or sets the recipe materials associated with the blueprint.
     /// </summary>
     public IReadOnlyList<BlueprintRecipeMaterialDto> Materials { get; set; } = Array.Empty<BlueprintRecipeMaterialDto>();
 
     #endregion
+
+    private static DateTime NormalizeUtc(DateTime value) =>
+        value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
+
+    private static string FormatOffset(int totalMinutes)
+    {
+        var sign = totalMinutes >= 0 ? "+" : "-";
+        var absolute = Math.Abs(totalMinutes);
+        var hours = absolute / 60;
+        var minutes = absolute % 60;
+        return $"{sign}{hours:00}:{minutes:00}";
+    }
 }

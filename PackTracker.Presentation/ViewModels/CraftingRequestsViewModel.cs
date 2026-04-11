@@ -276,7 +276,35 @@ public partial class CraftingRequestsViewModel : ObservableObject
     private async Task MarkCompletedAsync() => await ChangeStatus(RequestStatus.Completed, "Completed.");
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
-    private async Task CancelAsync() => await ChangeStatus(RequestStatus.Cancelled, "Cancelled.");
+    private async Task CancelAsync()
+    {
+        if (SelectedRequest is null) return;
+
+        try
+        {
+            IsLoading = true;
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.DeleteAsync($"api/v1/crafting/requests/{SelectedRequest.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                StatusMessage = "Request removed.";
+                await RefreshAsync();
+            }
+            else
+            {
+                StatusMessage = $"Update failed ({(int)response.StatusCode})";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 
     private async Task ChangeStatus(string status, string msg)
     {

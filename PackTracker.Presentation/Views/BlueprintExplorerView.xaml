@@ -858,6 +858,16 @@
                                                                     </DataTemplate>
                                                                 </ComboBox.ItemTemplate>
                                                             </ComboBox>
+
+                                                            <TextBlock Text="REWARD / PRICE"
+                                                                       Foreground="#8F7A5A"
+                                                                       FontSize="10"
+                                                                       FontWeight="Bold"
+                                                                       Margin="0,10,0,4" />
+
+                                                            <TextBox Text="{Binding RewardOffered, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Style="{StaticResource OpTextBoxStyle}"
+                                                                     FontSize="12" />
                                                         </StackPanel>
                                                     </Border>
                                                 </DataTemplate>

@@ -38,8 +38,8 @@ public class AppSettings
     public string UexCorpApiKey { get; set; } = string.Empty;
     public string UexBaseUrl { get; set; } = "https://api.uexcorp.space/2.0";
 
-    // --- Embedded API ---
-    public string ApiBaseUrl { get; set; } = "http://localhost:5001";
+    // --- External API ---
+    public string ApiBaseUrl { get; set; } = string.Empty;
 
     // --- Game Integration ---
     public string GameLogFilePath { get; set; } = string.Empty;

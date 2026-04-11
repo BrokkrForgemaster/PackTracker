@@ -1,26 +1,42 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
+using PackTracker.Application.DTOs.Dashboard;
 using PackTracker.Presentation.Commands;
+using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.ViewModels;
 
 public class DashboardViewModel : ViewModelBase
 {
+    private readonly IApiClientProvider _apiClientProvider;
+    private readonly SignalRChatService _signalR;
+    
     private int _nextZIndex = 1;
     private bool _isConnected = true;
     private string? _currentUserDisplayName = "Sentinel_Wolf";
     private string? _currentUserRole = "Leadership";
 
-    public DashboardViewModel()
+    public DashboardViewModel(
+        IApiClientProvider apiClientProvider,
+        SignalRChatService signalR,
+        GuideDashboardViewModel guideViewModel)
     {
+        _apiClientProvider = apiClientProvider;
+        _signalR = signalR;
+        Guide = guideViewModel;
+
         AvailableChatChannels = new ObservableCollection<AvailableChannelViewModel>();
         OpenChatWindows = new ObservableCollection<ChatWindowViewModel>();
         CollapsedWindowsWithUnread = new ObservableCollection<ChatWindowViewModel>();
         OnlineUsers = new ObservableCollection<OnlineUserViewModel>();
+        ActiveRequests = new ObservableCollection<ActiveRequestDto>();
 
         OpenChatWindowCommand = new RelayCommand<AvailableChannelViewModel>(OpenChatWindow);
         CascadeChatWindowsCommand = new RelayCommand(CascadeWindows);
@@ -30,6 +46,62 @@ public class DashboardViewModel : ViewModelBase
         SeedOnlineUsers();
         LoadChatChannelsForRole(CurrentUserRole);
         OpenDefaultWindows();
+
+        _ = InitAsync();
+    }
+
+    private async Task InitAsync()
+    {
+        try
+        {
+            await _signalR.ConnectAsync();
+            await RefreshDataAsync();
+            
+            _signalR.AssistanceRequestCreated += id => _ = RefreshDataAsync();
+            _signalR.AssistanceRequestUpdated += id => _ = RefreshDataAsync();
+            _signalR.CraftingRequestCreated += id => _ = RefreshDataAsync();
+            _signalR.CraftingRequestUpdated += id => _ = RefreshDataAsync();
+            _signalR.ProcurementRequestCreated += id => _ = RefreshDataAsync();
+            _signalR.ProcurementRequestUpdated += id => _ = RefreshDataAsync();
+            
+            _signalR.ConnectionStateChanged += state => 
+            {
+                IsConnected = state;
+                if (state) _ = RefreshDataAsync();
+            };
+        }
+        catch (Exception)
+        {
+            // Log or handle
+        }
+    }
+
+    public async Task RefreshDataAsync()
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            var summary = await client.GetFromJsonAsync<DashboardSummaryDto>("api/v1/dashboard/summary");
+            
+            if (summary != null)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ActiveRequests.Clear();
+                    foreach (var req in summary.ActiveRequests)
+                        ActiveRequests.Add(req);
+                    
+                    OnPropertyChanged(nameof(TopRequests));
+                });
+
+                await Guide.RefreshAsync();
+                OnPropertyChanged(nameof(TopGuideRequests));
+            }
+        }
+        catch (Exception)
+        {
+            // Handle
+        }
     }
 
     public bool IsConnected
@@ -54,6 +126,12 @@ public class DashboardViewModel : ViewModelBase
     public ObservableCollection<ChatWindowViewModel> OpenChatWindows { get; }
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
     public ObservableCollection<OnlineUserViewModel> OnlineUsers { get; }
+    public ObservableCollection<ActiveRequestDto> ActiveRequests { get; }
+    
+    public IEnumerable<ActiveRequestDto> TopRequests => ActiveRequests.Take(5);
+    
+    public GuideDashboardViewModel Guide { get; }
+    public IEnumerable<PackTracker.Domain.Entities.GuideRequest> TopGuideRequests => Guide.Requests.Take(2);
 
     public ICommand OpenChatWindowCommand { get; }
     public ICommand CascadeChatWindowsCommand { get; }

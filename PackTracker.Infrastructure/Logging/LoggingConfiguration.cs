@@ -28,46 +28,4 @@ public static class LoggingConfiguration
                 .Enrich.WithThreadId()
                 .Enrich.WithCorrelationId();
         });
-
-    public static IServiceCollection AddPackTrackerLogging(
-        this IServiceCollection services,
-        ISettingsService? settingsService)
-    {
-        var logDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PackTracker",
-            "Logs");
-
-        Directory.CreateDirectory(logDir);
-
-        var logPath = Path.Combine(logDir, "packtracker-.log");
-
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-            .MinimumLevel.Override("System", LogEventLevel.Warning)
-            .Enrich.FromLogContext()
-            .WriteTo.Async(wt =>
-            {
-                wt.Console();
-                wt.File(
-                    path: logPath,
-                    rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 7,
-                    fileSizeLimitBytes: 32 * 1024 * 1024,
-                    rollOnFileSizeLimit: true,
-                    shared: true,
-                    outputTemplate:
-                    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}");
-            })
-            .CreateLogger();
-
-        services.AddLogging(b =>
-        {
-            b.ClearProviders();
-            b.AddSerilog(Log.Logger, dispose: true);
-        });
-
-        return services;
-    }
 }

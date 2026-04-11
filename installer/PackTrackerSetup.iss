@@ -3,15 +3,13 @@
 ; House Wolf Operations Shell for Star Citizen
 ;
 ; Build from repo root:
-;   ISCC.exe /DAppVersion=0.1.4 installer\PackTrackerSetup.iss
+;   ISCC.exe /DAppVersion=0.1.5 installer\PackTrackerSetup.iss
 ;
-; The GitHub Actions workflow passes AppVersion automatically.
-; Version format: MAJOR.MINOR.PATCH  (no leading zeros, e.g. 0.1.4)
-;
-; Desktop icon note:
-;   IconFilename must be a .ico file.  Convert HWiconnew.png → HWiconnew.ico
-;   once (Paint / ImageMagick / any online converter), then place the .ico in
-;   PackTracker.Presentation\Assets\ alongside the PNG.
+; Notes:
+; - Build your app first so ..\publish\ contains the full publish output
+; - This script installs the whole publish folder into Program Files
+; - SmartScreen / "Unknown Publisher" warnings are NOT removed by Inno flags.
+;   To reduce/remove those warnings, sign both the app EXE and installer.
 ; ============================================================
 
 #ifndef AppVersion
@@ -34,7 +32,14 @@ AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}/issues
 AppUpdatesURL={#AppURL}/releases
-AppCopyright=Copyright © House Wolf
+AppCopyright=Copyright (C) House Wolf
+
+; Helps Windows show cleaner metadata
+VersionInfoVersion={#AppVersion}
+VersionInfoCompany={#AppPublisher}
+VersionInfoDescription={#AppName} Installer
+VersionInfoProductName={#AppName}
+VersionInfoCopyright=Copyright (C) House Wolf
 
 ; Install location
 DefaultDirName={autopf}\HouseWolf\PackTracker
@@ -45,13 +50,12 @@ AllowNoIcons=yes
 OutputDir=output
 OutputBaseFilename=PackTrackerSetup-{#AppVersion}
 
-; Branding — wizard uses the existing housewolf2.ico; shortcuts use the new icon
-SetupIconFile=..\PackTracker.Presentation\Assets\housewolf2.ico
+; Branding
+SetupIconFile={#AppIconFile}
 WizardStyle=modern
 WizardImageFile=..\PackTracker.Presentation\Assets\HousewolfBanner_installer.bmp
 WizardSmallImageFile=..\PackTracker.Presentation\Assets\Pack_Tracker_installer.bmp
 WizardImageStretch=yes
-; Dark background behind the banner image — matches app theme (#1A1410)
 WizardImageBackColor=$10141A
 
 ; Installer behavior
@@ -60,13 +64,19 @@ SolidCompression=yes
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
-
-; Uninstall entry in Add/Remove Programs
-UninstallDisplayIcon={app}\HWiconnew.ico
-UninstallDisplayName={#AppName} — {#AppDescription}
-
-; Restart not needed for a standalone exe
 RestartIfNeededByRun=no
+
+; These do not remove SmartScreen, but help installer quality/reputation signals
+SetupLogging=yes
+DisableDirPage=no
+DisableProgramGroupPage=yes
+UsePreviousAppDir=yes
+UsePreviousGroup=yes
+UninstallDisplayIcon={app}\housewolf2.ico
+UninstallDisplayName={#AppName} - {#AppDescription}
+
+; Enable this once you are code-signing the installer/uninstaller
+; SignedUninstaller=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -77,30 +87,31 @@ Name: "desktopicon"; \
   GroupDescription: "Additional shortcuts:"
 
 [Files]
-; All publish output — app cannot be single-file due to WebView2 native libs
+; Entire publish output
 Source: "..\publish\*"; \
   DestDir: "{app}"; \
   Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Desktop/shortcut icon — convert HWiconnew.png to HWiconnew.ico before building
-Source: "..\PackTracker.Presentation\Assets\housewolf2.ico"; \
+; Installer/app icon used for shortcuts and uninstall entry
+Source: "{#AppIconFile}"; \
   DestDir: "{app}"; \
   Flags: ignoreversion
 
 [Icons]
-; Start menu
+; Start menu shortcut
 Name: "{group}\{#AppName}"; \
   Filename: "{app}\{#AppExeName}"; \
-  IconFilename: "{app}\HWiconnew.ico"; \
+  IconFilename: "{app}\housewolf2.ico"; \
   Comment: "{#AppDescription}"
 
+; Uninstall shortcut
 Name: "{group}\Uninstall {#AppName}"; \
   Filename: "{uninstallexe}"
 
-; Desktop (optional task)
+; Desktop shortcut
 Name: "{autodesktop}\{#AppName}"; \
   Filename: "{app}\{#AppExeName}"; \
-  IconFilename: "{app}\HWiconnew.ico"; \
+  IconFilename: "{app}\housewolf2.ico"; \
   Comment: "{#AppDescription}"; \
   Tasks: desktopicon
 
@@ -111,23 +122,20 @@ Filename: "{app}\{#AppExeName}"; \
   Flags: nowait postinstall skipifsilent
 
 [Code]
-// ── Custom welcome & finish page text ──────────────────────────────────────
 procedure InitializeWizard;
 begin
-  // Welcome page
   WizardForm.WelcomeLabel1.Caption :=
     'Welcome to PackTracker Setup';
 
   WizardForm.WelcomeLabel2.Caption :=
-    'PackTracker is the House Wolf operations shell for Star Citizen — ' +
+    'PackTracker is the House Wolf operations shell for Star Citizen - ' +
     'your unified hub for blueprint ops, trade intel, crafting logistics, and fleet coordination.' + #13#10 + #13#10 +
     'Version ' + ExpandConstant('{#AppVersion}') + #13#10 + #13#10 +
     'Close other applications before continuing, then click Next.';
 
-  // Finish page
   WizardForm.FinishedLabel.Caption :=
     'PackTracker has been installed on your computer.' + #13#10 + #13#10 +
-    'The application requires a PostgreSQL database and Discord authentication ' +
-    'to be configured on first launch.' + #13#10 + #13#10 +
+    'The application may require PostgreSQL, Discord authentication, and user-specific API settings ' +
+    'to be configured after first launch.' + #13#10 + #13#10 +
     'Click Finish to close Setup.';
 end;

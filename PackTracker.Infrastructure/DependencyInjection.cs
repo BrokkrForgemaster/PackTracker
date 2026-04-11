@@ -80,9 +80,9 @@ public static class DependencyInjection
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IWikiSyncService, WikiSyncService>();
-        services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+        services.AddSingleton(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
 
-        services.AddSingleton<JwtTokenService>();
+        services.AddScoped<JwtTokenService>();
         services.AddSingleton<IRequestsService, RequestsService>();
     }
 

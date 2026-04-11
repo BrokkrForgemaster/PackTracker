@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
 using PackTracker.Infrastructure.Persistence;
@@ -17,11 +18,13 @@ public class BlueprintsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ILogger<BlueprintsController> _logger;
+    private readonly IWikiSyncService _wikiSync;
 
-    public BlueprintsController(AppDbContext db, ILogger<BlueprintsController> logger)
+    public BlueprintsController(AppDbContext db, ILogger<BlueprintsController> logger, IWikiSyncService wikiSync)
     {
         _db = db;
         _logger = logger;
+        _wikiSync = wikiSync;
     }
 
     [HttpGet("ping")]
@@ -46,6 +49,7 @@ public class BlueprintsController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Database connection check failed during Ping.");
             return StatusCode(500, new
             {
                 status = "db_error",
@@ -146,17 +150,29 @@ public class BlueprintsController : ControllerBase
         {
             var blueprint = await _db.Blueprints
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id, ct);
+                .FirstOrDefaultAsync(x => x.Id == id || x.WikiUuid == id.ToString(), ct);
 
             if (blueprint is null)
             {
-                _logger.LogWarning("Blueprint {Id} not found in database.", id);
+                _logger.LogInformation("Blueprint {Id} not found locally, attempting on-demand wiki sync.", id);
+                var success = await _wikiSync.SyncBlueprintAsync(id, ct);
+                if (success)
+                {
+                    blueprint = await _db.Blueprints
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.WikiUuid == id.ToString(), ct);
+                }
+            }
+
+            if (blueprint is null)
+            {
+                _logger.LogWarning("Blueprint {Id} not found in database or wiki.", id);
                 return NotFound(new { message = "Blueprint not found.", id });
             }
 
             var recipe = await _db.BlueprintRecipes
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.BlueprintId == id, ct);
+                .FirstOrDefaultAsync(x => x.BlueprintId == blueprint.Id, ct);
 
             var materials = recipe is null
                 ? new List<BlueprintRecipeMaterialDto>()
@@ -181,7 +197,7 @@ public class BlueprintsController : ControllerBase
 
             var owners = await _db.MemberBlueprintOwnerships
                 .AsNoTracking()
-                .Where(x => x.BlueprintId == id)
+                .Where(x => x.BlueprintId == blueprint.Id)
                 .Include(x => x.MemberProfile)
                 .OrderByDescending(x => x.OwnershipStatus)
                 .ThenBy(x => x.MemberProfile!.Username)

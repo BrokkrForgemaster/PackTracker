@@ -13,8 +13,10 @@ namespace PackTracker.Presentation.ViewModels;
 public partial class ProcurementRequestsViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
+    private readonly SignalRChatService _signalR;
     private CancellationTokenSource? _loadCommentsCts;
     private string _currentUsername = string.Empty;
+    private string? _currentRole;
 
     public ObservableCollection<MaterialProcurementRequestListItemDto> Requests { get; } = new();
     public ObservableCollection<RequestCommentDto> Comments { get; } = new();
@@ -40,14 +42,35 @@ public partial class ProcurementRequestsViewModel : ObservableObject
     public bool CanCancel => SelectedRequest is not null &&
                              SelectedRequest.Status != RequestStatus.Completed &&
                              SelectedRequest.Status != RequestStatus.Cancelled &&
-                             SelectedRequest.RequesterUsername == _currentUsername;
+                             (SelectedRequest.RequesterUsername == _currentUsername || IsPrivilegedRole(_currentRole));
 
     #endregion
 
-    public ProcurementRequestsViewModel(IApiClientProvider apiClientProvider)
+    public ProcurementRequestsViewModel(IApiClientProvider apiClientProvider, SignalRChatService signalR)
     {
         _apiClientProvider = apiClientProvider;
+        _signalR = signalR;
         _ = LoadCurrentUserAsync();
+        _ = InitSignalRAsync();
+    }
+
+    private async Task InitSignalRAsync()
+    {
+        try
+        {
+            await _signalR.ConnectAsync();
+            _signalR.ProcurementRequestCreated += OnProcurementEvent;
+            _signalR.ProcurementRequestUpdated += OnProcurementEvent;
+            _signalR.ConnectionStateChanged += connected =>
+            {
+                if (connected)
+                    OnProcurementEvent(Guid.Empty);
+            };
+        }
+        catch
+        {
+            // Non-fatal; refresh remains available.
+        }
     }
 
     private async Task LoadCurrentUserAsync()
@@ -60,6 +83,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
             {
                 var profile = await response.Content.ReadFromJsonAsync<ProfileSummary>();
                 _currentUsername = profile?.Username ?? string.Empty;
+                _currentRole = profile?.DiscordRank;
             }
         }
         catch { /* non-fatal — CanCancel will just stay false */ }
@@ -69,7 +93,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         }
     }
 
-    private record ProfileSummary(string Username);
+    private record ProfileSummary(string Username, string? DiscordRank);
 
     partial void OnSelectedRequestChanged(MaterialProcurementRequestListItemDto? value)
     {
@@ -201,7 +225,35 @@ public partial class ProcurementRequestsViewModel : ObservableObject
     private async Task MarkCompletedAsync() => await PatchStatusAsync(RequestStatus.Completed, "Completed.");
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
-    private async Task CancelAsync() => await PatchStatusAsync(RequestStatus.Cancelled, "Cancelled.");
+    private async Task CancelAsync()
+    {
+        if (SelectedRequest is null) return;
+
+        try
+        {
+            IsLoading = true;
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.DeleteAsync($"api/v1/crafting/procurement-requests/{SelectedRequest.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                StatusMessage = "Request removed.";
+                await RefreshAsync();
+            }
+            else
+            {
+                StatusMessage = $"Error: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Update failed: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 
     #endregion
 
@@ -245,6 +297,14 @@ public partial class ProcurementRequestsViewModel : ObservableObject
             IsLoading = false;
         }
     }
+
+    private void OnProcurementEvent(Guid id)
+    {
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(() => { _ = RefreshAsync(); });
+    }
+
+    private static bool IsPrivilegedRole(string? role) =>
+        role is "Captain" or "Fleet Commander" or "Armor" or "Hand of the Clan" or "Clan Warlord";
 
     #endregion
 }

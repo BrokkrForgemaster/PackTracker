@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
         Title="New Assistance Request"
-        Width="600" Height="680"
+        Width="660" Height="760"
         Background="Transparent" WindowStyle="None"
         WindowStartupLocation="CenterOwner"
         FontFamily="Segoe UI"
@@ -15,9 +15,19 @@
 
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}"/>
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+        <Style x:Key="DialogTextBox" TargetType="TextBox" BasedOn="{StaticResource OpTextBoxStyle}">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="MinHeight" Value="42"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="DialogComboBox" TargetType="ComboBox" BasedOn="{StaticResource OpComboBoxStyle}">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinHeight" Value="42"/>
         </Style>
     </Window.Resources>
 
@@ -32,23 +42,21 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header -->
             <StackPanel Grid.Row="0" Margin="0,0,0,20">
                 <TextBlock Text="NEW ASSISTANCE REQUEST"
-                           FontSize="20" FontWeight="Black"
+                           FontSize="24" FontWeight="Black"
                            Foreground="{StaticResource OpTextTitleBrush}"/>
-                <TextBlock Text="Request help from House Wolf members for materials, missions, and more."
-                           FontSize="12" Foreground="{StaticResource OpTextSecondaryBrush}"
-                           Margin="0,5,0,0" TextWrapping="Wrap"/>
+                <TextBlock Text="Request help from House Wolf members for materials, missions, escorts, and ad-hoc support."
+                           FontSize="13"
+                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                           Margin="0,5,0,0"
+                           TextWrapping="Wrap"/>
             </StackPanel>
 
-            <!-- Form Body -->
             <ScrollViewer Grid.Row="1"
                           VerticalScrollBarVisibility="Auto"
                           Style="{StaticResource OpScrollViewerStyle}">
                 <StackPanel Margin="0,0,6,0">
-
-                    <!-- Type + Priority row -->
                     <Grid Margin="0,0,0,14">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -60,7 +68,7 @@
                             <TextBlock Text="REQUEST TYPE" Style="{StaticResource FieldLabel}"/>
                             <ComboBox ItemsSource="{Binding KindOptions}"
                                       SelectedItem="{Binding SelectedKind}"
-                                      Style="{StaticResource OpComboBoxStyle}">
+                                      Style="{StaticResource DialogComboBox}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayNameConverter}}" />
@@ -73,7 +81,7 @@
                             <TextBlock Text="PRIORITY" Style="{StaticResource FieldLabel}"/>
                             <ComboBox ItemsSource="{Binding PriorityOptions}"
                                       SelectedItem="{Binding SelectedPriority}"
-                                      Style="{StaticResource OpComboBoxStyle}">
+                                      Style="{StaticResource DialogComboBox}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayNameConverter}}" />
@@ -83,37 +91,42 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Title -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <TextBlock Text="TITLE" Style="{StaticResource FieldLabel}" Margin="0"/>
-                        <TextBlock Text=" *" Foreground="#E84040" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Text=" *" Foreground="#E84040" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource OpTextBoxStyle}"
+                             Style="{StaticResource DialogTextBox}"
                              ToolTip="Brief title describing what you need"
                              Margin="0,0,0,14"/>
 
-                    <!-- Description -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <TextBlock Text="DESCRIPTION" Style="{StaticResource FieldLabel}" Margin="0"/>
-                        <TextBlock Text=" *" Foreground="#E84040" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Text=" *" Foreground="#E84040" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource OpTextBoxStyle}"
-                             AcceptsReturn="True" TextWrapping="Wrap" Height="80"
+                             Style="{StaticResource DialogTextBox}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="120"
+                             VerticalContentAlignment="Top"
                              VerticalScrollBarVisibility="Auto"
                              ToolTip="Detailed description of what you need help with"
                              Margin="0,0,0,14"/>
 
-                    <!-- Material / Resource fields -->
                     <Border Background="#111A24"
-                            BorderBrush="#2D3D50" BorderThickness="1"
-                            CornerRadius="6" Padding="14" Margin="0,0,0,14"
+                            BorderBrush="#2D3D50"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14"
+                            Margin="0,0,0,14"
                             Visibility="{Binding ShowMaterialFields, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="MATERIAL / RESOURCE"
                                        Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,12"/>
 
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
@@ -125,79 +138,89 @@
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="MATERIAL NAME" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding MaterialName, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource OpTextBoxStyle}"
+                                             Style="{StaticResource DialogTextBox}"
                                              ToolTip="e.g. Quantanium, Hadanite"/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="QUANTITY" Style="{StaticResource FieldLabel}"/>
-                                    <TextBox Text="{Binding QuantityNeeded, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource OpTextBoxStyle}"
+                                    <TextBox Text="{Binding QuantityNeededText, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource DialogTextBox}"
                                              ToolTip="How much you need"/>
                                 </StackPanel>
                             </Grid>
 
                             <TextBlock Text="MEETING LOCATION" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding MeetingLocation, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource OpTextBoxStyle}"
+                                     Style="{StaticResource DialogTextBox}"
                                      ToolTip="e.g. Port Olisar, Crusader L1"
                                      Margin="0,0,0,10"/>
 
                             <TextBlock Text="REWARD OFFERED" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding RewardOffered, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource OpTextBoxStyle}"
+                                     Style="{StaticResource DialogTextBox}"
                                      ToolTip="e.g. 100k aUEC, split 60/40"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Crew / Helper fields -->
                     <Border Background="#111A24"
-                            BorderBrush="#2D3D50" BorderThickness="1"
-                            CornerRadius="6" Padding="14" Margin="0,0,0,14"
+                            BorderBrush="#2D3D50"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14"
+                            Margin="0,0,0,14"
                             Visibility="{Binding ShowCrewFields, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="CREW / HELPERS"
                                        Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,12"/>
 
                             <TextBlock Text="HELPERS NEEDED" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding NumberOfHelpersNeeded, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource OpTextBoxStyle}"
-                                     ToolTip="How many people do you need?"
+                            <TextBox Text="{Binding NumberOfHelpersNeededText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource DialogTextBox}"
+                                     ToolTip="How many people do you need? You can enter a range like 3-4."
                                      Margin="0,0,0,10"/>
 
                             <TextBlock Text="MEETING LOCATION" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding MeetingLocation, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource OpTextBoxStyle}"
+                                     Style="{StaticResource DialogTextBox}"
                                      ToolTip="Where should helpers meet you?"
                                      Margin="0,0,0,10"/>
 
                             <TextBlock Text="REWARD OFFERED" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding RewardOffered, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource OpTextBoxStyle}"
+                                     Style="{StaticResource DialogTextBox}"
                                      ToolTip="Payment or reward for helping"/>
                         </StackPanel>
                     </Border>
-
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Footer -->
             <Grid Grid.Row="2" Margin="0,18,0,0">
-                <TextBlock Text="* Required fields" Foreground="#E84040" FontSize="10"
+                <TextBlock Text="* Required fields" Foreground="#E84040" FontSize="11"
                            VerticalAlignment="Center" HorizontalAlignment="Left"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="CANCEL"
                             Click="Cancel_Click"
-                            Padding="16,8" FontWeight="Bold"
-                            Background="#24374A" Foreground="#E8F0F8"
-                            BorderBrush="#4F6A84" BorderThickness="1"
+                            Padding="18,10"
+                            FontWeight="Bold"
+                            FontSize="13"
+                            Background="#24374A"
+                            Foreground="#E8F0F8"
+                            BorderBrush="#4F6A84"
+                            BorderThickness="1"
                             Margin="0,0,10,0"/>
                     <Button Content="SUBMIT REQUEST"
                             Command="{Binding SubmitCommand}"
-                            Padding="16,8" FontWeight="Bold"
-                            Background="#2B4E2E" Foreground="#EEF6EE"
-                            BorderBrush="#5C8B5E" BorderThickness="1"/>
+                            Padding="18,10"
+                            FontWeight="Bold"
+                            FontSize="13"
+                            Background="#2B4E2E"
+                            Foreground="#EEF6EE"
+                            BorderBrush="#5C8B5E"
+                            BorderThickness="1"/>
                 </StackPanel>
             </Grid>
         </Grid>

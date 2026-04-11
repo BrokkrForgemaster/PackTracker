@@ -228,9 +228,24 @@
                                                        Foreground="{StaticResource OpTextMutedBrush}"
                                                        FontSize="13" />
                                             <TextBlock Grid.Column="1"
-                                                       Text="{Binding SelectedRequest.CreatedAt, StringFormat={}{0:MMM d, yyyy h:mm tt}}"
+                                                       Text="{Binding SelectedRequest.CreatedAtLocalDisplay}"
                                                        Foreground="{StaticResource OpTextSecondaryBrush}"
                                                        FontSize="13" />
+                                        </Grid>
+
+                                        <Grid Margin="0,0,0,20">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="130" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Requester Time"
+                                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                                       FontSize="13" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedRequest.RequesterCreatedAtDisplay}"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="13"
+                                                       TextWrapping="Wrap" />
                                         </Grid>
 
                                         <TextBlock Text="ACTIONS"
@@ -276,7 +291,7 @@
                                                     BorderBrush="#4F6A84"
                                                     BorderThickness="1" />
 
-                                            <Button Content="CANCEL REQUEST"
+                                            <Button Content="REMOVE REQUEST"
                                                     Command="{Binding CancelCommand}"
                                                     Visibility="{Binding CanCancel, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Margin="0,0,0,8"

@@ -391,7 +391,7 @@ namespace PackTracker.Presentation.Views
             try
             {
                 // We use a fresh scope/context to ensure we see the latest data from the database
-                // after the embedded API has updated it.
+                // after the PackTracker API has updated it.
                 using var scope = _serviceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 

@@ -21,7 +21,9 @@ public class ApiClientProvider : IApiClientProvider
     {
         get
         {
-            var url = _settingsService.GetSettings().ApiBaseUrl ?? "http://localhost:5001";
+            var url = _settingsService.GetSettings().ApiBaseUrl;
+            if (string.IsNullOrWhiteSpace(url))
+                throw new InvalidOperationException("API base URL is not configured.");
             return url.TrimEnd('/');
         }
     }

@@ -38,12 +38,13 @@ public class ApiHostedService : IHostedService
     private IHost? _apiHost;
     private readonly ISettingsService _settingsService;
     private readonly ILogger<ApiHostedService> _logger;
-    private string _baseUrl = "http://localhost:5001";
+    private readonly string _baseUrl;
 
     public ApiHostedService(ISettingsService settingsService, ILogger<ApiHostedService> logger)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _baseUrl = ResolveBaseUrl(settingsService.GetSettings().ApiBaseUrl);
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -53,8 +54,6 @@ public class ApiHostedService : IHostedService
 
         try
         {
-            _baseUrl = "http://localhost:5001";
-
             _logger.LogInformation("Initializing embedded PackTracker API on {Url}...", _baseUrl);
 
             var config = new ConfigurationBuilder()
@@ -65,18 +64,17 @@ public class ApiHostedService : IHostedService
 
             var settings = _settingsService.GetSettings();
 
-            settings.JwtKey = config["Jwt:Key"] ?? settings.JwtKey;
-            settings.JwtIssuer = config["Jwt:Issuer"] ?? settings.JwtIssuer ?? "PackTracker";
-            settings.JwtAudience = config["Jwt:Audience"] ?? settings.JwtAudience ?? "PackTrackerClient";
+            settings.JwtKey = config["Authentication:Jwt:Key"] ?? settings.JwtKey;
+            settings.JwtIssuer = config["Authentication:Jwt:Issuer"] ?? settings.JwtIssuer ?? "PackTracker";
+            settings.JwtAudience = config["Authentication:Jwt:Audience"] ?? settings.JwtAudience ?? "PackTrackerClient";
 
             settings.ConnectionString = config.GetConnectionString("DefaultConnection") ?? settings.ConnectionString;
-            settings.DiscordClientId = config["Discord:ClientId"] ?? settings.DiscordClientId;
-            settings.DiscordClientSecret = config["Discord:ClientSecret"] ?? settings.DiscordClientSecret;
-            settings.DiscordCallbackPath = config["Discord:CallbackPath"] ?? settings.DiscordCallbackPath ?? "/signin-discord";
-            settings.DiscordRequiredGuildId = config["Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
-            settings.RegolithApiKey = config["Regolith:ApiKey"] ?? settings.RegolithApiKey;
+            settings.DiscordClientId = config["Authentication:Discord:ClientId"] ?? settings.DiscordClientId;
+            settings.DiscordClientSecret = config["Authentication:Discord:ClientSecret"] ?? settings.DiscordClientSecret;
+            settings.DiscordCallbackPath = config["Authentication:Discord:CallbackPath"] ?? settings.DiscordCallbackPath ?? "/signin-discord";
+            settings.DiscordRequiredGuildId = config["Authentication:Discord:RequiredGuildId"] ?? settings.DiscordRequiredGuildId;
             settings.UexCorpApiKey = config["Uex:ApiKey"] ?? settings.UexCorpApiKey;
-            settings.UexBaseUrl = config["Uex:BaseUrl"] ?? settings.UexBaseUrl;
+            settings.UexBaseUrl = config["Uex:ApiBaseUrl"] ?? settings.UexBaseUrl;
 
             if (string.IsNullOrWhiteSpace(settings.ConnectionString))
                 throw new InvalidOperationException("Database connection string missing.");
@@ -93,15 +91,6 @@ public class ApiHostedService : IHostedService
 
             if (string.IsNullOrWhiteSpace(settings.DiscordRequiredGuildId))
                 throw new InvalidOperationException("Discord required guild ID missing.");
-
-            if (string.IsNullOrWhiteSpace(settings.RegolithApiKey))
-                throw new InvalidOperationException("Regolith API key missing.");
-
-            if (string.IsNullOrWhiteSpace(settings.UexCorpApiKey))
-                throw new InvalidOperationException("Uex Corp API key missing.");
-
-            if (string.IsNullOrWhiteSpace(settings.UexBaseUrl))
-                throw new InvalidOperationException("Uex Base URL missing.");
 
             _logger.LogInformation("Configuration loaded and validated successfully. Starting API host...");
 
@@ -136,6 +125,17 @@ public class ApiHostedService : IHostedService
                         {
                             o.ApiKey = settings.UexCorpApiKey;
                             o.BaseUrl = settings.UexBaseUrl;
+                        });
+
+                        services.Configure<AuthOptions>(o =>
+                        {
+                            o.Jwt.Key = settings.JwtKey ?? string.Empty;
+                            o.Jwt.Issuer = settings.JwtIssuer ?? "PackTracker";
+                            o.Jwt.Audience = settings.JwtAudience ?? "PackTrackerClient";
+                            o.Discord.ClientId = settings.DiscordClientId ?? string.Empty;
+                            o.Discord.ClientSecret = settings.DiscordClientSecret ?? string.Empty;
+                            o.Discord.CallbackPath = settings.DiscordCallbackPath ?? "/signin-discord";
+                            o.Discord.RequiredGuildId = settings.DiscordRequiredGuildId ?? string.Empty;
                         });
 
                         // EF Core DbContext is Scoped by design
@@ -430,7 +430,7 @@ public class ApiHostedService : IHostedService
     private string ResolveBaseUrl(string desiredBaseUrl)
     {
         if (!Uri.TryCreate(desiredBaseUrl, UriKind.Absolute, out var uri))
-            uri = new Uri("http://localhost:5001");
+            uri = new Uri("http://localhost:5001/");
 
         var port = uri.Port;
         if (!IsPortAvailable(port))

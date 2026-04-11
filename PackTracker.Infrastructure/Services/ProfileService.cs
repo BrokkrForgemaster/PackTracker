@@ -6,6 +6,9 @@ using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
 
+using Microsoft.Extensions.Options;
+using PackTracker.Application.Options;
+
 namespace PackTracker.Infrastructure.Services;
 
 /// <summary>
@@ -20,6 +23,7 @@ public class ProfileService : IProfileService
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISettingsService _settingsService;
+    private readonly AuthOptions _authOptions;
     
 
     /// <summary>
@@ -29,16 +33,19 @@ public class ProfileService : IProfileService
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="settingsService">The settings service.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="authOptions">The authentication options.</param>
     public ProfileService(
         AppDbContext db,
         IHttpClientFactory httpClientFactory,
         ISettingsService settingsService,
-        ILogger<ProfileService> logger)
+        ILogger<ProfileService> logger,
+        IOptions<AuthOptions> authOptions)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger;
+        _authOptions = authOptions.Value;
     }
     
     private static string? ResolveAvatar(string? avatarUrl)
@@ -82,8 +89,7 @@ public class ProfileService : IProfileService
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("A Discord username is required.", nameof(username));
 
-        var settings = _settingsService.GetSettings();
-        var requiredGuildId = settings.DiscordRequiredGuildId;
+        var requiredGuildId = _authOptions.Discord.RequiredGuildId;
 
         if (string.IsNullOrWhiteSpace(requiredGuildId))
         {
@@ -92,14 +98,16 @@ public class ProfileService : IProfileService
         }
         
         _logger.LogInformation(
-            "Starting Discord profile upsert. DiscordId Username={Username}",
+            "Starting Discord profile upsert. DiscordId={DiscordId} Username={Username}",
+            discordId,
             username);
         var guilds = await GetUserGuildsAsync(accessToken, ct);
 
         if (guilds.Count == 0)
         {
             _logger.LogWarning(
-                "Discord guild lookup returned no guilds for DiscordId");
+                "Discord guild lookup returned no guilds for DiscordId={DiscordId}",
+                discordId);
         }
 
         var isMemberOfRequiredGuild = guilds.Any(g => g.Id == requiredGuildId);

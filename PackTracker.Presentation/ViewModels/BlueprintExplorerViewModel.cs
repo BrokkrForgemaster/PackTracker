@@ -62,6 +62,7 @@ public partial class MaterialSelectionViewModel : ObservableObject
 
     [ObservableProperty] private bool isSelected = false;
     [ObservableProperty] private QualityTier selectedQualityTier = QualityTiers[0];
+    [ObservableProperty] private string rewardOffered = "Negotiable";
 
     public int RequestedQuality => SelectedQualityTier.MinValue;
 
@@ -413,7 +414,9 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 MaterialSupplyMode = formVm.MaterialSupplyMode,
                 RewardOffered = formVm.RewardOffered,
                 DeliveryLocation = formVm.DeliveryLocation,
-                Notes = formVm.Notes
+                Notes = formVm.Notes,
+                RequesterTimeZoneDisplayName = formVm.RequesterTimeZoneDisplayName,
+                RequesterUtcOffsetMinutes = formVm.RequesterUtcOffsetMinutes
             };
 
             var response = await client.PostAsJsonAsync("api/v1/crafting/requests", dto);
@@ -461,7 +464,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                     QuantityRequested = (decimal)material.QuantityRequired,
                     MinimumQuality = material.RequestedQuality,
                     Priority = RequestPriority.Normal,
-                    PreferredForm = MaterialFormPreference.Any
+                    PreferredForm = MaterialFormPreference.Any,
+                    RewardOffered = string.IsNullOrWhiteSpace(material.RewardOffered)
+                        ? "Negotiable"
+                        : material.RewardOffered
                 };
 
                 var response = await client.PostAsJsonAsync("api/v1/crafting/procurement-requests", dto);

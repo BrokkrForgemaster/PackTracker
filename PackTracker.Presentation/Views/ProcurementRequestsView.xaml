@@ -55,16 +55,16 @@
                                 <Border Style="{StaticResource OpItemBorderStyle}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding MaterialName}" Foreground="{StaticResource OpTextTitleBrush}" FontWeight="Bold" FontSize="14"/>
+                                        <TextBlock Text="{Binding RequesterDisplayName}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="11" Margin="0,2,0,0"/>
                                         <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11" Margin="0,2,0,0">
                                             <Run Text="Quantity: "/>
                                             <Run Text="{Binding QuantityRequested}"/>
-                                            <Run Text=" "/>
-                                            <Run Text="{Binding Unit}"/>
                                         </TextBlock>
-                                        <DockPanel Margin="0,8,0,0">
-                                            <TextBlock Text="{Binding Status}" DockPanel.Dock="Left" Foreground="#E8A020" FontWeight="SemiBold" FontSize="11"/>
-                                            <TextBlock Text="{Binding Priority}" DockPanel.Dock="Right" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11"/>
-                                        </DockPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                            <Border Background="#1D3A1D" BorderBrush="#3A6B3A" BorderThickness="1" CornerRadius="3" Padding="6,2">
+                                                <TextBlock Text="{Binding Status}" Foreground="#5CB85C" FontWeight="SemiBold" FontSize="10"/>
+                                            </Border>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -174,7 +174,7 @@
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#24374A" Foreground="#E8F0F8"
                                         BorderBrush="#4F6A84" BorderThickness="1"/>
-                                <Button Content="CANCEL REQUEST"
+                                <Button Content="REMOVE REQUEST"
                                         Command="{Binding CancelCommand}"
                                         IsEnabled="{Binding CanCancel}"
                                         Padding="12,8" FontWeight="Bold"

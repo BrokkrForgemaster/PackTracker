@@ -37,6 +37,11 @@ public sealed class MaterialProcurementRequestListItemDto
     public string RequesterUsername { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the Discord display name of the requester (falls back to username).
+    /// </summary>
+    public string RequesterDisplayName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the username of the assigned fulfiller, if any.
     /// </summary>
     public string? AssignedToUsername { get; set; }

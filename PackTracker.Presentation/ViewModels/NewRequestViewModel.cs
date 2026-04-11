@@ -1,6 +1,9 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -74,10 +77,10 @@ public partial class NewRequestViewModel : ObservableObject
     [ObservableProperty] private RequestPriority selectedPriority;
 
     [ObservableProperty] private string? materialName;
-    [ObservableProperty] private int? quantityNeeded;
+    [ObservableProperty] private string? quantityNeededText;
     [ObservableProperty] private string? meetingLocation;
     [ObservableProperty] private string? rewardOffered;
-    [ObservableProperty] private int? numberOfHelpersNeeded;
+    [ObservableProperty] private string? numberOfHelpersNeededText;
 
     #endregion
 
@@ -123,6 +126,26 @@ public partial class NewRequestViewModel : ObservableObject
                 return;
             }
 
+            if (!TryParseOptionalPositiveInteger(QuantityNeededText, out var quantityNeeded))
+            {
+                MessageBox.Show(
+                    "Quantity must be a whole number greater than zero.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!TryParseOptionalPositiveInteger(NumberOfHelpersNeededText, out var numberOfHelpersNeeded))
+            {
+                MessageBox.Show(
+                    "Helpers needed must contain at least one whole number. For flexible staffing, enter something like '3-4' or '3 or 4'.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             var dto = new RequestCreateDto
             {
                 Title = Title,
@@ -130,10 +153,10 @@ public partial class NewRequestViewModel : ObservableObject
                 Kind = SelectedKind,
                 Priority = SelectedPriority,
                 MaterialName = MaterialName,
-                QuantityNeeded = QuantityNeeded,
+                QuantityNeeded = quantityNeeded,
                 MeetingLocation = MeetingLocation,
                 RewardOffered = RewardOffered,
-                NumberOfHelpersNeeded = NumberOfHelpersNeeded,
+                NumberOfHelpersNeeded = numberOfHelpersNeeded,
             };
 
             using var client = _apiClient.CreateClient();
@@ -141,7 +164,7 @@ public partial class NewRequestViewModel : ObservableObject
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync();
+                var error = await BuildErrorMessageAsync(response);
                 throw new HttpRequestException(error);
             }
 
@@ -168,6 +191,63 @@ public partial class NewRequestViewModel : ObservableObject
     #region Events
 
     public event EventHandler? RequestSubmitted;
+
+    #endregion
+
+    #region Helpers
+
+    private static bool TryParseOptionalPositiveInteger(string? text, out int? value)
+    {
+        value = null;
+
+        if (string.IsNullOrWhiteSpace(text))
+            return true;
+
+        var matches = Regex.Matches(text, @"\d+")
+            .Select(match => int.TryParse(match.Value, out var parsed) ? parsed : 0)
+            .Where(parsed => parsed > 0)
+            .ToList();
+
+        if (matches.Count == 0)
+            return false;
+
+        value = matches.Max();
+        return true;
+    }
+
+    private static async Task<string> BuildErrorMessageAsync(HttpResponseMessage response)
+    {
+        var raw = (await response.Content.ReadAsStringAsync()).Trim();
+        if (string.IsNullOrWhiteSpace(raw))
+            return $"Request failed with status {(int)response.StatusCode}.";
+
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+            var root = document.RootElement;
+
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (root.TryGetProperty("error", out var errorElement)
+                    && errorElement.ValueKind == JsonValueKind.String)
+                {
+                    return errorElement.GetString() ?? raw;
+                }
+
+                if (root.TryGetProperty("title", out var titleElement)
+                    && titleElement.ValueKind == JsonValueKind.String)
+                {
+                    return titleElement.GetString() ?? raw;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall through and use the raw response payload.
+        }
+
+        return raw;
+    }
 
     #endregion
 }

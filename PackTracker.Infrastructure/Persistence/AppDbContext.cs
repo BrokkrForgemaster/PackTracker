@@ -534,6 +534,7 @@ public class AppDbContext : DbContext
             entity.Property(x => x.MaterialSupplyMode).HasConversion<int>();
             entity.Property(x => x.DeliveryLocation).HasMaxLength(200);
             entity.Property(x => x.RewardOffered).HasMaxLength(100);
+            entity.Property(x => x.RequesterTimeZoneDisplayName).HasMaxLength(200);
 
             entity.HasOne(x => x.Blueprint)
                 .WithMany()

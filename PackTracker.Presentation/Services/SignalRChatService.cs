@@ -26,6 +26,8 @@ public class SignalRChatService : IAsyncDisposable
     public event Action<bool>? ConnectionStateChanged;
     public event Action<Guid>? CraftingRequestCreated;
     public event Action<Guid>? CraftingRequestUpdated;
+    public event Action<Guid>? ProcurementRequestCreated;
+    public event Action<Guid>? ProcurementRequestUpdated;
     public event Action<Guid>? AssistanceRequestCreated;
     public event Action<Guid>? AssistanceRequestUpdated;
 
@@ -47,7 +49,10 @@ public class SignalRChatService : IAsyncDisposable
             return;
 
         var settings = _settingsService.GetSettings();
-        var baseUrl = (settings.ApiBaseUrl ?? "http://localhost:5001").TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(settings.ApiBaseUrl))
+            throw new InvalidOperationException("API base URL is not configured.");
+
+        var baseUrl = settings.ApiBaseUrl.TrimEnd('/');
         var hubUrl = $"{baseUrl}/hubs/requests";
         var token = settings.JwtToken;
 
@@ -137,6 +142,16 @@ public class SignalRChatService : IAsyncDisposable
         _connection.On<Guid>("CraftingRequestUpdated", id =>
         {
             CraftingRequestUpdated?.Invoke(id);
+        });
+
+        _connection.On<Guid>("ProcurementRequestCreated", id =>
+        {
+            ProcurementRequestCreated?.Invoke(id);
+        });
+
+        _connection.On<Guid>("ProcurementUpdated", id =>
+        {
+            ProcurementRequestUpdated?.Invoke(id);
         });
 
         _connection.On<Guid>("AssistanceRequestCreated", id =>

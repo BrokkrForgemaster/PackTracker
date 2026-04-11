@@ -35,10 +35,9 @@ public class RequestLoggingMiddleware
         var sw = Stopwatch.StartNew();
 
         _logger.LogInformation(
-            "➡️ HTTP START {Method} {Path} {Query} TraceId={TraceId}",
+            "➡️ HTTP START {Method} {Path} TraceId={TraceId}",
             context.Request.Method,
             context.Request.Path,
-            context.Request.QueryString,
             correlationId);
 
         await _next(context);

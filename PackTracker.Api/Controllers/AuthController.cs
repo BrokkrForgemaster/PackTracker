@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Caching.Memory;
 using PackTracker.Infrastructure.Persistence;
 
+using Microsoft.Extensions.Options;
+using PackTracker.Application.Options;
+
 namespace PackTracker.Api.Controllers;
 
 /// <summary name="AuthController">
@@ -23,9 +26,16 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _db;
     private readonly ILogger<AuthController> _logger;
     private readonly IMemoryCache _cache;
+    private readonly AuthOptions _authOptions;
 
-    public AuthController(ISettingsService settingsService, JwtTokenService jwt, IProfileService profiles, AppDbContext db, ILogger<AuthController> logger,
-        IMemoryCache cache)
+    public AuthController(
+        ISettingsService settingsService,
+        JwtTokenService jwt,
+        IProfileService profiles,
+        AppDbContext db,
+        ILogger<AuthController> logger,
+        IMemoryCache cache,
+        IOptions<AuthOptions> authOptions)
     {
         _settingsService = settingsService;
         _jwt = jwt;
@@ -33,6 +43,7 @@ public class AuthController : ControllerBase
         _db = db;
         _logger = logger;
         _cache = cache;
+        _authOptions = authOptions.Value;
     }
 
 
@@ -48,9 +59,8 @@ public class AuthController : ControllerBase
         if (scheme is null)
             return HtmlMessage("❌ Discord auth scheme is not registered. Check startup configuration.");
         
-        var settings = _settingsService.GetSettings();
-        var clientId = settings.DiscordClientId;
-        var clientSecret = settings.DiscordClientSecret;
+        var clientId = _authOptions.Discord.ClientId;
+        var clientSecret = _authOptions.Discord.ClientSecret;
         if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
             return HtmlMessage("❌ Discord OAuth is not configured (missing ClientId/ClientSecret).");
 

@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,9 @@ using Microsoft.IdentityModel.Tokens;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
+
+using Microsoft.Extensions.Options;
+using PackTracker.Application.Options;
 
 namespace PackTracker.Infrastructure.Security;
 
@@ -21,22 +25,22 @@ public class JwtTokenService
     private readonly int _refreshTokenDays;
 
     public JwtTokenService(
-        ISettingsService settingsService,
+        IOptions<AuthOptions> authOptions,
         AppDbContext db,
         ILogger<JwtTokenService> logger)
     {
         _db = db;
         _logger = logger;
 
-        var settings = settingsService.GetSettings();
+        var options = authOptions.Value.Jwt;
 
-        _jwtKey = settings.JwtKey ?? string.Empty;
+        _jwtKey = options.Key ?? string.Empty;
         if (_jwtKey.Length < 16)
             throw new InvalidOperationException("JWT key too short; must be at least 16 characters.");
 
-        _jwtIssuer = string.IsNullOrWhiteSpace(settings.JwtIssuer) ? "PackTracker" : settings.JwtIssuer;
-        _jwtAudience = string.IsNullOrWhiteSpace(settings.JwtAudience) ? "PackTrackerClient" : settings.JwtAudience;
-        _accessTokenMinutes = settings.JwtExpiresInMinutes > 0 ? settings.JwtExpiresInMinutes : 60;
+        _jwtIssuer = string.IsNullOrWhiteSpace(options.Issuer) ? "PackTracker" : options.Issuer;
+        _jwtAudience = string.IsNullOrWhiteSpace(options.Audience) ? "PackTrackerClient" : options.Audience;
+        _accessTokenMinutes = options.ExpiresInMinutes > 0 ? options.ExpiresInMinutes : 60;
         _refreshTokenDays = 7;
     }
 
@@ -45,12 +49,18 @@ public class JwtTokenService
         var keyBytes = Encoding.UTF8.GetBytes(_jwtKey);
         var creds = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.DiscordId),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(ClaimTypes.NameIdentifier, user.DiscordId),
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Role, "HouseWolfMember"),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        if (!string.IsNullOrWhiteSpace(user.DiscordRank))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, user.DiscordRank));
+        }
 
         var token = new JwtSecurityToken(
             issuer: _jwtIssuer,
@@ -115,16 +125,8 @@ public class JwtTokenService
         var refresh = await _db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token, ct);
         if (refresh == null) return;
 
-        refresh = new RefreshToken
-        {
-            Id = refresh.Id,
-            UserId = refresh.UserId,
-            Token = refresh.Token,
-            CreatedAt = refresh.CreatedAt,
-            ExpiresAt = refresh.ExpiresAt,
-            IsRevoked = true,
-            RevokedAt = DateTime.UtcNow
-        };
+        refresh.IsRevoked = true;
+        refresh.RevokedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
 

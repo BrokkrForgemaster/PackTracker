@@ -193,18 +193,18 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Urgent Requests — primary panel, fills remaining space -->
+                <!-- Active Requests — primary panel, fills remaining space -->
                 <Border DockPanel.Dock="Top" Style="{StaticResource OpPanelBorderStyle}" Padding="12">
                     <StackPanel>
                         <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                            <TextBlock Text="URGENT REQUESTS" DockPanel.Dock="Left"
+                            <TextBlock Text="ACTIVE REQUESTS" DockPanel.Dock="Left"
                                        Foreground="{StaticResource OpTextTitleBrush}"
                                        FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
                             <Border DockPanel.Dock="Right"
                                     Background="{StaticResource OpBackgroundPillBrush}"
                                     BorderBrush="{StaticResource OpBorderPillBrush}"
                                     BorderThickness="1" CornerRadius="8" Padding="6,2">
-                                <TextBlock Text="{Binding ActiveRequests.Count, StringFormat={}{0} OPEN}"
+                                <TextBlock Text="{Binding ActiveRequests.Count, StringFormat={}{0} TASKS}"
                                            Foreground="{StaticResource OpTextAccentBrush}"
                                            FontSize="9" FontWeight="Bold" />
                             </Border>
@@ -216,25 +216,30 @@
                                     <Border Style="{StaticResource OpItemBorderStyle}"
                                             Padding="8,6" Margin="0,0,0,4">
                                         <DockPanel LastChildFill="True">
+                                            <!-- Status Indicator -->
                                             <Border DockPanel.Dock="Right"
-                                                    Background="#8B1A0F" CornerRadius="3"
+                                                    Background="#1A3A1A" CornerRadius="3"
                                                     Padding="5,2" Margin="6,0,0,0"
                                                     VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Priority}"
-                                                           Foreground="#F4EBDD"
+                                                <TextBlock Text="{Binding Status}"
+                                                           Foreground="#00A86B"
                                                            FontSize="9" FontWeight="Bold" />
                                             </Border>
-                                            <TextBlock Text="{Binding Title}"
-                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                       FontSize="11" TextTrimming="CharacterEllipsis"
-                                                       VerticalAlignment="Center" />
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}"
+                                                           Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                           FontSize="11" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding RequestType}"
+                                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                                           FontSize="9" />
+                                            </StackPanel>
                                         </DockPanel>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <TextBlock Text="No urgent requests." FontStyle="Italic"
+                        <TextBlock Text="No active tasks." FontStyle="Italic"
                                    Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="0,4">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">

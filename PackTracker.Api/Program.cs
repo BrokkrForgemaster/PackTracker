@@ -16,6 +16,12 @@ using PackTracker.Infrastructure.Services;
 using PackTracker.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
+#region Bootstrap .env
+
+DotNetEnv.Env.TraversePath().Load();
+
+#endregion
+
 #region Builder Setup
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +43,10 @@ settingsService.EnsureBootstrapDefaults(builder.Configuration);
 
 builder.Services.AddSingleton<ISettingsService>(settingsService);
 
+// Bind strongly-typed options
+builder.Services.Configure<PackTracker.Application.Options.AuthOptions>(
+    builder.Configuration.GetSection("Authentication"));
+
 #endregion
 
 #region Database
@@ -52,7 +62,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddInfrastructure(settingsService);
 
-builder.Services.AddScoped(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+builder.Services.AddSingleton(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<CraftingSeedService>();
 builder.Services.AddMemoryCache();
@@ -88,11 +98,11 @@ builder.Services.AddAuthentication(options =>
     })
     .AddDiscord("Discord", options =>
     {
-        var appSettings = settingsService.GetSettings();
+        var authOptions = builder.Configuration.GetSection("Authentication").Get<PackTracker.Application.Options.AuthOptions>() ?? new();
 
-        options.ClientId = appSettings.DiscordClientId!;
-        options.ClientSecret = appSettings.DiscordClientSecret!;
-        options.CallbackPath = appSettings.DiscordCallbackPath ?? "/signin-discord";
+        options.ClientId = authOptions.Discord.ClientId;
+        options.ClientSecret = authOptions.Discord.ClientSecret;
+        options.CallbackPath = authOptions.Discord.CallbackPath ?? "/signin-discord";
 
         options.SaveTokens = true;
         options.Scope.Add("identify");
@@ -119,7 +129,7 @@ builder.Services.AddAuthentication(options =>
     })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        var appSettings = settingsService.GetSettings();
+        var authOptions = builder.Configuration.GetSection("Authentication").Get<PackTracker.Application.Options.AuthOptions>() ?? new();
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -128,10 +138,10 @@ builder.Services.AddAuthentication(options =>
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
 
-            ValidIssuer = appSettings.JwtIssuer,
-            ValidAudience = appSettings.JwtAudience,
+            ValidIssuer = authOptions.Jwt.Issuer,
+            ValidAudience = authOptions.Jwt.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(appSettings.JwtKey))
+                Encoding.UTF8.GetBytes(authOptions.Jwt.Key))
         };
     });
 
@@ -250,6 +260,11 @@ static async Task InitializeDatabaseAsync(WebApplication app)
                 WHEN 'Char_Armor_Backpack'   THEN 'Armor - Backpack'
                 ELSE ""Category""
             END");
+
+        await db.Database.ExecuteSqlRawAsync(
+            @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""RequesterTimeZoneDisplayName"" character varying(200)");
+        await db.Database.ExecuteSqlRawAsync(
+            @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""RequesterUtcOffsetMinutes"" integer");
 
         logger.LogInformation("✅ Database cleanup completed");
 

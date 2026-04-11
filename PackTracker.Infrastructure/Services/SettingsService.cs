@@ -121,10 +121,10 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
             // Decrypt sensitive fields
             settings.ConnectionString      = SecretStorage.Unprotect(settings.ConnectionString);
+            settings.ApiBaseUrl            = string.IsNullOrWhiteSpace(settings.ApiBaseUrl) ? string.Empty : settings.ApiBaseUrl.TrimEnd('/');
             settings.JwtKey                = SecretStorage.Unprotect(settings.JwtKey);
             settings.DiscordClientId       = SecretStorage.Unprotect(settings.DiscordClientId);
             settings.DiscordClientSecret   = SecretStorage.Unprotect(settings.DiscordClientSecret);
-            settings.RegolithApiKey        = SecretStorage.Unprotect(settings.RegolithApiKey);
             settings.UexCorpApiKey         = SecretStorage.Unprotect(settings.UexCorpApiKey);
             settings.GameLogFilePath       = SecretStorage.Unprotect(settings.GameLogFilePath);
             settings.DiscordAccessToken    = SecretStorage.Unprotect(settings.DiscordAccessToken);
@@ -154,62 +154,63 @@ public sealed class SettingsService : ISettingsService, IDisposable
         {
             _logger.LogInformation("Saving user settings to {Path}", _userConfigPath);
 
-            var safeCopy = new AppSettings
+            if (newSettings != null)
             {
-                PlayerName          = newSettings.PlayerName,
-                Theme               = newSettings.Theme,
-                FirstRunComplete    = newSettings.FirstRunComplete,
+                var safeCopy = new AppSettings
+                {
+                    PlayerName          = newSettings.PlayerName,
+                    Theme               = newSettings.Theme,
+                    FirstRunComplete    = newSettings.FirstRunComplete,
 
-                // FIX 2: BlueprintDataSourceUrl was missing from safeCopy — it got wiped on every save
-                BlueprintDataSourceUrl = string.IsNullOrWhiteSpace(newSettings.BlueprintDataSourceUrl)
-                    ? DefaultBlueprintUrl
-                    : newSettings.BlueprintDataSourceUrl,
+                    // FIX 2: BlueprintDataSourceUrl was missing from safeCopy — it got wiped on every save
+                    BlueprintDataSourceUrl = string.IsNullOrWhiteSpace(newSettings.BlueprintDataSourceUrl)
+                        ? DefaultBlueprintUrl
+                        : newSettings.BlueprintDataSourceUrl,
 
-                ConnectionString    = SecretStorage.Protect(newSettings.ConnectionString),
+                    ConnectionString    = SecretStorage.Protect(newSettings.ConnectionString),
 
-                JwtKey              = SecretStorage.Protect(newSettings.JwtKey),
-                JwtIssuer           = newSettings.JwtIssuer,
-                JwtAudience         = newSettings.JwtAudience,
-                JwtExpiresInMinutes = newSettings.JwtExpiresInMinutes,
+                    JwtKey              = SecretStorage.Protect(newSettings.JwtKey),
+                    JwtIssuer           = newSettings.JwtIssuer,
+                    JwtAudience         = newSettings.JwtAudience,
+                    JwtExpiresInMinutes = newSettings.JwtExpiresInMinutes,
 
-                DiscordClientId       = SecretStorage.Protect(newSettings.DiscordClientId),
-                DiscordClientSecret   = SecretStorage.Protect(newSettings.DiscordClientSecret),
-                DiscordCallbackPath   = newSettings.DiscordCallbackPath,
-                DiscordRequiredGuildId = newSettings.DiscordRequiredGuildId,
-                DiscordConnected      = newSettings.DiscordConnected,
-                DiscordAccessToken    = SecretStorage.Protect(newSettings.DiscordAccessToken),
-                DiscordRefreshToken   = SecretStorage.Protect(newSettings.DiscordRefreshToken),
+                    DiscordClientId       = SecretStorage.Protect(newSettings.DiscordClientId),
+                    DiscordClientSecret   = SecretStorage.Protect(newSettings.DiscordClientSecret),
+                    DiscordCallbackPath   = newSettings.DiscordCallbackPath,
+                    DiscordRequiredGuildId = newSettings.DiscordRequiredGuildId,
+                    DiscordConnected      = newSettings.DiscordConnected,
+                    DiscordAccessToken    = SecretStorage.Protect(newSettings.DiscordAccessToken),
+                    DiscordRefreshToken   = SecretStorage.Protect(newSettings.DiscordRefreshToken),
+                
+                    UexCorpApiKey   = SecretStorage.Protect(newSettings.UexCorpApiKey),
+                    UexBaseUrl      = newSettings.UexBaseUrl,
+                    ApiBaseUrl      = newSettings.ApiBaseUrl,
+                    GameLogFilePath = SecretStorage.Protect(newSettings.GameLogFilePath),
 
-                RegolithApiKey  = SecretStorage.Protect(newSettings.RegolithApiKey),
-                RegolithBaseUrl = newSettings.RegolithBaseUrl,
-                UexCorpApiKey   = SecretStorage.Protect(newSettings.UexCorpApiKey),
-                UexBaseUrl      = newSettings.UexBaseUrl,
-                ApiBaseUrl      = newSettings.ApiBaseUrl,
-                GameLogFilePath = SecretStorage.Protect(newSettings.GameLogFilePath),
+                    JwtToken        = SecretStorage.Protect(newSettings.JwtToken),
+                    JwtRefreshToken = SecretStorage.Protect(newSettings.JwtRefreshToken)
+                };
 
-                JwtToken        = SecretStorage.Protect(newSettings.JwtToken),
-                JwtRefreshToken = SecretStorage.Protect(newSettings.JwtRefreshToken)
-            };
+                JsonObject root;
+                if (File.Exists(_userConfigPath))
+                {
+                    var text = File.ReadAllText(_userConfigPath);
+                    root = JsonNode.Parse(text)?.AsObject() ?? new JsonObject();
+                }
+                else
+                {
+                    root = new JsonObject();
+                }
 
-            JsonObject root;
-            if (File.Exists(_userConfigPath))
-            {
-                var text = File.ReadAllText(_userConfigPath);
-                root = JsonNode.Parse(text)?.AsObject() ?? new JsonObject();
+                root["AppSettings"] = JsonSerializer.SerializeToNode(
+                    safeCopy,
+                    new JsonSerializerOptions { WriteIndented = true });
+
+                // Write atomically
+                var tempFile = _userConfigPath + ".tmp";
+                File.WriteAllText(tempFile, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                File.Move(tempFile, _userConfigPath, overwrite: true);
             }
-            else
-            {
-                root = new JsonObject();
-            }
-
-            root["AppSettings"] = JsonSerializer.SerializeToNode(
-                safeCopy,
-                new JsonSerializerOptions { WriteIndented = true });
-
-            // Write atomically
-            var tempFile = _userConfigPath + ".tmp";
-            File.WriteAllText(tempFile, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-            File.Move(tempFile, _userConfigPath, overwrite: true);
 
             _logger.LogInformation("User settings saved successfully");
         }
@@ -267,7 +268,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
         Assign(ref connectionString, conn ?? string.Empty);
         _settings.ConnectionString = connectionString;
 
-        var jwtSection = configuration.GetSection("Jwt");
+        var jwtSection = configuration.GetSection("Authentication:Jwt");
         var jwtKey = _settings.JwtKey;
         Assign(ref jwtKey, jwtSection["Key"]);
         _settings.JwtKey = jwtKey;
@@ -338,7 +339,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
         var apiBase = _settings.ApiBaseUrl;
         Assign(ref apiBase, configuration["Api:BaseUrl"]);
-        _settings.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBase) ? "http://localhost:5001" : apiBase;
+        _settings.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBase) ? string.Empty : apiBase.TrimEnd('/');
 
         // Blueprint URL — bootstrap from config if present, otherwise use SC Wiki default
         var blueprintUrl = _settings.BlueprintDataSourceUrl;

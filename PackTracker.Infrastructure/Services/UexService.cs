@@ -8,8 +8,6 @@ using PackTracker.Application.DTOs.Uex;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
-using Polly;
-using Polly.Extensions.Http;
 
 namespace PackTracker.Infrastructure.Services;
 
@@ -21,14 +19,6 @@ public class UexService : IUexService
     private readonly AppDbContext _db;
 
     private readonly Dictionary<string, int> _codeToId = new(StringComparer.OrdinalIgnoreCase);
-
-    private static readonly IAsyncPolicy<HttpResponseMessage> RetryPolicy = HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .OrResult(r => (int)r.StatusCode == 429)
-        .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
-
-    private static readonly Dictionary<string, List<CommodityPrice>> _priceCache = new();
-    private static readonly Dictionary<int, List<UexTradeRouteDto>> _routeCache = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

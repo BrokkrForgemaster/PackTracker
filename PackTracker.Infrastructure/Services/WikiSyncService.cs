@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Wiki;
 using PackTracker.Application.Interfaces;
@@ -115,9 +116,15 @@ public sealed class WikiSyncService : IWikiSyncService
                             var wasCreated = await UpsertBlueprintAsync(detail, ct);
 
                             if (wasCreated)
+                            {
+                                _logger.LogInformation("Wiki sync: Created blueprint {Name} ({Uuid})", detail.OutputName, detail.Uuid);
                                 result.Created++;
+                            }
                             else
+                            {
+                                _logger.LogDebug("Wiki sync: Updated blueprint {Name} ({Uuid})", detail.OutputName, detail.Uuid);
                                 result.Updated++;
+                            }
 
                             processed++;
 
@@ -271,6 +278,33 @@ public sealed class WikiSyncService : IWikiSyncService
             page++;
         }
         while (page <= lastPage);
+    }
+
+    /// <summary>
+    /// Synchronizes a single blueprint by its Wiki UUID.
+    /// </summary>
+    public async Task<bool> SyncBlueprintAsync(Guid wikiUuid, CancellationToken ct)
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient("WikiApi");
+            var response = await client.GetAsync($"blueprints/{wikiUuid}", ct);
+            if (!response.IsSuccessStatusCode) return false;
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            var wrapper = JsonSerializer.Deserialize<WikiSingleResponseDto<WikiBlueprintDetailDto>>(
+                json,
+                WikiJsonOptions);
+
+            if (wrapper?.Data == null) return false;
+
+            return await UpsertBlueprintAsync(wrapper.Data, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to sync blueprint {Uuid} on demand.", wikiUuid);
+            return false;
+        }
     }
 
     /// <summary>

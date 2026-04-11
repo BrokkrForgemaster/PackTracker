@@ -19,7 +19,6 @@ public partial class LoginView : UserControl
     private readonly ILogger<LoginView> _logger;
     private readonly ISettingsService _settingsService;
     private readonly IApiClientProvider _apiClientProvider;
-    private static bool _apiStarted;
     private bool _hasNavigated;
     private string? _clientState;
 
@@ -38,69 +37,22 @@ public partial class LoginView : UserControl
 
     private async Task InitializeAsync()
     {
+        StatusPill.Visibility = Visibility.Visible;
+
         try
         {
-            DiscordStatus.Text = "Starting local API...";
-            await EnsureApiRunningAsync();
-            DiscordStatus.Text = "✅ API running locally. Ready for login.";
+            var apiReady = await WaitForApiAsync($"{ApiBaseUrl}/health");
+            DiscordStatus.Text = apiReady
+                ? "API reachable. Ready for login."
+                : $"API unavailable: {ApiBaseUrl}";
+
+            DiscordLoginButton.IsEnabled = apiReady;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start local API.");
-            DiscordStatus.Text = $"❌ Failed to start API: {ex.Message}";
+            _logger.LogError(ex, "Failed to validate API configuration.");
+            DiscordStatus.Text = ex.Message;
             DiscordLoginButton.IsEnabled = false;
-        }
-    }
-
-    private async Task EnsureApiRunningAsync()
-    {
-        if (_apiStarted)
-        {
-            _logger.LogInformation("API already running — skipping start.");
-            return;
-        }
-
-        try
-        {
-            using var client = new HttpClient();
-            var healthEndpoint = $"{ApiBaseUrl}/health";
-            for (int i = 0; i < 3; i++)
-            {
-                try
-                {
-                    var resp = await client.GetAsync(healthEndpoint);
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        _apiStarted = true;
-                        _logger.LogInformation("Detected running embedded API.");
-                        return;
-                    }
-                }
-                catch
-                {
-                    await Task.Delay(1000);
-                }
-            }
-
-            if (!_apiStarted)
-            {
-                var apiHost = _serviceProvider.GetService<ApiHostedService>();
-                if (apiHost != null)
-                {
-                    await apiHost.StartAsync(default);
-                    _apiStarted = true;
-                    _logger.LogInformation("Embedded API manually started on {Url}", ApiBaseUrl);
-                }
-                else
-                {
-                    throw new InvalidOperationException("API host service not available.");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while ensuring embedded API is running.");
-            throw;
         }
     }
 
@@ -122,7 +74,7 @@ public partial class LoginView : UserControl
 
             if (!apiReady)
             {
-                DiscordStatus.Text = $"❌ Unable to reach local API ({baseUrl}).";
+                DiscordStatus.Text = $"Unable to reach API ({baseUrl}).";
                 DiscordLoginButton.IsEnabled = true;
                 return;
             }
@@ -131,14 +83,14 @@ public partial class LoginView : UserControl
             Process.Start(new ProcessStartInfo(loginUrl) { UseShellExecute = true });
 
             _logger.LogInformation("Discord OAuth login initiated.");
-            DiscordStatus.Text = "🔗 Waiting for Discord authentication. Close the browser window when it says you're done.";
+            DiscordStatus.Text = "Waiting for Discord authentication. Close the browser window when it says you're done.";
 
             _ = MonitorLoginCompletionAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Discord login failed.");
-            DiscordStatus.Text = $"❌ Error: {ex.Message}";
+            DiscordStatus.Text = $"Error: {ex.Message}";
             DiscordLoginButton.IsEnabled = true;
         }
     }
@@ -168,7 +120,7 @@ public partial class LoginView : UserControl
 
                             await Dispatcher.InvokeAsync(() =>
                             {
-                                DiscordStatus.Text = "✅ Authentication complete. Redirecting...";
+                                DiscordStatus.Text = "Authentication complete. Redirecting...";
                                 DiscordCheck.Visibility = Visibility.Visible;
                             });
 
@@ -188,7 +140,7 @@ public partial class LoginView : UserControl
 
         await Dispatcher.InvokeAsync(() =>
         {
-            DiscordStatus.Text = "⚠️ Timed out waiting for Discord authentication.";
+            DiscordStatus.Text = "Timed out waiting for Discord authentication.";
             DiscordLoginButton.IsEnabled = true;
         });
     }
@@ -213,21 +165,20 @@ public partial class LoginView : UserControl
     {
         DiscordLoginButton.IsEnabled = false;
         DiscordCheck.Visibility = Visibility.Collapsed;
-        DiscordStatus.Text = "Re-checking local API readiness...";
+        DiscordStatus.Text = "Re-checking API availability...";
 
         try
         {
-            await EnsureApiRunningAsync();
-            DiscordStatus.Text = "✅ API running locally. Ready for login.";
+            var apiReady = await WaitForApiAsync($"{ApiBaseUrl}/health");
+            DiscordStatus.Text = apiReady
+                ? "API reachable. Ready for login."
+                : $"API unavailable: {ApiBaseUrl}";
+            DiscordLoginButton.IsEnabled = apiReady;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Retrying API readiness failed.");
-            DiscordStatus.Text = $"❌ Failed to start API: {ex.Message}";
-        }
-        finally
-        {
-            DiscordLoginButton.IsEnabled = true;
+            _logger.LogError(ex, "Retrying API availability failed.");
+            DiscordStatus.Text = ex.Message;
         }
     }
 
@@ -247,6 +198,7 @@ public partial class LoginView : UserControl
                 await Task.Delay(750);
             }
         }
+
         return false;
     }
 }

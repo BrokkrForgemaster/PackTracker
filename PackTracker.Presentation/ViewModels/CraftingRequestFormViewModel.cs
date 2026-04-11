@@ -25,6 +25,13 @@ public partial class CraftingRequestFormViewModel : ObservableObject
 
     public RequestPriority Priority => SelectedPriority.Value;
     public MaterialSupplyMode MaterialSupplyMode => SelectedMaterialSupplyMode.Value;
+    public string RequesterTimeZoneDisplayName =>
+        TimeZoneInfo.Local.IsDaylightSavingTime(DateTime.Now)
+            ? TimeZoneInfo.Local.DaylightName
+            : TimeZoneInfo.Local.StandardName;
+    public int RequesterUtcOffsetMinutes => (int)DateTimeOffset.Now.Offset.TotalMinutes;
+    public string SubmissionTimePreview =>
+        $"{DateTime.Now:MMM d, yyyy h:mm tt} {RequesterTimeZoneDisplayName}";
 
     public bool CanSubmit =>
         !string.IsNullOrWhiteSpace(RewardOffered) &&

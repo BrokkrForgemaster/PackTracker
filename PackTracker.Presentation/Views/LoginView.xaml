@@ -172,7 +172,7 @@
                         </Border>
                     </Grid>
 
-                    <Button Content="Retry API readiness"
+                    <Button Content="Retry API connection"
                             Click="RetryApi_Click"
                             Height="38"
                             FontSize="13"
@@ -202,7 +202,7 @@
 
             <!-- Footer note -->
             <TextBlock Grid.Row="4"
-                       Text="A browser window will open for OAuth login. Once authenticated, you'll be redirected back to the app, and can safely close the browser tab."
+                       Text="A browser window will open for OAuth login against the configured PackTracker API. Once authenticated, you'll be redirected back to the app and can safely close the browser tab."
                        FontSize="14"
                        Foreground="{DynamicResource TextMutedBrush}"
                        HorizontalAlignment="Center"

@@ -21,6 +21,15 @@ namespace PackTracker.Api.Controllers;
 [Authorize]
 public class CraftingRequestsController : ControllerBase
 {
+    private static readonly HashSet<string> ElevatedRequestRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Captain",
+        "Fleet Commander",
+        "Armor",
+        "Hand of the Clan",
+        "Clan Warlord"
+    };
+
     #region Fields
 
     private readonly AppDbContext _db;
@@ -116,6 +125,10 @@ public class CraftingRequestsController : ControllerBase
             RewardOffered = request.RewardOffered,
             RequiredBy = request.RequiredBy,
             Notes = request.Notes,
+            RequesterTimeZoneDisplayName = string.IsNullOrWhiteSpace(request.RequesterTimeZoneDisplayName)
+                ? null
+                : request.RequesterTimeZoneDisplayName.Trim(),
+            RequesterUtcOffsetMinutes = request.RequesterUtcOffsetMinutes,
             Status = RequestStatus.Open,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -206,6 +219,8 @@ public class CraftingRequestsController : ControllerBase
                 RequiredBy = r.RequiredBy,
                 Notes = r.Notes,
                 CreatedAt = r.CreatedAt,
+                RequesterTimeZoneDisplayName = r.RequesterTimeZoneDisplayName,
+                RequesterUtcOffsetMinutes = r.RequesterUtcOffsetMinutes,
                 Materials = materials
             });
         }
@@ -275,6 +290,12 @@ public class CraftingRequestsController : ControllerBase
 
         _db.RequestComments.Add(comment);
         await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Comment added to crafting request. RequestId={RequestId} AuthorProfileId={AuthorProfileId} CommentId={CommentId}",
+            id,
+            profile.Id,
+            comment.Id);
 
         await BroadcastAsync("RequestCommentAdded", id, ct);
 
@@ -362,6 +383,16 @@ public class CraftingRequestsController : ControllerBase
         if (request is null)
             return NotFound(new { error = "Crafting request not found." });
 
+        if (parsedStatus == RequestStatus.Cancelled)
+        {
+            var profile = await GetCurrentProfile(ct);
+            if (profile is null)
+                return Unauthorized();
+
+            if (!CanManageRequest(profile, request.RequesterProfileId))
+                return StatusCode(403, new { error = "Only the creator or authorized leadership may cancel this request." });
+        }
+
         var previous = request.Status;
         request.Status = parsedStatus;
         request.UpdatedAt = DateTime.UtcNow;
@@ -373,6 +404,35 @@ public class CraftingRequestsController : ControllerBase
         await BroadcastAsync("CraftingRequestUpdated", id, ct);
 
         return Ok(new { message = "Status updated.", requestId = id, previousStatus = previous.ToString(), newStatus = parsedStatus.ToString() });
+    }
+
+    /// <summary>
+    /// Cancels a crafting request. The creator or authorized leadership may remove it from active queues.
+    /// </summary>
+    [HttpDelete("requests/{id:guid}")]
+    public async Task<IActionResult> DeleteCraftingRequest(Guid id, CancellationToken ct)
+    {
+        var profile = await GetCurrentProfile(ct);
+        if (profile is null)
+            return Unauthorized();
+
+        var request = await _db.CraftingRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (request is null)
+            return NotFound(new { error = "Crafting request not found." });
+
+        if (!CanManageRequest(profile, request.RequesterProfileId))
+            return StatusCode(403, new { error = "Only the creator or authorized leadership may remove this request." });
+
+        if (request.Status == RequestStatus.Cancelled)
+            return BadRequest(new { error = "Request is already cancelled." });
+
+        request.Status = RequestStatus.Cancelled;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        await BroadcastAsync("CraftingRequestUpdated", id, ct);
+
+        return Ok(new { message = "Crafting request removed.", requestId = id });
     }
 
     #endregion
@@ -404,6 +464,9 @@ public class CraftingRequestsController : ControllerBase
                 LinkedCraftingRequestId = x.LinkedCraftingRequestId,
                 MaterialName = x.Material != null ? x.Material.Name : "Unknown",
                 RequesterUsername = x.RequesterProfile != null ? x.RequesterProfile.Username : "Unknown",
+                RequesterDisplayName = x.RequesterProfile != null
+                    ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username)
+                    : "Unknown",
                 AssignedToUsername = x.AssignedToProfile != null ? x.AssignedToProfile.Username : null,
                 QuantityRequested = x.QuantityRequested,
                 QuantityDelivered = x.QuantityDelivered,
@@ -680,9 +743,12 @@ public class CraftingRequestsController : ControllerBase
 
         if (parsedStatus == RequestStatus.Cancelled)
         {
-            var currentUsername = User.Identity?.Name ?? string.Empty;
-            if (entity.RequesterProfile?.Username != currentUsername)
-                return Forbid();
+            var profile = await GetCurrentProfile(ct);
+            if (profile is null)
+                return Unauthorized();
+
+            if (!CanManageRequest(profile, entity.RequesterProfileId))
+                return StatusCode(403, new { error = "Only the creator or authorized leadership may cancel this request." });
         }
 
         var previousStatus = entity.Status;
@@ -712,6 +778,35 @@ public class CraftingRequestsController : ControllerBase
             previousStatus = previousStatus.ToString(),
             newStatus = entity.Status.ToString()
         });
+    }
+
+    /// <summary>
+    /// Cancels a procurement request. The creator or authorized leadership may remove it from active queues.
+    /// </summary>
+    [HttpDelete("procurement-requests/{id:guid}")]
+    public async Task<IActionResult> DeleteProcurementRequest(Guid id, CancellationToken ct)
+    {
+        var profile = await GetCurrentProfile(ct);
+        if (profile is null)
+            return Unauthorized();
+
+        var entity = await _db.MaterialProcurementRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (entity is null)
+            return NotFound(new { error = "Procurement request not found." });
+
+        if (!CanManageRequest(profile, entity.RequesterProfileId))
+            return StatusCode(403, new { error = "Only the creator or authorized leadership may remove this request." });
+
+        if (entity.Status == RequestStatus.Cancelled)
+            return BadRequest(new { error = "Request is already cancelled." });
+
+        entity.Status = RequestStatus.Cancelled;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        await BroadcastAsync("ProcurementUpdated", id, ct);
+
+        return Ok(new { message = "Procurement request removed.", requestId = id });
     }
 
     #endregion
@@ -758,6 +853,14 @@ public class CraftingRequestsController : ControllerBase
 
         await _hub.Clients.All.SendAsync(eventName, id, ct);
     }
+
+    private bool CanManageRequest(Profile profile, Guid? creatorProfileId) =>
+        creatorProfileId.HasValue && profile.Id == creatorProfileId.Value
+        || UserHasElevatedRequestRole(profile.DiscordRank);
+
+    private bool UserHasElevatedRequestRole(string? profileRole) =>
+        ElevatedRequestRoles.Contains(profileRole ?? string.Empty)
+        || ElevatedRequestRoles.Any(User.IsInRole);
 
     #endregion
 }
