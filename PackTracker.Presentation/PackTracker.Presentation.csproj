@@ -148,7 +148,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="wwwroot\data\crafting-seed.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
