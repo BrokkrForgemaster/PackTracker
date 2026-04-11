@@ -162,11 +162,5 @@
     <Copyright>Copyright © House Wolf</Copyright>
   </PropertyGroup>
 
-  <!-- Authenticode signing after publish — set SIGN_CERT_PATH and SIGN_CERT_PASSWORD env vars locally -->
-  <Target Name="AuthenticodeSign" AfterTargets="Publish"
-          Condition="'$(SIGN_CERT_PATH)' != '' and '$(PublishSingleFile)' == 'true'">
-    <Exec Command="signtool sign /fd SHA256 /f &quot;$(SIGN_CERT_PATH)&quot; /p &quot;$(SIGN_CERT_PASSWORD)&quot; /tr http://timestamp.digicert.com /td SHA256 &quot;$(PublishDir)PackTracker.exe&quot;"
-          ContinueOnError="true"/>
-  </Target>
 
 </Project>

@@ -93,37 +93,6 @@ jobs:
           # Confirm output
           Get-Item installer/output/PackTrackerSetup-${{ steps.version.outputs.VERSION }}.exe
 
-      # ── SignPath cloud signing ────────────────────────────────────
-      # Prerequisites (one-time setup):
-      #   1. SignPath dashboard → Projects → PackTracker → Artifact Configurations
-      #      Create config named "PackTracker-installer", add a PE_FILE element for
-      #      PackTrackerSetup-*.exe  (use a wildcard or exact name)
-      #   2. SignPath dashboard → Projects → PackTracker → Signing Policies
-      #      Create policy named "release-signing", attach your Open Source certificate
-      #   3. GitHub repo → Settings → Secrets → Actions:
-      #        SIGNPATH_API_TOKEN          (SignPath → User menu → API token)
-      #        SIGNPATH_ORGANIZATION_ID    (SignPath → Settings → Organization, the GUID)
-      - name: Upload installer for signing
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-installer
-          path: installer/output/PackTrackerSetup-${{ steps.version.outputs.VERSION }}.exe
-
-      - name: Sign installer via SignPath
-        if: ${{ env.SIGNPATH_API_TOKEN != '' }}
-        env:
-          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: PackTracker
-          signing-policy-slug: release-signing
-          artifact-configuration-slug: PackTracker-installer
-          github-artifact-id: unsigned-installer
-          wait-for-completion: true
-          output-artifact-directory: installer/output/
-
       # ── Create GitHub Release ─────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
