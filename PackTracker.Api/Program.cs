@@ -6,6 +6,7 @@ using PackTracker.Infrastructure;
 using PackTracker.Api.Middleware;
 using PackTracker.Domain.Entities;
 using PackTracker.Api.Hubs;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PackTracker.Infrastructure.Logging;
@@ -25,7 +26,17 @@ DotNetEnv.Env.TraversePath().Load();
 #region Builder Setup
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Host.UsePackTrackerSerilog();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 #endregion
 
@@ -94,11 +105,13 @@ builder.Services.AddAuthentication(options =>
     .AddCookie("Cookies", options =>
     {
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.HttpOnly = true;
     })
     .AddDiscord("Discord", options =>
     {
-        var authOptions = builder.Configuration.GetSection("Authentication").Get<PackTracker.Application.Options.AuthOptions>() ?? new();
+        var authOptions = builder.Configuration.GetSection("Authentication")
+            .Get<PackTracker.Application.Options.AuthOptions>() ?? new();
 
         options.ClientId = authOptions.Discord.ClientId;
         options.ClientSecret = authOptions.Discord.ClientSecret;
@@ -119,17 +132,20 @@ builder.Services.AddAuthentication(options =>
         {
             var userId = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
             var avatar = ctx.User.GetProperty("avatar").GetString();
-            if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(avatar))
+
+            if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(avatar))
             {
                 var avatarUrl = $"https://cdn.discordapp.com/avatars/{userId}/{avatar}.png";
                 ctx.Identity?.AddClaim(new Claim("urn:discord:avatar:url", avatarUrl));
             }
+
             return Task.CompletedTask;
         };
     })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        var authOptions = builder.Configuration.GetSection("Authentication").Get<PackTracker.Application.Options.AuthOptions>() ?? new();
+        var authOptions = builder.Configuration.GetSection("Authentication")
+            .Get<PackTracker.Application.Options.AuthOptions>() ?? new();
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -137,7 +153,6 @@ builder.Services.AddAuthentication(options =>
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-
             ValidIssuer = authOptions.Jwt.Issuer,
             ValidAudience = authOptions.Jwt.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
@@ -163,6 +178,29 @@ var app = builder.Build();
 
 #endregion
 
+#region Forwarded Headers / Request Debug
+
+// Must run as early as possible so scheme/host are correct behind Render/proxies.
+// Clear KnownNetworks/KnownProxies so headers are trusted regardless of proxy IP.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    KnownNetworks = { },
+    KnownProxies = { }
+});
+
+app.MapGet("/debug-request", (HttpContext ctx) =>
+{
+    return Results.Json(new
+    {
+        scheme = ctx.Request.Scheme,
+        host = ctx.Request.Host.Value,
+        pathBase = ctx.Request.PathBase.Value
+    });
+});
+
+#endregion
+
 #region Startup Initialization (DB Fix + Seed)
 
 await InitializeDatabaseAsync(app);
@@ -171,19 +209,10 @@ await InitializeDatabaseAsync(app);
 
 #region Middleware Pipeline
 
-app.UseMiddleware<CorrelationIdMiddleware>(); // FIRST
-app.UseMiddleware<RequestLoggingMiddleware>(); // THEN logging
-app.UseMiddleware<ExceptionHandlingMiddleware>(); // THEN exception
-app.UseMiddleware<ValidationHandlingMiddleware>(); // THEN validation
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseExceptionHandler("/error");
-}
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<ValidationHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 
@@ -197,7 +226,7 @@ app.UseAuthorization();
 #region Endpoints
 
 app.MapControllers();
-app.MapHub<PackTracker.Api.Hubs.RequestsHub>(PackTracker.Api.Hubs.RequestsHub.Route);
+app.MapHub<RequestsHub>(RequestsHub.Route);
 app.MapHealthChecks("/health");
 
 #endregion
@@ -208,15 +237,15 @@ try
 {
     var logger = app.Services.GetRequiredService<ILoggingService<Program>>();
 
-    logger.LogInformation("🚀 Starting PackTracker API...");
+    logger.LogInformation("Starting PackTracker API...");
     logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 
     app.Run();
 }
 catch (Exception ex)
 {
-    var logger = app.Services.GetRequiredService<ILoggingService<Program>>();
-    logger.LogCritical(ex, "❌ API terminated unexpectedly");
+    Log.Fatal(ex, "API terminated unexpectedly");
+    throw;
 }
 finally
 {
@@ -237,7 +266,7 @@ static async Task InitializeDatabaseAsync(WebApplication app)
 
     try
     {
-        logger.LogInformation("🔧 Running database cleanup scripts...");
+        logger.LogInformation("Running database cleanup scripts...");
 
         var fixedCount = await db.Database.ExecuteSqlRawAsync(
             @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE");
@@ -263,10 +292,11 @@ static async Task InitializeDatabaseAsync(WebApplication app)
 
         await db.Database.ExecuteSqlRawAsync(
             @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""RequesterTimeZoneDisplayName"" character varying(200)");
+
         await db.Database.ExecuteSqlRawAsync(
             @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""RequesterUtcOffsetMinutes"" integer");
 
-        logger.LogInformation("✅ Database cleanup completed");
+        logger.LogInformation("Database cleanup completed");
 
         var preferredPath = Path.GetFullPath(
             Path.Combine(app.Environment.ContentRootPath, "..", "scunpacked-data", "blueprints.json"));
@@ -276,15 +306,15 @@ static async Task InitializeDatabaseAsync(WebApplication app)
 
         var seedPath = File.Exists(preferredPath) ? preferredPath : fallbackPath;
 
-        logger.LogInformation("🌱 Seeding crafting data from {Path}", seedPath);
+        logger.LogInformation("Seeding crafting data from {Path}", seedPath);
 
         await seedService.SeedAsync(seedPath);
 
-        logger.LogInformation("✅ Data seeding completed");
+        logger.LogInformation("Data seeding completed");
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "⚠️ Database initialization encountered issues (non-critical)");
+        logger.LogWarning(ex, "Database initialization encountered issues (non-critical)");
     }
 }
 
