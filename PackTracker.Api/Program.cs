@@ -128,16 +128,44 @@ builder.Services.AddAuthentication(options =>
         options.ClaimActions.MapJsonKey("urn:discord:avatar", "avatar");
         options.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
 
-        // Behind Render's reverse proxy the detected scheme can still be http even with
-        // forwarded-header middleware. Force https in the redirect_uri we send Discord
-        // so it always matches the registered callback URL regardless of proxy behaviour.
+        // Behind Render's reverse proxy the app may build the redirect_uri with the wrong
+        // scheme (http instead of https) or with an internal port (:8080, :443, etc.).
+        // Parse and reconstruct the redirect_uri cleanly so it always matches what's
+        // registered in the Discord Developer Portal.
         options.Events.OnRedirectToAuthorizationEndpoint = context =>
         {
-            var uri = context.RedirectUri.Replace(
-                "redirect_uri=http%3A%2F%2F",
-                "redirect_uri=https%3A%2F%2F",
-                StringComparison.OrdinalIgnoreCase);
-            context.Response.Redirect(uri);
+            // Split the Discord auth URL query string and find the redirect_uri parameter
+            var authUri = new Uri(context.RedirectUri);
+            var fixedParts = authUri.Query.TrimStart('?').Split('&').Select(part =>
+            {
+                if (!part.StartsWith("redirect_uri=", StringComparison.OrdinalIgnoreCase))
+                    return part;
+
+                var decoded = Uri.UnescapeDataString(part["redirect_uri=".Length..]);
+                var cb = new UriBuilder(decoded);
+
+                // Force https for any non-localhost callback
+                if (cb.Scheme == "http" && cb.Host != "localhost")
+                    cb.Scheme = "https";
+
+                // Strip any non-standard port (proxy artifacts like :8080, :443, :10000)
+                if (cb.Port != -1 && (
+                    (cb.Scheme == "https" && cb.Port == 443) ||
+                    (cb.Scheme == "http"  && cb.Port == 80)  ||
+                    (cb.Port is 8080 or 10000 or 5199)))
+                {
+                    cb.Port = -1;
+                }
+
+                return "redirect_uri=" + Uri.EscapeDataString(cb.Uri.ToString());
+            });
+
+            var newUri = new UriBuilder(authUri)
+            {
+                Query = string.Join("&", fixedParts)
+            }.Uri.AbsoluteUri;
+
+            context.Response.Redirect(newUri);
             return Task.CompletedTask;
         };
 
@@ -198,7 +226,7 @@ var app = builder.Build();
 // is a no-op on existing collections and does NOT clear the default loopback restriction.
 var forwardedOptions = new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 };
 forwardedOptions.KnownNetworks.Clear();
 forwardedOptions.KnownProxies.Clear();
