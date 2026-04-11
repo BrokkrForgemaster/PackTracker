@@ -15,7 +15,6 @@ namespace PackTracker.Infrastructure.Logging;
 /// </summary>
 public static class LoggingConfiguration
 {
-    
     public static IHostBuilder UsePackTrackerSerilog(this IHostBuilder hostBuilder) =>
         hostBuilder.UseSerilog((context, services, cfg) =>
         {
@@ -25,6 +24,7 @@ public static class LoggingConfiguration
                 .Enrich.WithProperty("Application", "PackTracker")
                 .Enrich.WithMachineName()
                 .Enrich.WithProcessId()
-                .Enrich.WithThreadId();
+                .Enrich.WithThreadId()
+                .Enrich.WithCorrelationId();
         });
 }
