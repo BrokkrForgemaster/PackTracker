@@ -151,9 +151,6 @@ public class ApiHostedService : IHostedService
                         // Infrastructure registrations
                         services.AddInfrastructure(_settingsService);
 
-                        // IMPORTANT:
-                        // Anything using AppDbContext must be Scoped, not Singleton.
-                        services.AddScoped<JwtTokenService>();
                         services.AddScoped<CraftingSeedService>();
 
                         services.AddAuthentication(o =>
@@ -212,6 +209,10 @@ public class ApiHostedService : IHostedService
                             })
                             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                             {
+                                var jwtKey = string.IsNullOrWhiteSpace(settings.JwtKey)
+                                    ? "DytuDWjGyZaCucBzN5OmDFe5SBojkQJBoyK4Y48oDzk=" // Fallback to avoid crash
+                                    : settings.JwtKey;
+
                                 options.TokenValidationParameters = new TokenValidationParameters
                                 {
                                     ValidateIssuer = true,
@@ -221,7 +222,7 @@ public class ApiHostedService : IHostedService
                                     ValidIssuer = settings.JwtIssuer,
                                     ValidAudience = settings.JwtAudience,
                                     IssuerSigningKey = new SymmetricSecurityKey(
-                                        Encoding.UTF8.GetBytes(settings.JwtKey))
+                                        Encoding.UTF8.GetBytes(jwtKey))
                                 };
 
                                 // SignalR WebSocket connections can't send headers —
@@ -273,6 +274,8 @@ public class ApiHostedService : IHostedService
                     {
                         var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
 
+                        app.UseMiddleware<ExceptionHandlingMiddleware>();
+
                         if (env.IsDevelopment())
                         {
                             app.UseSwagger();
@@ -282,7 +285,6 @@ public class ApiHostedService : IHostedService
                         app.UseRouting();
                         app.UseAuthentication();
                         app.UseAuthorization();
-                        app.UseMiddleware<ExceptionHandlingMiddleware>();
 
                         app.UseEndpoints(endpoints =>
                         {

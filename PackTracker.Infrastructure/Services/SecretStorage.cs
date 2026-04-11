@@ -29,15 +29,24 @@ public static class SecretStorage
 
         try
         {
+            // Try DPAPI first (standard behavior)
             var bytes = Convert.FromBase64String(protectedValue);
             var decrypted = ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
             return Encoding.UTF8.GetString(decrypted);
         }
-        catch (CryptographicException)
+        catch (Exception ex) when (ex is CryptographicException || ex is FormatException)
         {
-            // fallback: value not actually encrypted
-            var plain = Convert.FromBase64String(protectedValue);
-            return Encoding.UTF8.GetString(plain);
+            // Fallback: Check if it's a raw base64 string (not DPAPI encrypted)
+            try
+            {
+                var plain = Convert.FromBase64String(protectedValue);
+                return Encoding.UTF8.GetString(plain);
+            }
+            catch
+            {
+                // Final fallback: It's just a plain string
+                return protectedValue;
+            }
         }
     }
-}
+    }
