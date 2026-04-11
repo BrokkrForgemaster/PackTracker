@@ -120,20 +120,39 @@ public partial class App : System.Windows.Application
         {
             DotNetEnv.Env.TraversePath().Load();
 
-            // Load configuration — OnLoadException ensures a locked/corrupt appsettings.json
-            // never crashes startup; user settings are persisted separately in %AppData%.
-            var cfg = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile(src =>
-                {
-                    src.Path = "appsettings.json";
-                    src.Optional = true;
-                    src.ReloadOnChange = false;
-                    src.OnLoadException = ctx => ctx.Ignore = true;
-                })
-                .AddUserSecrets<App>(optional: true)
-                .AddEnvironmentVariables()
-                .Build();
+            // Load configuration. Each source is optional so a missing or locked file
+            // never crashes startup — user settings are persisted separately in %AppData%.
+            IConfiguration cfg;
+            try
+            {
+                cfg = new ConfigurationBuilder()
+                    .SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile(src =>
+                    {
+                        src.Path = "appsettings.json";
+                        src.Optional = true;
+                        src.ReloadOnChange = false;
+                        src.OnLoadException = ctx => ctx.Ignore = true;
+                    })
+                    .AddUserSecrets<App>(optional: true, reloadOnChange: false)
+                    .AddEnvironmentVariables()
+                    .Build();
+            }
+            catch
+            {
+                // User secrets file corrupt/locked (dev machine only) — fall back to env vars.
+                cfg = new ConfigurationBuilder()
+                    .SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile(src =>
+                    {
+                        src.Path = "appsettings.json";
+                        src.Optional = true;
+                        src.ReloadOnChange = false;
+                        src.OnLoadException = ctx => ctx.Ignore = true;
+                    })
+                    .AddEnvironmentVariables()
+                    .Build();
+            }
 
             // Bootstrap DI
             _serviceProvider = BootstrapServices(cfg);
