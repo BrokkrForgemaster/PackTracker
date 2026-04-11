@@ -52,6 +52,18 @@ public class ApiHostedService : IHostedService
         if (_apiHost is not null)
             return;
 
+        // If the stored API URL points at a remote host, the app is using the hosted
+        // Render deployment — skip starting the embedded server entirely.
+        var configuredUrl = _settingsService.GetSettings().ApiBaseUrl;
+        if (Uri.TryCreate(configuredUrl, UriKind.Absolute, out var configuredUri)
+            && !configuredUri.IsLoopback
+            && configuredUri.Host != "localhost")
+        {
+            _logger.LogInformation(
+                "Remote API configured at {Url} — embedded host will not start.", configuredUrl);
+            return;
+        }
+
         try
         {
             _logger.LogInformation("Initializing embedded PackTracker API on {Url}...", _baseUrl);
@@ -441,17 +453,19 @@ public class ApiHostedService : IHostedService
 
     private string ResolveBaseUrl(string desiredBaseUrl)
     {
-        if (!Uri.TryCreate(desiredBaseUrl, UriKind.Absolute, out var uri))
-            uri = new Uri("http://packtracker-yke3.onrender.com");
+        // Embedded API always binds to localhost — only use the port from the desired URL.
+        int port = 5001;
 
-        var port = uri.Port;
+        if (Uri.TryCreate(desiredBaseUrl, UriKind.Absolute, out var uri) && uri.IsLoopback)
+            port = uri.Port > 0 ? uri.Port : 5001;
+
         if (!IsPortAvailable(port))
         {
             _logger.LogWarning("Port {Port} is unavailable. Selecting alternate port.", port);
             port = GetAvailablePort(port + 1, port + 1000);
         }
 
-        return $"{uri.Scheme}://{uri.Host}:{port}";
+        return $"http://localhost:{port}";
     }
 
     private static bool IsPortAvailable(int port)

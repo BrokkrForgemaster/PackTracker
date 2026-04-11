@@ -148,11 +148,10 @@ builder.Services.AddAuthentication(options =>
                 if (cb.Scheme == "http" && cb.Host != "localhost")
                     cb.Scheme = "https";
 
-                // Strip any non-standard port (proxy artifacts like :8080, :443, :10000)
+                // Strip any port that shouldn't appear in the external callback URL —
+                // default ports (80/443), internal ports, or HTTP ports left on an https URL.
                 if (cb.Port != -1 && (
-                    (cb.Scheme == "https" && cb.Port == 443) ||
-                    (cb.Scheme == "http"  && cb.Port == 80)  ||
-                    (cb.Port is 8080 or 10000 or 5199)))
+                    cb.Port is 80 or 443 or 8080 or 10000 or 5199))
                 {
                     cb.Port = -1;
                 }
