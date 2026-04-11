@@ -442,7 +442,7 @@ public class ApiHostedService : IHostedService
     private string ResolveBaseUrl(string desiredBaseUrl)
     {
         if (!Uri.TryCreate(desiredBaseUrl, UriKind.Absolute, out var uri))
-            uri = new Uri("http://localhost:5001/");
+            uri = new Uri("https://packtracker-yke3.onrender.com");
 
         var port = uri.Port;
         if (!IsPortAvailable(port))
