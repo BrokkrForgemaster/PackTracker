@@ -30,11 +30,6 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-# Place seed data at the fallback path the API resolves relative to ContentRoot (/app)
-# Resolved path: Path.Combine(ContentRoot, "..", "PackTracker.Presentation", "wwwroot", "data", "crafting-seed.json")
-RUN mkdir -p /PackTracker.Presentation/wwwroot/data
-COPY --from=build /seed/crafting-seed.json /PackTracker.Presentation/wwwroot/data/crafting-seed.json
-
 # Persistent log directory (mount a volume here)
 RUN mkdir -p /app/Logs
 
