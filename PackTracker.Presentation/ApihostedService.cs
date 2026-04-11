@@ -57,7 +57,7 @@ public class ApiHostedService : IHostedService
             _logger.LogInformation("Initializing embedded PackTracker API on {Url}...", _baseUrl);
 
             var config = new ConfigurationBuilder()
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true, reloadOnChange: true)
+                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true, reloadOnChange: false)
                 .AddUserSecrets<ApiHostedService>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();
