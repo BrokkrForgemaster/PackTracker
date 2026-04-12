@@ -2,6 +2,13 @@
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         
+        <Version>0.1.7</Version>
+        <FileVersion>0.1.7</FileVersion>
+        <AssemblyVersion>0.1.7</AssemblyVersion>
+        <Authors>House Wolf</Authors>
+        <Company>House Wolf</Company>
+        <Copyright>Copyright © House Wolf</Copyright>
+
         <LangVersion>preview</LangVersion>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -15,7 +22,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-
         <PackageReference Include="Serilog.AspNetCore" Version="9.*" />
         <PackageReference Include="Serilog.Exceptions" Version="8.*" />
         <PackageReference Include="Serilog.Sinks.File" Version="7.*" />
