@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using PackTracker.Presentation.ViewModels;
 
@@ -9,6 +10,14 @@ namespace PackTracker.Presentation.Views
         {
             InitializeComponent();
             DataContext = viewModel;
+        }
+
+        private void Help_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.GetWindow(this) is MainWindow mw)
+            {
+                mw.ShowHelp("Trading Hub", "trading-hub");
+            }
         }
     }
 }

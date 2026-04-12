@@ -63,6 +63,14 @@
                         TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="TRADING GUIDE"
+                            Click="Help_Click"
+                            IsEnabled="False"
+                            Margin="0,0,12,0"
+                            Padding="14,8" FontSize="10" FontWeight="Bold"
+                            Background="#1A3A3A" Foreground="#80CBC4"
+                            BorderBrush="#2D5A5A" BorderThickness="1"/>
+
                     <Button Content="REFRESH DATA"
                             Command="{Binding RefreshDataCommand}"
                             Padding="16,8" FontWeight="Bold"

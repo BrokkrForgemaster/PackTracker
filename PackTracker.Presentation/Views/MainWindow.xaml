@@ -257,5 +257,20 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- Help Overlay -->
+        <Grid x:Name="HelpOverlay" Grid.ColumnSpan="2" Visibility="Collapsed" Panel.ZIndex="1000">
+            <Border Background="#CC000000" MouseLeftButtonDown="HelpOverlay_MouseDown" />
+            <Border x:Name="HelpPanel" 
+                    Width="800" 
+                    Margin="100,50" 
+                    HorizontalAlignment="Right"
+                    Background="{DynamicResource MainBackground}"
+                    BorderBrush="{DynamicResource GlassBorderBrush}"
+                    BorderThickness="1,0,0,0"
+                    CornerRadius="0">
+                <ContentControl x:Name="HelpContentControl" />
+            </Border>
+        </Grid>
     </Grid>
 </Window>

@@ -16,7 +16,7 @@ public class ChatWindowViewModel : ViewModelBase
 
     private readonly Action<ChatWindowViewModel> _closeAction;
     private readonly Action<ChatWindowViewModel> _bringToFrontAction;
-    private readonly Action<ChatWindowViewModel> _expandedAction;
+    private readonly Action<ChatWindowViewModel> _stateChangedAction;
 
     public event Action<string, string>? MessageSent;
 
@@ -33,11 +33,11 @@ public class ChatWindowViewModel : ViewModelBase
     public ChatWindowViewModel(
         Action<ChatWindowViewModel> closeAction,
         Action<ChatWindowViewModel> bringToFrontAction,
-        Action<ChatWindowViewModel> expandedAction)
+        Action<ChatWindowViewModel> stateChangedAction)
     {
         _closeAction = closeAction;
         _bringToFrontAction = bringToFrontAction;
-        _expandedAction = expandedAction;
+        _stateChangedAction = stateChangedAction;
 
         Messages = new ObservableCollection<ChatMessageViewModel>();
 
@@ -96,6 +96,7 @@ public class ChatWindowViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(ShowUnreadBadge));
                 OnPropertyChanged(nameof(AlertCaption));
+                _stateChangedAction(this);
             }
         }
     }
@@ -198,6 +199,5 @@ public class ChatWindowViewModel : ViewModelBase
         UnreadCount = 0;
         HasUnread = false;
         _bringToFrontAction(this);
-        _expandedAction(this);
     }
 }

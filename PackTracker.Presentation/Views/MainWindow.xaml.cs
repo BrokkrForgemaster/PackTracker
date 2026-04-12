@@ -549,6 +549,39 @@ namespace PackTracker.Presentation.Views
 
         #endregion
 
+        #region Help System
+
+        private HelpView? _helpView;
+
+        public void ShowHelp(string sectionName, string anchor)
+        {
+            if (_helpView == null)
+            {
+                _helpView = new HelpView();
+                HelpContentControl.Content = _helpView;
+            }
+
+            _helpView.NavigateToSection(sectionName, anchor);
+            HelpOverlay.Visibility = Visibility.Visible;
+        }
+
+        public void HideHelp()
+        {
+            HelpOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private void HelpOverlay_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // Only hide if the user clicks the dark background (HelpOverlay)
+            // and not the HelpPanel itself.
+            if (e.OriginalSource == HelpOverlay)
+            {
+                HideHelp();
+            }
+        }
+
+        #endregion
+
         #region INotifyPropertyChanged
 
         public event PropertyChangedEventHandler? PropertyChanged;

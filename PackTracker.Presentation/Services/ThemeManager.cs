@@ -18,7 +18,7 @@ public class ThemeManager : IThemeManager
     public ThemeManager(System.Windows.Application application)
     {
         _app = application ?? throw new ArgumentNullException(nameof(application));
-        AvailableThemes = new[] { "Dark", "Locops", "Tacops", "Specops" };
+        AvailableThemes = new[] { "Dark", "Locops", "Tacops", "Specops", "Arcops" };
         CurrentTheme = AvailableThemes[0];
         ApplyTheme(CurrentTheme);
     }

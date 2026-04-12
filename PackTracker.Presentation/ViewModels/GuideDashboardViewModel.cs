@@ -28,7 +28,12 @@ public partial class GuideDashboardViewModel : ObservableObject
         var result = await client.GetFromJsonAsync<List<GuideRequest>>("api/v1/guides/scheduled");
         if (result != null)
         {
-            Requests = new ObservableCollection<GuideRequest>(result);
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                Requests.Clear();
+                foreach (var r in result)
+                    Requests.Add(r);
+            });
         }
     }
 }

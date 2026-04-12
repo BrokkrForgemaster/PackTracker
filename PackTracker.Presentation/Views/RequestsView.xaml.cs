@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using PackTracker.Presentation.ViewModels;
 
@@ -14,6 +15,14 @@ public partial class RequestsView : UserControl
     {
         InitializeComponent();
         _viewModel = viewModel;
-        DataContext = _viewModel;
+        DataContext = viewModel;
+    }
+
+    private void Help_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is MainWindow mw)
+        {
+            mw.ShowHelp("Assistance Hub", "request-hub");
+        }
     }
 }

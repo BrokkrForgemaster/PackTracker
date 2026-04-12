@@ -54,4 +54,12 @@ public partial class DashboardView : UserControl
         _dragging = null;
         e.Handled = true;
     }
+
+    private void Help_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is MainWindow mw)
+        {
+            mw.ShowHelp("Operations Dashboard & Chat", "chat-dashboard");
+        }
+    }
 }

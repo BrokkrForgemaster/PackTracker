@@ -38,6 +38,8 @@ public class DashboardViewModel : ViewModelBase
 
         AvailableChatChannels = new ObservableCollection<AvailableChannelViewModel>();
         OpenChatWindows = new ObservableCollection<ChatWindowViewModel>();
+        FloatingChatWindows = new ObservableCollection<ChatWindowViewModel>();
+        MinimizedChatWindows = new ObservableCollection<ChatWindowViewModel>();
         CollapsedWindowsWithUnread = new ObservableCollection<ChatWindowViewModel>();
         OnlineUsers = new ObservableCollection<OnlineUserViewModel>();
         ActiveRequests = new ObservableCollection<ActiveRequestDto>();
@@ -53,6 +55,10 @@ public class DashboardViewModel : ViewModelBase
 
         _ = InitAsync();
     }
+
+    public ObservableCollection<ChatWindowViewModel> MinimizedChatWindows { get; set; }
+
+    public ObservableCollection<ChatWindowViewModel> FloatingChatWindows { get; set; }
 
     private async Task InitAsync()
     {
@@ -167,7 +173,7 @@ public class DashboardViewModel : ViewModelBase
                 });
 
                 await Guide.RefreshAsync();
-                OnPropertyChanged(nameof(TopGuideRequests));
+                System.Windows.Application.Current.Dispatcher.Invoke(() => OnPropertyChanged(nameof(TopGuideRequests)));
             }
         }
         catch (Exception)
@@ -274,7 +280,7 @@ public class DashboardViewModel : ViewModelBase
 
         var index = OpenChatWindows.Count;
 
-        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowExpanded)
+        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged)
         {
             ChannelKey = channel.Key,
             Title = channel.DisplayName,
@@ -293,6 +299,7 @@ public class DashboardViewModel : ViewModelBase
         };
 
         OpenChatWindows.Add(window);
+        FloatingChatWindows.Add(window);
         RefreshCollapsedAlerts();
 
         if (_signalR.IsConnected)
@@ -316,6 +323,8 @@ public class DashboardViewModel : ViewModelBase
         }
 
         OpenChatWindows.Remove(window);
+        FloatingChatWindows.Remove(window);
+        MinimizedChatWindows.Remove(window);
         RefreshCollapsedAlerts();
     }
 
@@ -324,13 +333,26 @@ public class DashboardViewModel : ViewModelBase
         window.ZIndex = GetNextZIndex();
     }
 
-    private void OnWindowExpanded(ChatWindowViewModel window)
+    private void OnWindowStateChanged(ChatWindowViewModel window)
     {
-        var channel = AvailableChatChannels.FirstOrDefault(x => x.Key == window.ChannelKey);
-        if (channel != null)
+        if (window.IsCollapsed)
         {
-            channel.HasUnread = false;
-            channel.UnreadCount = 0;
+            FloatingChatWindows.Remove(window);
+            if (!MinimizedChatWindows.Contains(window))
+                MinimizedChatWindows.Add(window);
+        }
+        else
+        {
+            MinimizedChatWindows.Remove(window);
+            if (!FloatingChatWindows.Contains(window))
+                FloatingChatWindows.Add(window);
+
+            var channel = AvailableChatChannels.FirstOrDefault(x => x.Key == window.ChannelKey);
+            if (channel != null)
+            {
+                channel.HasUnread = false;
+                channel.UnreadCount = 0;
+            }
         }
 
         RefreshCollapsedAlerts();
@@ -436,7 +458,7 @@ public class DashboardViewModel : ViewModelBase
             return existing;
         }
 
-        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowExpanded)
+        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged)
         {
             ChannelKey = channelKey,
             Title = $"DM // {displayName ?? username}",
@@ -456,6 +478,7 @@ public class DashboardViewModel : ViewModelBase
         };
         window.Messages.CollectionChanged += (_, _) => RefreshCollapsedAlerts();
         OpenChatWindows.Add(window);
+        FloatingChatWindows.Add(window);
         RefreshCollapsedAlerts();
         return window;
     }
