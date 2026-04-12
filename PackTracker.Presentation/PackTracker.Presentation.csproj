@@ -127,16 +127,10 @@
       <XamlRuntime>Wpf</XamlRuntime>
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="Themes\Dark.xaml">
+    <Page Update="Themes\*.xaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Page>
-    <Page Update="Themes\Locops.xaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Page>
-    <Page Update="Themes\Specops.xaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Page>
-    <Page Update="Themes\Tacops.xaml">
+    <Page Update="Styles\*.xaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Page>
   </ItemGroup>
