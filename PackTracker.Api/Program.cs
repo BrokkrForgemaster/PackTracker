@@ -144,6 +144,12 @@ builder.Services.AddAuthentication(options =>
         // registered in the Discord Developer Portal.
         options.Events.OnRedirectToAuthorizationEndpoint = context =>
         {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILoggingService<Program>>();
+            logger.LogInformation("Discord auth redirect. Scheme={Scheme} Host={Host}",
+                context.HttpContext.Request.Scheme,
+                context.HttpContext.Request.Host);
+
             // Split the Discord auth URL query string and find the redirect_uri parameter
             var authUri = new Uri(context.RedirectUri);
             var fixedParts = authUri.Query.TrimStart('?').Split('&').Select(part =>
@@ -166,7 +172,9 @@ builder.Services.AddAuthentication(options =>
                     cb.Port = -1;
                 }
 
-                return "redirect_uri=" + Uri.EscapeDataString(cb.Uri.ToString());
+                var fixed_uri = cb.Uri.ToString();
+                logger.LogInformation("Discord redirect_uri fixed to: {Uri}", fixed_uri);
+                return "redirect_uri=" + Uri.EscapeDataString(fixed_uri);
             });
 
             var newUri = new UriBuilder(authUri)
@@ -175,6 +183,16 @@ builder.Services.AddAuthentication(options =>
             }.Uri.AbsoluteUri;
 
             context.Response.Redirect(newUri);
+            return Task.CompletedTask;
+        };
+
+        options.Events.OnRemoteFailure = ctx =>
+        {
+            var logger = ctx.HttpContext.RequestServices
+                .GetRequiredService<ILoggingService<Program>>();
+            logger.LogError(ctx.Failure, "Discord remote failure: {Message}", ctx.Failure?.Message);
+            ctx.Response.Redirect("/auth-error?message=" + Uri.EscapeDataString(ctx.Failure?.Message ?? "unknown"));
+            ctx.HandleResponse();
             return Task.CompletedTask;
         };
 
