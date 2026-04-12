@@ -9,6 +9,7 @@ using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
+using PackTracker.Domain.Security;
 using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Api.Controllers;
@@ -21,15 +22,6 @@ namespace PackTracker.Api.Controllers;
 [Authorize]
 public class CraftingRequestsController : ControllerBase
 {
-    private static readonly HashSet<string> ElevatedRequestRoles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Captain",
-        "Fleet Commander",
-        "Armor",
-        "Hand of the Clan",
-        "Clan Warlord"
-    };
-
     #region Fields
 
     private readonly AppDbContext _db;
@@ -162,68 +154,128 @@ public class CraftingRequestsController : ControllerBase
     {
         var currentUsername = User.Identity?.Name ?? string.Empty;
 
-        var requests = await _db.CraftingRequests
-            .AsNoTracking()
-            .Include(x => x.Blueprint)
-            .Include(x => x.RequesterProfile)
-            .Include(x => x.AssignedCrafterProfile)
-            .OrderByDescending(x => x.CreatedAt)
-            .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
-            // Open requests are visible to all; assigned requests are only visible to requester or crafter
-            .Where(x => x.Status == RequestStatus.Open
-                     || x.RequesterProfile!.Username == currentUsername
-                     || x.AssignedCrafterProfile!.Username == currentUsername)
+        var rows = await (
+            from request in _db.CraftingRequests.AsNoTracking()
+            join blueprint in _db.Blueprints.AsNoTracking() on request.BlueprintId equals blueprint.Id into blueprintGroup
+            from blueprint in blueprintGroup.DefaultIfEmpty()
+            join requester in _db.Profiles.AsNoTracking() on request.RequesterProfileId equals requester.Id into requesterGroup
+            from requester in requesterGroup.DefaultIfEmpty()
+            join assignedCrafter in _db.Profiles.AsNoTracking() on request.AssignedCrafterProfileId equals assignedCrafter.Id into assignedCrafterGroup
+            from assignedCrafter in assignedCrafterGroup.DefaultIfEmpty()
+            join recipe in _db.BlueprintRecipes.AsNoTracking() on request.BlueprintId equals recipe.BlueprintId into recipeGroup
+            from recipe in recipeGroup.DefaultIfEmpty()
+            join recipeMaterial in _db.BlueprintRecipeMaterials.AsNoTracking() on recipe.Id equals recipeMaterial.BlueprintRecipeId into recipeMaterialGroup
+            from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
+            join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
+            from material in materialGroup.DefaultIfEmpty()
+            where request.Status != RequestStatus.Cancelled && request.Status != RequestStatus.Completed
+            where request.Status == RequestStatus.Open
+                || requester.Username == currentUsername
+                || assignedCrafter.Username == currentUsername
+            orderby request.CreatedAt descending
+            select new
+            {
+                RequestId = request.Id,
+                request.BlueprintId,
+                RequestItemName = request.ItemName,
+                BlueprintCraftedItemName = blueprint != null ? blueprint.CraftedItemName : null,
+                BlueprintName = blueprint != null ? blueprint.BlueprintName : null,
+                RequesterUsername = requester != null ? requester.Username : null,
+                RequesterDisplayName = requester != null ? requester.DiscordDisplayName : null,
+                AssignedCrafterUsername = assignedCrafter != null ? assignedCrafter.Username : null,
+                request.QuantityRequested,
+                request.MinimumQuality,
+                request.RefusalReason,
+                request.Priority,
+                request.Status,
+                request.MaterialSupplyMode,
+                request.DeliveryLocation,
+                request.RewardOffered,
+                request.RequiredBy,
+                request.Notes,
+                request.CreatedAt,
+                request.RequesterTimeZoneDisplayName,
+                request.RequesterUtcOffsetMinutes,
+                MaterialId = (Guid?)recipeMaterial.MaterialId,
+                MaterialName = material != null ? material.Name : null,
+                MaterialType = material != null ? material.MaterialType : null,
+                MaterialTier = material != null ? material.Tier : null,
+                MaterialSourceType = material != null ? material.SourceType.ToString() : null,
+                QuantityRequired = (double?)recipeMaterial.QuantityRequired,
+                Unit = recipeMaterial != null ? recipeMaterial.Unit : null,
+                IsOptional = (bool?)recipeMaterial.IsOptional,
+                IsIntermediateCraftable = (bool?)recipeMaterial.IsIntermediateCraftable
+            })
             .ToListAsync(ct);
 
-        var result = new List<CraftingRequestListItemDto>();
-
-        foreach (var r in requests)
-        {
-            var materials = await _db.BlueprintRecipeMaterials
-                .AsNoTracking()
-                .Where(x => _db.BlueprintRecipes.Any(rec => rec.BlueprintId == r.BlueprintId && rec.Id == x.BlueprintRecipeId))
-                .Include(x => x.Material)
-                .Select(x => new BlueprintRecipeMaterialDto
-                {
-                    MaterialId = x.MaterialId,
-                    MaterialName = x.Material != null ? x.Material.Name : "Unknown",
-                    MaterialType = x.Material != null ? x.Material.MaterialType : string.Empty,
-                    Tier = x.Material != null ? x.Material.Tier : string.Empty,
-                    QuantityRequired = x.QuantityRequired,
-                    Unit = x.Unit,
-                    SourceType = x.Material != null ? x.Material.SourceType.ToString() : "Unknown"
-                })
-                .ToListAsync(ct);
-
-            result.Add(new CraftingRequestListItemDto
+        var result = rows
+            .GroupBy(x => new
             {
-                Id = r.Id,
-                BlueprintId = r.BlueprintId,
-                BlueprintName = !string.IsNullOrWhiteSpace(r.ItemName)
-                    ? r.ItemName
-                    : (!string.IsNullOrWhiteSpace(r.Blueprint?.CraftedItemName) && r.Blueprint.CraftedItemName != "Unknown"
-                        ? r.Blueprint.CraftedItemName
-                        : r.Blueprint?.BlueprintName?.Replace(" Blueprint", "")) ?? "Unknown",
-                CraftedItemName = r.Blueprint?.CraftedItemName ?? "Unknown Item",
-                RequesterUsername = r.RequesterProfile?.Username ?? "Unknown",
-                RequesterDisplayName = r.RequesterProfile?.DiscordDisplayName ?? r.RequesterProfile?.Username ?? "Unknown",
-                AssignedCrafterUsername = r.AssignedCrafterProfile?.Username,
-                QuantityRequested = r.QuantityRequested,
-                MinimumQuality = r.MinimumQuality,
-                RefusalReason = r.RefusalReason,
-                Priority = r.Priority.ToString(),
-                Status = r.Status.ToString(),
-                MaterialSupplyMode = r.MaterialSupplyMode.ToString(),
-                DeliveryLocation = r.DeliveryLocation,
-                RewardOffered = r.RewardOffered,
-                RequiredBy = r.RequiredBy,
-                Notes = r.Notes,
-                CreatedAt = r.CreatedAt,
-                RequesterTimeZoneDisplayName = r.RequesterTimeZoneDisplayName,
-                RequesterUtcOffsetMinutes = r.RequesterUtcOffsetMinutes,
-                Materials = materials
-            });
-        }
+                x.RequestId,
+                x.BlueprintId,
+                x.RequestItemName,
+                x.BlueprintCraftedItemName,
+                x.BlueprintName,
+                x.RequesterUsername,
+                x.RequesterDisplayName,
+                x.AssignedCrafterUsername,
+                x.QuantityRequested,
+                x.MinimumQuality,
+                x.RefusalReason,
+                x.Priority,
+                x.Status,
+                x.MaterialSupplyMode,
+                x.DeliveryLocation,
+                x.RewardOffered,
+                x.RequiredBy,
+                x.Notes,
+                x.CreatedAt,
+                x.RequesterTimeZoneDisplayName,
+                x.RequesterUtcOffsetMinutes
+            })
+            .Select(group => new CraftingRequestListItemDto
+            {
+                Id = group.Key.RequestId,
+                BlueprintId = group.Key.BlueprintId,
+                BlueprintName = !string.IsNullOrWhiteSpace(group.Key.RequestItemName)
+                    ? group.Key.RequestItemName
+                    : (!string.IsNullOrWhiteSpace(group.Key.BlueprintCraftedItemName) && group.Key.BlueprintCraftedItemName != "Unknown"
+                        ? group.Key.BlueprintCraftedItemName
+                        : group.Key.BlueprintName?.Replace(" Blueprint", "")) ?? "Unknown",
+                CraftedItemName = group.Key.BlueprintCraftedItemName ?? "Unknown Item",
+                RequesterUsername = group.Key.RequesterUsername ?? "Unknown",
+                RequesterDisplayName = group.Key.RequesterDisplayName ?? group.Key.RequesterUsername ?? "Unknown",
+                AssignedCrafterUsername = group.Key.AssignedCrafterUsername,
+                QuantityRequested = group.Key.QuantityRequested,
+                MinimumQuality = group.Key.MinimumQuality,
+                RefusalReason = group.Key.RefusalReason,
+                Priority = group.Key.Priority.ToString(),
+                Status = group.Key.Status.ToString(),
+                MaterialSupplyMode = group.Key.MaterialSupplyMode.ToString(),
+                DeliveryLocation = group.Key.DeliveryLocation,
+                RewardOffered = group.Key.RewardOffered,
+                RequiredBy = group.Key.RequiredBy,
+                Notes = group.Key.Notes,
+                CreatedAt = group.Key.CreatedAt,
+                RequesterTimeZoneDisplayName = group.Key.RequesterTimeZoneDisplayName,
+                RequesterUtcOffsetMinutes = group.Key.RequesterUtcOffsetMinutes,
+                Materials = group
+                    .Where(x => x.MaterialId.HasValue)
+                    .Select(x => new BlueprintRecipeMaterialDto
+                    {
+                        MaterialId = x.MaterialId!.Value,
+                        MaterialName = x.MaterialName ?? "Unknown",
+                        MaterialType = x.MaterialType ?? string.Empty,
+                        Tier = x.MaterialTier ?? string.Empty,
+                        QuantityRequired = x.QuantityRequired ?? 0,
+                        Unit = x.Unit ?? string.Empty,
+                        SourceType = x.MaterialSourceType ?? "Unknown",
+                        IsOptional = x.IsOptional ?? false,
+                        IsIntermediateCraftable = x.IsIntermediateCraftable ?? false
+                    })
+                    .ToList()
+            })
+            .ToList();
 
         return Ok(result);
     }
@@ -859,8 +911,8 @@ public class CraftingRequestsController : ControllerBase
         || UserHasElevatedRequestRole(profile.DiscordRank);
 
     private bool UserHasElevatedRequestRole(string? profileRole) =>
-        ElevatedRequestRoles.Contains(profileRole ?? string.Empty)
-        || ElevatedRequestRoles.Any(User.IsInRole);
+        SecurityConstants.IsElevatedRequestRole(profileRole)
+        || SecurityConstants.ElevatedRequestRoles.Any(User.IsInRole);
 
     #endregion
 }

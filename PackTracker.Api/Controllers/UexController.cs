@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Security;
 
 namespace PackTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "HouseWolfMember")]
+[Authorize(Roles = SecurityConstants.Roles.HouseWolfMember)]
 public class UexController : ControllerBase
 {
     #region Fields & Constructor

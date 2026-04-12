@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Domain.Enums;
@@ -26,6 +27,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
     private readonly SignalRChatService _signalR;
+    private readonly ILogger<CraftingRequestsViewModel> _logger;
     
     private string? _currentRequestRoomId;
     private CancellationTokenSource? _switchRoomCts;
@@ -47,10 +49,14 @@ public partial class CraftingRequestsViewModel : ObservableObject
     public bool CanMarkCompleted => SelectedRequest is not null && (SelectedRequest.Status == RequestStatus.Accepted || SelectedRequest.Status == RequestStatus.InProgress);
     public bool CanCancel => SelectedRequest is not null && SelectedRequest.Status != RequestStatus.Completed && SelectedRequest.Status != RequestStatus.Cancelled;
 
-    public CraftingRequestsViewModel(IApiClientProvider apiClientProvider, SignalRChatService signalR)
+    public CraftingRequestsViewModel(
+        IApiClientProvider apiClientProvider,
+        SignalRChatService signalR,
+        ILogger<CraftingRequestsViewModel> logger)
     {
         _apiClientProvider = apiClientProvider;
         _signalR = signalR;
+        _logger = logger;
         
         _ = RefreshAsync();
         _ = ConnectSignalRAsync();
@@ -67,6 +73,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "ConnectSignalR");
             StatusMessage = $"Chat connection failed: {ex.Message}";
         }
     }
@@ -131,6 +138,11 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(
+                ex,
+                "SwitchRequestRoom",
+                ("PreviousRoomId", _currentRequestRoomId),
+                ("NewRoomId", newRequestId));
             StatusMessage = $"Room switch error: {ex.Message}";
         }
     }
@@ -151,6 +163,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "LoadComments", ("RequestId", requestId));
             StatusMessage = $"Comment load failed: {ex.Message}";
         }
     }
@@ -194,6 +207,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "RefreshCraftingRequests");
             StatusMessage = $"Connection failed: {ex.Message}";
         }
         finally
@@ -221,6 +235,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "AddCraftingComment", ("RequestId", SelectedRequest.Id));
             StatusMessage = $"Comment failed: {ex.Message}";
         }
     }
@@ -261,6 +276,12 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(
+                ex,
+                "CreateProcurementRequest",
+                ("RequestId", SelectedRequest.Id),
+                ("MaterialId", material.MaterialId),
+                ("MaterialName", material.MaterialName));
             StatusMessage = $"Procurement failed: {ex.Message}";
         }
         finally
@@ -298,6 +319,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "CancelCraftingRequest", ("RequestId", SelectedRequest.Id));
             StatusMessage = $"Error: {ex.Message}";
         }
         finally
@@ -335,6 +357,12 @@ public partial class CraftingRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(
+                ex,
+                "PatchCraftingRequest",
+                ("RequestUrl", url),
+                ("RequestId", SelectedRequest?.Id),
+                ("HasBody", body is not null));
             StatusMessage = $"Error: {ex.Message}";
         }
         finally

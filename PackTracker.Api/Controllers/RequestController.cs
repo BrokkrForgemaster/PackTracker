@@ -8,6 +8,7 @@ using PackTracker.Application.DTOs.Request;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
+using PackTracker.Domain.Security;
 using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Api.Controllers;
@@ -17,7 +18,7 @@ namespace PackTracker.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/legacy/requests")]
-[Authorize(Roles = "HouseWolfMember")]
+[Authorize(Roles = SecurityConstants.Roles.HouseWolfMember)]
 public class RequestsController : ControllerBase
 {
     #region Fields

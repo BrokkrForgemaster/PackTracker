@@ -1,10 +1,6 @@
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Claims;
-using System.Text;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -14,17 +10,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using PackTracker.Api.Controllers;
 using PackTracker.Api.Authentication;
+using PackTracker.Api.Controllers;
 using PackTracker.Api.Hubs;
 using PackTracker.Api.Middleware;
 using PackTracker.Application.Interfaces;
-using PackTracker.Application.Options;
-using PackTracker.Infrastructure;
+using PackTracker.Infrastructure.ApiHosting;
 using PackTracker.Infrastructure.Persistence;
-using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
 using Serilog;
 
@@ -53,15 +46,14 @@ public class ApiHostedService : IHostedService
         if (_apiHost is not null)
             return;
 
-        // If the stored API URL points at a remote host, the app is using the hosted
-        // Render deployment — skip starting the embedded server entirely.
         var configuredUrl = _settingsService.GetSettings().ApiBaseUrl;
         if (Uri.TryCreate(configuredUrl, UriKind.Absolute, out var configuredUri)
             && !configuredUri.IsLoopback
             && configuredUri.Host != "localhost")
         {
             _logger.LogInformation(
-                "Remote API configured at {Url} — embedded host will not start.", configuredUrl);
+                "Remote API configured at {Url} â€” embedded host will not start.",
+                configuredUrl);
             return;
         }
 
@@ -86,7 +78,6 @@ public class ApiHostedService : IHostedService
             settings.JwtKey = config["Authentication:Jwt:Key"] ?? settings.JwtKey;
             settings.JwtIssuer = config["Authentication:Jwt:Issuer"] ?? settings.JwtIssuer ?? "PackTracker";
             settings.JwtAudience = config["Authentication:Jwt:Audience"] ?? settings.JwtAudience ?? "PackTrackerClient";
-
             settings.ConnectionString = config.GetConnectionString("DefaultConnection") ?? settings.ConnectionString;
             settings.DiscordClientId = config["Authentication:Discord:ClientId"] ?? settings.DiscordClientId;
             settings.DiscordClientSecret = config["Authentication:Discord:ClientSecret"] ?? settings.DiscordClientSecret;
@@ -101,9 +92,11 @@ public class ApiHostedService : IHostedService
             if (string.IsNullOrWhiteSpace(settings.JwtKey))
                 throw new InvalidOperationException("JWT key missing.");
 
-            if (string.IsNullOrWhiteSpace(settings.DiscordClientId) ||
-                string.IsNullOrWhiteSpace(settings.DiscordClientSecret))
+            if (string.IsNullOrWhiteSpace(settings.DiscordClientId)
+                || string.IsNullOrWhiteSpace(settings.DiscordClientSecret))
+            {
                 throw new InvalidOperationException("Discord OAuth credentials missing.");
+            }
 
             if (string.IsNullOrWhiteSpace(settings.DiscordCallbackPath))
                 throw new InvalidOperationException("Discord callback path missing.");
@@ -127,8 +120,6 @@ public class ApiHostedService : IHostedService
 
                     webBuilder.ConfigureServices(services =>
                     {
-                        services.AddSingleton(_settingsService);
-
                         services.AddDataProtection()
                             .PersistKeysToFileSystem(new DirectoryInfo(
                                 Path.Combine(
@@ -136,130 +127,18 @@ public class ApiHostedService : IHostedService
                                     "packtracker",
                                     "apihosted")));
 
-                        services.AddHttpClient();
-                        services.AddHealthChecks();
-                        services.AddMemoryCache();
-
-                        services.Configure<UexOptions>(o =>
+                        services.AddPackTrackerApiHost(_settingsService, options =>
                         {
-                            o.ApiKey = settings.UexCorpApiKey;
-                            o.BaseUrl = settings.UexBaseUrl;
+                            options.SmartScheme = ApiAuthenticationDefaults.SmartScheme;
+                            options.CookieScheme = ApiAuthenticationDefaults.CookieScheme;
+                            options.DiscordScheme = ApiAuthenticationDefaults.DiscordScheme;
+                            options.CookieSecurePolicy = CookieSecurePolicy.None;
+                            options.SelectScheme = ApiAuthenticationDefaults.SelectScheme;
+                            options.GetSignalRAccessToken = ApiAuthenticationDefaults.GetSignalRAccessToken;
+                            options.ConfigureControllers = mvc =>
+                                mvc.AddApplicationPart(typeof(ProfilesController).Assembly);
                         });
 
-                        services.Configure<AuthOptions>(o =>
-                        {
-                            o.Jwt.Key = settings.JwtKey ?? string.Empty;
-                            o.Jwt.Issuer = settings.JwtIssuer ?? "PackTracker";
-                            o.Jwt.Audience = settings.JwtAudience ?? "PackTrackerClient";
-                            o.Discord.ClientId = settings.DiscordClientId ?? string.Empty;
-                            o.Discord.ClientSecret = settings.DiscordClientSecret ?? string.Empty;
-                            o.Discord.CallbackPath = settings.DiscordCallbackPath ?? "/signin-discord";
-                            o.Discord.RequiredGuildId = settings.DiscordRequiredGuildId ?? string.Empty;
-                        });
-
-                        // EF Core DbContext is Scoped by design
-                        services.AddDbContext<AppDbContext>(options =>
-                            options.UseNpgsql(settings.ConnectionString));
-
-                        // Infrastructure registrations
-                        services.AddInfrastructure(_settingsService);
-
-                        services.AddScoped<CraftingSeedService>();
-
-                        services.AddAuthentication(o =>
-                            {
-                                // Smart scheme: picks JWT for API/SignalR, Cookies for browser flows
-                                o.DefaultScheme = ApiAuthenticationDefaults.SmartScheme;
-                                o.DefaultAuthenticateScheme = ApiAuthenticationDefaults.SmartScheme;
-                                o.DefaultChallengeScheme = ApiAuthenticationDefaults.DiscordScheme;
-                            })
-                            .AddPolicyScheme(ApiAuthenticationDefaults.SmartScheme, "JWT or Cookie", o =>
-                            {
-                                o.ForwardDefaultSelector = ctx => ApiAuthenticationDefaults.SelectScheme(ctx);
-                            })
-                            .AddCookie(ApiAuthenticationDefaults.CookieScheme, o =>
-                            {
-                                o.Cookie.SameSite = SameSiteMode.Lax;
-                                o.Cookie.SecurePolicy = CookieSecurePolicy.None;
-                            })
-                            .AddDiscord(ApiAuthenticationDefaults.DiscordScheme, o =>
-                            {
-                                o.ClientId = settings.DiscordClientId!;
-                                o.ClientSecret = settings.DiscordClientSecret!;
-                                o.CallbackPath = settings.DiscordCallbackPath ?? "/signin-discord";
-                                o.SaveTokens = true;
-                                o.Scope.Add("identify");
-                                o.Scope.Add("guilds");
-                                o.Scope.Add("guilds.members.read");
-
-                                o.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-                                o.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
-                                o.ClaimActions.MapJsonKey("urn:discord:displayname", "global_name");
-                                o.ClaimActions.MapJsonKey("urn:discord:avatar", "avatar");
-                                o.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
-
-                                o.Events.OnCreatingTicket = ctx =>
-                                {
-                                    var userId = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-                                    if (!string.IsNullOrEmpty(userId) &&
-                                        ctx.User.TryGetProperty("avatar", out var avatarProp))
-                                    {
-                                        var avatar = avatarProp.GetString();
-                                        if (!string.IsNullOrEmpty(avatar))
-                                        {
-                                            var avatarUrl = $"https://cdn.discordapp.com/avatars/{userId}/{avatar}.png";
-                                            ctx.Identity?.AddClaim(new Claim("urn:discord:avatar:url", avatarUrl));
-                                        }
-                                    }
-                                    return Task.CompletedTask;
-                                };
-                            })
-                            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-                            {
-                                var jwtKey = string.IsNullOrWhiteSpace(settings.JwtKey)
-                                    ? "DytuDWjGyZaCucBzN5OmDFe5SBojkQJBoyK4Y48oDzk=" // Fallback to avoid crash
-                                    : settings.JwtKey;
-
-                                options.TokenValidationParameters = new TokenValidationParameters
-                                {
-                                    ValidateIssuer = true,
-                                    ValidateAudience = true,
-                                    ValidateLifetime = true,
-                                    ValidateIssuerSigningKey = true,
-                                    ValidIssuer = settings.JwtIssuer,
-                                    ValidAudience = settings.JwtAudience,
-                                    IssuerSigningKey = new SymmetricSecurityKey(
-                                        Encoding.UTF8.GetBytes(jwtKey))
-                                };
-
-                                // SignalR WebSocket connections can't send headers —
-                                // read the JWT from the access_token query parameter instead.
-                                options.Events = new JwtBearerEvents
-                                {
-                                    OnMessageReceived = ctx =>
-                                    {
-                                        var token = ApiAuthenticationDefaults.GetSignalRAccessToken(ctx.Request);
-                                        if (!string.IsNullOrWhiteSpace(token))
-                                        {
-                                            ctx.Token = token;
-                                        }
-                                        return Task.CompletedTask;
-                                    }
-                                };
-                            });
-
-                        services.AddAuthorization(options =>
-                        {
-                            options.AddPolicy("HouseWolfOnly", policy =>
-                                policy.RequireClaim(ClaimTypes.Role, "HouseWolfMember"));
-                        });
-
-                        services.AddSignalR();
-
-                        services.AddControllers()
-                            .AddApplicationPart(typeof(ProfilesController).Assembly);
-
-                        services.AddEndpointsApiExplorer();
                         services.AddSwaggerGen(c =>
                         {
                             c.SwaggerDoc("v1", new OpenApiInfo
@@ -325,53 +204,15 @@ public class ApiHostedService : IHostedService
 
         try
         {
-            db.Database.EnsureCreated();
+            await db.Database.MigrateAsync(ct);
 
             await db.Database.ExecuteSqlRawAsync(
-                @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
-            await db.Database.ExecuteSqlRawAsync(
-                @"ALTER TABLE ""Blueprints"" ADD COLUMN IF NOT EXISTS ""WikiLastSyncedAt"" character varying(50)", ct);
-            await db.Database.ExecuteSqlRawAsync(
-                @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""WikiUuid"" character varying(200)", ct);
-            await db.Database.ExecuteSqlRawAsync(
-                @"ALTER TABLE ""Materials"" ADD COLUMN IF NOT EXISTS ""Category"" character varying(100)", ct);
-            await db.Database.ExecuteSqlRawAsync(
-                @"CREATE INDEX IF NOT EXISTS ""IX_Blueprints_WikiUuid"" ON ""Blueprints"" (""WikiUuid"")", ct);
-            await db.Database.ExecuteSqlRawAsync(
-                @"CREATE INDEX IF NOT EXISTS ""IX_Materials_WikiUuid"" ON ""Materials"" (""WikiUuid"")", ct);
+                @"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''",
+                ct);
 
             await db.Database.ExecuteSqlRawAsync(
-                @"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''", ct);
-
-            await db.Database.ExecuteSqlRawAsync(
-                @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE", ct);
-
-            // Schema additions added after initial EnsureCreated — safe to run repeatedly
-            await db.Database.ExecuteSqlRawAsync(
-                @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""MaterialSupplyMode"" integer NOT NULL DEFAULT 2", ct);
-            await db.Database.ExecuteSqlRawAsync(
-                @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""ItemName"" character varying(300)", ct);
-
-            await db.Database.ExecuteSqlRawAsync(@"
-                CREATE TABLE IF NOT EXISTS ""AssistanceRequests"" (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""Kind"" integer NOT NULL DEFAULT 0,
-                    ""Title"" character varying(120) NOT NULL,
-                    ""Description"" character varying(4000),
-                    ""Priority"" integer NOT NULL DEFAULT 1,
-                    ""Status"" integer NOT NULL DEFAULT 0,
-                    ""CreatedByProfileId"" uuid NOT NULL,
-                    ""AssignedToProfileId"" uuid,
-                    ""MaterialName"" character varying(100),
-                    ""QuantityNeeded"" integer,
-                    ""MeetingLocation"" character varying(100),
-                    ""RewardOffered"" character varying(100),
-                    ""NumberOfHelpersNeeded"" integer,
-                    ""DueAt"" timestamp with time zone,
-                    ""CreatedAt"" timestamp with time zone NOT NULL,
-                    ""UpdatedAt"" timestamp with time zone NOT NULL,
-                    ""CompletedAt"" timestamp with time zone
-                )", ct);
+                @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE",
+                ct);
 
             await db.Database.ExecuteSqlRawAsync(@"
                 UPDATE ""Blueprints"" SET ""Category"" = CASE ""Category""
@@ -389,7 +230,8 @@ public class ApiHostedService : IHostedService
                     'WeaponPersonal','WeaponAttachment',
                     'Char_Armor_Torso','Char_Armor_Arms','Char_Armor_Legs',
                     'Char_Armor_Helmet','Char_Armor_Undersuit','Char_Armor_Backpack'
-                )", ct);
+                )",
+                ct);
 
             log.LogInformation("Database initialization and cleanup complete.");
         }
@@ -443,8 +285,7 @@ public class ApiHostedService : IHostedService
 
     private string ResolveBaseUrl(string desiredBaseUrl)
     {
-        // Embedded API always binds to localhost — only use the port from the desired URL.
-        int port = 5001;
+        var port = 5001;
 
         if (Uri.TryCreate(desiredBaseUrl, UriKind.Absolute, out var uri) && uri.IsLoopback)
             port = uri.Port > 0 ? uri.Port : 5001;

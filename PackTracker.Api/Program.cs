@@ -1,22 +1,16 @@
-using Serilog;
-using System.Text;
 using System.Security.Claims;
-using Serilog.Extensions.Logging;
-using PackTracker.Infrastructure;
-using PackTracker.Api.Middleware;
-using PackTracker.Api.Authentication;
-using PackTracker.Domain.Entities;
-using PackTracker.Api.Hubs;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using PackTracker.Infrastructure.Logging;
+using PackTracker.Api.Authentication;
+using PackTracker.Api.Hubs;
+using PackTracker.Api.Middleware;
 using PackTracker.Application.Interfaces;
-using Microsoft.AspNetCore.Authentication;
-using PackTracker.Infrastructure.Security;
-using PackTracker.Infrastructure.Services;
+using PackTracker.Infrastructure.ApiHosting;
 using PackTracker.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using PackTracker.Infrastructure.Services;
+using PackTracker.Infrastructure.Logging;
+using Serilog;
+using Serilog.Extensions.Logging;
 
 #region Bootstrap .env
 
@@ -55,102 +49,29 @@ settingsService.EnsureBootstrapDefaults(builder.Configuration);
 
 builder.Services.AddSingleton<ISettingsService>(settingsService);
 
-// Bind strongly-typed options
-builder.Services.Configure<PackTracker.Application.Options.AuthOptions>(
-    builder.Configuration.GetSection("Authentication"));
-
 #endregion
 
-#region Database
+#region API Host Services
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddPackTrackerApiHost(settingsService, options =>
 {
-    options.UseNpgsql(settingsService.GetSettings().ConnectionString);
-});
-
-#endregion
-
-#region Core Services
-
-builder.Services.AddInfrastructure(settingsService);
-
-builder.Services.AddSingleton(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
-builder.Services.AddScoped<JwtTokenService>();
-builder.Services.AddScoped<CraftingSeedService>();
-builder.Services.AddMemoryCache();
-
-#endregion
-
-#region API + Swagger
-
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddHealthChecks();
-
-#endregion
-
-#region SignalR (Realtime Foundation)
-
-builder.Services.AddSignalR();
-
-#endregion
-
-#region Authentication
-
-builder.Services.AddAuthentication(options =>
+    options.SmartScheme = ApiAuthenticationDefaults.SmartScheme;
+    options.CookieScheme = ApiAuthenticationDefaults.CookieScheme;
+    options.DiscordScheme = ApiAuthenticationDefaults.DiscordScheme;
+    options.CookieSecurePolicy = CookieSecurePolicy.Always;
+    options.SelectScheme = ApiAuthenticationDefaults.SelectScheme;
+    options.GetSignalRAccessToken = ApiAuthenticationDefaults.GetSignalRAccessToken;
+    options.ConfigureDiscordEvents = events =>
     {
-        options.DefaultScheme = ApiAuthenticationDefaults.SmartScheme;
-        options.DefaultAuthenticateScheme = ApiAuthenticationDefaults.SmartScheme;
-        options.DefaultChallengeScheme = ApiAuthenticationDefaults.DiscordScheme;
-    })
-    .AddPolicyScheme(
-        ApiAuthenticationDefaults.SmartScheme,
-        "JWT or Cookie",
-        options =>
-        {
-            options.ForwardDefaultSelector = context =>
-                ApiAuthenticationDefaults.SelectScheme(context);
-        })
-    .AddCookie(ApiAuthenticationDefaults.CookieScheme, options =>
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.Cookie.HttpOnly = true;
-    })
-    .AddDiscord(ApiAuthenticationDefaults.DiscordScheme, options =>
-    {
-        var authOptions = builder.Configuration.GetSection("Authentication")
-            .Get<PackTracker.Application.Options.AuthOptions>() ?? new();
-
-        options.ClientId = authOptions.Discord.ClientId;
-        options.ClientSecret = authOptions.Discord.ClientSecret;
-        options.CallbackPath = authOptions.Discord.CallbackPath ?? "/signin-discord";
-
-        options.SaveTokens = true;
-        options.Scope.Add("identify");
-        options.Scope.Add("guilds");
-        options.Scope.Add("guilds.members.read");
-
-        options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-        options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
-        options.ClaimActions.MapJsonKey("urn:discord:displayname", "global_name");
-        options.ClaimActions.MapJsonKey("urn:discord:avatar", "avatar");
-        options.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
-
-        // Behind Render's reverse proxy the app may build the redirect_uri with the wrong
-        // scheme (http instead of https) or with an internal port (:8080, :443, etc.).
-        // Parse and reconstruct the redirect_uri cleanly so it always matches what's
-        // registered in the Discord Developer Portal.
-        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        events.OnRedirectToAuthorizationEndpoint = context =>
         {
             var logger = context.HttpContext.RequestServices
                 .GetRequiredService<ILoggingService<Program>>();
-            logger.LogInformation("Discord auth redirect. Scheme={Scheme} Host={Host}",
+            logger.LogInformation(
+                "Discord auth redirect. Scheme={Scheme} Host={Host}",
                 context.HttpContext.Request.Scheme,
                 context.HttpContext.Request.Host);
 
-            // Split the Discord auth URL query string and find the redirect_uri parameter
             var authUri = new Uri(context.RedirectUri);
             var fixedParts = authUri.Query.TrimStart('?').Split('&').Select(part =>
             {
@@ -158,23 +79,17 @@ builder.Services.AddAuthentication(options =>
                     return part;
 
                 var decoded = Uri.UnescapeDataString(part["redirect_uri=".Length..]);
-                var cb = new UriBuilder(decoded);
+                var callbackUri = new UriBuilder(decoded);
 
-                // Force https for any non-localhost callback
-                if (cb.Scheme == "http" && cb.Host != "localhost")
-                    cb.Scheme = "https";
+                if (callbackUri.Scheme == "http" && callbackUri.Host != "localhost")
+                    callbackUri.Scheme = "https";
 
-                // Strip any port that shouldn't appear in the external callback URL —
-                // default ports (80/443), internal ports, or HTTP ports left on an https URL.
-                if (cb.Port != -1 && (
-                    cb.Port is 80 or 443 or 8080 or 10000 or 5199))
-                {
-                    cb.Port = -1;
-                }
+                if (callbackUri.Port != -1 && callbackUri.Port is 80 or 443 or 8080 or 10000 or 5199)
+                    callbackUri.Port = -1;
 
-                var fixed_uri = cb.Uri.ToString();
-                logger.LogInformation("Discord redirect_uri fixed to: {Uri}", fixed_uri);
-                return "redirect_uri=" + Uri.EscapeDataString(fixed_uri);
+                var fixedUri = callbackUri.Uri.ToString();
+                logger.LogInformation("Discord redirect_uri fixed to: {Uri}", fixedUri);
+                return "redirect_uri=" + Uri.EscapeDataString(fixedUri);
             });
 
             var newUri = new UriBuilder(authUri)
@@ -186,69 +101,22 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         };
 
-        options.Events.OnRemoteFailure = ctx =>
+        events.OnRemoteFailure = context =>
         {
-            var logger = ctx.HttpContext.RequestServices
+            var logger = context.HttpContext.RequestServices
                 .GetRequiredService<ILoggingService<Program>>();
-            logger.LogError(ctx.Failure, "Discord remote failure: {Message}", ctx.Failure?.Message);
-            ctx.Response.Redirect("/auth-error?message=" + Uri.EscapeDataString(ctx.Failure?.Message ?? "unknown"));
-            ctx.HandleResponse();
+            logger.LogError(
+                context.Failure ?? new InvalidOperationException("Unknown remote failure"),
+                "Discord remote failure: {Message}",
+                context.Failure?.Message ?? "unknown");
+            context.Response.Redirect("/auth-error?message=" + Uri.EscapeDataString(context.Failure?.Message ?? "unknown"));
+            context.HandleResponse();
             return Task.CompletedTask;
         };
-
-        options.Events.OnCreatingTicket = ctx =>
-        {
-            var userId = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-            var avatar = ctx.User.GetProperty("avatar").GetString();
-
-            if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(avatar))
-            {
-                var avatarUrl = $"https://cdn.discordapp.com/avatars/{userId}/{avatar}.png";
-                ctx.Identity?.AddClaim(new Claim("urn:discord:avatar:url", avatarUrl));
-            }
-
-            return Task.CompletedTask;
-        };
-    })
-    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-    {
-        var authOptions = builder.Configuration.GetSection("Authentication")
-            .Get<PackTracker.Application.Options.AuthOptions>() ?? new();
-
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = authOptions.Jwt.Issuer,
-            ValidAudience = authOptions.Jwt.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(authOptions.Jwt.Key))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var token = ApiAuthenticationDefaults.GetSignalRAccessToken(context.Request);
-                if (!string.IsNullOrWhiteSpace(token))
-                    context.Token = token;
-
-                return Task.CompletedTask;
-            }
-        };
-    });
-
-#endregion
-
-#region Authorization
-
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("HouseWolfOnly", policy =>
-        policy.RequireClaim(ClaimTypes.Role, "HouseWolfMember"));
+    };
 });
+
+builder.Services.AddSwaggerGen();
 
 #endregion
 
@@ -260,9 +128,6 @@ var app = builder.Build();
 
 #region Forwarded Headers / Request Debug
 
-// Must run as early as possible so scheme/host are correct behind Render/proxies.
-// KnownNetworks/KnownProxies must be explicitly cleared — the { } initializer syntax
-// is a no-op on existing collections and does NOT clear the default loopback restriction.
 var forwardedOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
@@ -283,9 +148,9 @@ app.MapGet("/debug-request", (HttpContext ctx) =>
 
 #endregion
 
-#region Startup Initialization (DB Fix + Seed)
+#region Startup Initialization
 
-await InitializeDatabaseAsync(app);
+await InitializeDatabaseAsync(app, app.Lifetime.ApplicationStopping);
 
 #endregion
 
@@ -338,7 +203,7 @@ finally
 
 #region Initialization Method
 
-static async Task InitializeDatabaseAsync(WebApplication app)
+static async Task InitializeDatabaseAsync(WebApplication app, CancellationToken ct)
 {
     using var scope = app.Services.CreateScope();
 
@@ -348,16 +213,21 @@ static async Task InitializeDatabaseAsync(WebApplication app)
 
     try
     {
+        logger.LogInformation("Applying database migrations...");
+        await db.Database.MigrateAsync(ct);
+
         logger.LogInformation("Running database cleanup scripts...");
 
         var fixedCount = await db.Database.ExecuteSqlRawAsync(
-            @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE");
+            @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE",
+            ct);
 
         if (fixedCount > 0)
             logger.LogInformation("Fixed {Count} blueprint records", fixedCount);
 
         await db.Database.ExecuteSqlRawAsync(
-            @"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''");
+            @"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''",
+            ct);
 
         await db.Database.ExecuteSqlRawAsync(@"
             UPDATE ""Blueprints"" SET ""Category"" = CASE ""Category""
@@ -370,13 +240,8 @@ static async Task InitializeDatabaseAsync(WebApplication app)
                 WHEN 'Char_Armor_Undersuit'  THEN 'Armor - Undersuit'
                 WHEN 'Char_Armor_Backpack'   THEN 'Armor - Backpack'
                 ELSE ""Category""
-            END");
-
-        await db.Database.ExecuteSqlRawAsync(
-            @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""RequesterTimeZoneDisplayName"" character varying(200)");
-
-        await db.Database.ExecuteSqlRawAsync(
-            @"ALTER TABLE ""CraftingRequests"" ADD COLUMN IF NOT EXISTS ""RequesterUtcOffsetMinutes"" integer");
+            END",
+            ct);
 
         logger.LogInformation("Database cleanup completed");
 
@@ -390,7 +255,7 @@ static async Task InitializeDatabaseAsync(WebApplication app)
 
         logger.LogInformation("Seeding crafting data from {Path}", seedPath);
 
-        await seedService.SeedAsync(seedPath);
+        await seedService.SeedAsync(seedPath, ct);
 
         logger.LogInformation("Data seeding completed");
     }

@@ -20,12 +20,6 @@ public sealed class CraftingSeedService
 
     public async Task SeedAsync(string seedFilePath, CancellationToken ct = default)
     {
-        if (await _db.Blueprints.AnyAsync(ct))
-        {
-            _logger.LogInformation("Crafting seed skipped because blueprint data already exists.");
-            return;
-        }
-
         var realBlueprintPath = ResolveRealBlueprintPath(seedFilePath);
         if (File.Exists(realBlueprintPath))
         {
@@ -56,59 +50,60 @@ public sealed class CraftingSeedService
             return;
         }
 
-        var materialMap = new Dictionary<string, Material>(StringComparer.OrdinalIgnoreCase);
+        var materialMap = await LoadExistingMaterialsAsync(ct);
+        var importedBlueprints = 0;
 
         foreach (var blueprintSeed in payload.Blueprints)
         {
-            var blueprint = new Blueprint
+            var materials = blueprintSeed.Materials.Select(materialSeed => new RecipeMaterialSeed
             {
-                Slug = blueprintSeed.Slug,
-                BlueprintName = blueprintSeed.BlueprintName,
-                CraftedItemName = blueprintSeed.CraftedItemName,
-                Category = blueprintSeed.Category,
-                Description = blueprintSeed.Description,
-                IsInGameAvailable = blueprintSeed.IsInGameAvailable,
-                AcquisitionSummary = blueprintSeed.AcquisitionSummary,
-                AcquisitionLocation = blueprintSeed.AcquisitionLocation,
-                AcquisitionMethod = blueprintSeed.AcquisitionMethod,
-                SourceVersion = payload.SourceVersion,
-                DataConfidence = payload.DataConfidence ?? "Seeded"
-            };
+                MaterialName = materialSeed.MaterialName,
+                Slug = materialSeed.Slug,
+                MaterialType = materialSeed.MaterialType,
+                Tier = materialSeed.Tier,
+                SourceType = ParseSourceType(materialSeed.SourceType),
+                IsRawOre = materialSeed.IsRawOre,
+                IsRefinedMaterial = materialSeed.IsRefinedMaterial,
+                IsCraftedComponent = materialSeed.IsCraftedComponent,
+                QuantityRequired = materialSeed.QuantityRequired,
+                Unit = string.IsNullOrWhiteSpace(materialSeed.Unit) ? "SCU" : materialSeed.Unit,
+                IsOptional = materialSeed.IsOptional,
+                IsIntermediateCraftable = materialSeed.IsIntermediateCraftable,
+                Notes = materialSeed.Notes
+            }).ToList();
 
-            _db.Blueprints.Add(blueprint);
-
-            var recipe = new BlueprintRecipe
-            {
-                Blueprint = blueprint,
-                OutputQuantity = blueprintSeed.OutputQuantity <= 0 ? 1 : blueprintSeed.OutputQuantity,
-                CraftingStationType = blueprintSeed.CraftingStationType,
-                TimeToCraftSeconds = blueprintSeed.TimeToCraftSeconds,
-                Notes = blueprintSeed.Notes
-            };
-
-            _db.BlueprintRecipes.Add(recipe);
-
-            foreach (var materialSeed in blueprintSeed.Materials)
-            {
-                var material = GetOrCreateMaterial(materialMap, materialSeed.MaterialName, materialSeed.Slug, materialSeed.MaterialType, materialSeed.Tier,
-                    ParseSourceType(materialSeed.SourceType), materialSeed.IsRawOre, materialSeed.IsRefinedMaterial, materialSeed.IsCraftedComponent, materialSeed.Notes);
-
-                _db.BlueprintRecipeMaterials.Add(new BlueprintRecipeMaterial
+            await UpsertBlueprintAsync(
+                new BlueprintSeedModel
                 {
-                    BlueprintRecipe = recipe,
-                    Material = material,
-                    QuantityRequired = materialSeed.QuantityRequired,
-                    Unit = string.IsNullOrWhiteSpace(materialSeed.Unit) ? "SCU" : materialSeed.Unit,
-                    IsOptional = materialSeed.IsOptional,
-                    IsIntermediateCraftable = materialSeed.IsIntermediateCraftable,
-                    Notes = materialSeed.Notes
-                });
-            }
+                    LookupKey = blueprintSeed.Slug,
+                    Slug = blueprintSeed.Slug,
+                    BlueprintName = blueprintSeed.BlueprintName,
+                    CraftedItemName = blueprintSeed.CraftedItemName,
+                    Category = blueprintSeed.Category,
+                    Description = blueprintSeed.Description,
+                    IsInGameAvailable = blueprintSeed.IsInGameAvailable,
+                    AcquisitionSummary = blueprintSeed.AcquisitionSummary,
+                    AcquisitionLocation = blueprintSeed.AcquisitionLocation,
+                    AcquisitionMethod = blueprintSeed.AcquisitionMethod,
+                    SourceVersion = payload.SourceVersion,
+                    DataConfidence = payload.DataConfidence ?? "Seeded",
+                    Notes = blueprintSeed.Notes,
+                    OutputQuantity = blueprintSeed.OutputQuantity <= 0 ? 1 : blueprintSeed.OutputQuantity,
+                    CraftingStationType = blueprintSeed.CraftingStationType,
+                    TimeToCraftSeconds = blueprintSeed.TimeToCraftSeconds,
+                    RecipeNotes = blueprintSeed.Notes
+                },
+                materials,
+                materialMap,
+                ct);
+
+            importedBlueprints++;
         }
 
         await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("Seeded {BlueprintCount} blueprints and {MaterialCount} materials from legacy seed.",
-            payload.Blueprints.Count,
+        _logger.LogInformation(
+            "Upserted {BlueprintCount} blueprints and tracked {MaterialCount} materials from legacy seed.",
+            importedBlueprints,
             materialMap.Count);
     }
 
@@ -128,7 +123,7 @@ public sealed class CraftingSeedService
             return;
         }
 
-        var materialMap = new Dictionary<string, Material>(StringComparer.OrdinalIgnoreCase);
+        var materialMap = await LoadExistingMaterialsAsync(ct);
         var importedBlueprints = 0;
 
         foreach (var record in payload)
@@ -140,7 +135,7 @@ public sealed class CraftingSeedService
                 .OrderBy(x => x.TierIndex)
                 .FirstOrDefault();
 
-            var flattenedMaterials = new Dictionary<string, FlattenedMaterialRequirement>(StringComparer.OrdinalIgnoreCase);
+            var flattenedMaterials = new Dictionary<string, RecipeMaterialSeed>(StringComparer.OrdinalIgnoreCase);
             if (firstTier?.Requirements is not null)
                 CollectMaterials(firstTier.Requirements, flattenedMaterials);
 
@@ -151,111 +146,189 @@ public sealed class CraftingSeedService
                 ? $"{record.Output.Name} Blueprint"
                 : record.Key ?? "Unknown Blueprint";
 
-            var category = MapCategory(record.Output.Type, record.Kind);
-            var acquisitionSummary = BuildAvailabilitySummary(record.Availability);
-
-            var blueprint = new Blueprint
-            {
-                Slug = FirstNonEmpty(record.Key, record.Uuid, Guid.NewGuid().ToString("N")),
-                BlueprintName = blueprintName,
-                CraftedItemName = FirstNonEmpty(record.Output.Name, record.Key, "Unknown Item"),
-                Category = category,
-                Description = BuildDescription(record.Output),
-                IsInGameAvailable = true, // All blueprints from this source are in-game craftable
-                AcquisitionSummary = acquisitionSummary,
-                AcquisitionLocation = null,
-                AcquisitionMethod = record.Availability?.Default == true ? "In-game crafting availability confirmed" : "Reward pool / restricted availability",
-                SourceVersion = "scunpacked-data",
-                DataConfidence = "Imported from Star Citizen Wiki local data",
-                Notes = BuildBlueprintNotes(record, firstTier)
-            };
-
-            _db.Blueprints.Add(blueprint);
-
-            var recipe = new BlueprintRecipe
-            {
-                Blueprint = blueprint,
-                OutputQuantity = 1,
-                CraftingStationType = "Crafting",
-                TimeToCraftSeconds = firstTier?.CraftTimeSeconds,
-                Notes = firstTier is null ? "No tier data available" : $"Imported from tier {firstTier.TierIndex}"
-            };
-
-            _db.BlueprintRecipes.Add(recipe);
-
-            foreach (var requirement in flattenedMaterials.Values.OrderBy(x => x.MaterialName))
-            {
-                var material = GetOrCreateMaterial(materialMap,
-                    requirement.MaterialName,
-                    requirement.Slug,
-                    requirement.MaterialType,
-                    requirement.Tier,
-                    requirement.SourceType,
-                    isRawOre: true,
-                    isRefinedMaterial: false,
-                    isCraftedComponent: false,
-                    notes: requirement.Notes);
-
-                _db.BlueprintRecipeMaterials.Add(new BlueprintRecipeMaterial
+            await UpsertBlueprintAsync(
+                new BlueprintSeedModel
                 {
-                    BlueprintRecipe = recipe,
-                    Material = material,
-                    QuantityRequired = requirement.QuantityRequired,
-                    Unit = requirement.Unit,
-                    IsOptional = false,
-                    IsIntermediateCraftable = false,
-                    Notes = requirement.Notes
-                });
-            }
+                    LookupKey = FirstNonEmpty(record.Uuid, record.Key, record.Output.Name),
+                    Slug = FirstNonEmpty(record.Key, record.Uuid, Guid.NewGuid().ToString("N")),
+                    BlueprintName = blueprintName,
+                    CraftedItemName = FirstNonEmpty(record.Output.Name, record.Key, "Unknown Item"),
+                    Category = MapCategory(record.Output.Type, record.Kind),
+                    Description = BuildDescription(record.Output),
+                    IsInGameAvailable = true,
+                    AcquisitionSummary = BuildAvailabilitySummary(record.Availability),
+                    AcquisitionLocation = null,
+                    AcquisitionMethod = record.Availability?.Default == true
+                        ? "In-game crafting availability confirmed"
+                        : "Reward pool / restricted availability",
+                    SourceVersion = "scunpacked-data",
+                    DataConfidence = "Imported from Star Citizen Wiki local data",
+                    Notes = BuildBlueprintNotes(record, firstTier),
+                    WikiUuid = record.Uuid,
+                    OutputQuantity = 1,
+                    CraftingStationType = "Crafting",
+                    TimeToCraftSeconds = firstTier?.CraftTimeSeconds,
+                    RecipeNotes = firstTier is null ? "No tier data available" : $"Imported from tier {firstTier.TierIndex}"
+                },
+                flattenedMaterials.Values.OrderBy(x => x.MaterialName).ToList(),
+                materialMap,
+                ct);
 
             importedBlueprints++;
         }
 
         await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("Imported {BlueprintCount} blueprints and {MaterialCount} materials from Star Citizen local data.", importedBlueprints, materialMap.Count);
+        _logger.LogInformation(
+            "Upserted {BlueprintCount} blueprints and tracked {MaterialCount} materials from Star Citizen local data.",
+            importedBlueprints,
+            materialMap.Count);
     }
 
-    private Material GetOrCreateMaterial(
+    private async Task UpsertBlueprintAsync(
+        BlueprintSeedModel blueprintSeed,
+        IReadOnlyCollection<RecipeMaterialSeed> materialSeeds,
         IDictionary<string, Material> materialMap,
-        string materialName,
-        string slug,
-        string materialType,
-        string tier,
-        MaterialSourceType sourceType,
-        bool isRawOre,
-        bool isRefinedMaterial,
-        bool isCraftedComponent,
-        string? notes)
+        CancellationToken ct)
     {
-        if (materialMap.TryGetValue(materialName, out var existing))
-            return existing;
-
-        var material = new Material
+        var blueprint = await FindExistingBlueprintAsync(blueprintSeed, ct);
+        if (blueprint is null)
         {
-            Name = materialName,
-            Slug = slug,
-            MaterialType = materialType,
-            Tier = tier,
-            SourceType = sourceType,
-            IsRawOre = isRawOre,
-            IsRefinedMaterial = isRefinedMaterial,
-            IsCraftedComponent = isCraftedComponent,
-            Notes = notes
+            blueprint = new Blueprint();
+            _db.Blueprints.Add(blueprint);
+        }
+
+        blueprint.Slug = blueprintSeed.Slug;
+        blueprint.BlueprintName = blueprintSeed.BlueprintName;
+        blueprint.CraftedItemName = blueprintSeed.CraftedItemName;
+        blueprint.Category = blueprintSeed.Category;
+        blueprint.Description = blueprintSeed.Description;
+        blueprint.IsInGameAvailable = blueprintSeed.IsInGameAvailable;
+        blueprint.AcquisitionSummary = blueprintSeed.AcquisitionSummary;
+        blueprint.AcquisitionLocation = blueprintSeed.AcquisitionLocation;
+        blueprint.AcquisitionMethod = blueprintSeed.AcquisitionMethod;
+        blueprint.SourceVersion = blueprintSeed.SourceVersion;
+        blueprint.DataConfidence = blueprintSeed.DataConfidence;
+        blueprint.Notes = blueprintSeed.Notes;
+        blueprint.WikiUuid = string.IsNullOrWhiteSpace(blueprintSeed.WikiUuid) ? blueprint.WikiUuid : blueprintSeed.WikiUuid;
+        blueprint.UpdatedAt = DateTime.UtcNow;
+
+        var recipe = await _db.BlueprintRecipes
+            .FirstOrDefaultAsync(x => x.BlueprintId == blueprint.Id, ct);
+
+        if (recipe is null)
+        {
+            recipe = new BlueprintRecipe
+            {
+                Blueprint = blueprint
+            };
+            _db.BlueprintRecipes.Add(recipe);
+        }
+
+        recipe.OutputQuantity = blueprintSeed.OutputQuantity;
+        recipe.CraftingStationType = blueprintSeed.CraftingStationType;
+        recipe.TimeToCraftSeconds = blueprintSeed.TimeToCraftSeconds;
+        recipe.Notes = blueprintSeed.RecipeNotes;
+
+        if (recipe.BlueprintId == Guid.Empty)
+            recipe.Blueprint = blueprint;
+
+        var existingRecipeMaterials = await _db.BlueprintRecipeMaterials
+            .Where(x => x.BlueprintRecipeId == recipe.Id)
+            .ToListAsync(ct);
+
+        if (existingRecipeMaterials.Count > 0)
+            _db.BlueprintRecipeMaterials.RemoveRange(existingRecipeMaterials);
+
+        foreach (var materialSeed in materialSeeds)
+        {
+            var material = GetOrCreateMaterial(materialMap, materialSeed);
+            _db.BlueprintRecipeMaterials.Add(new BlueprintRecipeMaterial
+            {
+                BlueprintRecipe = recipe,
+                Material = material,
+                QuantityRequired = materialSeed.QuantityRequired,
+                Unit = materialSeed.Unit,
+                IsOptional = materialSeed.IsOptional,
+                IsIntermediateCraftable = materialSeed.IsIntermediateCraftable,
+                Notes = materialSeed.Notes
+            });
+        }
+    }
+
+    private async Task<Blueprint?> FindExistingBlueprintAsync(BlueprintSeedModel blueprintSeed, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(blueprintSeed.WikiUuid))
+        {
+            var byWikiUuid = await _db.Blueprints
+                .FirstOrDefaultAsync(x => x.WikiUuid == blueprintSeed.WikiUuid, ct);
+            if (byWikiUuid is not null)
+                return byWikiUuid;
+        }
+
+        var bySlug = await _db.Blueprints
+            .FirstOrDefaultAsync(x => x.Slug == blueprintSeed.Slug, ct);
+        if (bySlug is not null)
+            return bySlug;
+
+        if (!string.IsNullOrWhiteSpace(blueprintSeed.LookupKey))
+        {
+            return await _db.Blueprints.FirstOrDefaultAsync(
+                x => x.BlueprintName == blueprintSeed.LookupKey || x.CraftedItemName == blueprintSeed.LookupKey,
+                ct);
+        }
+
+        return null;
+    }
+
+    private async Task<Dictionary<string, Material>> LoadExistingMaterialsAsync(CancellationToken ct)
+    {
+        var materials = await _db.Materials.ToListAsync(ct);
+        return materials.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private Material GetOrCreateMaterial(IDictionary<string, Material> materialMap, RecipeMaterialSeed materialSeed)
+    {
+        if (materialMap.TryGetValue(materialSeed.MaterialName, out var material))
+        {
+            material.Slug = materialSeed.Slug;
+            material.MaterialType = materialSeed.MaterialType;
+            material.Tier = materialSeed.Tier;
+            material.SourceType = materialSeed.SourceType;
+            material.IsRawOre = materialSeed.IsRawOre;
+            material.IsRefinedMaterial = materialSeed.IsRefinedMaterial;
+            material.IsCraftedComponent = materialSeed.IsCraftedComponent;
+            material.Notes = materialSeed.Notes;
+            material.UpdatedAt = DateTime.UtcNow;
+            return material;
+        }
+
+        material = new Material
+        {
+            Name = materialSeed.MaterialName,
+            Slug = materialSeed.Slug,
+            MaterialType = materialSeed.MaterialType,
+            Tier = materialSeed.Tier,
+            SourceType = materialSeed.SourceType,
+            IsRawOre = materialSeed.IsRawOre,
+            IsRefinedMaterial = materialSeed.IsRefinedMaterial,
+            IsCraftedComponent = materialSeed.IsCraftedComponent,
+            Notes = materialSeed.Notes,
+            UpdatedAt = DateTime.UtcNow
         };
 
-        materialMap[materialName] = material;
+        materialMap[materialSeed.MaterialName] = material;
         _db.Materials.Add(material);
         return material;
     }
 
-    private static void CollectMaterials(RequirementNode node, IDictionary<string, FlattenedMaterialRequirement> materials)
+    private static void CollectMaterials(RequirementNode node, IDictionary<string, RecipeMaterialSeed> materials)
     {
         if (node.Kind.Equals("resource", StringComparison.OrdinalIgnoreCase))
         {
             var name = FirstNonEmpty(node.Name, node.Key, node.Uuid, "Unknown Material");
             if (!materials.TryGetValue(name, out var existing))
             {
-                existing = new FlattenedMaterialRequirement
+                existing = new RecipeMaterialSeed
                 {
                     MaterialName = name,
                     Slug = Slugify(name),
@@ -263,6 +336,7 @@ public sealed class CraftingSeedService
                     Tier = node.MinQuality > 0 ? $"Q{node.MinQuality}" : string.Empty,
                     SourceType = MaterialSourceType.Mined,
                     Unit = node.QuantityScu > 0 ? "SCU" : "Units",
+                    IsRawOre = true,
                     Notes = node.MinQuality > 0 ? $"Minimum quality {node.MinQuality}" : null
                 };
                 materials[name] = existing;
@@ -327,15 +401,15 @@ public sealed class CraftingSeedService
 
     private static string MapCategory(string? type, string? kind = null) => type switch
     {
-        "WeaponPersonal"       => "Personal Weapon",
-        "WeaponAttachment"     => "Weapon Attachment",
-        "Char_Armor_Torso"     => "Armor - Torso",
-        "Char_Armor_Arms"      => "Armor - Arms",
-        "Char_Armor_Legs"      => "Armor - Legs",
-        "Char_Armor_Helmet"    => "Armor - Helmet",
+        "WeaponPersonal" => "Personal Weapon",
+        "WeaponAttachment" => "Weapon Attachment",
+        "Char_Armor_Torso" => "Armor - Torso",
+        "Char_Armor_Arms" => "Armor - Arms",
+        "Char_Armor_Legs" => "Armor - Legs",
+        "Char_Armor_Helmet" => "Armor - Helmet",
         "Char_Armor_Undersuit" => "Armor - Undersuit",
-        "Char_Armor_Backpack"  => "Armor - Backpack",
-        _                      => type ?? kind ?? "Unknown"
+        "Char_Armor_Backpack" => "Armor - Backpack",
+        _ => type ?? kind ?? "Unknown"
     };
 
     private static string Slugify(string value)
@@ -344,15 +418,42 @@ public sealed class CraftingSeedService
         return new string(chars).Trim('-');
     }
 
-    private sealed class FlattenedMaterialRequirement
+    private sealed class BlueprintSeedModel
+    {
+        public string LookupKey { get; set; } = string.Empty;
+        public string Slug { get; set; } = string.Empty;
+        public string BlueprintName { get; set; } = string.Empty;
+        public string CraftedItemName { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool IsInGameAvailable { get; set; } = true;
+        public string? AcquisitionSummary { get; set; }
+        public string? AcquisitionLocation { get; set; }
+        public string? AcquisitionMethod { get; set; }
+        public string? SourceVersion { get; set; }
+        public string DataConfidence { get; set; } = "Imported";
+        public string? Notes { get; set; }
+        public string? WikiUuid { get; set; }
+        public int OutputQuantity { get; set; } = 1;
+        public string? CraftingStationType { get; set; }
+        public int? TimeToCraftSeconds { get; set; }
+        public string? RecipeNotes { get; set; }
+    }
+
+    private sealed class RecipeMaterialSeed
     {
         public string MaterialName { get; set; } = string.Empty;
         public string Slug { get; set; } = string.Empty;
         public string MaterialType { get; set; } = string.Empty;
         public string Tier { get; set; } = string.Empty;
         public MaterialSourceType SourceType { get; set; } = MaterialSourceType.Unknown;
+        public bool IsRawOre { get; set; }
+        public bool IsRefinedMaterial { get; set; }
+        public bool IsCraftedComponent { get; set; }
         public double QuantityRequired { get; set; }
         public string Unit { get; set; } = "SCU";
+        public bool IsOptional { get; set; }
+        public bool IsIntermediateCraftable { get; set; }
         public string? Notes { get; set; }
     }
 

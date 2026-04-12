@@ -8,6 +8,7 @@ using PackTracker.Infrastructure.Persistence;
 
 using Microsoft.Extensions.Options;
 using PackTracker.Application.Options;
+using PackTracker.Domain.Security;
 
 namespace PackTracker.Infrastructure.Services;
 
@@ -219,7 +220,7 @@ public class ProfileService : IProfileService
             // House Wolf specific role ID to Name mapping (Fallback)
             var houseWolfRoles = new Dictionary<string, string>
             {
-                { "1119837295097434263", "Hand of the Clan" },
+                { "1119837295097434263", SecurityConstants.Roles.HandOfTheClan },
                 { "1182799457650233465", "High Command" },
                 { "1178165015694561290", "Officer" },
                 { "1182796308516446288", "Veteran" },

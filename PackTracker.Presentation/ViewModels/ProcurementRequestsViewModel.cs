@@ -3,9 +3,11 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Domain.Enums;
+using PackTracker.Domain.Security;
 using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.ViewModels;
@@ -14,6 +16,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
 {
     private readonly IApiClientProvider _apiClientProvider;
     private readonly SignalRChatService _signalR;
+    private readonly ILogger<ProcurementRequestsViewModel> _logger;
     private CancellationTokenSource? _loadCommentsCts;
     private string _currentUsername = string.Empty;
     private string? _currentRole;
@@ -46,10 +49,14 @@ public partial class ProcurementRequestsViewModel : ObservableObject
 
     #endregion
 
-    public ProcurementRequestsViewModel(IApiClientProvider apiClientProvider, SignalRChatService signalR)
+    public ProcurementRequestsViewModel(
+        IApiClientProvider apiClientProvider,
+        SignalRChatService signalR,
+        ILogger<ProcurementRequestsViewModel> logger)
     {
         _apiClientProvider = apiClientProvider;
         _signalR = signalR;
+        _logger = logger;
         _ = LoadCurrentUserAsync();
         _ = InitSignalRAsync();
     }
@@ -67,9 +74,9 @@ public partial class ProcurementRequestsViewModel : ObservableObject
                     OnProcurementEvent(Guid.Empty);
             };
         }
-        catch
+        catch (Exception ex)
         {
-            // Non-fatal; refresh remains available.
+            _logger.LogViewModelError(ex, "ConnectProcurementSignalR");
         }
     }
 
@@ -86,7 +93,10 @@ public partial class ProcurementRequestsViewModel : ObservableObject
                 _currentRole = profile?.DiscordRank;
             }
         }
-        catch { /* non-fatal — CanCancel will just stay false */ }
+        catch (Exception ex)
+        {
+            _logger.LogViewModelError(ex, "LoadCurrentUser");
+        }
         finally
         {
             await RefreshAsync();
@@ -142,6 +152,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         catch (OperationCanceledException) { /* Normal during rapid selection */ }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "LoadProcurementComments", ("RequestId", requestId));
             StatusMessage = $"Comment load failed: {ex.Message}";
         }
     }
@@ -177,6 +188,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "RefreshProcurementRequests");
             StatusMessage = $"Refresh failed: {ex.Message}";
         }
         finally
@@ -205,6 +217,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "AddProcurementComment", ("RequestId", SelectedRequest.Id));
             StatusMessage = $"Comment failed: {ex.Message}";
         }
     }
@@ -247,6 +260,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "CancelProcurementRequest", ("RequestId", SelectedRequest.Id));
             StatusMessage = $"Update failed: {ex.Message}";
         }
         finally
@@ -290,6 +304,12 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(
+                ex,
+                "PatchProcurementRequest",
+                ("RequestUrl", url),
+                ("RequestId", SelectedRequest?.Id),
+                ("HasBody", body is not null));
             StatusMessage = $"Update failed: {ex.Message}";
         }
         finally
@@ -304,7 +324,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
     }
 
     private static bool IsPrivilegedRole(string? role) =>
-        role is "Captain" or "Fleet Commander" or "Armor" or "Hand of the Clan" or "Clan Warlord";
+        SecurityConstants.IsElevatedRequestRole(role);
 
     #endregion
 }

@@ -7,6 +7,7 @@ using PackTracker.Api.Hubs;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
+using PackTracker.Domain.Security;
 using PackTracker.Infrastructure.Persistence;
 using HubsRequestsHub = PackTracker.Api.Hubs.RequestsHub;
 
@@ -20,15 +21,6 @@ namespace PackTracker.Api.Controllers;
 [Authorize]
 public class AssistanceRequestsController : ControllerBase
 {
-    private static readonly HashSet<string> ElevatedRequestRoles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Captain",
-        "Fleet Commander",
-        "Armor",
-        "Hand of the Clan",
-        "Clan Warlord"
-    };
-
     #region Fields
 
     private readonly AppDbContext _db;
@@ -62,7 +54,10 @@ public class AssistanceRequestsController : ControllerBase
     /// and non-open requests only if the user is the requester or assignee.
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<AssistanceRequestDto>>> GetRequests(CancellationToken ct)
+    public async Task<ActionResult<IReadOnlyList<AssistanceRequestDto>>> GetRequests(
+        [FromQuery] RequestKind? kind,
+        [FromQuery] RequestStatus? status,
+        CancellationToken ct)
     {
         var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
 
@@ -72,14 +67,23 @@ public class AssistanceRequestsController : ControllerBase
 
         var currentProfileId = currentProfile?.Id ?? Guid.Empty;
 
-        var requests = await _db.AssistanceRequests
+        var query = _db.AssistanceRequests
             .AsNoTracking()
             .Include(x => x.CreatedByProfile)
             .Include(x => x.AssignedToProfile)
-            .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
             .Where(x => x.Status == RequestStatus.Open
                      || x.CreatedByProfileId == currentProfileId
-                     || x.AssignedToProfileId == currentProfileId)
+                     || x.AssignedToProfileId == currentProfileId);
+
+        if (kind.HasValue)
+            query = query.Where(x => x.Kind == kind.Value);
+
+        if (status.HasValue)
+            query = query.Where(x => x.Status == status.Value);
+        else
+            query = query.Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed);
+
+        var requests = await query
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => new AssistanceRequestDto
             {
@@ -305,8 +309,8 @@ public class AssistanceRequestsController : ControllerBase
         profile.Id == creatorProfileId || UserHasElevatedRequestRole(profile.DiscordRank);
 
     private bool UserHasElevatedRequestRole(string? profileRole) =>
-        ElevatedRequestRoles.Contains(profileRole ?? string.Empty)
-        || ElevatedRequestRoles.Any(User.IsInRole);
+        SecurityConstants.IsElevatedRequestRole(profileRole)
+        || SecurityConstants.ElevatedRequestRoles.Any(User.IsInRole);
 
     #endregion
 }

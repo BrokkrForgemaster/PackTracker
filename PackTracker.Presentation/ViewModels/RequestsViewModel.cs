@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Net.Http.Json;
+using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Presentation.Services;
@@ -22,6 +24,7 @@ public partial class RequestsViewModel : ObservableObject
     private readonly IApiClientProvider _apiClientProvider;
     private readonly SignalRChatService _signalR;
     private readonly IServiceProvider _services;
+    private readonly ILogger<RequestsViewModel> _logger;
 
     #endregion
 
@@ -30,11 +33,13 @@ public partial class RequestsViewModel : ObservableObject
     public RequestsViewModel(
         IApiClientProvider apiClientProvider,
         SignalRChatService signalR,
-        IServiceProvider services)
+        IServiceProvider services,
+        ILogger<RequestsViewModel> logger)
     {
         _apiClientProvider = apiClientProvider;
         _signalR = signalR;
         _services = services;
+        _logger = logger;
 
         KindOptions = BuildKindOptions();
         StatusOptions = BuildStatusOptions();
@@ -59,6 +64,7 @@ public partial class RequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "InitializeSignalR");
             StatusMessage = $"SignalR connection failed: {ex.Message}";
         }
 
@@ -151,7 +157,7 @@ public partial class RequestsViewModel : ObservableObject
             StatusMessage = "Refreshing...";
 
             using var client = _apiClientProvider.CreateClient();
-            using var response = await client.GetAsync("api/v1/requests");
+            using var response = await client.GetAsync(BuildRequestsQueryUrl());
 
             if (!response.IsSuccessStatusCode)
             {
@@ -161,13 +167,6 @@ public partial class RequestsViewModel : ObservableObject
 
             var items = await response.Content.ReadFromJsonAsync<List<AssistanceRequestDto>>()
                         ?? new List<AssistanceRequestDto>();
-
-            // Apply client-side filters
-            if (SelectedKind.HasValue)
-                items = items.Where(x => x.Kind == SelectedKind.Value).ToList();
-
-            if (!string.IsNullOrEmpty(SelectedStatus))
-                items = items.Where(x => x.Status == SelectedStatus).ToList();
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
@@ -182,6 +181,12 @@ public partial class RequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(
+                ex,
+                "RefreshRequests",
+                ("SelectedKind", SelectedKind?.ToString()),
+                ("SelectedStatus", SelectedStatus),
+                ("RequestUrl", BuildRequestsQueryUrl()));
             StatusMessage = $"Connection failed: {ex.Message}";
         }
         finally
@@ -210,6 +215,7 @@ public partial class RequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(ex, "OpenNewRequestDialog");
             StatusMessage = $"Failed to open dialog: {ex.Message}";
         }
     }
@@ -254,6 +260,11 @@ public partial class RequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(
+                ex,
+                "DeleteRequest",
+                ("RequestId", SelectedRequest.Id),
+                ("SelectedStatus", SelectedRequest.Status));
             StatusMessage = $"Error: {ex.Message}";
         }
         finally
@@ -287,6 +298,12 @@ public partial class RequestsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogViewModelError(
+                ex,
+                "PatchRequest",
+                ("RequestUrl", url),
+                ("SelectedRequestId", SelectedRequest?.Id),
+                ("SuccessMessage", successMessage));
             StatusMessage = $"Error: {ex.Message}";
         }
         finally
@@ -318,6 +335,24 @@ public partial class RequestsViewModel : ObservableObject
             DomainRequestStatus.Completed.ToString(),
             DomainRequestStatus.Cancelled.ToString()
         };
+
+    private string BuildRequestsQueryUrl()
+    {
+        var queryParts = new List<string>();
+
+        if (SelectedKind.HasValue)
+            queryParts.Add($"kind={Uri.EscapeDataString(SelectedKind.Value.ToString())}");
+
+        if (!string.IsNullOrWhiteSpace(SelectedStatus))
+            queryParts.Add($"status={Uri.EscapeDataString(SelectedStatus)}");
+
+        if (queryParts.Count == 0)
+            return "api/v1/requests";
+
+        var builder = new StringBuilder("api/v1/requests?");
+        builder.Append(string.Join("&", queryParts));
+        return builder.ToString();
+    }
 
     #endregion
 }

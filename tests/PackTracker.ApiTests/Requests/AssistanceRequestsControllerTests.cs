@@ -63,7 +63,7 @@ public class AssistanceRequestsControllerTests
         var db = CreateDb();
         var controller = BuildController(db);
 
-        var result = await controller.GetRequests(CancellationToken.None);
+        var result = await controller.GetRequests(null, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<AssistanceRequestDto>>(ok.Value);
@@ -84,12 +84,57 @@ public class AssistanceRequestsControllerTests
         );
         await db.SaveChangesAsync();
 
-        var result = await controller.GetRequests(CancellationToken.None);
+        var result = await controller.GetRequests(null, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<AssistanceRequestDto>>(ok.Value);
         Assert.Single(list);
         Assert.Equal("Open", list[0].Title);
+    }
+
+    [Fact]
+    public async Task GetRequests_FiltersByKindAndStatus_OnServer()
+    {
+        var db = CreateDb();
+        var profile = await SeedProfileAsync(db);
+        var controller = BuildController(db);
+
+        db.AssistanceRequests.AddRange(
+            new AssistanceRequest
+            {
+                Title = "Mining Open",
+                Kind = RequestKind.MiningMaterials,
+                Status = RequestStatus.Open,
+                CreatedByProfileId = profile.Id
+            },
+            new AssistanceRequest
+            {
+                Title = "Mining Completed",
+                Kind = RequestKind.MiningMaterials,
+                Status = RequestStatus.Completed,
+                CreatedByProfileId = profile.Id
+            },
+            new AssistanceRequest
+            {
+                Title = "Escort Completed",
+                Kind = RequestKind.CargoEscort,
+                Status = RequestStatus.Completed,
+                CreatedByProfileId = profile.Id
+            });
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetRequests(
+            RequestKind.MiningMaterials,
+            RequestStatus.Completed,
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<AssistanceRequestDto>>(ok.Value);
+
+        var request = Assert.Single(list);
+        Assert.Equal("Mining Completed", request.Title);
+        Assert.Equal(RequestKind.MiningMaterials, request.Kind);
+        Assert.Equal(RequestStatus.Completed.ToString(), request.Status);
     }
 
     [Fact]

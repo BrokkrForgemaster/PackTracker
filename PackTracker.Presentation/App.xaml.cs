@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ using PackTracker.Presentation.Services;
 using PackTracker.Presentation.ViewModels;
 using PackTracker.Presentation.Views;
 using Serilog;
+using Serilog.Events;
 
 namespace PackTracker.Presentation;
 
@@ -34,13 +36,26 @@ public partial class App : System.Windows.Application
     private static IServiceProvider BootstrapServices(IConfiguration cfg)
     {
         var services = new ServiceCollection();
+        var appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "HouseWolf",
+            "PackTracker");
+        var logsPath = Path.Combine(appDataPath, "logs");
+        Directory.CreateDirectory(logsPath);
 
         // 1️⃣ Logging configuration
-        // appsettings.json owns the sink definitions (File + Console) and Enrich list.
-        // Only add enrichers that are not expressible via appsettings here.
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(cfg)
             .Enrich.WithProperty("Application", "PackTracker")
+            .WriteTo.Async(writeTo => writeTo.File(
+                path: Path.Combine(logsPath, "packtracker-.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 14,
+                fileSizeLimitBytes: 10 * 1024 * 1024,
+                rollOnFileSizeLimit: true,
+                shared: true,
+                restrictedToMinimumLevel: LogEventLevel.Information,
+                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}"))
             .CreateLogger();
 
         services.AddLogging(b => b.AddSerilog());

@@ -14,13 +14,14 @@ namespace PackTracker.Infrastructure.Services;
 public sealed class SettingsService : ISettingsService, IDisposable
 {
     private readonly ILogger<SettingsService> _logger;
+    private readonly object _settingsSync = new();
     private readonly string _userFolder;
     private readonly string _userConfigPath;
     private readonly string _defaultConfigPath;
     private readonly FileSystemWatcher _watcher;
     private AppSettings _settings = new();
+    private bool _suspendWatcherReload;
 
-    // The correct blueprint data source — SC Wiki API, free, no key required
     private const string DefaultBlueprintUrl = "https://api.star-citizen.wiki/api/blueprints";
 
     public SettingsService(ILogger<SettingsService> logger)
@@ -30,8 +31,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
         _userFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "HouseWolf",
-            "PackTracker"
-        );
+            "PackTracker");
         Directory.CreateDirectory(_userFolder);
 
         _userConfigPath = Path.Combine(_userFolder, "user_settings.json");
@@ -40,8 +40,11 @@ public sealed class SettingsService : ISettingsService, IDisposable
                         ?? AppContext.BaseDirectory;
         _defaultConfigPath = Path.Combine(exeFolder, "appsettings.json");
 
-        EnsureUserConfigExists();
-        _settings = LoadSettings();
+        lock (_settingsSync)
+        {
+            EnsureUserConfigExists();
+            _settings = LoadSettingsCore();
+        }
 
         _watcher = new FileSystemWatcher(_userFolder, "user_settings.json")
         {
@@ -52,10 +55,6 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
         _logger.LogInformation("Initialized SettingsService. Config path: {Path}", _userConfigPath);
     }
-
-    // ------------------------------------------------------------------------
-    // Initialization
-    // ------------------------------------------------------------------------
 
     private void EnsureUserConfigExists()
     {
@@ -89,18 +88,16 @@ public sealed class SettingsService : ISettingsService, IDisposable
         }
     }
 
-    // ------------------------------------------------------------------------
-    // Load / Save
-    // ------------------------------------------------------------------------
-
-    private AppSettings LoadSettings()
+    private AppSettings LoadSettingsCore()
     {
         try
         {
-            if (!File.Exists(_userConfigPath)) return new AppSettings();
+            if (!File.Exists(_userConfigPath))
+                return new AppSettings();
 
             var json = File.ReadAllText(_userConfigPath);
-            if (string.IsNullOrWhiteSpace(json)) return new AppSettings();
+            if (string.IsNullOrWhiteSpace(json))
+                return new AppSettings();
 
             JsonNode? root;
             try
@@ -115,31 +112,25 @@ public sealed class SettingsService : ISettingsService, IDisposable
             }
 
             var node = root?["AppSettings"];
-            if (node is null) return new AppSettings();
+            if (node is null)
+                return new AppSettings();
 
             var settings = node.Deserialize<AppSettings>() ?? new AppSettings();
 
-            // Decrypt sensitive fields
-            settings.ConnectionString      = SecretStorage.Unprotect(settings.ConnectionString);
-            settings.ApiBaseUrl            = string.IsNullOrWhiteSpace(settings.ApiBaseUrl) ? string.Empty : settings.ApiBaseUrl.TrimEnd('/');
-            settings.JwtKey                = SecretStorage.Unprotect(settings.JwtKey);
-            settings.DiscordClientId       = SecretStorage.Unprotect(settings.DiscordClientId);
-            settings.DiscordClientSecret   = SecretStorage.Unprotect(settings.DiscordClientSecret);
-            settings.UexCorpApiKey         = SecretStorage.Unprotect(settings.UexCorpApiKey);
-            settings.GameLogFilePath       = SecretStorage.Unprotect(settings.GameLogFilePath);
-            settings.DiscordAccessToken    = SecretStorage.Unprotect(settings.DiscordAccessToken);
-            settings.DiscordRefreshToken   = SecretStorage.Unprotect(settings.DiscordRefreshToken);
-            settings.JwtToken              = SecretStorage.Unprotect(settings.JwtToken);
-            settings.JwtRefreshToken       = SecretStorage.Unprotect(settings.JwtRefreshToken);
+            settings.ConnectionString = SecretStorage.Unprotect(settings.ConnectionString);
+            settings.ApiBaseUrl = string.IsNullOrWhiteSpace(settings.ApiBaseUrl) ? string.Empty : settings.ApiBaseUrl.TrimEnd('/');
+            settings.JwtKey = SecretStorage.Unprotect(settings.JwtKey);
+            settings.DiscordClientId = SecretStorage.Unprotect(settings.DiscordClientId);
+            settings.DiscordClientSecret = SecretStorage.Unprotect(settings.DiscordClientSecret);
+            settings.RegolithApiKey = SecretStorage.Unprotect(settings.RegolithApiKey);
+            settings.UexCorpApiKey = SecretStorage.Unprotect(settings.UexCorpApiKey);
+            settings.GameLogFilePath = SecretStorage.Unprotect(settings.GameLogFilePath);
+            settings.DiscordAccessToken = SecretStorage.Unprotect(settings.DiscordAccessToken);
+            settings.DiscordRefreshToken = SecretStorage.Unprotect(settings.DiscordRefreshToken);
+            settings.JwtToken = SecretStorage.Unprotect(settings.JwtToken);
+            settings.JwtRefreshToken = SecretStorage.Unprotect(settings.JwtRefreshToken);
 
-            // FIX 1: Correct fallback URL — the old GitHub path doesn't exist
-            if (string.IsNullOrWhiteSpace(settings.BlueprintDataSourceUrl) ||
-                settings.BlueprintDataSourceUrl.Contains("raw.githubusercontent.com"))
-            {
-                settings.BlueprintDataSourceUrl = DefaultBlueprintUrl;
-            }
-
-            return settings;
+            return NormalizeSettings(settings);
         }
         catch (Exception ex)
         {
@@ -150,66 +141,230 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
     public Task SaveSettings(AppSettings newSettings)
     {
+        lock (_settingsSync)
+        {
+            SaveSettingsCore(newSettings);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void OnUserConfigChanged(object? sender, FileSystemEventArgs e)
+    {
+        lock (_settingsSync)
+        {
+            if (_suspendWatcherReload)
+                return;
+
+            _logger.LogInformation("Detected user settings change: {Path}", e.FullPath);
+            _settings = LoadSettingsCore();
+        }
+    }
+
+    public AppSettings GetSettings()
+    {
+        lock (_settingsSync)
+        {
+            return CloneSettings(_settings);
+        }
+    }
+
+    public void UpdateSettings(Action<AppSettings> applyUpdates)
+    {
+        ArgumentNullException.ThrowIfNull(applyUpdates);
+
+        lock (_settingsSync)
+        {
+            var updatedSettings = CloneSettings(_settings);
+            applyUpdates(updatedSettings);
+            SaveSettingsCore(updatedSettings);
+        }
+    }
+
+    public Task UpdateSettingsAsync(Action<AppSettings> applyUpdates)
+    {
+        ArgumentNullException.ThrowIfNull(applyUpdates);
+        return Task.Run(() => UpdateSettings(applyUpdates));
+    }
+
+    public void EnsureBootstrapDefaults(IConfiguration configuration)
+    {
+        if (configuration is null)
+            return;
+
+        lock (_settingsSync)
+        {
+            var changed = false;
+            var updatedSettings = CloneSettings(_settings);
+
+            void Assign(ref string target, string? candidate)
+            {
+                if (string.IsNullOrWhiteSpace(target) && !string.IsNullOrWhiteSpace(candidate))
+                {
+                    target = candidate;
+                    changed = true;
+                }
+            }
+
+            var connectionString = updatedSettings.ConnectionString;
+            Assign(ref connectionString, configuration.GetConnectionString("DefaultConnection"));
+            updatedSettings.ConnectionString = connectionString;
+
+            var jwtSection = configuration.GetSection("Authentication:Jwt");
+            var jwtKey = updatedSettings.JwtKey;
+            Assign(ref jwtKey, jwtSection["Key"]);
+            updatedSettings.JwtKey = jwtKey;
+
+            if (!string.IsNullOrWhiteSpace(jwtSection["Issuer"]) && string.IsNullOrWhiteSpace(updatedSettings.JwtIssuer))
+            {
+                updatedSettings.JwtIssuer = jwtSection["Issuer"]!;
+                changed = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(jwtSection["Audience"]) && string.IsNullOrWhiteSpace(updatedSettings.JwtAudience))
+            {
+                updatedSettings.JwtAudience = jwtSection["Audience"]!;
+                changed = true;
+            }
+
+            if (updatedSettings.JwtExpiresInMinutes <= 0
+                && int.TryParse(jwtSection["ExpiresInMinutes"], out var minutes)
+                && minutes > 0)
+            {
+                updatedSettings.JwtExpiresInMinutes = minutes;
+                changed = true;
+            }
+
+            var discord = configuration.GetSection("Authentication:Discord");
+            var discordClientId = updatedSettings.DiscordClientId;
+            Assign(ref discordClientId, discord["ClientId"]);
+            updatedSettings.DiscordClientId = discordClientId;
+
+            var discordClientSecret = updatedSettings.DiscordClientSecret;
+            Assign(ref discordClientSecret, discord["ClientSecret"]);
+            updatedSettings.DiscordClientSecret = discordClientSecret;
+
+            if (string.IsNullOrWhiteSpace(updatedSettings.DiscordCallbackPath))
+            {
+                var discordCallbackPath = updatedSettings.DiscordCallbackPath;
+                Assign(ref discordCallbackPath, discord["CallbackPath"]);
+                updatedSettings.DiscordCallbackPath = discordCallbackPath;
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedSettings.DiscordCallbackPath))
+            {
+                updatedSettings.DiscordCallbackPath = "/signin-discord";
+                changed = true;
+            }
+
+            var discordRequiredGuildId = updatedSettings.DiscordRequiredGuildId;
+            Assign(ref discordRequiredGuildId, discord["RequiredGuildId"]);
+            updatedSettings.DiscordRequiredGuildId = discordRequiredGuildId;
+
+            var regolithBase = updatedSettings.RegolithBaseUrl;
+            Assign(ref regolithBase, configuration["Regolith:BaseUrl"]);
+            updatedSettings.RegolithBaseUrl = regolithBase;
+
+            var regolithKey = updatedSettings.RegolithApiKey;
+            Assign(ref regolithKey, configuration["Regolith:ApiKey"]);
+            updatedSettings.RegolithApiKey = regolithKey;
+
+            var uexBase = updatedSettings.UexBaseUrl;
+            Assign(ref uexBase, configuration["Uex:ApiBaseUrl"]);
+            updatedSettings.UexBaseUrl = uexBase;
+
+            var uexKey = updatedSettings.UexCorpApiKey;
+            Assign(ref uexKey, configuration["Uex:ApiKey"]);
+            updatedSettings.UexCorpApiKey = uexKey;
+
+            var apiBase = updatedSettings.ApiBaseUrl;
+            Assign(ref apiBase, configuration["Api:BaseUrl"]);
+            updatedSettings.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBase) ? string.Empty : apiBase.TrimEnd('/');
+
+            var blueprintUrl = updatedSettings.BlueprintDataSourceUrl;
+            Assign(ref blueprintUrl, configuration["Blueprints:DataSourceUrl"]);
+            updatedSettings.BlueprintDataSourceUrl = blueprintUrl;
+
+            updatedSettings = NormalizeSettings(updatedSettings);
+
+            if (!SettingsEqual(_settings, updatedSettings))
+                changed = true;
+
+            if (changed)
+            {
+                _logger.LogInformation("Bootstrapping user settings from configuration defaults.");
+                SaveSettingsCore(updatedSettings);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _watcher.Dispose();
+    }
+
+    private void SaveSettingsCore(AppSettings newSettings)
+    {
         try
         {
             _logger.LogInformation("Saving user settings to {Path}", _userConfigPath);
 
-            if (newSettings != null)
+            var normalizedSettings = NormalizeSettings(CloneSettings(newSettings));
+
+            var safeCopy = new AppSettings
             {
-                var safeCopy = new AppSettings
-                {
-                    PlayerName          = newSettings.PlayerName,
-                    Theme               = newSettings.Theme,
-                    FirstRunComplete    = newSettings.FirstRunComplete,
+                PlayerName = normalizedSettings.PlayerName,
+                Theme = normalizedSettings.Theme,
+                FirstRunComplete = normalizedSettings.FirstRunComplete,
+                BlueprintDataSourceUrl = normalizedSettings.BlueprintDataSourceUrl,
+                ConnectionString = SecretStorage.Protect(normalizedSettings.ConnectionString),
+                JwtKey = SecretStorage.Protect(normalizedSettings.JwtKey),
+                JwtIssuer = normalizedSettings.JwtIssuer,
+                JwtAudience = normalizedSettings.JwtAudience,
+                JwtExpiresInMinutes = normalizedSettings.JwtExpiresInMinutes,
+                DiscordClientId = SecretStorage.Protect(normalizedSettings.DiscordClientId),
+                DiscordClientSecret = SecretStorage.Protect(normalizedSettings.DiscordClientSecret),
+                DiscordCallbackPath = normalizedSettings.DiscordCallbackPath,
+                DiscordRequiredGuildId = normalizedSettings.DiscordRequiredGuildId,
+                RegolithApiKey = SecretStorage.Protect(normalizedSettings.RegolithApiKey),
+                RegolithBaseUrl = normalizedSettings.RegolithBaseUrl,
+                UexCorpApiKey = SecretStorage.Protect(normalizedSettings.UexCorpApiKey),
+                UexBaseUrl = normalizedSettings.UexBaseUrl,
+                ApiBaseUrl = normalizedSettings.ApiBaseUrl,
+                GameLogFilePath = SecretStorage.Protect(normalizedSettings.GameLogFilePath),
+                DiscordConnected = normalizedSettings.DiscordConnected,
+                DiscordAccessToken = SecretStorage.Protect(normalizedSettings.DiscordAccessToken),
+                DiscordRefreshToken = SecretStorage.Protect(normalizedSettings.DiscordRefreshToken),
+                JwtToken = SecretStorage.Protect(normalizedSettings.JwtToken),
+                JwtRefreshToken = SecretStorage.Protect(normalizedSettings.JwtRefreshToken)
+            };
 
-                    // FIX 2: BlueprintDataSourceUrl was missing from safeCopy — it got wiped on every save
-                    BlueprintDataSourceUrl = string.IsNullOrWhiteSpace(newSettings.BlueprintDataSourceUrl)
-                        ? DefaultBlueprintUrl
-                        : newSettings.BlueprintDataSourceUrl,
+            JsonObject root;
+            if (File.Exists(_userConfigPath))
+            {
+                var text = File.ReadAllText(_userConfigPath);
+                root = JsonNode.Parse(text)?.AsObject() ?? new JsonObject();
+            }
+            else
+            {
+                root = new JsonObject();
+            }
 
-                    ConnectionString    = SecretStorage.Protect(newSettings.ConnectionString),
+            root["AppSettings"] = JsonSerializer.SerializeToNode(
+                safeCopy,
+                new JsonSerializerOptions { WriteIndented = true });
 
-                    JwtKey              = SecretStorage.Protect(newSettings.JwtKey),
-                    JwtIssuer           = newSettings.JwtIssuer,
-                    JwtAudience         = newSettings.JwtAudience,
-                    JwtExpiresInMinutes = newSettings.JwtExpiresInMinutes,
-
-                    DiscordClientId       = SecretStorage.Protect(newSettings.DiscordClientId),
-                    DiscordClientSecret   = SecretStorage.Protect(newSettings.DiscordClientSecret),
-                    DiscordCallbackPath   = newSettings.DiscordCallbackPath,
-                    DiscordRequiredGuildId = newSettings.DiscordRequiredGuildId,
-                    DiscordConnected      = newSettings.DiscordConnected,
-                    DiscordAccessToken    = SecretStorage.Protect(newSettings.DiscordAccessToken),
-                    DiscordRefreshToken   = SecretStorage.Protect(newSettings.DiscordRefreshToken),
-                
-                    UexCorpApiKey   = SecretStorage.Protect(newSettings.UexCorpApiKey),
-                    UexBaseUrl      = newSettings.UexBaseUrl,
-                    ApiBaseUrl      = newSettings.ApiBaseUrl,
-                    GameLogFilePath = SecretStorage.Protect(newSettings.GameLogFilePath),
-
-                    JwtToken        = SecretStorage.Protect(newSettings.JwtToken),
-                    JwtRefreshToken = SecretStorage.Protect(newSettings.JwtRefreshToken)
-                };
-
-                JsonObject root;
-                if (File.Exists(_userConfigPath))
-                {
-                    var text = File.ReadAllText(_userConfigPath);
-                    root = JsonNode.Parse(text)?.AsObject() ?? new JsonObject();
-                }
-                else
-                {
-                    root = new JsonObject();
-                }
-
-                root["AppSettings"] = JsonSerializer.SerializeToNode(
-                    safeCopy,
-                    new JsonSerializerOptions { WriteIndented = true });
-
-                // Write atomically
-                var tempFile = _userConfigPath + ".tmp";
+            var tempFile = _userConfigPath + ".tmp";
+            _suspendWatcherReload = true;
+            try
+            {
                 File.WriteAllText(tempFile, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
                 File.Move(tempFile, _userConfigPath, overwrite: true);
+                _settings = normalizedSettings;
+            }
+            finally
+            {
+                _suspendWatcherReload = false;
             }
 
             _logger.LogInformation("User settings saved successfully");
@@ -219,166 +374,87 @@ public sealed class SettingsService : ISettingsService, IDisposable
             _logger.LogError(ex, "Error saving user settings");
             throw;
         }
-
-        return Task.CompletedTask;
     }
 
-    // ------------------------------------------------------------------------
-    // Updates and Events
-    // ------------------------------------------------------------------------
+    private static AppSettings CloneSettings(AppSettings source) =>
+        new()
+        {
+            PlayerName = source.PlayerName,
+            Theme = source.Theme,
+            FirstRunComplete = source.FirstRunComplete,
+            ConnectionString = source.ConnectionString,
+            BlueprintDataSourceUrl = source.BlueprintDataSourceUrl,
+            JwtKey = source.JwtKey,
+            JwtIssuer = source.JwtIssuer,
+            JwtAudience = source.JwtAudience,
+            JwtExpiresInMinutes = source.JwtExpiresInMinutes,
+            DiscordClientId = source.DiscordClientId,
+            DiscordClientSecret = source.DiscordClientSecret,
+            DiscordCallbackPath = source.DiscordCallbackPath,
+            DiscordRequiredGuildId = source.DiscordRequiredGuildId,
+            RegolithApiKey = source.RegolithApiKey,
+            RegolithBaseUrl = source.RegolithBaseUrl,
+            UexCorpApiKey = source.UexCorpApiKey,
+            UexBaseUrl = source.UexBaseUrl,
+            ApiBaseUrl = source.ApiBaseUrl,
+            GameLogFilePath = source.GameLogFilePath,
+            DiscordConnected = source.DiscordConnected,
+            DiscordAccessToken = source.DiscordAccessToken,
+            DiscordRefreshToken = source.DiscordRefreshToken,
+            JwtToken = source.JwtToken,
+            JwtRefreshToken = source.JwtRefreshToken
+        };
 
-    private void OnUserConfigChanged(object? sender, FileSystemEventArgs e)
+    private static AppSettings NormalizeSettings(AppSettings settings)
     {
-        _logger.LogInformation("Detected user settings change: {Path}", e.FullPath);
-        _settings = LoadSettings();
+        settings.ApiBaseUrl = string.IsNullOrWhiteSpace(settings.ApiBaseUrl)
+            ? string.Empty
+            : settings.ApiBaseUrl.TrimEnd('/');
+
+        if (string.IsNullOrWhiteSpace(settings.BlueprintDataSourceUrl)
+            || settings.BlueprintDataSourceUrl.Contains("raw.githubusercontent.com"))
+        {
+            settings.BlueprintDataSourceUrl = DefaultBlueprintUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(settings.DiscordCallbackPath))
+            settings.DiscordCallbackPath = "/signin-discord";
+
+        if (string.IsNullOrWhiteSpace(settings.JwtIssuer))
+            settings.JwtIssuer = "PackTracker";
+
+        if (string.IsNullOrWhiteSpace(settings.JwtAudience))
+            settings.JwtAudience = "PackTrackerClients";
+
+        if (settings.JwtExpiresInMinutes <= 0)
+            settings.JwtExpiresInMinutes = 60;
+
+        return settings;
     }
 
-    public AppSettings GetSettings() => _settings;
-
-    public void UpdateSettings(Action<AppSettings> applyUpdates)
-    {
-        applyUpdates(_settings);
-        SaveSettings(_settings);
-    }
-
-    public async Task UpdateSettingsAsync(Action<AppSettings> applyUpdates)
-    {
-        applyUpdates(_settings);
-        await Task.Run(() => SaveSettings(_settings));
-    }
-
-    public void EnsureBootstrapDefaults(IConfiguration configuration)
-    {
-        if (configuration is null)
-            return;
-
-        var changed = false;
-
-        void Assign(ref string target, string? candidate)
-        {
-            if (string.IsNullOrWhiteSpace(target) && !string.IsNullOrWhiteSpace(candidate))
-            {
-                target = candidate;
-                changed = true;
-            }
-        }
-
-        var conn = configuration.GetConnectionString("DefaultConnection");
-        var connectionString = _settings.ConnectionString;
-        Assign(ref connectionString, conn ?? string.Empty);
-        _settings.ConnectionString = connectionString;
-
-        var jwtSection = configuration.GetSection("Authentication:Jwt");
-        var jwtKey = _settings.JwtKey;
-        Assign(ref jwtKey, jwtSection["Key"]);
-        _settings.JwtKey = jwtKey;
-
-        if (!string.IsNullOrWhiteSpace(jwtSection["Issuer"])
-            && string.IsNullOrWhiteSpace(_settings.JwtIssuer))
-        {
-            _settings.JwtIssuer = jwtSection["Issuer"]!;
-            changed = true;
-        }
-
-        if (!string.IsNullOrWhiteSpace(jwtSection["Audience"])
-            && string.IsNullOrWhiteSpace(_settings.JwtAudience))
-        {
-            _settings.JwtAudience = jwtSection["Audience"]!;
-            changed = true;
-        }
-
-        if (_settings.JwtExpiresInMinutes <= 0
-            && int.TryParse(jwtSection["ExpiresInMinutes"], out var minutes)
-            && minutes > 0)
-        {
-            _settings.JwtExpiresInMinutes = minutes;
-            changed = true;
-        }
-
-        var discord = configuration.GetSection("Authentication:Discord");
-        var discordClientId = _settings.DiscordClientId;
-        Assign(ref discordClientId, discord["ClientId"]);
-        _settings.DiscordClientId = discordClientId;
-
-        var discordClientSecret = _settings.DiscordClientSecret;
-        Assign(ref discordClientSecret, discord["ClientSecret"]);
-        _settings.DiscordClientSecret = discordClientSecret;
-
-        if (string.IsNullOrWhiteSpace(_settings.DiscordCallbackPath))
-        {
-            var discordCallbackPath = _settings.DiscordCallbackPath;
-            Assign(ref discordCallbackPath, discord["CallbackPath"]);
-            _settings.DiscordCallbackPath = discordCallbackPath;
-        }
-
-        if (string.IsNullOrWhiteSpace(_settings.DiscordCallbackPath))
-        {
-            _settings.DiscordCallbackPath = "/signin-discord";
-            changed = true;
-        }
-
-        var discordRequiredGuildId = _settings.DiscordRequiredGuildId;
-        Assign(ref discordRequiredGuildId, discord["RequiredGuildId"]);
-        _settings.DiscordRequiredGuildId = discordRequiredGuildId;
-
-        var regolithBase = _settings.RegolithBaseUrl;
-        Assign(ref regolithBase, configuration["Regolith:BaseUrl"]);
-        _settings.RegolithBaseUrl = regolithBase;
-
-        var regolithKey = _settings.RegolithApiKey;
-        Assign(ref regolithKey, configuration["Regolith:ApiKey"]);
-        _settings.RegolithApiKey = regolithKey;
-
-        var uexBase = _settings.UexBaseUrl;
-        Assign(ref uexBase, configuration["Uex:ApiBaseUrl"]);
-        _settings.UexBaseUrl = uexBase;
-
-        var uexKey = _settings.UexCorpApiKey;
-        Assign(ref uexKey, configuration["Uex:ApiKey"]);
-        _settings.UexCorpApiKey = uexKey;
-
-        var apiBase = _settings.ApiBaseUrl;
-        Assign(ref apiBase, configuration["Api:BaseUrl"]);
-        _settings.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBase) ? string.Empty : apiBase.TrimEnd('/');
-
-        // Blueprint URL — bootstrap from config if present, otherwise use SC Wiki default
-        var blueprintUrl = _settings.BlueprintDataSourceUrl;
-        Assign(ref blueprintUrl, configuration["Blueprints:DataSourceUrl"]);
-        if (string.IsNullOrWhiteSpace(blueprintUrl) ||
-            blueprintUrl.Contains("raw.githubusercontent.com"))
-        {
-            blueprintUrl = DefaultBlueprintUrl;
-            changed = true;
-        }
-        _settings.BlueprintDataSourceUrl = blueprintUrl;
-
-        if (string.IsNullOrWhiteSpace(_settings.JwtIssuer))
-        {
-            _settings.JwtIssuer = "PackTracker";
-            changed = true;
-        }
-
-        if (string.IsNullOrWhiteSpace(_settings.JwtAudience))
-        {
-            _settings.JwtAudience = "PackTrackerClients";
-            changed = true;
-        }
-
-        if (_settings.JwtExpiresInMinutes <= 0)
-        {
-            _settings.JwtExpiresInMinutes = 60;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            _logger.LogInformation("Bootstrapping user settings from configuration defaults.");
-            SaveSettings(_settings);
-        }
-    }
-
-    public void Dispose()
-    {
-        _watcher.Dispose();
-    }
+    private static bool SettingsEqual(AppSettings left, AppSettings right) =>
+        left.PlayerName == right.PlayerName
+        && left.Theme == right.Theme
+        && left.FirstRunComplete == right.FirstRunComplete
+        && left.ConnectionString == right.ConnectionString
+        && left.BlueprintDataSourceUrl == right.BlueprintDataSourceUrl
+        && left.JwtKey == right.JwtKey
+        && left.JwtIssuer == right.JwtIssuer
+        && left.JwtAudience == right.JwtAudience
+        && left.JwtExpiresInMinutes == right.JwtExpiresInMinutes
+        && left.DiscordClientId == right.DiscordClientId
+        && left.DiscordClientSecret == right.DiscordClientSecret
+        && left.DiscordCallbackPath == right.DiscordCallbackPath
+        && left.DiscordRequiredGuildId == right.DiscordRequiredGuildId
+        && left.RegolithApiKey == right.RegolithApiKey
+        && left.RegolithBaseUrl == right.RegolithBaseUrl
+        && left.UexCorpApiKey == right.UexCorpApiKey
+        && left.UexBaseUrl == right.UexBaseUrl
+        && left.ApiBaseUrl == right.ApiBaseUrl
+        && left.GameLogFilePath == right.GameLogFilePath
+        && left.DiscordConnected == right.DiscordConnected
+        && left.DiscordAccessToken == right.DiscordAccessToken
+        && left.DiscordRefreshToken == right.DiscordRefreshToken
+        && left.JwtToken == right.JwtToken
+        && left.JwtRefreshToken == right.JwtRefreshToken;
 }

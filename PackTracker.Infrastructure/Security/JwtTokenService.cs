@@ -11,6 +11,7 @@ using PackTracker.Infrastructure.Persistence;
 
 using Microsoft.Extensions.Options;
 using PackTracker.Application.Options;
+using PackTracker.Domain.Security;
 
 namespace PackTracker.Infrastructure.Security;
 
@@ -53,7 +54,7 @@ public class JwtTokenService
         {
             new(ClaimTypes.NameIdentifier, user.DiscordId),
             new(ClaimTypes.Name, user.Username),
-            new(ClaimTypes.Role, "HouseWolfMember"),
+            new(ClaimTypes.Role, SecurityConstants.Roles.HouseWolfMember),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
