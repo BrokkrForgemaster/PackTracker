@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\PackTracker.Domain\PackTracker.Domain.csproj" />
     <ProjectReference Include="..\..\PackTracker.Application\PackTracker.Application.csproj" />
     <ProjectReference Include="..\..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\PackTracker.Presentation\PackTracker.Presentation.csproj" />
   </ItemGroup>
 
 </Project>

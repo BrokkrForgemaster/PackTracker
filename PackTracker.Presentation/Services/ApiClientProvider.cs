@@ -13,9 +13,13 @@ public interface IApiClientProvider
 public class ApiClientProvider : IApiClientProvider
 {
     private readonly ISettingsService _settingsService;
+    private readonly AuthTokenService _authTokenService;
 
-    public ApiClientProvider(ISettingsService settingsService) =>
+    public ApiClientProvider(ISettingsService settingsService, AuthTokenService authTokenService)
+    {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _authTokenService = authTokenService ?? throw new ArgumentNullException(nameof(authTokenService));
+    }
 
     public string BaseUrl
     {
@@ -35,7 +39,7 @@ public class ApiClientProvider : IApiClientProvider
             BaseAddress = new Uri($"{BaseUrl}/")
         };
 
-        var token = _settingsService.GetSettings().JwtToken;
+        var token = _authTokenService.GetAccessTokenAsync().GetAwaiter().GetResult();
         if (!string.IsNullOrWhiteSpace(token))
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

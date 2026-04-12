@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Serilog.Extensions.Logging;
 using PackTracker.Infrastructure;
 using PackTracker.Api.Middleware;
+using PackTracker.Api.Authentication;
 using PackTracker.Domain.Entities;
 using PackTracker.Api.Hubs;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -99,16 +100,25 @@ builder.Services.AddSignalR();
 
 builder.Services.AddAuthentication(options =>
     {
-        options.DefaultScheme = "Cookies";
-        options.DefaultChallengeScheme = "Discord";
+        options.DefaultScheme = ApiAuthenticationDefaults.SmartScheme;
+        options.DefaultAuthenticateScheme = ApiAuthenticationDefaults.SmartScheme;
+        options.DefaultChallengeScheme = ApiAuthenticationDefaults.DiscordScheme;
     })
-    .AddCookie("Cookies", options =>
+    .AddPolicyScheme(
+        ApiAuthenticationDefaults.SmartScheme,
+        "JWT or Cookie",
+        options =>
+        {
+            options.ForwardDefaultSelector = context =>
+                ApiAuthenticationDefaults.SelectScheme(context);
+        })
+    .AddCookie(ApiAuthenticationDefaults.CookieScheme, options =>
     {
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Cookie.HttpOnly = true;
     })
-    .AddDiscord("Discord", options =>
+    .AddDiscord(ApiAuthenticationDefaults.DiscordScheme, options =>
     {
         var authOptions = builder.Configuration.GetSection("Authentication")
             .Get<PackTracker.Application.Options.AuthOptions>() ?? new();
@@ -197,6 +207,18 @@ builder.Services.AddAuthentication(options =>
             ValidAudience = authOptions.Jwt.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(authOptions.Jwt.Key))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = ApiAuthenticationDefaults.GetSignalRAccessToken(context.Request);
+                if (!string.IsNullOrWhiteSpace(token))
+                    context.Token = token;
+
+                return Task.CompletedTask;
+            }
         };
     });
 

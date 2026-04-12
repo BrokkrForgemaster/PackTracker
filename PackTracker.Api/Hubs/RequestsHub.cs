@@ -297,6 +297,57 @@ public class RequestsHub : Hub
         });
     }
 
+    public async Task SendDirectMessage(string targetUsername, string content)
+    {
+        if (string.IsNullOrWhiteSpace(targetUsername))
+            throw new HubException("Target username is required.");
+
+        if (string.IsNullOrWhiteSpace(content))
+            throw new HubException("Message content cannot be empty.");
+
+        var senderDiscordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var senderUsername = Context.User?.Identity?.Name ?? "Unknown";
+
+        var senderProfile = await _profiles.GetByDiscordIdAsync(senderDiscordId, CancellationToken.None);
+        var targetProfile = await _profiles.GetByNameAsync(targetUsername.Trim(), CancellationToken.None);
+
+        if (targetProfile == null)
+            throw new HubException($"User '{targetUsername}' was not found.");
+
+        var senderDisplayName = senderProfile?.DiscordDisplayName ?? senderUsername;
+        var senderAvatarUrl = senderProfile?.DiscordAvatarUrl;
+        var targetDisplayName = targetProfile.DiscordDisplayName ?? targetProfile.Username;
+        var timestamp = DateTime.UtcNow;
+        var messageId = Guid.NewGuid().ToString();
+        var trimmedContent = content.Trim();
+
+        await Clients.User(targetProfile.DiscordId).SendAsync("ReceiveDirectMessage", new
+        {
+            Id = messageId,
+            Channel = BuildDirectChannelName(senderUsername),
+            Sender = senderUsername,
+            SenderDisplayName = senderDisplayName,
+            Content = trimmedContent,
+            SentAt = timestamp,
+            AvatarUrl = senderAvatarUrl,
+            CounterpartUsername = senderUsername,
+            CounterpartDisplayName = senderDisplayName
+        });
+
+        await Clients.Caller.SendAsync("ReceiveDirectMessage", new
+        {
+            Id = messageId,
+            Channel = BuildDirectChannelName(targetProfile.Username),
+            Sender = senderUsername,
+            SenderDisplayName = senderDisplayName,
+            Content = trimmedContent,
+            SentAt = timestamp,
+            AvatarUrl = senderAvatarUrl,
+            CounterpartUsername = targetProfile.Username,
+            CounterpartDisplayName = targetDisplayName
+        });
+    }
+
     #endregion
 
     #region Lobby Rooms
@@ -395,6 +446,9 @@ public class RequestsHub : Hub
     /// </summary>
     private static string NormalizeLobbyName(string lobbyName) =>
         $"lobby:{lobbyName.Trim().ToLowerInvariant()}";
+
+    private static string BuildDirectChannelName(string username) =>
+        $"direct:{username.Trim().ToLowerInvariant()}";
 
     #endregion
 

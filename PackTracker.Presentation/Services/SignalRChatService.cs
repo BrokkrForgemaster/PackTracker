@@ -17,6 +17,7 @@ public class SignalRChatService : IAsyncDisposable
 {
     private HubConnection? _connection;
     private readonly ISettingsService _settingsService;
+    private readonly AuthTokenService _authTokenService;
     private readonly ILogger<SignalRChatService> _logger;
 
     // Events the ViewModel subscribes to
@@ -33,9 +34,13 @@ public class SignalRChatService : IAsyncDisposable
 
     public bool IsConnected => _connection?.State == HubConnectionState.Connected;
 
-    public SignalRChatService(ISettingsService settingsService, ILogger<SignalRChatService> logger)
+    public SignalRChatService(
+        ISettingsService settingsService,
+        AuthTokenService authTokenService,
+        ILogger<SignalRChatService> logger)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _authTokenService = authTokenService ?? throw new ArgumentNullException(nameof(authTokenService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -54,12 +59,11 @@ public class SignalRChatService : IAsyncDisposable
 
         var baseUrl = settings.ApiBaseUrl.TrimEnd('/');
         var hubUrl = $"{baseUrl}/hubs/requests";
-        var token = settings.JwtToken;
 
         _connection = new HubConnectionBuilder()
             .WithUrl(hubUrl, options =>
             {
-                options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                options.AccessTokenProvider = () => _authTokenService.GetAccessTokenAsync();
             })
             .WithAutomaticReconnect()
             .Build();
@@ -76,6 +80,25 @@ public class SignalRChatService : IAsyncDisposable
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to parse ReceiveLobbyMessage payload.");
+            }
+        });
+
+        _connection.On<JsonElement>("ReceiveDirectMessage", json =>
+        {
+            try
+            {
+                var counterpart = GetString(json, "counterpartUsername", "CounterpartUsername");
+                var fallbackChannel = !string.IsNullOrWhiteSpace(counterpart)
+                    ? $"direct:{counterpart.Trim().ToLowerInvariant()}"
+                    : GetString(json, "channel", "Channel");
+
+                var msg = ParseChatMessage(json, fallbackChannel);
+                if (msg != null)
+                    MessageReceived?.Invoke(msg);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse ReceiveDirectMessage payload.");
             }
         });
 
@@ -248,6 +271,21 @@ public class SignalRChatService : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to send message to channel '{Channel}'.", channel);
+        }
+    }
+
+    public async Task SendDirectMessageAsync(string username, string content)
+    {
+        if (!IsConnected || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(content))
+            return;
+
+        try
+        {
+            await _connection!.InvokeAsync("SendDirectMessage", username, content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send direct message to '{Username}'.", username);
         }
     }
 

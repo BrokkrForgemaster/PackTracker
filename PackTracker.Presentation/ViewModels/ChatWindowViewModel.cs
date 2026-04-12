@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using System.Windows.Media;
 using PackTracker.Presentation.Commands;
@@ -9,6 +10,10 @@ namespace PackTracker.Presentation.ViewModels;
 
 public class ChatWindowViewModel : ViewModelBase
 {
+    private static readonly Regex DirectMentionPattern = new(
+        @"^\s*@(?<username>[A-Za-z0-9_.-]+)\s+.+$",
+        RegexOptions.Compiled);
+
     private readonly Action<ChatWindowViewModel> _closeAction;
     private readonly Action<ChatWindowViewModel> _bringToFrontAction;
     private readonly Action<ChatWindowViewModel> _expandedAction;
@@ -45,7 +50,10 @@ public class ChatWindowViewModel : ViewModelBase
 
     public string ChannelKey { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
+    public string? TargetUsername { get; set; }
+    public string? TargetDisplayName { get; set; }
     public Brush AccentBrush { get; set; } = Brushes.Gray;
+    public bool IsDirectMessage => !string.IsNullOrWhiteSpace(TargetUsername);
 
     public ObservableCollection<ChatMessageViewModel> Messages { get; }
 
@@ -166,17 +174,23 @@ public class ChatWindowViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        Messages.Add(new ChatMessageViewModel
+        if (!IsDirectMessage && !LooksLikeDirectMention(text))
         {
-            SenderDisplayName = "You",
-            Content = text,
-            SentAt = DateTime.Now
-        });
+            Messages.Add(new ChatMessageViewModel
+            {
+                SenderDisplayName = "You",
+                Content = text,
+                SentAt = DateTime.Now
+            });
+        }
 
         DraftMessage = string.Empty;
         MessageSent?.Invoke(ChannelKey, text);
         _bringToFrontAction(this);
     }
+
+    private static bool LooksLikeDirectMention(string text) =>
+        DirectMentionPattern.IsMatch(text);
 
     private void ExpandWindow()
     {

@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PackTracker.Api.Controllers;
+using PackTracker.Api.Authentication;
 using PackTracker.Api.Hubs;
 using PackTracker.Api.Middleware;
 using PackTracker.Application.Interfaces;
@@ -168,30 +169,20 @@ public class ApiHostedService : IHostedService
                         services.AddAuthentication(o =>
                             {
                                 // Smart scheme: picks JWT for API/SignalR, Cookies for browser flows
-                                o.DefaultScheme = "Smart";
-                                o.DefaultChallengeScheme = "Discord";
+                                o.DefaultScheme = ApiAuthenticationDefaults.SmartScheme;
+                                o.DefaultAuthenticateScheme = ApiAuthenticationDefaults.SmartScheme;
+                                o.DefaultChallengeScheme = ApiAuthenticationDefaults.DiscordScheme;
                             })
-                            .AddPolicyScheme("Smart", "JWT or Cookie", o =>
+                            .AddPolicyScheme(ApiAuthenticationDefaults.SmartScheme, "JWT or Cookie", o =>
                             {
-                                o.ForwardDefaultSelector = ctx =>
-                                {
-                                    var auth = ctx.Request.Headers["Authorization"].FirstOrDefault();
-                                    if (!string.IsNullOrEmpty(auth) && auth.StartsWith("Bearer "))
-                                        return JwtBearerDefaults.AuthenticationScheme;
-
-                                    if (ctx.Request.Query.ContainsKey("access_token") &&
-                                        ctx.Request.Path.StartsWithSegments("/hubs"))
-                                        return JwtBearerDefaults.AuthenticationScheme;
-
-                                    return "Cookies";
-                                };
+                                o.ForwardDefaultSelector = ctx => ApiAuthenticationDefaults.SelectScheme(ctx);
                             })
-                            .AddCookie("Cookies", o =>
+                            .AddCookie(ApiAuthenticationDefaults.CookieScheme, o =>
                             {
                                 o.Cookie.SameSite = SameSiteMode.Lax;
                                 o.Cookie.SecurePolicy = CookieSecurePolicy.None;
                             })
-                            .AddDiscord("Discord", o =>
+                            .AddDiscord(ApiAuthenticationDefaults.DiscordScheme, o =>
                             {
                                 o.ClientId = settings.DiscordClientId!;
                                 o.ClientSecret = settings.DiscordClientSecret!;
@@ -247,9 +238,8 @@ public class ApiHostedService : IHostedService
                                 {
                                     OnMessageReceived = ctx =>
                                     {
-                                        var token = ctx.Request.Query["access_token"].ToString();
-                                        if (!string.IsNullOrEmpty(token) &&
-                                            ctx.Request.Path.StartsWithSegments("/hubs"))
+                                        var token = ApiAuthenticationDefaults.GetSignalRAccessToken(ctx.Request);
+                                        if (!string.IsNullOrWhiteSpace(token))
                                         {
                                             ctx.Token = token;
                                         }

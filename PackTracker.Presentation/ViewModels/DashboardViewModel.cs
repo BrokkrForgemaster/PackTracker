@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -17,6 +18,9 @@ public class DashboardViewModel : ViewModelBase
 {
     private readonly IApiClientProvider _apiClientProvider;
     private readonly SignalRChatService _signalR;
+    private static readonly Regex DirectMentionPattern = new(
+        @"^\s*@(?<username>[A-Za-z0-9_.-]+)\s+(?<message>.+)$",
+        RegexOptions.Compiled);
     
     private int _nextZIndex = 1;
     private bool _isConnected = true;
@@ -39,6 +43,7 @@ public class DashboardViewModel : ViewModelBase
         ActiveRequests = new ObservableCollection<ActiveRequestDto>();
 
         OpenChatWindowCommand = new RelayCommand<AvailableChannelViewModel>(OpenChatWindow);
+        OpenDirectMessageCommand = new RelayCommand<OnlineUserViewModel>(OpenDirectMessage);
         CascadeChatWindowsCommand = new RelayCommand(CascadeWindows);
         CollapseAllChatWindowsCommand = new RelayCommand(CollapseAllWindows);
         ExpandAllChatWindowsCommand = new RelayCommand(ExpandAllWindows);
@@ -115,6 +120,12 @@ public class DashboardViewModel : ViewModelBase
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
             var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == msg.Channel);
+            if (window == null && msg.Channel.StartsWith("direct:", StringComparison.OrdinalIgnoreCase))
+            {
+                var username = msg.Channel["direct:".Length..];
+                window = EnsureDirectMessageWindow(username, msg.SenderDisplayName);
+            }
+
             window?.ReceiveMessage(msg.SenderDisplayName, msg.Content);
         });
     }
@@ -128,6 +139,7 @@ public class DashboardViewModel : ViewModelBase
             {
                 OnlineUsers.Add(new OnlineUserViewModel
                 {
+                    Username = u.Username,
                     DisplayName = u.DisplayName,
                     Role = u.Role,
                     RoleColorBrush = BrushFromHex("#B89C78")
@@ -194,6 +206,7 @@ public class DashboardViewModel : ViewModelBase
     public IEnumerable<PackTracker.Domain.Entities.GuideRequest> TopGuideRequests => Guide.Requests.Take(2);
 
     public ICommand OpenChatWindowCommand { get; }
+    public ICommand OpenDirectMessageCommand { get; }
     public ICommand CascadeChatWindowsCommand { get; }
     public ICommand CollapseAllChatWindowsCommand { get; }
     public ICommand ExpandAllChatWindowsCommand { get; }
@@ -238,10 +251,6 @@ public class DashboardViewModel : ViewModelBase
         if (general != null)
             OpenChatWindow(general);
 
-        var direct = AvailableChatChannels.FirstOrDefault(x => x.Key == "direct");
-        if (direct != null)
-            OpenChatWindow(direct);
-
         var division = AvailableChatChannels.FirstOrDefault(x =>
             x.Key is "locops" or "tacops" or "specops" or "arcops");
         if (division != null)
@@ -278,7 +287,10 @@ public class DashboardViewModel : ViewModelBase
         };
 
         window.Messages.CollectionChanged += (_, _) => SyncUnreadState(window, channel);
-        window.MessageSent += (channelKey, content) => _ = _signalR.SendMessageAsync(channelKey, content);
+        window.MessageSent += (_, content) =>
+        {
+            var sendTask = SendWindowMessageAsync(window, content);
+        };
 
         OpenChatWindows.Add(window);
         RefreshCollapsedAlerts();
@@ -378,6 +390,78 @@ public class DashboardViewModel : ViewModelBase
     }
 
     private int GetNextZIndex() => _nextZIndex++;
+
+    private async Task SendWindowMessageAsync(ChatWindowViewModel window, string content)
+    {
+        if (window.IsDirectMessage && !string.IsNullOrWhiteSpace(window.TargetUsername))
+        {
+            await _signalR.SendDirectMessageAsync(window.TargetUsername, content);
+            return;
+        }
+
+        var mention = DirectMentionPattern.Match(content);
+        if (mention.Success)
+        {
+            var username = mention.Groups["username"].Value;
+            var message = mention.Groups["message"].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(message))
+            {
+                EnsureDirectMessageWindow(username, username);
+                await _signalR.SendDirectMessageAsync(username, message);
+                return;
+            }
+        }
+
+        await _signalR.SendMessageAsync(window.ChannelKey, content);
+    }
+
+    private void OpenDirectMessage(OnlineUserViewModel? user)
+    {
+        if (user == null || string.IsNullOrWhiteSpace(user.Username))
+            return;
+
+        EnsureDirectMessageWindow(user.Username, user.DisplayName);
+    }
+
+    private ChatWindowViewModel EnsureDirectMessageWindow(string username, string? displayName)
+    {
+        var channelKey = BuildDirectChannelKey(username);
+        var existing = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == channelKey);
+        if (existing != null)
+        {
+            existing.IsCollapsed = false;
+            existing.UnreadCount = 0;
+            BringToFront(existing);
+            RefreshCollapsedAlerts();
+            return existing;
+        }
+
+        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowExpanded)
+        {
+            ChannelKey = channelKey,
+            Title = $"DM // {displayName ?? username}",
+            TargetUsername = username,
+            TargetDisplayName = displayName ?? username,
+            AccentBrush = BrushFromHex("#6A4F8B"),
+            Left = 30 + (OpenChatWindows.Count * 40),
+            Top = 25 + (OpenChatWindows.Count * 35),
+            Width = 380,
+            WindowHeight = 420,
+            ZIndex = GetNextZIndex()
+        };
+
+        window.MessageSent += (_, content) =>
+        {
+            var sendTask = SendWindowMessageAsync(window, content);
+        };
+        window.Messages.CollectionChanged += (_, _) => RefreshCollapsedAlerts();
+        OpenChatWindows.Add(window);
+        RefreshCollapsedAlerts();
+        return window;
+    }
+
+    private static string BuildDirectChannelKey(string username) =>
+        $"direct:{username.Trim().ToLowerInvariant()}";
 
     private static Brush BrushFromHex(string hex)
     {
