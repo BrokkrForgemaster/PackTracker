@@ -1,5 +1,5 @@
 ; ============================================================
-; PackTracker � Inno Setup Script
+; PackTracker - Inno Setup Script
 ; House Wolf Operations Shell for Star Citizen
 ;
 ; Build from repo root:
@@ -13,7 +13,7 @@
 ; ============================================================
 
 #ifndef AppVersion
-  #define AppVersion "0.1.5"
+  #define AppVersion "0.1.6"
 #endif
 
 #define AppName        "PackTracker"
@@ -91,19 +91,19 @@ Name: "desktopicon"; \
   GroupDescription: "Additional shortcuts:"
 
 [Files]
-; Primary publish output (from CI/CD or root publish folder)
+; Primary publish output
 Source: "..\publish\*"; \
   DestDir: "{app}"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; \
   Check: DirExists(ExpandConstant('{src}\..\publish'))
 
-; Failsafe for local dev builds (Rider/VS default output)
-Source: "..\PackTracker.Presentation\bin\Release\net9.0-windows\win-x64\publish\*"; \
+; Failsafe for local dev builds
+Source: "..\publish\*"; \
   DestDir: "{app}"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; \
   Check: not DirExists(ExpandConstant('{src}\..\publish'))
 
-; Explicitly ensure appsettings.json is included (prevents it being missed by wildcards)
+; Explicitly ensure appsettings.json is included
 Source: "..\PackTracker.Presentation\appsettings.json"; \
   DestDir: "{app}"; \
   Flags: ignoreversion
@@ -113,11 +113,7 @@ Source: "{#AppIconFile}"; \
   DestDir: "{app}"; \
   Flags: ignoreversion
 
-[Code]
-function DirExists(DirName: String): Boolean;
-begin
-  Result := DirectoryExists(DirName);
-end;
+[Icons]
 ; Start menu shortcut
 Name: "{group}\{#AppName}"; \
   Filename: "{app}\{#AppExeName}"; \
