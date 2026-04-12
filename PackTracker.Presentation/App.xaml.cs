@@ -224,4 +224,16 @@ public partial class App : System.Windows.Application
         Log.CloseAndFlush();
         base.OnExit(e);
     }
+
+    private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        Log.Fatal(e.Exception, "❌ Unhandled UI thread exception.");
+        MessageBox.Show(
+            $"A critical error occurred:\n\n{e.Exception.Message}\n\nCheck logs for details.",
+            "Runtime Error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+        e.Handled = true;
+        Shutdown(-1);
+    }
 }

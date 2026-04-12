@@ -49,14 +49,16 @@ public partial class WelcomeView : UserControl
 
     private async void SaveUexCorpApiKey_Click(object sender, RoutedEventArgs e)
     {
-        await _settings.UpdateSettingsAsync(cfg => cfg.UexCorpApiKey = UexcorpApiKeyBox.Text.Trim());
+        var apiKey = UexcorpApiKeyBox.Text.Trim();
+        await _settings.UpdateSettingsAsync(cfg => cfg.UexCorpApiKey = apiKey);
         CheckAllIntegrations();
         UpdateProceedButtonState();
     }
 
     private async void SaveLogLocation_Click(object sender, RoutedEventArgs e)
     {
-        await _settings.UpdateSettingsAsync(cfg => cfg.GameLogFilePath = LogLocationBox.Text.Trim());
+        var logPath = LogLocationBox.Text.Trim();
+        await _settings.UpdateSettingsAsync(cfg => cfg.GameLogFilePath = logPath);
         CheckAllIntegrations();
         UpdateProceedButtonState();
     }
@@ -85,10 +87,13 @@ public partial class WelcomeView : UserControl
 
     private async void ProceedBtn_Click(object sender, RoutedEventArgs e)
     {
+        var apiKey = UexcorpApiKeyBox.Text.Trim();
+        var logPath = LogLocationBox.Text.Trim();
+
         await _settings.UpdateSettingsAsync(cfg =>
         {
-            cfg.UexCorpApiKey = UexcorpApiKeyBox.Text.Trim();
-            cfg.GameLogFilePath = LogLocationBox.Text.Trim();
+            cfg.UexCorpApiKey = apiKey;
+            cfg.GameLogFilePath = logPath;
             cfg.FirstRunComplete = true;
         });
 
