@@ -13,8 +13,8 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="320" />
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0"
@@ -23,223 +23,302 @@
                 Style="{StaticResource SectionCardStyle}"
                 Background="{DynamicResource HeroGradientBrush}">
             <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Bottom" Margin="0,20,0,0">
-                    <Border Style="{StaticResource GlassPanelStyle}" Padding="8,6" Margin="0,0,0,14">
+                <StackPanel DockPanel.Dock="Bottom"
+                            Margin="0,20,0,0">
+                    <Border Style="{StaticResource GlassPanelStyle}"
+                            Padding="16"
+                            Margin="0,0,0,18"
+                            HorizontalAlignment="Center"
+                            Width="220">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock x:Name="TxtLocalTime"
                                        FontSize="13"
                                        HorizontalAlignment="Center"
                                        TextAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
                             <TextBlock x:Name="TxtTimeZone"
                                        FontSize="9"
                                        HorizontalAlignment="Center"
                                        TextAlignment="Center"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Opacity="0.6"
-                                       Margin="0,2,0,0" />
+                                       Margin="0,2,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
-                <StackPanel>
-                    <Border Style="{StaticResource GlassPanelStyle}" Padding="18" Margin="0,0,0,18">
-                        <StackPanel>
-                            <Image Source="{DynamicResource SidebarImage}"
-                                   Width="120"
-                                   Height="120"
-                                   HorizontalAlignment="Center"
-                                   Stretch="Uniform"
-                                   Margin="0,0,0,14" />
-                            <TextBlock Text="PackTracker"
-                                       FontSize="28"
-                                       FontWeight="Black"
-                                       Foreground="White"
-                                       HorizontalAlignment="Center" />
-                            <TextBlock Text="House Wolf Operations Center"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,6,0,0" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource GlassPanelStyle}" Padding="16" Margin="0,0,0,18">
-                        <StackPanel>
-                            <TextBlock Text="Navigation"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource AccentGoldBrush}"
-                                       Margin="0,0,0,12" />
-
-                            <Grid>
-                                <StackPanel x:Name="NavButtonPanel">
-                                    <Button Content="Dashboard"
-                                            Tag="Dashboard"
-                                            Style="{StaticResource SidebarButtonStyle}"
-                                            Click="Navigate_Click" />
-                                    <Button Content="Trading Hub"
-                                            Tag="TradingHub"
-                                            Style="{StaticResource SidebarButtonStyle}"
-                                            Click="Navigate_Click" />
-                                    <Button Content="Blueprints"
-                                            Tag="Blueprints"
-                                            Style="{StaticResource SidebarButtonStyle}"
-                                            Click="Navigate_Click" />
-                                    <Button Content="Crafting Center"
-                                            Tag="CraftingQueue"
-                                            Style="{StaticResource SidebarButtonStyle}"
-                                            Click="Navigate_Click" />
-                                    <Button Content="Procurement Center"
-                                            Tag="ProcurementQueue"
-                                            Style="{StaticResource SidebarButtonStyle}"
-                                            Click="Navigate_Click" />
-                                    <Button Content="Request Hub"
-                                            Tag="RequestHub"
-                                            Style="{StaticResource SidebarButtonStyle}"
-                                            Click="Navigate_Click" />
-                                    <Button Content="Settings"
-                                            Tag="Settings"
-                                            Style="{StaticResource SidebarButtonStyle}"
-                                            Click="Navigate_Click" />
-                                </StackPanel>
-                                <!-- Transparent overlay blocks all mouse input when user is not authenticated -->
-                                <Border x:Name="NavBlocker"
-                                        Background="Transparent"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="True" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <StackPanel Grid.Row="2"
-                                Margin="0,18,0,18"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Top">
-
-                        <Grid Width="90" Height="90" Margin="0,0,0,12">
-                            <Ellipse Width="90"
-                                     Height="90"
-                                     Stroke="#B15B34"
-                                     StrokeThickness="3" />
-
-                            <Image x:Name="SidebarAvatarImage"
-                                   Width="84"
-                                   Height="84"
-                                   Stretch="UniformToFill"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Source="{Binding CurrentUserAvatar}">
-                                <Image.Clip>
-                                    <EllipseGeometry Center="42,42" RadiusX="42" RadiusY="42" />
-                                </Image.Clip>
-                            </Image>
-                        </Grid>
-
-                        <TextBlock Text="Welcome Dragoon,"
-                                   FontSize="11"
-                                   Foreground="#D7A56B"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,2" />
-
-                        <TextBlock Text="{Binding DiscordDisplayName}"
-                                   FontSize="18"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center"
-                                   TextAlignment="Center"
-                                   Margin="0,0,0,4" />
-
-                        <Border Background="#223A4A5A"
-                                CornerRadius="10"
-                                Padding="10,4"
-                                HorizontalAlignment="Center"
-                                Margin="0,0,0,8">
-                            <TextBlock Text="{Binding DiscordRank}"
-                                       FontSize="11"
-                                       Foreground="#C9D6E3"
-                                       HorizontalAlignment="Center"
-                                       TextAlignment="Center" />
-                        </Border>
-                    </StackPanel>
-
-                    <Border Style="{StaticResource GlassPanelStyle}" Padding="16">
-                        <StackPanel>
-                            <TextBlock x:Name="PostureTitle"
-                                       Text="Operational posture"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource AccentGoldBrush}"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,0,0,12" />
-
-                            <!-- Normal state -->
-                            <StackPanel x:Name="NormalPostureContent">
-                                <TextBlock
-                                    Text="Use this to navigate between dashboard, logistics, requests, and system configuration."
-                                    FontSize="11"
-                                    TextWrapping="Wrap"
-                                    Foreground="{DynamicResource TextSecondaryBrush}" />
-                                <Button Content="Exit"
-                                        Style="{StaticResource SecondaryActionButtonStyle}"
-                                        Margin="0,16,0,0"
-                                        Click="Exit_Click" />
-                            </StackPanel>
-
-                            <!-- Update available state (hidden until an update is found) -->
-                            <StackPanel x:Name="UpdatePostureContent" Visibility="Collapsed">
-                                <TextBlock x:Name="UpdateVersionLabel"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           Margin="0,0,0,6"
-                                           TextWrapping="Wrap" />
-                                <Border Background="#0D1A0D"
-                                        BorderBrush="#1E4A1E"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="10,8"
-                                        Margin="0,0,0,12">
-                                    <ScrollViewer MaxHeight="100"
-                                                  VerticalScrollBarVisibility="Auto"
-                                                  HorizontalScrollBarVisibility="Disabled">
-                                        <TextBlock x:Name="UpdateNotesText"
-                                                   FontSize="11"
-                                                   Foreground="#A8C8A8"
-                                                   TextWrapping="Wrap" />
-                                    </ScrollViewer>
+                <Border Background="#1F1712"
+                        CornerRadius="8"
+                        Padding="0"
+                        Margin="0">
+                    <Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Background="Transparent"
+                                      Padding="0"
+                                      Margin="0">
+                            <ScrollViewer.Resources>
+                                <Style TargetType="ScrollBar"
+                                       BasedOn="{StaticResource ThinScrollBarStyle}"/>
+                            </ScrollViewer.Resources>
+                            <ScrollViewer.Style>
+                                <Style TargetType="ScrollViewer">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ScrollViewer">
+                                                <Grid Background="{TemplateBinding Background}">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                                            Grid.Row="0"
+                                                                            Margin="{TemplateBinding Padding}"
+                                                                            CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                                            Content="{TemplateBinding Content}"
+                                                                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                    <ScrollBar x:Name="PART_VerticalScrollBar"
+                                                               Grid.Row="0"
+                                                               Minimum="0"
+                                                               Maximum="{TemplateBinding ScrollableHeight}"
+                                                               Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                                               ViewportSize="{TemplateBinding ViewportHeight}"
+                                                               Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                                               Width="0"
+                                                               Opacity="0"
+                                                               HorizontalAlignment="Right"
+                                                               Panel.ZIndex="1"
+                                                               Style="{StaticResource ThinScrollBarStyle}"/>
+                                                    <ScrollBar x:Name="PART_HorizontalScrollBar"
+                                                               Grid.Row="1"
+                                                               Orientation="Horizontal"
+                                                               Minimum="0"
+                                                               Maximum="{TemplateBinding ScrollableWidth}"
+                                                               Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                                               ViewportSize="{TemplateBinding ViewportWidth}"
+                                                               Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                                                               Style="{StaticResource ThinScrollBarStyle}"/>
+                                                </Grid>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="PART_VerticalScrollBar" Property="Width" Value="1"/>
+                                                        <Setter TargetName="PART_VerticalScrollBar" Property="Opacity" Value="1"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ScrollViewer.Style>
+                            <StackPanel>
+                                <Border Style="{StaticResource GlassPanelStyle}"
+                                        Padding="18"
+                                        Margin="0,0,0,18">
+                                    <StackPanel>
+                                        <Image Source="{DynamicResource SidebarImage}"
+                                               Width="120"
+                                               Height="120"
+                                               HorizontalAlignment="Center"
+                                               Stretch="Uniform"
+                                               Margin="0,0,0,14"/>
+                                        <TextBlock Text="PackTracker"
+                                                   FontSize="28"
+                                                   FontWeight="Black"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock Text="House Wolf Operations Center"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,6,0,0"/>
+                                    </StackPanel>
                                 </Border>
-                                <Button x:Name="DownloadUpdateButton"
-                                        Content="DOWNLOAD UPDATE"
-                                        Style="{StaticResource SecondaryActionButtonStyle}"
-                                        Margin="0,0,0,8"
-                                        Click="DownloadUpdate_Click" />
-                                <ProgressBar x:Name="DownloadProgressBar"
-                                             Height="8"
-                                             Minimum="0"
-                                             Maximum="100"
-                                             Visibility="Collapsed"
-                                             Background="#30FFFFFF"
-                                             Foreground="{StaticResource AccentBrush}"
-                                             Margin="0,0,0,6" />
-                                <TextBlock x:Name="DownloadStatusText"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           Visibility="Collapsed"
-                                           TextWrapping="Wrap" />
+
+                                <Border Style="{StaticResource GlassPanelStyle}"
+                                        Padding="16"
+                                        Margin="0,0,0,18">
+                                    <StackPanel>
+                                        <TextBlock Text="Navigation"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource AccentGoldBrush}"
+                                                   Margin="0,0,0,12"/>
+
+                                        <Grid>
+                                            <StackPanel x:Name="NavButtonPanel">
+                                                <Button Content="Dashboard"
+                                                        Tag="Dashboard"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
+                                                <Button Content="Trading Hub"
+                                                        Tag="TradingHub"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
+                                                <Button Content="Blueprints"
+                                                        Tag="Blueprints"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
+                                                <Button Content="Crafting Center"
+                                                        Tag="CraftingQueue"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
+                                                <Button Content="Procurement Center"
+                                                        Tag="ProcurementQueue"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
+                                                <Button Content="Request Hub"
+                                                        Tag="RequestHub"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
+                                                <Button Content="Settings"
+                                                        Tag="Settings"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
+                                            </StackPanel>
+
+                                            <Border x:Name="NavBlocker"
+                                                    Background="Transparent"
+                                                    Visibility="Collapsed"
+                                                    IsHitTestVisible="True"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <StackPanel Margin="0,18,0,18"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top">
+
+                                    <Grid Width="90"
+                                          Height="90"
+                                          Margin="0,0,0,12">
+                                        <Ellipse Width="90"
+                                                 Height="90"
+                                                 Stroke="#B15B34"
+                                                 StrokeThickness="3"/>
+
+                                        <Image x:Name="SidebarAvatarImage"
+                                               Width="84"
+                                               Height="84"
+                                               Stretch="UniformToFill"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Source="{Binding CurrentUserAvatar}">
+                                            <Image.Clip>
+                                                <EllipseGeometry Center="42,42"
+                                                                 RadiusX="42"
+                                                                 RadiusY="42"/>
+                                            </Image.Clip>
+                                        </Image>
+                                    </Grid>
+
+                                    <TextBlock Text="Welcome Dragoon,"
+                                               FontSize="11"
+                                               Foreground="#D7A56B"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,2"/>
+
+                                    <TextBlock Text="{Binding DiscordDisplayName}"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               Margin="0,0,0,4"/>
+
+                                    <Border Background="#223A4A5A"
+                                            CornerRadius="10"
+                                            Padding="10,4"
+                                            HorizontalAlignment="Center"
+                                            Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding DiscordRank}"
+                                                   FontSize="11"
+                                                   Foreground="#C9D6E3"
+                                                   HorizontalAlignment="Center"
+                                                   TextAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <Border Style="{StaticResource GlassPanelStyle}"
+                                        Padding="16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="PostureTitle"
+                                                   Text="Operational posture"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentGoldBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,0,0,12"/>
+
+                                        <StackPanel x:Name="NormalPostureContent">
+                                            <TextBlock Text="Use this to navigate between dashboard, logistics, requests, and system configuration."
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <Button Content="Exit"
+                                                    Style="{StaticResource SecondaryActionButtonStyle}"
+                                                    Margin="0,16,0,0"
+                                                    Click="Exit_Click"/>
+                                        </StackPanel>
+
+                                        <StackPanel x:Name="UpdatePostureContent"
+                                                    Visibility="Collapsed">
+                                            <TextBlock x:Name="UpdateVersionLabel"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Margin="0,0,0,6"
+                                                       TextWrapping="Wrap"/>
+                                            <Border Background="#0D1A0D"
+                                                    BorderBrush="#1E4A1E"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="10,8"
+                                                    Margin="0,0,0,12">
+                                                <ScrollViewer MaxHeight="100"
+                                                              VerticalScrollBarVisibility="Auto"
+                                                              HorizontalScrollBarVisibility="Disabled">
+                                                    <TextBlock x:Name="UpdateNotesText"
+                                                               FontSize="11"
+                                                               Foreground="#A8C8A8"
+                                                               TextWrapping="Wrap"/>
+                                                </ScrollViewer>
+                                            </Border>
+                                            <Button x:Name="DownloadUpdateButton"
+                                                    Content="DOWNLOAD UPDATE"
+                                                    Style="{StaticResource SecondaryActionButtonStyle}"
+                                                    Margin="0,0,0,8"
+                                                    Click="DownloadUpdate_Click"/>
+                                            <ProgressBar x:Name="DownloadProgressBar"
+                                                         Height="8"
+                                                         Minimum="0"
+                                                         Maximum="100"
+                                                         Visibility="Collapsed"
+                                                         Background="#30FFFFFF"
+                                                         Foreground="{StaticResource AccentBrush}"
+                                                         Margin="0,0,0,6"/>
+                                            <TextBlock x:Name="DownloadStatusText"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Visibility="Collapsed"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
             </DockPanel>
         </Border>
 
-        <Grid Grid.Column="1" Margin="0,20,20,20">
+        <Grid Grid.Column="1"
+              Margin="0,20,20,20">
             <Image Source="/Assets/Pack_Tracker.png"
                    Opacity="0.30"
                    Stretch="UniformToFill"
                    IsHitTestVisible="False"
-                   Panel.ZIndex="0" />
+                   Panel.ZIndex="0"/>
 
             <Border Panel.ZIndex="1"
                     Style="{StaticResource SectionCardStyle}"
@@ -248,28 +327,31 @@
                 <Grid>
                     <Border Background="#14000000"
                             CornerRadius="18"
-                            Margin="0" />
+                            Margin="0"/>
                     <Frame x:Name="ContentFrame"
                            Margin="0"
                            Padding="0"
                            NavigationUIVisibility="Hidden"
-                           Background="Transparent" />
+                           Background="Transparent"/>
                 </Grid>
             </Border>
         </Grid>
 
-        <!-- Help Overlay -->
-        <Grid x:Name="HelpOverlay" Grid.ColumnSpan="2" Visibility="Collapsed" Panel.ZIndex="1000">
-            <Border Background="#CC000000" MouseLeftButtonDown="HelpOverlay_MouseDown" />
-            <Border x:Name="HelpPanel" 
-                    Width="800" 
-                    Margin="100,50" 
+        <Grid x:Name="HelpOverlay"
+              Grid.ColumnSpan="2"
+              Visibility="Collapsed"
+              Panel.ZIndex="1000">
+            <Border Background="#CC000000"
+                    MouseLeftButtonDown="HelpOverlay_MouseDown"/>
+            <Border x:Name="HelpPanel"
+                    Width="800"
+                    Margin="100,50"
                     HorizontalAlignment="Right"
                     Background="{DynamicResource MainBackground}"
                     BorderBrush="{DynamicResource GlassBorderBrush}"
                     BorderThickness="1,0,0,0"
                     CornerRadius="0">
-                <ContentControl x:Name="HelpContentControl" />
+                <ContentControl x:Name="HelpContentControl"/>
             </Border>
         </Grid>
     </Grid>

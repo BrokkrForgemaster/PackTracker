@@ -630,6 +630,8 @@ public class AppDbContext : DbContext
             entity.Property(x => x.Kind).HasConversion<int>();
             entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.Priority).HasConversion<int>();
+            entity.Property(x => x.IsPinned)
+                .HasDefaultValue(false);
 
             entity.Property(x => x.Title)
                 .HasMaxLength(120)

@@ -301,4 +301,55 @@ public class CraftingRequestsControllerTests
             stopwatch.Elapsed < TimeSpan.FromSeconds(3),
             $"Expected 125 crafting requests to load within 3 seconds, but took {stopwatch.Elapsed.TotalMilliseconds:N0} ms.");
     }
+
+    [Fact]
+    public async Task GetLiveChat_ReturnsOnlyPersistedLiveChatEntries()
+    {
+        var db = CreateDb();
+        var requester = await SeedProfileAsync(db, TestDiscordId, TestUsername, "Requester");
+
+        var blueprint = new Blueprint
+        {
+            BlueprintName = "Shield Blueprint",
+            CraftedItemName = "Shield",
+            Category = "Defense",
+            Slug = "shield-blueprint"
+        };
+
+        var request = new CraftingRequest
+        {
+            BlueprintId = blueprint.Id,
+            RequesterProfileId = requester.Id,
+            Status = RequestStatus.Open
+        };
+
+        db.AddRange(blueprint, request);
+        db.RequestComments.AddRange(
+            new RequestComment
+            {
+                RequestId = request.Id,
+                AuthorProfileId = requester.Id,
+                Content = "Regular note",
+                IsLiveChat = false,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-2)
+            },
+            new RequestComment
+            {
+                RequestId = request.Id,
+                AuthorProfileId = requester.Id,
+                Content = "Live ping",
+                IsLiveChat = true,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+            });
+        await db.SaveChangesAsync();
+
+        var controller = BuildController(db);
+
+        var result = await controller.GetLiveChat(request.Id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var chat = Assert.IsAssignableFrom<IReadOnlyList<RequestCommentDto>>(ok.Value);
+        var message = Assert.Single(chat);
+        Assert.Equal("Live ping", message.Content);
+    }
 }

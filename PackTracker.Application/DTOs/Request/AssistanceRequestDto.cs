@@ -38,6 +38,11 @@ public class AssistanceRequestDto
     public string Status { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets whether the request is pinned to the top of the queue.
+    /// </summary>
+    public bool IsPinned { get; set; }
+
+    /// <summary>
     /// Gets or sets the username of the member who created the request.
     /// </summary>
     public string CreatedByUsername { get; set; } = string.Empty;

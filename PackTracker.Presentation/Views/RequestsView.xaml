@@ -8,7 +8,7 @@
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <converters:RequestPriorityToColorConverter x:Key="RequestPriorityToColorConverter" />
         <converters:RequestKindToIconConverter x:Key="RequestKindToIconConverter" />
-        <converters:EnumToDisplayNameConverter x:Key="EnumToDisplayNameConverter" NullLabel="All Kinds" />
+        <converters:EnumToDisplayNameConverter x:Key="EnumToDisplayNameConverter" NullLabel="All" />
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -90,6 +90,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Kind, Converter={StaticResource RequestKindToIconConverter}}" FontSize="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1">
@@ -100,7 +101,15 @@
                                                 <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:g}'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11"/>
                                             </StackPanel>
                                         </StackPanel>
-                                        <Border Grid.Column="2" Background="{Binding Priority, Converter={StaticResource RequestPriorityToColorConverter}}" CornerRadius="4" Padding="6,2" VerticalAlignment="Top">
+                                        <TextBlock Grid.Column="2"
+                                                   Text="PINNED"
+                                                   Foreground="{StaticResource OpTextAccentBrush}"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   Margin="0,0,10,0"
+                                                   VerticalAlignment="Top"
+                                                   Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        <Border Grid.Column="3" Background="{Binding Priority, Converter={StaticResource RequestPriorityToColorConverter}}" CornerRadius="4" Padding="6,2" VerticalAlignment="Top">
                                             <TextBlock Text="{Binding Priority}" Foreground="White" FontSize="10" FontWeight="Bold"/>
                                         </Border>
                                     </Grid>
@@ -207,6 +216,12 @@
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#24374A" Foreground="#E8F0F8"
                                         BorderBrush="#4F6A84" BorderThickness="1"/>
+                                <Button Content="{Binding PinActionLabel}"
+                                        Command="{Binding TogglePinCommand}"
+                                        Visibility="{Binding CanPin, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
+                                        Background="#5A4A14" Foreground="#F8E9D4"
+                                        BorderBrush="#A38A2F" BorderThickness="1"/>
                                 <Button Content="DELETE REQUEST"
                                         Command="{Binding DeleteCommand}"
                                         Padding="12,8" FontWeight="Bold"

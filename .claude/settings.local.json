@@ -35,7 +35,8 @@
       "Bash(dotnet restore:*)",
       "Bash(dotnet test:*)",
       "Bash(dotnet publish:*)",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

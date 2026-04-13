@@ -30,6 +30,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
     private readonly ILogger<CraftingRequestsViewModel> _logger;
     
     private string? _currentRequestRoomId;
+    private string _currentUsername = string.Empty;
     private CancellationTokenSource? _switchRoomCts;
 
     public ObservableCollection<CraftingRequestListItemDto> Requests { get; } = new();
@@ -42,6 +43,8 @@ public partial class CraftingRequestsViewModel : ObservableObject
     [ObservableProperty] private string statusMessage = "Ready";
     [ObservableProperty] private string newCommentText = string.Empty;
     [ObservableProperty] private string liveChatInput = string.Empty;
+    [ObservableProperty] private string liveChatStatusText = "Select a request to open the live channel.";
+    [ObservableProperty] private bool isLiveChatCounterpartOnline;
 
     // Logic updated to use Status Constants
     public bool CanAssign => SelectedRequest?.Status == RequestStatus.Open;
@@ -58,7 +61,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
         _signalR = signalR;
         _logger = logger;
         
-        _ = RefreshAsync();
+        _ = LoadCurrentUserAsync();
         _ = ConnectSignalRAsync();
     }
 
@@ -70,6 +73,8 @@ public partial class CraftingRequestsViewModel : ObservableObject
             _signalR.RequestMessageReceived += OnRequestMessageReceived;
             _signalR.CraftingRequestCreated += id => _ = RefreshAsync();
             _signalR.CraftingRequestUpdated += id => _ = RefreshAsync();
+            _signalR.PresenceUpdated += _ =>
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(RefreshPresenceState);
         }
         catch (Exception ex)
         {
@@ -80,6 +85,9 @@ public partial class CraftingRequestsViewModel : ObservableObject
 
     private void OnRequestMessageReceived(ChatMessageDto msg)
     {
+        if (!string.Equals(msg.Channel, _currentRequestRoomId, StringComparison.OrdinalIgnoreCase))
+            return;
+
         // Use BeginInvoke to prevent UI thread blocking during high-frequency messaging
         System.Windows.Application.Current.Dispatcher.BeginInvoke(() => LiveChat.Add(msg));
     }
@@ -113,11 +121,14 @@ public partial class CraftingRequestsViewModel : ObservableObject
         {
             _ = LoadCommentsAsync(value.Id);
             _ = SwitchRequestRoomAsync(value.Id.ToString(), _switchRoomCts.Token);
+            RefreshPresenceState();
         }
         else
         {
             Comments.Clear();
             _ = SwitchRequestRoomAsync(null, _switchRoomCts.Token);
+            LiveChatStatusText = "Select a request to open the live channel.";
+            IsLiveChatCounterpartOnline = false;
         }
     }
 
@@ -134,7 +145,13 @@ public partial class CraftingRequestsViewModel : ObservableObject
             _currentRequestRoomId = newRequestId;
 
             if (newRequestId != null)
+            {
+                await LoadLiveChatAsync(Guid.Parse(newRequestId), ct);
                 await _signalR.JoinRequestRoomAsync(newRequestId);
+            }
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception ex)
         {
@@ -144,6 +161,44 @@ public partial class CraftingRequestsViewModel : ObservableObject
                 ("PreviousRoomId", _currentRequestRoomId),
                 ("NewRoomId", newRequestId));
             StatusMessage = $"Room switch error: {ex.Message}";
+        }
+    }
+
+    private async Task LoadLiveChatAsync(Guid requestId, CancellationToken ct)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.GetAsync($"api/v1/crafting/requests/{requestId}/live-chat", ct);
+            if (!response.IsSuccessStatusCode || ct.IsCancellationRequested)
+                return;
+
+            var items = await response.Content.ReadFromJsonAsync<List<RequestCommentDto>>(ct)
+                        ?? new List<RequestCommentDto>();
+
+            if (ct.IsCancellationRequested)
+                return;
+
+            LiveChat.Clear();
+            foreach (var item in items)
+            {
+                LiveChat.Add(new ChatMessageDto(
+                    item.Id.ToString(),
+                    requestId.ToString(),
+                    item.AuthorUsername,
+                    item.AuthorUsername,
+                    item.Content,
+                    item.CreatedAt,
+                    null));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogViewModelError(ex, "LoadCraftingLiveChat", ("RequestId", requestId));
+            StatusMessage = $"Live chat load failed: {ex.Message}";
         }
     }
 
@@ -204,6 +259,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
                 Requests.Add(item);
 
             StatusMessage = Requests.Count == 0 ? "No requests found." : $"Loaded {Requests.Count} requests.";
+            RefreshPresenceState();
         }
         catch (Exception ex)
         {
@@ -213,6 +269,39 @@ public partial class CraftingRequestsViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    public Task RefreshDataAsync() => RefreshAsync();
+
+    private async Task LoadCurrentUserAsync()
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+
+            using var profileResponse = await client.GetAsync("api/v1/profiles/me");
+            if (profileResponse.IsSuccessStatusCode)
+            {
+                var profile = await profileResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+                _currentUsername = profile?.Username ?? string.Empty;
+            }
+
+            using var onlineResponse = await client.GetAsync("api/v1/profiles/online");
+            if (onlineResponse.IsSuccessStatusCode)
+            {
+                var onlineUsers = await onlineResponse.Content.ReadFromJsonAsync<List<OnlineProfileDto>>()
+                                  ?? new List<OnlineProfileDto>();
+                _signalR.UpdateOnlineUsersSnapshot(onlineUsers.Select(x => x.Username));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogViewModelError(ex, "LoadCurrentCraftingUser");
+        }
+        finally
+        {
+            await RefreshAsync();
         }
     }
 
@@ -370,4 +459,43 @@ public partial class CraftingRequestsViewModel : ObservableObject
             IsLoading = false;
         }
     }
+
+    private void RefreshPresenceState()
+    {
+        var selected = SelectedRequest;
+        if (selected is null)
+        {
+            LiveChatStatusText = "Select a request to open the live channel.";
+            IsLiveChatCounterpartOnline = false;
+            return;
+        }
+
+        var counterpartUsername = ResolveLiveChatCounterpartUsername(selected);
+        if (string.IsNullOrWhiteSpace(counterpartUsername))
+        {
+            LiveChatStatusText = "Waiting for a crafter to accept this request.";
+            IsLiveChatCounterpartOnline = false;
+            return;
+        }
+
+        var isOnline = _signalR.IsUserOnline(counterpartUsername);
+        IsLiveChatCounterpartOnline = isOnline;
+        LiveChatStatusText = isOnline
+            ? $"{counterpartUsername} is live now."
+            : $"{counterpartUsername} is offline. Messages will persist and sync when they reconnect.";
+    }
+
+    private string? ResolveLiveChatCounterpartUsername(CraftingRequestListItemDto request)
+    {
+        if (!string.IsNullOrWhiteSpace(_currentUsername)
+            && string.Equals(request.RequesterUsername, _currentUsername, StringComparison.OrdinalIgnoreCase))
+        {
+            return request.AssignedCrafterUsername;
+        }
+
+        return request.RequesterUsername;
+    }
+
+    private sealed record CurrentUserDto(string Username);
+    private sealed record OnlineProfileDto(string Username);
 }

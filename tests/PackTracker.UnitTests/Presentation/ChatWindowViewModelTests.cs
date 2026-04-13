@@ -6,7 +6,7 @@ namespace PackTracker.UnitTests.Presentation;
 public class ChatWindowViewModelTests
 {
     [Fact]
-    public void SendMessage_AddsLocalMessage_ForRegularChannelMessage()
+    public void SendMessage_DoesNotAddLocalMessage_ForRegularChannelMessage()
     {
         var sut = CreateWindow();
         sut.ChannelKey = "general";
@@ -15,9 +15,7 @@ public class ChatWindowViewModelTests
 
         sut.SendMessageCommand.Execute(null);
 
-        Assert.Single(sut.Messages);
-        Assert.Equal("You", sut.Messages[0].SenderDisplayName);
-        Assert.Equal("hello team", sut.Messages[0].Content);
+        Assert.Empty(sut.Messages);
     }
 
     [Fact]
@@ -81,6 +79,18 @@ public class ChatWindowViewModelTests
         Assert.Equal("Ghost (@ghost)", sut.ContactLabel);
     }
 
+    [Fact]
+    public void ReceiveMessage_PreservesServerTimestamp()
+    {
+        var sut = CreateWindow();
+        var sentAt = new DateTime(2026, 4, 12, 18, 30, 0, DateTimeKind.Utc);
+
+        sut.ReceiveMessage("msg-1", "ghost", "Ghost", "hello", sentAt);
+
+        Assert.Single(sut.Messages);
+        Assert.Equal(sentAt, sut.Messages[0].SentAt);
+    }
+
     private static ChatWindowViewModel CreateWindow()
     {
         return new ChatWindowViewModel(
@@ -88,7 +98,9 @@ public class ChatWindowViewModelTests
             _ => { },
             _ => { })
         {
-            AccentBrush = Brushes.Gray
+            AccentBrush = Brushes.Gray,
+            CurrentUserDisplayName = "You",
+            CurrentUsername = "you"
         };
     }
 }

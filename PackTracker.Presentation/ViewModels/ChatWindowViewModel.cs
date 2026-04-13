@@ -19,6 +19,8 @@ public class ChatWindowViewModel : ViewModelBase
     private readonly Action<ChatWindowViewModel> _stateChangedAction;
 
     public event Action<string, string>? MessageSent;
+    public event Action<string, string, string>? EditRequested;
+    public event Action<string, string>? DeleteRequested;
 
     private double _left;
     private double _top;
@@ -29,6 +31,8 @@ public class ChatWindowViewModel : ViewModelBase
     private bool _hasUnread;
     private int _unreadCount;
     private string _draftMessage = string.Empty;
+    private string? _currentUserDisplayName;
+    private string? _currentUsername;
 
     public ChatWindowViewModel(
         Action<ChatWindowViewModel> closeAction,
@@ -54,6 +58,18 @@ public class ChatWindowViewModel : ViewModelBase
     public string? TargetDisplayName { get; set; }
     public Brush AccentBrush { get; set; } = Brushes.Gray;
     public bool IsDirectMessage => !string.IsNullOrWhiteSpace(TargetUsername);
+
+    public string? CurrentUserDisplayName
+    {
+        get => _currentUserDisplayName;
+        set => SetProperty(ref _currentUserDisplayName, value);
+    }
+
+    public string? CurrentUsername
+    {
+        get => _currentUsername;
+        set => SetProperty(ref _currentUsername, value);
+    }
 
     public ObservableCollection<ChatMessageViewModel> Messages { get; }
 
@@ -133,11 +149,8 @@ public class ChatWindowViewModel : ViewModelBase
         get => _draftMessage;
         set
         {
-            if (SetProperty(ref _draftMessage, value))
-            {
-                if (SendMessageCommand is RelayCommand cmd)
-                    cmd.RaiseCanExecuteChanged();
-            }
+            if (SetProperty(ref _draftMessage, value) && SendMessageCommand is RelayCommand cmd)
+                cmd.RaiseCanExecuteChanged();
         }
     }
 
@@ -151,23 +164,42 @@ public class ChatWindowViewModel : ViewModelBase
     public ICommand CloseCommand { get; }
     public ICommand PopFrontCommand { get; }
 
-    public void ReceiveMessage(string sender, string content)
+    public void ReceiveMessage(
+        string id,
+        string sender,
+        string senderDisplayName,
+        string content,
+        DateTime sentAt,
+        string? senderRole = null)
     {
-        Messages.Add(new ChatMessageViewModel
-        {
-            SenderDisplayName = sender,
-            Content = content,
-            SentAt = DateTime.Now
-        });
+        if (!string.IsNullOrEmpty(id) && Messages.Any(m => m.Id == id))
+            return;
+
+        var isOwn = IsCurrentUser(sender, senderDisplayName);
+        Messages.Add(CreateMessageVm(id, sender, senderDisplayName, content, sentAt, senderRole, isOwn));
 
         if (IsCollapsed)
             UnreadCount++;
     }
 
-    private bool CanSendMessage()
+    public void ApplyEdit(string messageId, string newContent)
     {
-        return !string.IsNullOrWhiteSpace(DraftMessage);
+        var msg = Messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+        {
+            msg.Content = newContent;
+            msg.IsEdited = true;
+        }
     }
+
+    public void ApplyDelete(string messageId)
+    {
+        var msg = Messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+            Messages.Remove(msg);
+    }
+
+    private bool CanSendMessage() => !string.IsNullOrWhiteSpace(DraftMessage);
 
     private void SendMessage()
     {
@@ -175,23 +207,71 @@ public class ChatWindowViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        if (!IsDirectMessage && !LooksLikeDirectMention(text))
-        {
-            Messages.Add(new ChatMessageViewModel
-            {
-                SenderDisplayName = "You",
-                Content = text,
-                SentAt = DateTime.Now
-            });
-        }
-
         DraftMessage = string.Empty;
         MessageSent?.Invoke(ChannelKey, text);
         _bringToFrontAction(this);
     }
 
+    private ChatMessageViewModel CreateMessageVm(
+        string id,
+        string sender,
+        string senderDisplayName,
+        string content,
+        DateTime sentAt,
+        string? role,
+        bool isOwn)
+    {
+        var vm = new ChatMessageViewModel
+        {
+            Id = id,
+            Sender = sender,
+            SenderDisplayName = senderDisplayName,
+            SenderRole = role,
+            Content = content,
+            SentAt = sentAt,
+            IsOwnMessage = isOwn
+        };
+
+        if (isOwn)
+        {
+            vm.BeginEditCommand = new RelayCommand(() =>
+            {
+                vm.EditDraft = vm.Content;
+                vm.IsEditing = true;
+            });
+            vm.ConfirmEditCommand = new RelayCommand(() =>
+            {
+                var trimmed = vm.EditDraft?.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed) && trimmed != vm.Content)
+                {
+                    EditRequested?.Invoke(ChannelKey, vm.Id, trimmed);
+                    vm.Content = trimmed;
+                    vm.IsEdited = true;
+                }
+
+                vm.IsEditing = false;
+            });
+            vm.CancelEditCommand = new RelayCommand(() => vm.IsEditing = false);
+            vm.DeleteCommand = new RelayCommand(() => DeleteRequested?.Invoke(ChannelKey, vm.Id));
+        }
+
+        return vm;
+    }
+
     private static bool LooksLikeDirectMention(string text) =>
         DirectMentionPattern.IsMatch(text);
+
+    private bool IsCurrentUser(string sender, string senderDisplayName)
+    {
+        if (!string.IsNullOrWhiteSpace(CurrentUsername)
+            && string.Equals(CurrentUsername, sender, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(CurrentUserDisplayName)
+               && string.Equals(CurrentUserDisplayName, senderDisplayName, StringComparison.OrdinalIgnoreCase);
+    }
 
     private void ExpandWindow()
     {

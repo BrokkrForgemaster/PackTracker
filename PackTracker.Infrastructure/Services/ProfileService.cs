@@ -195,7 +195,7 @@ public class ProfileService : IProfileService
     {
         try
         {
-            _logger.LogInformation("🔍 Fetching Discord rank for GuildId={GuildId}", guildId);
+            _logger.LogInformation("Fetching Discord rank for GuildId={GuildId}", guildId);
             var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -204,85 +204,142 @@ public class ProfileService : IProfileService
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("⚠️ Failed to fetch Discord member details. Status: {Status}, Error: {Error}", response.StatusCode, errorBody);
-                return "Member";
+                _logger.LogWarning("Failed to fetch Discord member details. Status: {Status}, Error: {Error}", response.StatusCode, errorBody);
+                return SecurityConstants.Roles.Foundling;
             }
 
             var member = await response.Content.ReadFromJsonAsync<DiscordMember>(ct);
             if (member == null || member.Roles.Count == 0)
             {
-                _logger.LogInformation("ℹ️ User has no roles in the guild.");
-                return "Member";
+                _logger.LogInformation("User has no roles in the guild.");
+                return SecurityConstants.Roles.Foundling;
             }
 
-            _logger.LogInformation("✅ Found {Count} roles for user: {RoleIds}", member.Roles.Count, string.Join(", ", member.Roles));
+            _logger.LogInformation("Found {Count} roles for user: {RoleIds}", member.Roles.Count, string.Join(", ", member.Roles));
 
-            // House Wolf specific role ID to Name mapping (Fallback)
-            var houseWolfRoles = new Dictionary<string, string>
-            {
-                { "1119837295097434263", SecurityConstants.Roles.HandOfTheClan },
-                { "1182799457650233465", "High Command" },
-                { "1178165015694561290", "Officer" },
-                { "1182796308516446288", "Veteran" },
-                { "1442226431747948595", "Elite" },
-                { "1318668583747715102", "Member" },
-                { "1443066936337633400", "Recruit" },
-                { "1357688449871646873", "Guest" },
-                { "1182922578894008380", "Bot" },
-                { "1319052362261725214", "Friend" }
-            };
+            // Fetch guild roles to determine hierarchy.
+            // The /guilds/{id}/roles endpoint requires Bot authorization, not a user Bearer token.
+            var botToken = _authOptions.Discord.BotToken;
+            List<DiscordRole>? allRoles = null;
 
-            // Fetch guild roles to determine hierarchy
-            var rolesResponse = await client.GetAsync($"https://discord.com/api/guilds/{guildId}/roles", ct);
-            if (!rolesResponse.IsSuccessStatusCode)
+            if (!string.IsNullOrWhiteSpace(botToken))
             {
-                _logger.LogWarning("⚠️ Failed to fetch Discord guild roles. Status: {Status}. Using fallback mapping.", rolesResponse.StatusCode);
-                
-                // Use fallback mapping based on user's roles
-                foreach (var mapping in houseWolfRoles)
+                var botClient = _httpClientFactory.CreateClient();
+                botClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bot", botToken);
+
+                var rolesResponse = await botClient.GetAsync($"https://discord.com/api/guilds/{guildId}/roles", ct);
+                if (rolesResponse.IsSuccessStatusCode)
                 {
-                    if (member.Roles.Contains(mapping.Key))
-                    {
-                        _logger.LogInformation("👑 Highest role identified via fallback: {RoleName}", mapping.Value);
-                        return mapping.Value;
-                    }
+                    allRoles = await rolesResponse.Content.ReadFromJsonAsync<List<DiscordRole>>(ct);
                 }
-                return "Member";
+                else
+                {
+                    _logger.LogWarning("Failed to fetch guild roles via Bot token. Status: {Status}", rolesResponse.StatusCode);
+                }
             }
-
-            var allRoles = await rolesResponse.Content.ReadFromJsonAsync<List<DiscordRole>>(ct);
-            if (allRoles == null)
+            else
             {
-                _logger.LogWarning("⚠️ Could not deserialize guild roles.");
-                return "Member";
+                _logger.LogInformation("No Discord Bot token configured; using known role hierarchy for rank resolution.");
             }
 
-            // Find the highest role the user has based on position
-            var userRoles = allRoles
-                .Where(r => member.Roles.Contains(r.Id))
-                .OrderByDescending(r => r.Position)
-                .ToList();
-
-            var highest = userRoles.FirstOrDefault();
-            if (highest != null)
+            if (allRoles != null && allRoles.Count > 0)
             {
-                _logger.LogInformation("👑 Highest role identified: {RoleName} (Position {Position})", highest.Name, highest.Position);
-                return highest.Name;
+                // Find the highest role the user has by matching against our known hierarchy.
+                // This ensures we pick the highest *rank* role, not a cosmetic/division role.
+                var userRoleNames = allRoles
+                    .Where(r => member.Roles.Contains(r.Id))
+                    .Select(r => r.Name)
+                    .ToList();
+
+                var highestKnown = ResolveHighestKnownRole(userRoleNames);
+                if (highestKnown != null)
+                {
+                    _logger.LogInformation("Highest rank identified via API: {RoleName}", highestKnown);
+                    return highestKnown;
+                }
+
+                // If none of the user's roles match the known hierarchy,
+                // fall back to the highest role by Discord position.
+                var highestByPosition = allRoles
+                    .Where(r => member.Roles.Contains(r.Id))
+                    .OrderByDescending(r => r.Position)
+                    .FirstOrDefault();
+
+                if (highestByPosition != null)
+                {
+                    _logger.LogInformation("Highest role by position: {RoleName} (Position {Position})", highestByPosition.Name, highestByPosition.Position);
+                    return highestByPosition.Name;
+                }
             }
 
-            // If API didn't find anything but we have roles, try the fallback again
-            foreach (var mapping in houseWolfRoles)
+            // Fallback: match member role IDs against the known House Wolf role mapping.
+            // This is used when no Bot token is configured or the API call fails.
+            var fallbackRole = ResolveHighestKnownRoleById(member.Roles);
+            if (fallbackRole != null)
             {
-                if (member.Roles.Contains(mapping.Key)) return mapping.Value;
+                _logger.LogInformation("Highest rank identified via fallback: {RoleName}", fallbackRole);
+                return fallbackRole;
             }
 
-            return "Member";
+            return SecurityConstants.Roles.Foundling;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error fetching Discord rank.");
-            return "Member";
+            _logger.LogError(ex, "Error fetching Discord rank.");
+            return SecurityConstants.Roles.Foundling;
         }
+    }
+
+    /// <summary>
+    /// Given a list of role names from Discord, returns the highest-ranked name
+    /// that matches the known House Wolf hierarchy, or null if none match.
+    /// </summary>
+    private static string? ResolveHighestKnownRole(IEnumerable<string> roleNames)
+    {
+        string? highest = null;
+        int highestPos = -1;
+
+        foreach (var name in roleNames)
+        {
+            var pos = SecurityConstants.GetRolePosition(name);
+            if (pos > highestPos)
+            {
+                highestPos = pos;
+                highest = SecurityConstants.RoleHierarchy[pos];
+            }
+        }
+
+        return highest;
+    }
+
+    /// <summary>
+    /// Fallback: maps Discord role IDs to known role names, ordered highest-first.
+    /// These IDs are specific to the House Wolf Discord guild.
+    /// Update these if roles are recreated in Discord (IDs change on delete/recreate).
+    /// </summary>
+    private static string? ResolveHighestKnownRoleById(List<string> memberRoleIds)
+    {
+        // Ordered from highest rank to lowest so the first match wins.
+        var knownRoles = new (string Id, string Name)[]
+        {
+            ("1119837295097434263", SecurityConstants.Roles.HandOfTheClan),
+            ("1182799457650233465", SecurityConstants.Roles.HighCouncilor),
+            ("1178165015694561290", SecurityConstants.Roles.Armor),
+            ("1182796308516446288", SecurityConstants.Roles.FleetCommander),
+            ("1442226431747948595", SecurityConstants.Roles.Captain),
+            ("1318668583747715102", SecurityConstants.Roles.Lieutenant),
+            ("1443066936337633400", SecurityConstants.Roles.Foundling),
+            ("1357688449871646873", SecurityConstants.Roles.Foundling),
+            ("1319052362261725214", SecurityConstants.Roles.Foundling)
+        };
+
+        foreach (var (id, name) in knownRoles)
+        {
+            if (memberRoleIds.Contains(id))
+                return name;
+        }
+
+        return null;
     }
 
     /// <summary>

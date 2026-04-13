@@ -261,6 +261,10 @@ public sealed class SettingsService : ISettingsService, IDisposable
             Assign(ref discordRequiredGuildId, discord["RequiredGuildId"]);
             updatedSettings.DiscordRequiredGuildId = discordRequiredGuildId;
 
+            var discordBotToken = updatedSettings.DiscordBotToken;
+            Assign(ref discordBotToken, discord["BotToken"]);
+            updatedSettings.DiscordBotToken = discordBotToken;
+
             var regolithBase = updatedSettings.RegolithBaseUrl;
             Assign(ref regolithBase, configuration["Regolith:BaseUrl"]);
             updatedSettings.RegolithBaseUrl = regolithBase;
@@ -326,6 +330,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
                 DiscordClientSecret = SecretStorage.Protect(normalizedSettings.DiscordClientSecret),
                 DiscordCallbackPath = normalizedSettings.DiscordCallbackPath,
                 DiscordRequiredGuildId = normalizedSettings.DiscordRequiredGuildId,
+                DiscordBotToken = SecretStorage.Protect(normalizedSettings.DiscordBotToken),
                 RegolithApiKey = SecretStorage.Protect(normalizedSettings.RegolithApiKey),
                 RegolithBaseUrl = normalizedSettings.RegolithBaseUrl,
                 UexCorpApiKey = SecretStorage.Protect(normalizedSettings.UexCorpApiKey),
@@ -392,6 +397,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
             DiscordClientSecret = source.DiscordClientSecret,
             DiscordCallbackPath = source.DiscordCallbackPath,
             DiscordRequiredGuildId = source.DiscordRequiredGuildId,
+            DiscordBotToken = source.DiscordBotToken,
             RegolithApiKey = source.RegolithApiKey,
             RegolithBaseUrl = source.RegolithBaseUrl,
             UexCorpApiKey = source.UexCorpApiKey,
@@ -446,6 +452,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
         && left.DiscordClientSecret == right.DiscordClientSecret
         && left.DiscordCallbackPath == right.DiscordCallbackPath
         && left.DiscordRequiredGuildId == right.DiscordRequiredGuildId
+        && left.DiscordBotToken == right.DiscordBotToken
         && left.RegolithApiKey == right.RegolithApiKey
         && left.RegolithBaseUrl == right.RegolithBaseUrl
         && left.UexCorpApiKey == right.UexCorpApiKey

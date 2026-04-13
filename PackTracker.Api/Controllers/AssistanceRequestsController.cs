@@ -84,7 +84,8 @@ public class AssistanceRequestsController : ControllerBase
             query = query.Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed);
 
         var requests = await query
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderByDescending(x => x.IsPinned)
+            .ThenByDescending(x => x.CreatedAt)
             .Select(x => new AssistanceRequestDto
             {
                 Id = x.Id,
@@ -93,6 +94,7 @@ public class AssistanceRequestsController : ControllerBase
                 Description = x.Description,
                 Priority = x.Priority,
                 Status = x.Status.ToString(),
+                IsPinned = x.IsPinned,
                 CreatedByUsername = x.CreatedByProfile != null ? x.CreatedByProfile.Username : "Unknown",
                 CreatedByDisplayName = x.CreatedByProfile != null
                     ? (x.CreatedByProfile.DiscordDisplayName ?? x.CreatedByProfile.Username)
@@ -230,6 +232,74 @@ public class AssistanceRequestsController : ControllerBase
         await BroadcastAsync("AssistanceRequestUpdated", id, ct);
 
         return Ok(new { message = "Request completed.", requestId = id });
+    }
+
+    /// <summary>
+    /// Pins an assistance request to the top of the hub. Captains and above may pin requests.
+    /// </summary>
+    [HttpPost("{id}/pin")]
+    [HttpPatch("{id:guid}/pin")]
+    [HttpPatch("{id}/pin")]
+    public async Task<IActionResult> PinRequest(string id, CancellationToken ct)
+    {
+        if (!Guid.TryParse(id, out var requestId))
+            return BadRequest(new { error = "Invalid assistance request id." });
+
+        var profile = await GetCurrentProfile(ct);
+        if (profile is null)
+            return Unauthorized();
+
+        if (!UserHasElevatedRequestRole(profile.DiscordRank))
+            return StatusCode(403, new { error = "Only Captains and above may pin requests." });
+
+        var request = await _db.AssistanceRequests.FirstOrDefaultAsync(x => x.Id == requestId, ct);
+        if (request is null)
+            return NotFound(new { error = "Assistance request not found." });
+
+        if (request.IsPinned)
+            return Ok(new { message = "Request already pinned.", requestId });
+
+        request.IsPinned = true;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        await BroadcastAsync("AssistanceRequestUpdated", requestId, ct);
+
+        return Ok(new { message = "Request pinned.", requestId });
+    }
+
+    /// <summary>
+    /// Removes a pin from an assistance request. Captains and above may unpin requests.
+    /// </summary>
+    [HttpPost("{id}/unpin")]
+    [HttpPatch("{id:guid}/unpin")]
+    [HttpPatch("{id}/unpin")]
+    public async Task<IActionResult> UnpinRequest(string id, CancellationToken ct)
+    {
+        if (!Guid.TryParse(id, out var requestId))
+            return BadRequest(new { error = "Invalid assistance request id." });
+
+        var profile = await GetCurrentProfile(ct);
+        if (profile is null)
+            return Unauthorized();
+
+        if (!UserHasElevatedRequestRole(profile.DiscordRank))
+            return StatusCode(403, new { error = "Only Captains and above may unpin requests." });
+
+        var request = await _db.AssistanceRequests.FirstOrDefaultAsync(x => x.Id == requestId, ct);
+        if (request is null)
+            return NotFound(new { error = "Assistance request not found." });
+
+        if (!request.IsPinned)
+            return Ok(new { message = "Request already unpinned.", requestId });
+
+        request.IsPinned = false;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        await BroadcastAsync("AssistanceRequestUpdated", requestId, ct);
+
+        return Ok(new { message = "Request unpinned.", requestId });
     }
 
     /// <summary>

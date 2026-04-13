@@ -295,7 +295,7 @@ public class CraftingRequestsController : ControllerBase
 
         var comments = await _db.RequestComments
             .AsNoTracking()
-            .Where(x => x.RequestId == id)
+            .Where(x => x.RequestId == id && !x.IsLiveChat)
             .Include(x => x.AuthorProfile)
             .OrderBy(x => x.CreatedAt)
             .Select(x => new RequestCommentDto
@@ -337,6 +337,7 @@ public class CraftingRequestsController : ControllerBase
             RequestId = id,
             AuthorProfileId = profile.Id,
             Content = dto.Content.Trim(),
+            IsLiveChat = false,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -352,6 +353,34 @@ public class CraftingRequestsController : ControllerBase
         await BroadcastAsync("RequestCommentAdded", id, ct);
 
         return Ok(new { message = "Comment added.", commentId = comment.Id });
+    }
+
+    /// <summary>
+    /// Returns the persisted live chat transcript for a crafting request.
+    /// </summary>
+    [HttpGet("requests/{id:guid}/live-chat")]
+    public async Task<ActionResult<IReadOnlyList<RequestCommentDto>>> GetLiveChat(Guid id, CancellationToken ct)
+    {
+        var requestExists = await _db.CraftingRequests.AsNoTracking().AnyAsync(x => x.Id == id, ct);
+        if (!requestExists)
+            return NotFound(new { error = "Crafting request not found." });
+
+        var chat = await _db.RequestComments
+            .AsNoTracking()
+            .Where(x => x.RequestId == id && x.IsLiveChat)
+            .Include(x => x.AuthorProfile)
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new RequestCommentDto
+            {
+                Id = x.Id,
+                RequestId = x.RequestId,
+                AuthorUsername = x.AuthorProfile != null ? x.AuthorProfile.Username : "Unknown",
+                Content = x.Content,
+                CreatedAt = x.CreatedAt
+            })
+            .ToListAsync(ct);
+
+        return Ok(chat);
     }
 
     /// <summary>
@@ -549,7 +578,7 @@ public class CraftingRequestsController : ControllerBase
 
         var comments = await _db.RequestComments
             .AsNoTracking()
-            .Where(x => x.RequestId == id)
+            .Where(x => x.RequestId == id && !x.IsLiveChat)
             .Include(x => x.AuthorProfile)
             .OrderBy(x => x.CreatedAt)
             .Select(x => new RequestCommentDto
@@ -587,6 +616,7 @@ public class CraftingRequestsController : ControllerBase
             RequestId = id,
             AuthorProfileId = profile.Id,
             Content = dto.Content.Trim(),
+            IsLiveChat = false,
             CreatedAt = DateTime.UtcNow
         };
 

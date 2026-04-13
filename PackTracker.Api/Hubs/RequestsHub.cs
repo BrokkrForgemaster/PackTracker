@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
+using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Api.Hubs;
 
@@ -36,14 +38,16 @@ public class RequestsHub : Hub
     #region Dependencies
 
     private readonly IProfileService _profiles;
+    private readonly AppDbContext _db;
 
     #endregion
 
     #region Constructor
 
-    public RequestsHub(IProfileService profiles)
+    public RequestsHub(IProfileService profiles, AppDbContext db)
     {
         _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
     #endregion
@@ -124,6 +128,8 @@ public class RequestsHub : Hub
         string senderDisplayName = username;
         string? avatarUrl = null;
 
+        string? senderRole = null;
+
         try
         {
             var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
@@ -131,6 +137,7 @@ public class RequestsHub : Hub
             {
                 senderDisplayName = profile.DiscordDisplayName ?? profile.Username;
                 avatarUrl = profile.DiscordAvatarUrl;
+                senderRole = profile.DiscordRank;
             }
         }
         catch
@@ -147,18 +154,13 @@ public class RequestsHub : Hub
             Content: content.Trim(),
             SentAt: DateTime.UtcNow,
             SenderDiscordId: discordId,
-            AvatarUrl: avatarUrl);
+            AvatarUrl: avatarUrl,
+            SenderRole: senderRole);
 
         // Store in capped history queue
-        var queue = _messageHistory.GetOrAdd(normalizedLobby, _ => new Queue<ChatMessage>());
-        lock (queue)
-        {
-            queue.Enqueue(message);
-            while (queue.Count > MaxHistoryPerChannel)
-                queue.Dequeue();
-        }
+        StoreMessageHistory(normalizedLobby, message);
 
-        // Broadcast to lobby group
+        // Broadcast to lobby group (exclude sender — they add the message locally for instant feedback)
         await Clients.Group(normalizedLobby).SendAsync("ReceiveLobbyMessage", new
         {
             message.Id,
@@ -167,7 +169,8 @@ public class RequestsHub : Hub
             message.SenderDisplayName,
             message.Content,
             message.SentAt,
-            message.AvatarUrl
+            message.AvatarUrl,
+            message.SenderRole
         });
     }
 
@@ -206,8 +209,92 @@ public class RequestsHub : Hub
                 m.SenderDisplayName,
                 m.Content,
                 m.SentAt,
-                m.AvatarUrl
+                m.AvatarUrl,
+                m.SenderRole
             })
+        });
+    }
+
+    /// <summary>
+    /// Edits an existing lobby message. Only the original sender may edit their message.
+    /// </summary>
+    public async Task EditLobbyMessage(string lobbyName, string messageId, string newContent)
+    {
+        if (string.IsNullOrWhiteSpace(lobbyName))
+            throw new HubException("Lobby name is required.");
+        if (string.IsNullOrWhiteSpace(messageId))
+            throw new HubException("Message ID is required.");
+        if (string.IsNullOrWhiteSpace(newContent))
+            throw new HubException("New content cannot be empty.");
+
+        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var normalizedLobby = NormalizeLobbyName(lobbyName);
+
+        if (_messageHistory.TryGetValue(normalizedLobby, out var queue))
+        {
+            lock (queue)
+            {
+                var msg = queue.FirstOrDefault(m => m.Id == messageId);
+                if (msg == null)
+                    throw new HubException("Message not found.");
+                if (msg.SenderDiscordId != discordId)
+                    throw new HubException("You can only edit your own messages.");
+
+                msg.Content = newContent.Trim();
+            }
+        }
+        else
+        {
+            throw new HubException("Message not found.");
+        }
+
+        await Clients.Group(normalizedLobby).SendAsync("LobbyMessageEdited", new
+        {
+            MessageId = messageId,
+            Channel = lobbyName,
+            NewContent = newContent.Trim(),
+            EditedAt = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Deletes a lobby message. Only the original sender may delete their message.
+    /// </summary>
+    public async Task DeleteLobbyMessage(string lobbyName, string messageId)
+    {
+        if (string.IsNullOrWhiteSpace(lobbyName))
+            throw new HubException("Lobby name is required.");
+        if (string.IsNullOrWhiteSpace(messageId))
+            throw new HubException("Message ID is required.");
+
+        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var normalizedLobby = NormalizeLobbyName(lobbyName);
+
+        if (_messageHistory.TryGetValue(normalizedLobby, out var queue))
+        {
+            lock (queue)
+            {
+                var msg = queue.FirstOrDefault(m => m.Id == messageId);
+                if (msg == null)
+                    throw new HubException("Message not found.");
+                if (msg.SenderDiscordId != discordId)
+                    throw new HubException("You can only delete your own messages.");
+
+                var updated = new Queue<ChatMessage>(queue.Where(m => m.Id != messageId));
+                queue.Clear();
+                foreach (var m in updated)
+                    queue.Enqueue(m);
+            }
+        }
+        else
+        {
+            throw new HubException("Message not found.");
+        }
+
+        await Clients.Group(normalizedLobby).SendAsync("LobbyMessageDeleted", new
+        {
+            MessageId = messageId,
+            Channel = lobbyName
         });
     }
 
@@ -262,6 +349,7 @@ public class RequestsHub : Hub
 
         string senderDisplayName = username;
         string? avatarUrl = null;
+        string? senderRole = null;
 
         try
         {
@@ -270,6 +358,7 @@ public class RequestsHub : Hub
             {
                 senderDisplayName = profile.DiscordDisplayName ?? profile.Username;
                 avatarUrl = profile.DiscordAvatarUrl;
+                senderRole = profile.DiscordRank;
             }
         }
         catch { /* Non-fatal */ }
@@ -283,7 +372,26 @@ public class RequestsHub : Hub
             Content: content.Trim(),
             SentAt: DateTime.UtcNow,
             SenderDiscordId: discordId,
-            AvatarUrl: avatarUrl);
+            AvatarUrl: avatarUrl,
+            SenderRole: senderRole);
+
+        if (Guid.TryParse(requestId, out var parsedRequestId))
+        {
+            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
+            if (profile != null)
+            {
+                _db.RequestComments.Add(new RequestComment
+                {
+                    RequestId = parsedRequestId,
+                    AuthorProfileId = profile.Id,
+                    Content = message.Content,
+                    IsLiveChat = true,
+                    CreatedAt = message.SentAt
+                });
+
+                await _db.SaveChangesAsync(CancellationToken.None);
+            }
+        }
 
         await Clients.Group(groupName).SendAsync("ReceiveRequestMessage", new
         {
@@ -293,7 +401,8 @@ public class RequestsHub : Hub
             message.SenderDisplayName,
             message.Content,
             message.SentAt,
-            message.AvatarUrl
+            message.AvatarUrl,
+            message.SenderRole
         });
     }
 
@@ -316,33 +425,53 @@ public class RequestsHub : Hub
 
         var senderDisplayName = senderProfile?.DiscordDisplayName ?? senderUsername;
         var senderAvatarUrl = senderProfile?.DiscordAvatarUrl;
+        var senderRole = senderProfile?.DiscordRank;
         var targetDisplayName = targetProfile.DiscordDisplayName ?? targetProfile.Username;
         var timestamp = DateTime.UtcNow;
         var messageId = Guid.NewGuid().ToString();
         var trimmedContent = content.Trim();
+        var senderChannel = BuildDirectChannelName(targetProfile.Username);
+        var recipientChannel = BuildDirectChannelName(senderUsername);
 
+        var message = new ChatMessage(
+            Id: messageId,
+            Sender: senderUsername,
+            SenderDisplayName: senderDisplayName,
+            Content: trimmedContent,
+            SentAt: timestamp,
+            SenderDiscordId: senderDiscordId,
+            AvatarUrl: senderAvatarUrl,
+            SenderRole: senderRole);
+
+        StoreMessageHistory(senderChannel, message);
+        StoreMessageHistory(recipientChannel, message);
+
+        // Send to the recipient
         await Clients.User(targetProfile.DiscordId).SendAsync("ReceiveDirectMessage", new
         {
             Id = messageId,
-            Channel = BuildDirectChannelName(senderUsername),
+            Channel = recipientChannel,
             Sender = senderUsername,
             SenderDisplayName = senderDisplayName,
             Content = trimmedContent,
             SentAt = timestamp,
             AvatarUrl = senderAvatarUrl,
+            SenderRole = senderRole,
             CounterpartUsername = senderUsername,
             CounterpartDisplayName = senderDisplayName
         });
 
+        // Echo back to the sender (they do not add DMs locally — the echo is the authoritative copy)
         await Clients.Caller.SendAsync("ReceiveDirectMessage", new
         {
             Id = messageId,
-            Channel = BuildDirectChannelName(targetProfile.Username),
+            Channel = senderChannel,
             Sender = senderUsername,
             SenderDisplayName = senderDisplayName,
             Content = trimmedContent,
             SentAt = timestamp,
             AvatarUrl = senderAvatarUrl,
+            SenderRole = senderRole,
             CounterpartUsername = targetProfile.Username,
             CounterpartDisplayName = targetDisplayName
         });
@@ -406,6 +535,15 @@ public class RequestsHub : Hub
         });
     }
 
+    public async Task Heartbeat()
+    {
+        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(discordId))
+            return;
+
+        await _profiles.TouchLastSeenAsync(discordId, CancellationToken.None);
+    }
+
     #endregion
 
     #region Private Helpers
@@ -450,6 +588,17 @@ public class RequestsHub : Hub
     private static string BuildDirectChannelName(string username) =>
         $"direct:{username.Trim().ToLowerInvariant()}";
 
+    private static void StoreMessageHistory(string normalizedLobby, ChatMessage message)
+    {
+        var queue = _messageHistory.GetOrAdd(normalizedLobby, _ => new Queue<ChatMessage>());
+        lock (queue)
+        {
+            queue.Enqueue(message);
+            while (queue.Count > MaxHistoryPerChannel)
+                queue.Dequeue();
+        }
+    }
+
     #endregion
 
     #region Private Records
@@ -464,7 +613,12 @@ public class RequestsHub : Hub
         string Content,
         DateTime SentAt,
         string SenderDiscordId,
-        string? AvatarUrl);
+        string? AvatarUrl,
+        string? SenderRole)
+    {
+        public string Content { get; set; } = Content;
+    }
 
     #endregion
 }
+

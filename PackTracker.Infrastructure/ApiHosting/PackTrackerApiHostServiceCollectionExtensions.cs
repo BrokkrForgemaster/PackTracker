@@ -49,6 +49,7 @@ public static class PackTrackerApiHostServiceCollectionExtensions
             options.Discord.ClientSecret = settings.DiscordClientSecret ?? string.Empty;
             options.Discord.CallbackPath = settings.DiscordCallbackPath ?? "/signin-discord";
             options.Discord.RequiredGuildId = settings.DiscordRequiredGuildId ?? string.Empty;
+            options.Discord.BotToken = settings.DiscordBotToken ?? string.Empty;
         });
 
         services.AddInfrastructure(settingsService);

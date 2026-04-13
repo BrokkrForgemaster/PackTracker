@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.DTOs.Request;
+using PackTracker.Domain.Security;
 using PackTracker.Presentation.Services;
 using PackTracker.Presentation.Views;
 using DomainRequestStatus = PackTracker.Domain.Enums.RequestStatus;
@@ -25,6 +26,7 @@ public partial class RequestsViewModel : ObservableObject
     private readonly SignalRChatService _signalR;
     private readonly IServiceProvider _services;
     private readonly ILogger<RequestsViewModel> _logger;
+    private string? _currentRole;
 
     #endregion
 
@@ -51,6 +53,8 @@ public partial class RequestsViewModel : ObservableObject
 
     private async Task InitAsync()
     {
+        await LoadCurrentUserAsync();
+
         try
         {
             await _signalR.ConnectAsync();
@@ -123,6 +127,13 @@ public partial class RequestsViewModel : ObservableObject
                           && SelectedRequest.Status != DomainRequestStatus.Completed.ToString()
                           && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString();
 
+    public bool CanPin => SelectedRequest is not null
+                       && SecurityConstants.IsElevatedRequestRole(_currentRole);
+
+    public string PinActionLabel => SelectedRequest?.IsPinned == true
+        ? "UNPIN REQUEST"
+        : "PIN REQUEST";
+
     #endregion
 
     #region Partial Hooks
@@ -132,6 +143,8 @@ public partial class RequestsViewModel : ObservableObject
         OnPropertyChanged(nameof(CanClaim));
         OnPropertyChanged(nameof(CanComplete));
         OnPropertyChanged(nameof(CanDelete));
+        OnPropertyChanged(nameof(CanPin));
+        OnPropertyChanged(nameof(PinActionLabel));
     }
 
     partial void OnSelectedKindChanged(DomainRequestKind? value)
@@ -273,6 +286,19 @@ public partial class RequestsViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task TogglePinAsync()
+    {
+        if (SelectedRequest is null || !CanPin)
+            return;
+
+        var url = SelectedRequest.IsPinned
+            ? $"api/v1/requests/{SelectedRequest.Id}/unpin"
+            : $"api/v1/requests/{SelectedRequest.Id}/pin";
+
+        await PatchAsync(url, SelectedRequest.IsPinned ? "Request unpinned." : "Request pinned.");
+    }
+
     #endregion
 
     #region Helpers
@@ -317,6 +343,26 @@ public partial class RequestsViewModel : ObservableObject
         System.Windows.Application.Current.Dispatcher.BeginInvoke(() => { _ = RefreshAsync(); });
     }
 
+    private async Task LoadCurrentUserAsync()
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.GetAsync("api/v1/profiles/me");
+            if (!response.IsSuccessStatusCode)
+                return;
+
+            var profile = await response.Content.ReadFromJsonAsync<CurrentUserDto>();
+            _currentRole = profile?.DiscordRank;
+            OnPropertyChanged(nameof(CanPin));
+            OnPropertyChanged(nameof(PinActionLabel));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogViewModelError(ex, "LoadCurrentRequestUser");
+        }
+    }
+
     private static List<DomainRequestKind?> BuildKindOptions()
     {
         var list = new List<DomainRequestKind?> { null };
@@ -353,6 +399,8 @@ public partial class RequestsViewModel : ObservableObject
         builder.Append(string.Join("&", queryParts));
         return builder.ToString();
     }
+
+    private sealed record CurrentUserDto(string Username, string? DiscordRank);
 
     #endregion
 }

@@ -13,6 +13,7 @@ public class AssistanceRequest
     public string? Description { get; set; }
     public RequestPriority Priority { get; set; } = RequestPriority.Normal;
     public RequestStatus Status { get; set; } = RequestStatus.Open;
+    public bool IsPinned { get; set; }
     public Guid CreatedByProfileId { get; set; }
     public Guid? AssignedToProfileId { get; set; }
     public string? MaterialName { get; set; }

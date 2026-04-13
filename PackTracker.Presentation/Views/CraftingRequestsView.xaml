@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:behaviors="clr-namespace:PackTracker.Presentation.Behaviors"
              xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
              mc:Ignorable="d"
              Background="Transparent">
@@ -499,6 +500,7 @@
                                         </Grid>
 
                                         <ListBox ItemsSource="{Binding Comments}"
+                                                 behaviors:AutoScrollBehavior.AutoScrollSource="{Binding Comments}"
                                                  Style="{StaticResource OpListBoxStyle}"
                                                  BorderThickness="0"
                                                  Background="Transparent"
@@ -547,6 +549,20 @@
                                                        Foreground="{StaticResource OpTextMutedBrush}"
                                                        FontSize="10"
                                                        Margin="0,2,0,0" />
+                                            <TextBlock Text="{Binding LiveChatStatusText}"
+                                                       FontSize="11"
+                                                       Margin="0,6,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsLiveChatCounterpartOnline}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource OpTextAccentBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0">
@@ -577,6 +593,7 @@
                                         </Grid>
 
                                         <ListBox ItemsSource="{Binding LiveChat}"
+                                                 behaviors:AutoScrollBehavior.AutoScrollSource="{Binding LiveChat}"
                                                  Style="{StaticResource OpListBoxStyle}"
                                                  BorderThickness="0"
                                                  Background="Transparent"

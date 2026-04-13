@@ -15,8 +15,10 @@ using System.Windows.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using PackTracker.Application.DTOs.Dashboard;
 using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.Persistence;
+using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views
 {
@@ -349,7 +351,49 @@ namespace PackTracker.Presentation.Views
                     $"Failed to open Procurement Queue:\n{ex}",
                     "Navigation Error",
                     MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBoxImage.Error);
+            }
+        }
+
+        internal async Task NavigateToActiveRequestAsync(ActiveRequestDto request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            switch (request.RequestType.Trim())
+            {
+                case "Crafting":
+                    {
+                        var view = _serviceProvider.GetRequiredService<CraftingRequestsView>();
+                        ContentFrame.Navigate(view);
+                        if (view.DataContext is CraftingRequestsViewModel vm)
+                        {
+                            await vm.RefreshDataAsync();
+                            vm.SelectedRequest = vm.Requests.FirstOrDefault(x => x.Id == request.Id);
+                        }
+                        break;
+                    }
+                case "Procurement":
+                    {
+                        var view = _serviceProvider.GetRequiredService<ProcurementRequestsView>();
+                        ContentFrame.Navigate(view);
+                        if (view.DataContext is ProcurementRequestsViewModel vm)
+                        {
+                            await vm.RefreshDataAsync();
+                            vm.SelectedRequest = vm.Requests.FirstOrDefault(x => x.Id == request.Id);
+                        }
+                        break;
+                    }
+                default:
+                    {
+                        var view = _serviceProvider.GetRequiredService<RequestsView>();
+                        ContentFrame.Navigate(view);
+                        if (view.DataContext is RequestsViewModel vm)
+                        {
+                            await vm.RefreshAsync();
+                            vm.SelectedRequest = vm.Requests.FirstOrDefault(x => x.Id == request.Id);
+                        }
+                        break;
+                    }
             }
         }
 
@@ -509,6 +553,19 @@ namespace PackTracker.Presentation.Views
 
             NormalPostureContent.Visibility = Visibility.Collapsed;
             UpdatePostureContent.Visibility = Visibility.Visible;
+
+            // Show a modal dialog so users on smaller screens can still install the update
+            var notes = string.IsNullOrWhiteSpace(update.ReleaseNotes)
+                ? string.Empty
+                : $"\n\n{update.ReleaseNotes.Trim()}";
+            var result = MessageBox.Show(
+                $"PackTracker v{update.Version} is available.{notes}\n\nDownload and install now?",
+                "Update Available",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (result == MessageBoxResult.Yes)
+                DownloadUpdate_Click(this, new RoutedEventArgs());
         }
 
         private async void DownloadUpdate_Click(object sender, RoutedEventArgs e)

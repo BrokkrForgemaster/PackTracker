@@ -29,6 +29,7 @@ public class AppSettings
     public string DiscordClientSecret { get; set; } = string.Empty;
     public string DiscordCallbackPath { get; set; } = "/signin-discord";
     public string DiscordRequiredGuildId { get; set; } = string.Empty;
+    public string DiscordBotToken { get; set; } = string.Empty;
 
     // --- Regolith API ---
     public string RegolithApiKey { get; set; } = string.Empty;

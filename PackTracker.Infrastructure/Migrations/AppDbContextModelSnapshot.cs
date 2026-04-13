@@ -50,6 +50,11 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("MaterialName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -925,6 +930,9 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsLiveChat")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");

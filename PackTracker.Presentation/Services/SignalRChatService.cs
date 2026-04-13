@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
@@ -19,10 +20,18 @@ public class SignalRChatService : IAsyncDisposable
     private readonly ISettingsService _settingsService;
     private readonly AuthTokenService _authTokenService;
     private readonly ILogger<SignalRChatService> _logger;
+    private readonly HashSet<string> _joinedChannels = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _joinedRequestRooms = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _onlineUsers = new(StringComparer.OrdinalIgnoreCase);
+    private CancellationTokenSource? _heartbeatCts;
+
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromMinutes(2);
 
     // Events the ViewModel subscribes to
     public event Action<ChatMessageDto>? MessageReceived;
     public event Action<ChatMessageDto>? RequestMessageReceived;
+    public event Action<ChatMessageEditedDto>? MessageEdited;
+    public event Action<ChatMessageDeletedDto>? MessageDeleted;
     public event Action<IReadOnlyList<OnlineUserDto>>? PresenceUpdated;
     public event Action<bool>? ConnectionStateChanged;
     public event Action<Guid>? CraftingRequestCreated;
@@ -207,6 +216,10 @@ public class SignalRChatService : IAsyncDisposable
                     users.Add(new OnlineUserDto(username, displayName, role, avatarUrl));
                 }
 
+                _onlineUsers.Clear();
+                foreach (var user in users.Where(x => !string.IsNullOrWhiteSpace(x.Username)))
+                    _onlineUsers.Add(user.Username);
+
                 PresenceUpdated?.Invoke(users.AsReadOnly());
             }
             catch (Exception ex)
@@ -215,15 +228,53 @@ public class SignalRChatService : IAsyncDisposable
             }
         });
 
-        // ── Connection state callbacks ─────────────────────────────────
-        _connection.Reconnected += _ =>
+        _connection.On<JsonElement>("LobbyMessageEdited", json =>
         {
+            try
+            {
+                var messageId = GetString(json, "messageId", "MessageId") ?? string.Empty;
+                var channel = GetString(json, "channel", "Channel") ?? string.Empty;
+                var newContent = GetString(json, "newContent", "NewContent") ?? string.Empty;
+                DateTime editedAt = DateTime.UtcNow;
+                if (json.TryGetProperty("editedAt", out var ea) || json.TryGetProperty("EditedAt", out ea))
+                {
+                    if (ea.ValueKind == JsonValueKind.String && DateTime.TryParse(ea.GetString(), out var parsed))
+                        editedAt = parsed;
+                }
+                MessageEdited?.Invoke(new ChatMessageEditedDto(messageId, channel, newContent, editedAt));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse LobbyMessageEdited payload.");
+            }
+        });
+
+        _connection.On<JsonElement>("LobbyMessageDeleted", json =>
+        {
+            try
+            {
+                var messageId = GetString(json, "messageId", "MessageId") ?? string.Empty;
+                var channel = GetString(json, "channel", "Channel") ?? string.Empty;
+                MessageDeleted?.Invoke(new ChatMessageDeletedDto(messageId, channel));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse LobbyMessageDeleted payload.");
+            }
+        });
+
+        // ── Connection state callbacks ─────────────────────────────────
+        _connection.Reconnected += connectionId =>
+        {
+            _ = RestoreSubscriptionsAsync();
+            StartHeartbeat();
             ConnectionStateChanged?.Invoke(true);
             return Task.CompletedTask;
         };
 
         _connection.Closed += _ =>
         {
+            StopHeartbeat();
             ConnectionStateChanged?.Invoke(false);
             return Task.CompletedTask;
         };
@@ -231,6 +282,7 @@ public class SignalRChatService : IAsyncDisposable
         try
         {
             await _connection.StartAsync();
+            StartHeartbeat();
             ConnectionStateChanged?.Invoke(true);
             _logger.LogInformation("SignalR hub connected to {Url}", hubUrl);
         }
@@ -249,6 +301,7 @@ public class SignalRChatService : IAsyncDisposable
         if (!IsConnected) return;
         try
         {
+            _joinedChannels.Add(channel);
             await _connection!.InvokeAsync("JoinLobby", channel);
             await _connection!.InvokeAsync("GetLobbyHistory", channel);
         }
@@ -297,6 +350,7 @@ public class SignalRChatService : IAsyncDisposable
         if (!IsConnected) return;
         try
         {
+            _joinedRequestRooms.Add(requestId);
             await _connection!.InvokeAsync("JoinRequestRoom", requestId);
         }
         catch (Exception ex)
@@ -313,6 +367,7 @@ public class SignalRChatService : IAsyncDisposable
         if (!IsConnected) return;
         try
         {
+            _joinedRequestRooms.Remove(requestId);
             await _connection!.InvokeAsync("LeaveRequestRoom", requestId);
         }
         catch (Exception ex)
@@ -337,8 +392,42 @@ public class SignalRChatService : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Edits a previously sent lobby message.
+    /// </summary>
+    public async Task EditMessageAsync(string channel, string messageId, string newContent)
+    {
+        if (!IsConnected || string.IsNullOrWhiteSpace(newContent)) return;
+        try
+        {
+            await _connection!.InvokeAsync("EditLobbyMessage", channel, messageId, newContent);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to edit message '{MessageId}' in channel '{Channel}'.", messageId, channel);
+        }
+    }
+
+    /// <summary>
+    /// Deletes a previously sent lobby message.
+    /// </summary>
+    public async Task DeleteMessageAsync(string channel, string messageId)
+    {
+        if (!IsConnected) return;
+        try
+        {
+            await _connection!.InvokeAsync("DeleteLobbyMessage", channel, messageId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete message '{MessageId}' in channel '{Channel}'.", messageId, channel);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
+        StopHeartbeat();
+
         if (_connection != null)
         {
             try { await _connection.DisposeAsync(); }
@@ -348,6 +437,81 @@ public class SignalRChatService : IAsyncDisposable
 
     // ── Private helpers ───────────────────────────────────────────────
 
+    private void StartHeartbeat()
+    {
+        StopHeartbeat();
+        _heartbeatCts = new CancellationTokenSource();
+        _ = RunHeartbeatAsync(_heartbeatCts.Token);
+    }
+
+    private void StopHeartbeat()
+    {
+        if (_heartbeatCts == null)
+            return;
+
+        try
+        {
+            _heartbeatCts.Cancel();
+            _heartbeatCts.Dispose();
+        }
+        catch
+        {
+        }
+        finally
+        {
+            _heartbeatCts = null;
+        }
+    }
+
+    public bool IsUserOnline(string? username) =>
+        !string.IsNullOrWhiteSpace(username) && _onlineUsers.Contains(username);
+
+    public void UpdateOnlineUsersSnapshot(IEnumerable<string> usernames)
+    {
+        _onlineUsers.Clear();
+        foreach (var username in usernames.Where(x => !string.IsNullOrWhiteSpace(x)))
+            _onlineUsers.Add(username);
+    }
+
+    private async Task RunHeartbeatAsync(CancellationToken ct)
+    {
+        using var timer = new PeriodicTimer(HeartbeatInterval);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                if (!IsConnected)
+                    continue;
+
+                await _connection!.InvokeAsync("Heartbeat", cancellationToken: ct);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "SignalR heartbeat failed.");
+        }
+    }
+
+    private async Task RestoreSubscriptionsAsync()
+    {
+        if (!IsConnected)
+            return;
+
+        foreach (var channel in _joinedChannels.ToArray())
+        {
+            await JoinChannelAsync(channel);
+        }
+
+        foreach (var requestId in _joinedRequestRooms.ToArray())
+        {
+            await JoinRequestRoomAsync(requestId);
+        }
+    }
+
     private static ChatMessageDto? ParseChatMessage(JsonElement json, string? fallbackChannel = null)
     {
         var id = GetString(json, "id", "Id") ?? Guid.NewGuid().ToString();
@@ -356,6 +520,7 @@ public class SignalRChatService : IAsyncDisposable
         var senderDisplayName = GetString(json, "senderDisplayName", "SenderDisplayName") ?? sender;
         var content = GetString(json, "content", "Content") ?? string.Empty;
         var avatarUrl = GetString(json, "avatarUrl", "AvatarUrl");
+        var senderRole = GetString(json, "senderRole", "SenderRole");
 
         DateTime sentAt = DateTime.UtcNow;
         if (json.TryGetProperty("sentAt", out var sa) || json.TryGetProperty("SentAt", out sa))
@@ -364,7 +529,7 @@ public class SignalRChatService : IAsyncDisposable
                 sentAt = parsed;
         }
 
-        return new ChatMessageDto(id, channel, sender, senderDisplayName, content, sentAt, avatarUrl);
+        return new ChatMessageDto(id, channel, sender, senderDisplayName, content, sentAt, avatarUrl, senderRole);
     }
 
     private static string? GetString(JsonElement el, string camelKey, string pascalKey)
@@ -385,7 +550,11 @@ public record ChatMessageDto(
     string SenderDisplayName,
     string Content,
     DateTime SentAt,
-    string? AvatarUrl);
+    string? AvatarUrl,
+    string? SenderRole = null);
+
+public record ChatMessageEditedDto(string MessageId, string Channel, string NewContent, DateTime EditedAt);
+public record ChatMessageDeletedDto(string MessageId, string Channel);
 
 /// <summary>
 /// Represents an online user entry received from the SignalR presence system.

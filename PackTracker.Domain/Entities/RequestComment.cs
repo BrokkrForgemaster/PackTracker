@@ -39,6 +39,11 @@ public class RequestComment
     public string Content { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets whether this entry originated from the live request chat stream.
+    /// </summary>
+    public bool IsLiveChat { get; set; }
+
+    /// <summary>
     /// Gets or sets when the comment was created.
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

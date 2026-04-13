@@ -197,6 +197,8 @@ public partial class ProcurementRequestsViewModel : ObservableObject
         }
     }
 
+    public Task RefreshDataAsync() => RefreshAsync();
+
     [RelayCommand]
     private async Task AddCommentAsync()
     {

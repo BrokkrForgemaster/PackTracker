@@ -21,6 +21,7 @@ services:
       Authentication__Discord__ClientSecret: ${DISCORD_CLIENT_SECRET}
       Authentication__Discord__CallbackPath: /signin-discord
       Authentication__Discord__RequiredGuildId: ${DISCORD_GUILD_ID}
+      Authentication__Discord__BotToken: ${DISCORD_BOT_TOKEN:-}
       # External APIs
       Uex__ApiBaseUrl: https://api.uexcorp.uk/2.0
       Uex__ApiKey: ${UEX_API_KEY:-}

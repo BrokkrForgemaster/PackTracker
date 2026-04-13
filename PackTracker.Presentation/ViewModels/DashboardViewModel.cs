@@ -26,6 +26,8 @@ public class DashboardViewModel : ViewModelBase
     private bool _isConnected = true;
     private string? _currentUserDisplayName = "Loading...";
     private string? _currentUserRole = "Member";
+    private bool _chatSoundMuted;
+    private string? _currentUsername;
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
@@ -49,6 +51,7 @@ public class DashboardViewModel : ViewModelBase
         CascadeChatWindowsCommand = new RelayCommand(CascadeWindows);
         CollapseAllChatWindowsCommand = new RelayCommand(CollapseAllWindows);
         ExpandAllChatWindowsCommand = new RelayCommand(ExpandAllWindows);
+        ToggleMuteCommand = new RelayCommand(() => ChatSoundMuted = !ChatSoundMuted);
 
         LoadChatChannelsForRole(CurrentUserRole);
         OpenDefaultWindows();
@@ -74,6 +77,8 @@ public class DashboardViewModel : ViewModelBase
             await RefreshDataAsync();
 
             _signalR.MessageReceived += OnMessageReceived;
+            _signalR.MessageEdited += OnMessageEdited;
+            _signalR.MessageDeleted += OnMessageDeleted;
             _signalR.PresenceUpdated += OnPresenceUpdated;
 
             _signalR.AssistanceRequestCreated += id => _ = RefreshDataAsync();
@@ -103,12 +108,20 @@ public class DashboardViewModel : ViewModelBase
             var profile = await client.GetFromJsonAsync<CurrentUserDto>("api/v1/profiles/me");
             if (profile != null)
             {
+                _currentUsername = profile.Username;
                 CurrentUserDisplayName = !string.IsNullOrWhiteSpace(profile.DiscordDisplayName)
                     ? profile.DiscordDisplayName
                     : profile.Username;
                 CurrentUserRole = !string.IsNullOrWhiteSpace(profile.DiscordRank)
                     ? profile.DiscordRank
-                    : "Member";
+                    : "Foundling";
+
+                foreach (var window in OpenChatWindows)
+                {
+                    window.CurrentUsername = _currentUsername;
+                    window.CurrentUserDisplayName = CurrentUserDisplayName;
+                }
+
                 // Rebuild the available channel list for the real role.
                 // Already-open windows are unaffected; new role-gated channels
                 // become available for the user to open manually.
@@ -132,7 +145,35 @@ public class DashboardViewModel : ViewModelBase
                 window = EnsureDirectMessageWindow(username, msg.SenderDisplayName);
             }
 
-            window?.ReceiveMessage(msg.SenderDisplayName, msg.Content);
+            if (window != null)
+            {
+                window.ReceiveMessage(
+                    msg.Id,
+                    msg.Sender,
+                    msg.SenderDisplayName,
+                    msg.Content,
+                    msg.SentAt,
+                    msg.SenderRole);
+                PlayNotificationSound(window);
+            }
+        });
+    }
+
+    private void OnMessageEdited(ChatMessageEditedDto edit)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == edit.Channel);
+            window?.ApplyEdit(edit.MessageId, edit.NewContent);
+        });
+    }
+
+    private void OnMessageDeleted(ChatMessageDeletedDto del)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == del.Channel);
+            window?.ApplyDelete(del.MessageId);
         });
     }
 
@@ -148,7 +189,7 @@ public class DashboardViewModel : ViewModelBase
                     Username = u.Username,
                     DisplayName = u.DisplayName,
                     Role = u.Role,
-                    RoleColorBrush = BrushFromHex("#B89C78")
+                    RoleColorBrush = OnlineUserViewModel.GetRoleColor(u.Role)
                 });
             }
         });
@@ -200,6 +241,12 @@ public class DashboardViewModel : ViewModelBase
         set => SetProperty(ref _currentUserRole, value);
     }
 
+    public bool ChatSoundMuted
+    {
+        get => _chatSoundMuted;
+        set => SetProperty(ref _chatSoundMuted, value);
+    }
+
     public ObservableCollection<AvailableChannelViewModel> AvailableChatChannels { get; }
     public ObservableCollection<ChatWindowViewModel> OpenChatWindows { get; }
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
@@ -216,6 +263,7 @@ public class DashboardViewModel : ViewModelBase
     public ICommand CascadeChatWindowsCommand { get; }
     public ICommand CollapseAllChatWindowsCommand { get; }
     public ICommand ExpandAllChatWindowsCommand { get; }
+    public ICommand ToggleMuteCommand { get; }
 
     private void LoadChatChannelsForRole(string? role)
     {
@@ -285,6 +333,8 @@ public class DashboardViewModel : ViewModelBase
             ChannelKey = channel.Key,
             Title = channel.DisplayName,
             AccentBrush = channel.AccentBrush,
+            CurrentUserDisplayName = CurrentUserDisplayName,
+            CurrentUsername = _currentUsername,
             Left = 30 + (index * 40),
             Top = 25 + (index * 35),
             Width = 380,
@@ -296,6 +346,14 @@ public class DashboardViewModel : ViewModelBase
         window.MessageSent += (_, content) =>
         {
             var sendTask = SendWindowMessageAsync(window, content);
+        };
+        window.EditRequested += (ch, msgId, newContent) =>
+        {
+            _ = _signalR.EditMessageAsync(ch, msgId, newContent);
+        };
+        window.DeleteRequested += (ch, msgId) =>
+        {
+            _ = _signalR.DeleteMessageAsync(ch, msgId);
         };
 
         OpenChatWindows.Add(window);
@@ -464,6 +522,8 @@ public class DashboardViewModel : ViewModelBase
             Title = $"DM // {displayName ?? username}",
             TargetUsername = username,
             TargetDisplayName = displayName ?? username,
+            CurrentUserDisplayName = CurrentUserDisplayName,
+            CurrentUsername = _currentUsername,
             AccentBrush = BrushFromHex("#6A4F8B"),
             Left = 30 + (OpenChatWindows.Count * 40),
             Top = 25 + (OpenChatWindows.Count * 35),
@@ -480,6 +540,10 @@ public class DashboardViewModel : ViewModelBase
         OpenChatWindows.Add(window);
         FloatingChatWindows.Add(window);
         RefreshCollapsedAlerts();
+
+        if (_signalR.IsConnected)
+            _ = _signalR.JoinChannelAsync(channelKey);
+
         return window;
     }
 
@@ -491,6 +555,53 @@ public class DashboardViewModel : ViewModelBase
         return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)!);
     }
 
+    private void PlayNotificationSound(ChatWindowViewModel window)
+    {
+        // Only notify when the window is collapsed or the app is not focused
+        if (!window.IsCollapsed)
+            return;
+
+        if (!ChatSoundMuted)
+        {
+            try
+            {
+                System.Media.SystemSounds.Asterisk.Play();
+            }
+            catch
+            {
+                // Non-fatal — sound may not be available
+            }
+        }
+
+        // Flash the taskbar to draw visual attention
+        try
+        {
+            var mainWindow = System.Windows.Application.Current.MainWindow;
+            if (mainWindow != null && !mainWindow.IsActive)
+            {
+                FlashWindow(mainWindow);
+            }
+        }
+        catch
+        {
+            // Non-fatal
+        }
+    }
+
+    private static void FlashWindow(System.Windows.Window window)
+    {
+        var helper = new System.Windows.Interop.WindowInteropHelper(window);
+        var info = new NativeMethods.FLASHWINFO
+        {
+            cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.FLASHWINFO>(),
+            hwnd = helper.Handle,
+            dwFlags = NativeMethods.FLASHW_ALL | NativeMethods.FLASHW_TIMERNOFG,
+            uCount = 3,
+            dwTimeout = 0
+        };
+        NativeMethods.FlashWindowEx(ref info);
+    }
+
     // optional test helper
     public void SimulateIncomingMessage(string channelKey, string sender, string content)
     {
@@ -498,7 +609,7 @@ public class DashboardViewModel : ViewModelBase
         if (window == null)
             return;
 
-        window.ReceiveMessage(sender, content);
+        window.ReceiveMessage(Guid.NewGuid().ToString(), sender, sender, content, DateTime.UtcNow);
 
         var channel = AvailableChatChannels.FirstOrDefault(x => x.Key == channelKey);
         if (channel != null)

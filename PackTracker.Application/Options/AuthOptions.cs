@@ -14,6 +14,11 @@ public class DiscordOptions
     public string ClientSecret { get; set; } = string.Empty;
     public string CallbackPath { get; set; } = "/signin-discord";
     public string RequiredGuildId { get; set; } = string.Empty;
+    /// <summary>
+    /// Optional Discord Bot token used to fetch guild role hierarchy.
+    /// The /guilds/{id}/roles endpoint requires Bot authorization.
+    /// </summary>
+    public string BotToken { get; set; } = string.Empty;
 }
 
 public class JwtOptions

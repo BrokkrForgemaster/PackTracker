@@ -49,9 +49,9 @@ public class AssistanceRequestsControllerTests
         return controller;
     }
 
-    private static async Task<Profile> SeedProfileAsync(AppDbContext db, string discordId = TestDiscordId)
+    private static async Task<Profile> SeedProfileAsync(AppDbContext db, string discordId = TestDiscordId, string? role = null)
     {
-        var profile = new Profile { DiscordId = discordId, Username = "testuser" };
+        var profile = new Profile { DiscordId = discordId, Username = "testuser", DiscordRank = role };
         db.Profiles.Add(profile);
         await db.SaveChangesAsync();
         return profile;
@@ -135,6 +135,39 @@ public class AssistanceRequestsControllerTests
         Assert.Equal("Mining Completed", request.Title);
         Assert.Equal(RequestKind.MiningMaterials, request.Kind);
         Assert.Equal(RequestStatus.Completed.ToString(), request.Status);
+    }
+
+    [Fact]
+    public async Task GetRequests_OrdersPinnedRequestsFirst()
+    {
+        var db = CreateDb();
+        var profile = await SeedProfileAsync(db);
+        var controller = BuildController(db);
+
+        db.AssistanceRequests.AddRange(
+            new AssistanceRequest
+            {
+                Title = "Older unpinned",
+                Status = RequestStatus.Open,
+                CreatedByProfileId = profile.Id,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+            },
+            new AssistanceRequest
+            {
+                Title = "Pinned request",
+                Status = RequestStatus.Open,
+                CreatedByProfileId = profile.Id,
+                IsPinned = true,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-10)
+            });
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetRequests(null, null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<AssistanceRequestDto>>(ok.Value);
+        Assert.Equal("Pinned request", list[0].Title);
+        Assert.True(list[0].IsPinned);
     }
 
     [Fact]
@@ -252,6 +285,51 @@ public class AssistanceRequestsControllerTests
 
         var updated = await db.AssistanceRequests.FindAsync(request.Id);
         Assert.Equal(RequestStatus.Cancelled, updated!.Status);
+    }
+
+    [Fact]
+    public async Task PinRequest_ReturnsForbidden_WhenUserIsBelowCaptain()
+    {
+        var db = CreateDb();
+        var profile = await SeedProfileAsync(db, role: "Lieutenant");
+        var controller = BuildController(db);
+
+        var request = new AssistanceRequest
+        {
+            Title = "Need escort",
+            Status = RequestStatus.Open,
+            CreatedByProfileId = profile.Id
+        };
+        db.AssistanceRequests.Add(request);
+        await db.SaveChangesAsync();
+
+        var result = await controller.PinRequest(request.Id.ToString(), CancellationToken.None);
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
+    }
+
+    [Fact]
+    public async Task PinRequest_ReturnsOk_WhenUserIsCaptainOrAbove()
+    {
+        var db = CreateDb();
+        var profile = await SeedProfileAsync(db, role: "Captain");
+        var controller = BuildController(db);
+
+        var request = new AssistanceRequest
+        {
+            Title = "Critical cargo escort",
+            Status = RequestStatus.Open,
+            CreatedByProfileId = profile.Id
+        };
+        db.AssistanceRequests.Add(request);
+        await db.SaveChangesAsync();
+
+        var result = await controller.PinRequest(request.Id.ToString(), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        var updated = await db.AssistanceRequests.FindAsync(request.Id);
+        Assert.True(updated!.IsPinned);
     }
 
     [Fact]
