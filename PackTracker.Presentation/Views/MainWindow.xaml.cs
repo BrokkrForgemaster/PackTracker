@@ -64,13 +64,11 @@ namespace PackTracker.Presentation.Views
         private ImageSource? _currentUserAvatar;
         private string _discordDisplayName = "Not Logged In";
         private string _discordRank = "No Rank";
+
         #endregion
 
         #region Bindable Properties
 
-        /// <summary>
-        /// Gets or sets the current user's avatar image displayed in the sidebar.
-        /// </summary>
         public ImageSource? CurrentUserAvatar
         {
             get => _currentUserAvatar;
@@ -84,9 +82,6 @@ namespace PackTracker.Presentation.Views
             }
         }
 
-        /// <summary>
-        /// Gets or sets the current user's Discord display name shown in the sidebar.
-        /// </summary>
         public string DiscordDisplayName
         {
             get => _discordDisplayName;
@@ -100,9 +95,6 @@ namespace PackTracker.Presentation.Views
             }
         }
 
-        /// <summary>
-        /// Gets or sets the current user's Discord rank or role shown in the sidebar.
-        /// </summary>
         public string DiscordRank
         {
             get => _discordRank;
@@ -120,9 +112,6 @@ namespace PackTracker.Presentation.Views
 
         #region Constructor
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MainWindow"/> class.
-        /// </summary>
         public MainWindow(
             IServiceProvider serviceProvider,
             ISettingsService settingsService,
@@ -151,8 +140,11 @@ namespace PackTracker.Presentation.Views
 
             NavigateToFirstView();
 
-            _ = RefreshSidebarProfileAsync();
-            _ = CheckForUpdateAsync();
+            Loaded += async (_, _) =>
+            {
+                await RefreshSidebarProfileAsync();
+                await CheckForUpdateAsync();
+            };
         }
 
         #endregion
@@ -180,9 +172,6 @@ namespace PackTracker.Presentation.Views
             NavigateToDashboard();
         }
 
-        /// <summary>
-        /// Validates JWT structure and expiration without throwing.
-        /// </summary>
         private bool IsJwtValid(string token)
         {
             if (string.IsNullOrWhiteSpace(token) || token.Count(c => c == '.') != 2)
@@ -351,7 +340,7 @@ namespace PackTracker.Presentation.Views
                     $"Failed to open Procurement Queue:\n{ex}",
                     "Navigation Error",
                     MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                    MessageBoxImage.Error);
             }
         }
 
@@ -427,24 +416,58 @@ namespace PackTracker.Presentation.Views
             System.Windows.Application.Current.Shutdown();
         }
 
-        /// <summary>
-        /// Refreshes the sidebar profile card using the most recently logged-in profile.
-        /// </summary>
         public async Task RefreshSidebarProfileAsync()
         {
             try
             {
-                // We use a fresh scope/context to ensure we see the latest data from the database
-                // after the PackTracker API has updated it.
                 using var scope = _serviceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var logger = scope.ServiceProvider.GetService<ILogger<MainWindow>>();
 
-                var profile = await db.Profiles
-                    .OrderByDescending(p => p.LastLogin)
-                    .FirstOrDefaultAsync();
+                var settings = _settingsService.GetSettings();
+                var jwtToken = settings.JwtToken;
+
+                if (string.IsNullOrWhiteSpace(jwtToken) || !IsJwtValid(jwtToken))
+                {
+                    await Dispatcher.InvokeAsync(SetDefaultProfile);
+                    return;
+                }
+
+                var (candidateDisplayName, candidateUsername) = ExtractJwtIdentity(jwtToken);
+
+                if (string.IsNullOrWhiteSpace(candidateDisplayName) &&
+                    string.IsNullOrWhiteSpace(candidateUsername))
+                {
+                    logger?.LogWarning("JWT did not contain a usable display name or username.");
+                    await Dispatcher.InvokeAsync(SetDefaultProfile);
+                    return;
+                }
+
+                var query = db.Profiles.AsNoTracking();
+
+                var profile =
+                    (!string.IsNullOrWhiteSpace(candidateDisplayName)
+                        ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateDisplayName)
+                        : null)
+                    ??
+                    (!string.IsNullOrWhiteSpace(candidateUsername)
+                        ? await query.FirstOrDefaultAsync(p => p.Username == candidateUsername)
+                        : null)
+                    ??
+                    (!string.IsNullOrWhiteSpace(candidateUsername)
+                        ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateUsername)
+                        : null)
+                    ??
+                    (!string.IsNullOrWhiteSpace(candidateDisplayName)
+                        ? await query.FirstOrDefaultAsync(p => p.Username == candidateDisplayName)
+                        : null);
 
                 if (profile == null)
                 {
+                    logger?.LogWarning(
+                        "No matching profile found. JWT display name: {DisplayName}, JWT username: {Username}",
+                        candidateDisplayName, candidateUsername);
+
                     await Dispatcher.InvokeAsync(SetDefaultProfile);
                     return;
                 }
@@ -459,15 +482,12 @@ namespace PackTracker.Presentation.Views
                             : !string.IsNullOrWhiteSpace(profile.Username)
                                 ? profile.Username
                                 : "Unknown User";
-                    
+
                     DiscordRank = !string.IsNullOrWhiteSpace(profile.DiscordRank)
                         ? profile.DiscordRank
                         : "No Rank";
 
-                    // DiscordRank =  profile.DiscordRank.OrderByDescending<char, object>(r => r.Position).FirstOrDefault(); ?? "No Rank";
-
-                    CurrentUserAvatar = LoadAvatar(avatar);
-
+                    CurrentUserAvatar = LoadAvatar(avatar, logger);
                     SidebarAvatarImage.Source = CurrentUserAvatar;
                 });
             }
@@ -475,7 +495,32 @@ namespace PackTracker.Presentation.Views
             {
                 var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
                 logger?.LogWarning(ex, "Failed to refresh sidebar profile.");
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(SetDefaultProfile);
+                await Dispatcher.InvokeAsync(SetDefaultProfile);
+            }
+        }
+
+        private (string? DisplayName, string? Username) ExtractJwtIdentity(string token)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                var jwt = handler.ReadJwtToken(token);
+
+                string? displayName =
+                    jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value ??
+                    jwt.Claims.FirstOrDefault(c => c.Type == "unique_name")?.Value ??
+                    jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
+
+                string? username =
+                    jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value ??
+                    jwt.Claims.FirstOrDefault(c => c.Type == "username")?.Value ??
+                    jwt.Claims.FirstOrDefault(c => c.Type == "unique_name")?.Value;
+
+                return (displayName?.Trim(), username?.Trim());
+            }
+            catch
+            {
+                return (null, null);
             }
         }
 
@@ -484,25 +529,33 @@ namespace PackTracker.Presentation.Views
             DiscordDisplayName = "Not Logged In";
             DiscordRank = "No Rank";
             CurrentUserAvatar = LoadFallbackAvatar();
+            SidebarAvatarImage.Source = CurrentUserAvatar;
         }
 
-        private ImageSource LoadAvatar(string? url)
+        private ImageSource LoadAvatar(string? url, ILogger? logger = null)
         {
             if (string.IsNullOrWhiteSpace(url))
                 return LoadFallbackAvatar();
 
             try
             {
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                {
+                    logger?.LogWarning("Invalid Discord avatar URL: {AvatarUrl}", url);
+                    return LoadFallbackAvatar();
+                }
+
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
-                bitmap.UriSource = new Uri(url, UriKind.Absolute);
+                bitmap.UriSource = uri;
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.EndInit();
                 bitmap.Freeze();
                 return bitmap;
             }
-            catch
+            catch (Exception ex)
             {
+                logger?.LogWarning(ex, "Failed to load Discord avatar from {AvatarUrl}", url);
                 return LoadFallbackAvatar();
             }
         }
@@ -515,11 +568,9 @@ namespace PackTracker.Presentation.Views
             }
             catch
             {
-                // Absolute last resort - empty transparent image
                 return new DrawingImage();
             }
         }
-
 
         #endregion
 
@@ -554,7 +605,6 @@ namespace PackTracker.Presentation.Views
             NormalPostureContent.Visibility = Visibility.Collapsed;
             UpdatePostureContent.Visibility = Visibility.Visible;
 
-            // Show a modal dialog so users on smaller screens can still install the update
             var notes = string.IsNullOrWhiteSpace(update.ReleaseNotes)
                 ? string.Empty
                 : $"\n\n{update.ReleaseNotes.Trim()}";
@@ -629,8 +679,6 @@ namespace PackTracker.Presentation.Views
 
         private void HelpOverlay_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // Only hide if the user clicks the dark background (HelpOverlay)
-            // and not the HelpPanel itself.
             if (e.OriginalSource == HelpOverlay)
             {
                 HideHelp();
