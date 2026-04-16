@@ -4,120 +4,126 @@
     <ProjectReference Include="..\PackTracker.Api\PackTracker.Api.csproj" />
     <ProjectReference Include="..\PackTracker.Application\PackTracker.Application.csproj" />
     <ProjectReference Include="..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\PackTracker.Logging\PackTracker.Logging.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Discord.Net.WebSocket" Version="3.18.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="AspNet.Security.OAuth.Discord" Version="9.4.1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="CorrelationId" Version="3.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
+    <PackageReference Include="Discord.Net.WebSocket" Version="3.18.0" />
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3485.44" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
-    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
-    <PackageReference Include="System.Text.Json" Version="9.0.9" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="System.Text.Json" Version="10.0.6" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\**\*.*" />
   </ItemGroup>
+
   <ItemGroup>
     <Content Include="wwwroot\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+
     <None Remove="appsettings.json" />
     <Content Include="appsettings.json">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </Content>
+
     <None Remove="appsettings.Development.json" />
     <Content Include="appsettings.Development.json">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </Content>
+
     <None Remove="Assets\comingsoon.jpg" />
     <Content Include="Assets\comingsoon.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\GearSolid.svg" />
     <Content Include="Assets\GearSolid.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\housewolf2.ico" />
     <Content Include="Assets\housewolf2.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\HousewolfBanner.png" />
     <Content Include="Assets\HousewolfBanner.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\HWiconnew.png" />
     <Content Include="Assets\HWiconnew.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\HWpic1.png" />
     <Content Include="Assets\HWpic1.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\killtracker.png" />
     <Content Include="Assets\killtracker.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\leadership.png" />
     <Content Include="Assets\leadership.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\Pack_Tracker.png" />
     <Content Include="Assets\Pack_Tracker.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\RightLeftSolid.svg" />
     <Content Include="Assets\RightLeftSolid.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\RocketSolid.svg" />
     <Content Include="Assets\RocketSolid.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\RssSolid.svg" />
     <Content Include="Assets\RssSolid.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\SkullCrossbonesSolid.svg" />
     <Content Include="Assets\SkullCrossbonesSolid.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\specops.png" />
     <Content Include="Assets\specops.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Remove="Assets\tacops.png" />
     <Content Include="Assets\tacops.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+
     <None Include="Styles\Buttons.xml" />
   </ItemGroup>
 
@@ -127,19 +133,16 @@
       <XamlRuntime>Wpf</XamlRuntime>
       <SubType>Designer</SubType>
     </Page>
+
     <Page Update="Themes\*.xaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Page>
+
     <Page Update="Styles\*.xaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Page>
   </ItemGroup>
- 
-  <ItemGroup>
-    <Content Include="wwwroot\**\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+
   <ItemGroup>
     <Content Include="wwwroot\data\crafting-seed.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -1,5 +1,5 @@
-﻿using System.Windows;
-using System.IO;
+﻿using System.IO;
+using System.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -7,11 +7,11 @@ using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Services;
+using PackTracker.Logging.Extensions;
 using PackTracker.Presentation.Services;
 using PackTracker.Presentation.ViewModels;
 using PackTracker.Presentation.Views;
 using Serilog;
-using Serilog.Events;
 
 namespace PackTracker.Presentation;
 
@@ -26,58 +26,37 @@ public partial class App : System.Windows.Application
     public static T GetService<T>() where T : notnull
     {
         if (Current is not App app || app._serviceProvider is null)
-            throw new InvalidOperationException("❌ Service provider not initialized.");
+            throw new InvalidOperationException("Service provider not initialized.");
+
         return app._serviceProvider.GetRequiredService<T>();
     }
 
-    // -------------------------------------------------------------
-    // 🧩 Central Bootstrap Method
-    // -------------------------------------------------------------
     private static IServiceProvider BootstrapServices(IConfiguration cfg)
     {
         var services = new ServiceCollection();
-        var appDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "HouseWolf",
-            "PackTracker");
-        var logsPath = Path.Combine(appDataPath, "logs");
-        Directory.CreateDirectory(logsPath);
 
-        // 1️⃣ Logging configuration
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(cfg)
-            .Enrich.WithProperty("Application", "PackTracker")
-            .WriteTo.Async(writeTo => writeTo.File(
-                path: Path.Combine(logsPath, "packtracker-.log"),
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 14,
-                fileSizeLimitBytes: 10 * 1024 * 1024,
-                rollOnFileSizeLimit: true,
-                shared: true,
-                restrictedToMinimumLevel: LogEventLevel.Information,
-                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}"))
-            .CreateLogger();
+        // Logging
+        services.AddPackTrackerLogging(cfg);
 
-        services.AddLogging(b => b.AddSerilog());
-
-        // 2️⃣ Settings service (merge environment, secrets, local file)
-        var settingsLoggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
+        // Settings service
+        var settingsLoggerFactory = LoggerFactory.Create(builder => builder.AddSerilog(Log.Logger, dispose: false));
         var settingsLogger = settingsLoggerFactory.CreateLogger<SettingsService>();
         var settingsService = new SettingsService(settingsLogger);
+
         settingsService.EnsureBootstrapDefaults(cfg);
         services.AddSingleton<ISettingsService>(settingsService);
 
-        // 3️⃣ Infrastructure (requires settings)
+        // Infrastructure
         services.AddInfrastructure(settingsService);
 
-        // 4️⃣ Application shell
+        // Application shell
         services.AddSingleton<System.Windows.Application>(_ => Current);
 
-        // 5️⃣ External API configs
+        // External API configs
         services.Configure<UexOptions>(cfg.GetSection("Uex"));
         services.AddHttpClient<IUexService, UexService>();
 
-        // 6️⃣ Core presentation services
+        // Core presentation services
         services.AddSingleton<IThemeManager, ThemeManager>();
         services.AddSingleton<AuthTokenService>();
         services.AddSingleton<IApiClientProvider, ApiClientProvider>();
@@ -86,7 +65,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<SignalRChatService>();
 
-        // 7️⃣ Views + ViewModels
+        // Views + ViewModels
         services.AddTransient<MainWindow>();
         services.AddSingleton<WelcomeView>();
         services.AddSingleton<LoginView>();
@@ -107,27 +86,23 @@ public partial class App : System.Windows.Application
         services.AddTransient<ProcurementRequestsView>();
         services.AddTransient<ComponentViewModel>();
 
-        // Embedded API host — registered as singleton so we can start/stop it manually
+        // Embedded API host
         services.AddSingleton<ApiHostedService>();
 
-        // Bind GuideRequest and Api options from configuration
+        // Configuration-bound options and helpers
         services.Configure<GuideRequestOptions>(cfg.GetSection(GuideRequestOptions.SectionName));
-
         services.AddSingleton<GuideNotificationService>();
         services.AddSingleton<GuideRequestWatcher>();
         services.AddSingleton<GuideAssignmentHandler>();
         services.AddTransient<GuideDashboardViewModel>();
         services.AddTransient<NewRequestViewModel>();
         services.AddTransient<SettingsView>();
+
         services.AddSignalR();
-        
 
         return services.BuildServiceProvider();
     }
 
-    // -------------------------------------------------------------
-    // 🚀 Application Startup
-    // -------------------------------------------------------------
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -136,8 +111,6 @@ public partial class App : System.Windows.Application
         {
             DotNetEnv.Env.TraversePath().Load();
 
-            // Load configuration. Each source is optional so a missing or locked file
-            // never crashes startup — user settings are persisted separately in %AppData%.
             IConfiguration cfg;
             try
             {
@@ -156,7 +129,6 @@ public partial class App : System.Windows.Application
             }
             catch
             {
-                // User secrets file corrupt/locked (dev machine only) — fall back to env vars.
                 cfg = new ConfigurationBuilder()
                     .SetBasePath(AppContext.BaseDirectory)
                     .AddJsonFile(src =>
@@ -170,26 +142,21 @@ public partial class App : System.Windows.Application
                     .Build();
             }
 
-            // Bootstrap DI
             _serviceProvider = BootstrapServices(cfg);
 
             var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
-            logger.LogInformation("🚀 Starting PackTracker...");
+            logger.LogInformation("Starting PackTracker.");
 
-            // Start embedded API (fire-and-forget — LoginView polls /health until it's up)
             var apiService = _serviceProvider.GetRequiredService<ApiHostedService>();
             _ = apiService.StartAsync(CancellationToken.None);
 
-            // Load user settings
             var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
             var settings = settingsService.GetSettings();
 
-            // Theme
             var themeManager = _serviceProvider.GetRequiredService<IThemeManager>();
             if (!string.IsNullOrWhiteSpace(settings.Theme))
                 themeManager.ApplyTheme(settings.Theme);
 
-            // Setup main window
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
 
             if (settings.FirstRunComplete)
@@ -198,41 +165,52 @@ public partial class App : System.Windows.Application
                 mainWindow.ContentFrame.Navigate(_serviceProvider.GetRequiredService<WelcomeView>());
 
             mainWindow.Show();
-            Log.Information("✅ PackTracker started successfully.");
+            logger.LogInformation("PackTracker started successfully.");
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "❌ Fatal error during startup.");
+            Log.Fatal(ex, "Fatal error during startup.");
+
             MessageBox.Show(
                 $"A critical error occurred:\n\n{ex.Message}",
                 "Startup Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
+
             Shutdown(-1);
         }
     }
 
-    // -------------------------------------------------------------
-    // 🛑 Graceful Shutdown
-    // -------------------------------------------------------------
     protected override void OnExit(ExitEventArgs e)
     {
-        _serviceProvider?.GetService<ApiHostedService>()
-            ?.StopAsync(CancellationToken.None)
-            .GetAwaiter().GetResult();
+        try
+        {
+            _serviceProvider?.GetService<ApiHostedService>()
+                ?.StopAsync(CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
 
-        Log.CloseAndFlush();
-        base.OnExit(e);
+            Log.Information("PackTracker shut down.");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+            base.OnExit(e);
+        }
     }
 
-    private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    private void App_DispatcherUnhandledException(
+        object sender,
+        System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
     {
-        Log.Fatal(e.Exception, "❌ Unhandled UI thread exception.");
+        Log.Fatal(e.Exception, "Unhandled UI thread exception.");
+
         MessageBox.Show(
             $"A critical error occurred:\n\n{e.Exception.Message}\n\nCheck logs for details.",
             "Runtime Error",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
+
         e.Handled = true;
         Shutdown(-1);
     }

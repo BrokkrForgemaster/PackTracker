@@ -1,11 +1,6 @@
 using Serilog;
 using Serilog.Exceptions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using PackTracker.Application.Interfaces;
-using Serilog.Events;
 
 namespace PackTracker.Infrastructure.Logging;
 
@@ -23,8 +18,6 @@ public static class LoggingConfiguration
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Application", "PackTracker")
                 .Enrich.WithMachineName()
-                .Enrich.WithProcessId()
-                .Enrich.WithThreadId()
-                .Enrich.WithCorrelationId();
+                .Enrich.WithThreadId();
         });
 }
