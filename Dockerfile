@@ -6,6 +6,7 @@ WORKDIR /src
 COPY PackTracker.Domain/PackTracker.Domain.csproj             PackTracker.Domain/
 COPY PackTracker.Application/PackTracker.Application.csproj   PackTracker.Application/
 COPY PackTracker.Infrastructure/PackTracker.Infrastructure.csproj PackTracker.Infrastructure/
+COPY PackTracker.Logging/PackTracker.Logging.csproj           PackTracker.Logging/
 COPY PackTracker.Api/PackTracker.Api.csproj                   PackTracker.Api/
 
 RUN dotnet restore PackTracker.Api/PackTracker.Api.csproj
@@ -14,6 +15,7 @@ RUN dotnet restore PackTracker.Api/PackTracker.Api.csproj
 COPY PackTracker.Domain/       PackTracker.Domain/
 COPY PackTracker.Application/  PackTracker.Application/
 COPY PackTracker.Infrastructure/ PackTracker.Infrastructure/
+COPY PackTracker.Logging/      PackTracker.Logging/
 COPY PackTracker.Api/          PackTracker.Api/
 
 RUN dotnet publish PackTracker.Api/PackTracker.Api.csproj \
