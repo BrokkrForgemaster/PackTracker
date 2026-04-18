@@ -10,6 +10,7 @@ namespace PackTracker.Presentation.Views;
 public partial class DashboardView : UserControl
 {
     private readonly DashboardViewModel _vm;
+    public DashboardViewModel ViewModel => _vm;
     private ChatWindowViewModel? _dragging;
     private Point _dragOffset;
 

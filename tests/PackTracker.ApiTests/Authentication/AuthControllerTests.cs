@@ -10,6 +10,7 @@ using PackTracker.Application.Options;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
+using PackTracker.Infrastructure.Services;
 using static PackTracker.Api.Controllers.AuthController;
 
 namespace PackTracker.ApiTests.Authentication;
@@ -28,36 +29,40 @@ public class AuthControllerTests
         });
 
         var jwt = new JwtTokenService(authOptions, db, NullLogger<JwtTokenService>.Instance);
-
-        var settingsMock = new Mock<ISettingsService>();
-        var profileMock = new Mock<IProfileService>();
         var cache = new MemoryCache(new MemoryCacheOptions());
         var logger = NullLogger<AuthController>.Instance;
+        var profiles = new Mock<IProfileService>();
+        var authWorkflow = new AuthWorkflowService(
+            profiles.Object,
+            jwt,
+            db,
+            cache,
+            NullLogger<AuthWorkflowService>.Instance);
 
-        var controller = new AuthController(settingsMock.Object, jwt, profileMock.Object, db, logger, cache, authOptions);
+        var controller = new AuthController(authWorkflow, logger, authOptions);
         return (controller, db, cache);
     }
 
     [Fact]
-    public void Poll_ReturnsNotFound_WhenStateUnknown()
+    public async Task Poll_ReturnsNotFound_WhenStateUnknown()
     {
         var (controller, _, _) = BuildController();
 
-        var result = controller.Poll("unknown-state");
+        var result = await controller.Poll("unknown-state", CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
-    public void Poll_ReturnsOk_WhenStateExists()
+    public async Task Poll_ReturnsOk_WhenStateExists()
     {
         var (controller, _, cache) = BuildController();
 
         cache.Set("login-state:my-state",
-            new LoginTokenPayload("access", "refresh", 3600),
+            new PackTracker.Application.Interfaces.LoginTokenPayload("access", "refresh", 3600),
             new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) });
 
-        var result = controller.Poll("my-state");
+        var result = await controller.Poll("my-state", CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
     }

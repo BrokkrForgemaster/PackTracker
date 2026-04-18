@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using FluentValidation;
 using PackTracker.Application.Interfaces;
 using PackTracker.Common.DTOs;
 
@@ -40,6 +41,20 @@ public class ExceptionHandlingMiddleware
         catch (Exception ex)
         {
             var traceId = context.TraceIdentifier;
+            var statusCode = ex is ValidationException
+                ? (int)HttpStatusCode.BadRequest
+                : (int)HttpStatusCode.InternalServerError;
+            var message = ex is ValidationException validationException
+                ? "Validation failed"
+                : ex.Message;
+            var errors = ex is ValidationException fluentValidationException
+                ? fluentValidationException.Errors
+                    .GroupBy(x => x.PropertyName)
+                    .ToDictionary(g => g.Key, g => g.Select(x => x.ErrorMessage).ToArray())
+                : new Dictionary<string, string[]>
+                {
+                    ["StackTrace"] = new[] { ex.StackTrace ?? "No stack trace available" }
+                };
 
             _logger.LogError(
                 ex,
@@ -52,13 +67,10 @@ public class ExceptionHandlingMiddleware
 
             var error = new ErrorResponse
             {
-                Message = ex.Message,
+                Message = message,
                 TraceId = traceId,
-                StatusCode = (int)HttpStatusCode.InternalServerError,
-                Errors = new Dictionary<string, string[]>
-                {
-                    ["StackTrace"] = new[] { ex.StackTrace ?? "No stack trace available" }
-                }
+                StatusCode = statusCode,
+                Errors = errors
             };
 
             context.Response.ContentType = "application/json";

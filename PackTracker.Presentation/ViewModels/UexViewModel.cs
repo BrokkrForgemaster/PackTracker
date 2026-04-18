@@ -141,12 +141,12 @@ public partial class UexViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedShipChanged(UexVehicleDto? ship)
+    partial void OnSelectedShipChanged(UexVehicleDto? value)
     {
         CalculateShipProfit();
     }
 
-    partial void OnBestRouteChanged(UexTradeRouteDto? route)
+    partial void OnBestRouteChanged(UexTradeRouteDto? value)
     {
         CalculateShipProfit();
     }

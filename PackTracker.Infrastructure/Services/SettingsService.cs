@@ -282,6 +282,8 @@ public sealed class SettingsService : ISettingsService, IDisposable
             updatedSettings.UexCorpApiKey = uexKey;
 
             var apiBase = updatedSettings.ApiBaseUrl;
+            if (apiBase.Contains("example.com", StringComparison.OrdinalIgnoreCase))
+                apiBase = string.Empty;
             Assign(ref apiBase, configuration["Api:BaseUrl"]);
             updatedSettings.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBase) ? string.Empty : apiBase.TrimEnd('/');
 

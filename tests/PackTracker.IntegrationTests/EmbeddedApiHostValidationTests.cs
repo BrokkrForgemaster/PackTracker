@@ -21,6 +21,7 @@ using PackTracker.Infrastructure.ApiHosting;
 using PackTracker.Infrastructure.BackgroundServices;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
+using PackTracker.Logging;
 
 namespace PackTracker.IntegrationTests;
 
@@ -78,6 +79,8 @@ public class EmbeddedApiHostValidationTests
                 webBuilder.UseTestServer();
                 webBuilder.ConfigureServices(services =>
                 {
+                    services.AddPackTrackerLogging(new ConfigurationBuilder().Build(), "PackTracker.IntegrationTests");
+
                     services.AddDataProtection()
                         .PersistKeysToFileSystem(keyDirectory);
 

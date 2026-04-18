@@ -258,18 +258,8 @@ public class ProfileService : IProfileService
                     return highestKnown;
                 }
 
-                // If none of the user's roles match the known hierarchy,
-                // fall back to the highest role by Discord position.
-                var highestByPosition = allRoles
-                    .Where(r => member.Roles.Contains(r.Id))
-                    .OrderByDescending(r => r.Position)
-                    .FirstOrDefault();
-
-                if (highestByPosition != null)
-                {
-                    _logger.LogInformation("Highest role by position: {RoleName} (Position {Position})", highestByPosition.Name, highestByPosition.Position);
-                    return highestByPosition.Name;
-                }
+                // Log unmatched role names to help diagnose hierarchy mismatches.
+                _logger.LogInformation("No hierarchy match found. User role names: {RoleNames}", string.Join(", ", userRoleNames));
             }
 
             // Fallback: match member role IDs against the known House Wolf role mapping.

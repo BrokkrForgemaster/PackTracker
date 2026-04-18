@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -17,7 +18,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Dashboard;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
+using PackTracker.Presentation.Services;
 using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views
@@ -254,6 +257,7 @@ namespace PackTracker.Presentation.Views
             SetNavigationEnabled(true);
             var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
             ContentFrame.Navigate(dashboardView);
+            _ = dashboardView.ViewModel.LoadCurrentUserAsync();
             _ = RefreshSidebarProfileAsync();
         }
 
@@ -411,9 +415,37 @@ namespace PackTracker.Presentation.Views
 
         #region Sidebar Controls
 
-        private void Exit_Click(object sender, RoutedEventArgs e)
+        private async void Exit_Click(object sender, RoutedEventArgs e)
         {
+            await LogoutAsync();
             System.Windows.Application.Current.Shutdown();
+        }
+
+        protected override async void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+            await LogoutAsync();
+            e.Cancel = false;
+            base.OnClosing(e);
+            System.Windows.Application.Current.Shutdown();
+        }
+
+        private async Task LogoutAsync()
+        {
+            try
+            {
+                await _settingsService.UpdateSettingsAsync(s =>
+                {
+                    s.JwtToken = string.Empty;
+                    s.JwtRefreshToken = string.Empty;
+                    s.DiscordRefreshToken = string.Empty;
+                });
+            }
+            catch (Exception ex)
+            {
+                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
+                logger?.LogWarning(ex, "Failed to clear tokens on logout.");
+            }
         }
 
         public async Task RefreshSidebarProfileAsync()
@@ -433,46 +465,77 @@ namespace PackTracker.Presentation.Views
                     return;
                 }
 
-                var (candidateDisplayName, candidateUsername) = ExtractJwtIdentity(jwtToken);
+                var apiProvider = scope.ServiceProvider.GetRequiredService<IApiClientProvider>();
+                var isRemote = !apiProvider.BaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase);
 
-                if (string.IsNullOrWhiteSpace(candidateDisplayName) &&
-                    string.IsNullOrWhiteSpace(candidateUsername))
+                Profile? profile;
+
+                if (isRemote)
                 {
-                    logger?.LogWarning("JWT did not contain a usable display name or username.");
-                    await Dispatcher.InvokeAsync(SetDefaultProfile);
-                    return;
+                    using var client = apiProvider.CreateClient();
+                    var response = await client.GetAsync("api/v1/profiles/me");
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        logger?.LogWarning("GET /api/v1/profiles/me returned {Status}", response.StatusCode);
+                        await Dispatcher.InvokeAsync(SetDefaultProfile);
+                        return;
+                    }
+                    profile = await response.Content.ReadFromJsonAsync<Profile>();
                 }
+                else
+                {
+                    var (candidateDisplayName, candidateUsername) = ExtractJwtIdentity(jwtToken);
 
-                var query = db.Profiles.AsNoTracking();
+                    if (string.IsNullOrWhiteSpace(candidateDisplayName) &&
+                        string.IsNullOrWhiteSpace(candidateUsername))
+                    {
+                        logger?.LogWarning("JWT did not contain a usable display name or username.");
+                        await Dispatcher.InvokeAsync(SetDefaultProfile);
+                        return;
+                    }
 
-                var profile =
-                    (!string.IsNullOrWhiteSpace(candidateDisplayName)
-                        ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateDisplayName)
-                        : null)
-                    ??
-                    (!string.IsNullOrWhiteSpace(candidateUsername)
-                        ? await query.FirstOrDefaultAsync(p => p.Username == candidateUsername)
-                        : null)
-                    ??
-                    (!string.IsNullOrWhiteSpace(candidateUsername)
-                        ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateUsername)
-                        : null)
-                    ??
-                    (!string.IsNullOrWhiteSpace(candidateDisplayName)
-                        ? await query.FirstOrDefaultAsync(p => p.Username == candidateDisplayName)
-                        : null);
+                    var query = db.Profiles.AsNoTracking();
+                    profile =
+                        (!string.IsNullOrWhiteSpace(candidateDisplayName)
+                            ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateDisplayName)
+                            : null)
+                        ??
+                        (!string.IsNullOrWhiteSpace(candidateUsername)
+                            ? await query.FirstOrDefaultAsync(p => p.Username == candidateUsername)
+                            : null)
+                        ??
+                        (!string.IsNullOrWhiteSpace(candidateUsername)
+                            ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateUsername)
+                            : null)
+                        ??
+                        (!string.IsNullOrWhiteSpace(candidateDisplayName)
+                            ? await query.FirstOrDefaultAsync(p => p.Username == candidateDisplayName)
+                            : null);
+                }
 
                 if (profile == null)
                 {
-                    logger?.LogWarning(
-                        "No matching profile found. JWT display name: {DisplayName}, JWT username: {Username}",
-                        candidateDisplayName, candidateUsername);
-
+                    logger?.LogWarning("No matching profile found for sidebar.");
                     await Dispatcher.InvokeAsync(SetDefaultProfile);
                     return;
                 }
 
-                var avatar = profile.DiscordAvatarUrl;
+                // Download avatar bytes on background thread — BitmapImage can't fetch web URLs on the UI thread.
+                byte[]? avatarBytes = null;
+                var avatarUrl = profile.DiscordAvatarUrl;
+                if (!string.IsNullOrWhiteSpace(avatarUrl) && Uri.TryCreate(avatarUrl, UriKind.Absolute, out _))
+                {
+                    try
+                    {
+                        using var avatarClient = new System.Net.Http.HttpClient();
+                        avatarClient.Timeout = TimeSpan.FromSeconds(10);
+                        avatarBytes = await avatarClient.GetByteArrayAsync(avatarUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Failed to download avatar from {Url}", avatarUrl);
+                    }
+                }
 
                 await Dispatcher.InvokeAsync(() =>
                 {
@@ -487,7 +550,29 @@ namespace PackTracker.Presentation.Views
                         ? profile.DiscordRank
                         : "No Rank";
 
-                    CurrentUserAvatar = LoadAvatar(avatar, logger);
+                    if (avatarBytes != null)
+                    {
+                        try
+                        {
+                            var bmp = new BitmapImage();
+                            bmp.BeginInit();
+                            bmp.StreamSource = new System.IO.MemoryStream(avatarBytes);
+                            bmp.CacheOption = BitmapCacheOption.OnLoad;
+                            bmp.EndInit();
+                            bmp.Freeze();
+                            CurrentUserAvatar = bmp;
+                        }
+                        catch (Exception ex)
+                        {
+                            logger?.LogWarning(ex, "Failed to create BitmapImage from avatar bytes.");
+                            CurrentUserAvatar = LoadFallbackAvatar();
+                        }
+                    }
+                    else
+                    {
+                        CurrentUserAvatar = LoadFallbackAvatar();
+                    }
+
                     SidebarAvatarImage.Source = CurrentUserAvatar;
                 });
             }

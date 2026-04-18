@@ -1,169 +1,160 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PackTracker.Application.Interfaces;
+using PackTracker.Application.Options;
 
 namespace PackTracker.Infrastructure.Services;
 
 /// <summary>
 /// Service for checking and installing updates from GitHub releases.
 /// </summary>
-/// <remarks>
-/// Checks GitHub releases for newer versions and downloads installers.
-/// Supports progress reporting and cancellation.
-/// </remarks>
 public class UpdateService : IUpdateService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<UpdateService> _logger;
     private readonly IVersionService _versionService;
-
-    // Configure your GitHub repository
-    private const string GitHubOwner = "BrokkrForgemaster";
-    private const string GitHubRepo = "PackTracker";
-    private const string GitHubApiUrl = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
+    private readonly UpdateOptions _options;
 
     public UpdateService(
-        IHttpClientFactory httpClientFactory,
+        HttpClient httpClient,
         ILogger<UpdateService> logger,
-        IVersionService versionService)
+        IVersionService versionService,
+        IOptions<UpdateOptions> options)
     {
-        _httpClient = httpClientFactory.CreateClient();
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "PackTracker-Updater");
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _versionService = versionService ?? throw new ArgumentNullException(nameof(versionService));
+        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+
+        if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
+        {
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(_options.UserAgent);
+        }
     }
 
-    /// <summary>
-    /// Checks GitHub releases for a newer version.
-    /// </summary>
     public async Task<UpdateInfo?> CheckForUpdateAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Checking for updates from GitHub...");
+            _logger.LogInformation(
+                "Checking GitHub releases for updates. Owner={Owner} Repository={Repository}",
+                _options.GitHubOwner,
+                _options.GitHubRepository);
 
-            var response = await _httpClient.GetAsync(GitHubApiUrl, cancellationToken);
-
+            using var response = await _httpClient.GetAsync(GetLatestReleaseApiUrl(), cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to check for updates. Status: {Status}", response.StatusCode);
+                _logger.LogWarning("Failed to check for updates. Status={StatusCode}", response.StatusCode);
                 return null;
             }
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             var release = JsonSerializer.Deserialize<GitHubRelease>(json);
-
-            if (release == null)
+            if (release is null)
             {
-                _logger.LogWarning("Failed to parse GitHub release JSON");
+                _logger.LogWarning("GitHub latest release response could not be parsed.");
                 return null;
             }
 
-            // Parse version (remove 'v' prefix if present)
             var latestVersion = release.TagName?.TrimStart('v') ?? "0.0.0";
             var currentVersion = GetCurrentVersion();
 
-            _logger.LogInformation("Current version: {Current}, Latest version: {Latest}",
-                currentVersion, latestVersion);
+            _logger.LogInformation(
+                "Current version={CurrentVersion} Latest version={LatestVersion}",
+                currentVersion,
+                latestVersion);
 
-            // Compare versions
             if (!IsNewerVersion(currentVersion, latestVersion))
             {
-                _logger.LogInformation("Application is up to date");
+                _logger.LogInformation("Application is already up to date.");
                 return null;
             }
 
-            // Find installer asset (look for .exe, .msi, or .zip)
-            var installerAsset = release.Assets?
-                .FirstOrDefault(a => a.Name?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true ||
-                                     a.Name?.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) == true ||
-                                     a.Name?.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) == true);
+            var installerAsset = release.Assets?.FirstOrDefault(asset =>
+                !string.IsNullOrWhiteSpace(asset.Name)
+                && _options.AllowedAssetExtensions.Any(extension =>
+                    asset.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)));
 
-            if (installerAsset == null)
+            if (installerAsset is null || string.IsNullOrWhiteSpace(installerAsset.BrowserDownloadUrl))
             {
-                _logger.LogWarning("No installer found in latest release");
+                _logger.LogWarning("Latest release did not include a supported installer asset.");
                 return null;
             }
 
-            var updateInfo = new UpdateInfo
+            return new UpdateInfo
             {
                 Version = latestVersion,
-                DownloadUrl = installerAsset.BrowserDownloadUrl ?? string.Empty,
+                DownloadUrl = installerAsset.BrowserDownloadUrl,
                 ReleaseNotes = release.Body,
                 PublishedAt = release.PublishedAt,
                 FileSize = installerAsset.Size,
-                IsMandatory = false // Could parse this from release notes
+                IsMandatory = false
             };
-
-            _logger.LogInformation("Update available: {Version}", updateInfo.Version);
-            return updateInfo;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking for updates");
+            _logger.LogError(ex, "Error checking for updates.");
             return null;
         }
     }
 
-    /// <summary>
-    /// Downloads the update installer with progress reporting.
-    /// </summary>
     public async Task<string> DownloadUpdateAsync(
         UpdateInfo updateInfo,
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(updateInfo);
+
         try
         {
             _logger.LogInformation("Downloading update from {Url}", updateInfo.DownloadUrl);
 
-            // Create temp directory for downloads
-            var tempDir = Path.Combine(Path.GetTempPath(), "PackTracker", "Updates");
-            Directory.CreateDirectory(tempDir);
+            var tempDirectory = Path.Combine(Path.GetTempPath(), "PackTracker", "Updates");
+            Directory.CreateDirectory(tempDirectory);
 
-            // Generate filename
-            var fileName = Path.GetFileName(new Uri(updateInfo.DownloadUrl).LocalPath);
-            var filePath = Path.Combine(tempDir, fileName);
+            var fileName = ResolveDownloadFileName(updateInfo.DownloadUrl);
+            var filePath = Path.Combine(tempDirectory, fileName);
 
-            // Delete existing file if present
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
             }
 
-            // Download with progress
-            using var response = await _httpClient.GetAsync(updateInfo.DownloadUrl,
-                HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var response = await _httpClient.GetAsync(
+                updateInfo.DownloadUrl,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
-            var canReportProgress = totalBytes > 0 && progress != null;
+            var canReportProgress = totalBytes > 0 && progress is not null;
 
-            using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write,
-                FileShare.None, 8192, true);
+            await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
 
             var buffer = new byte[8192];
-            var totalBytesRead = 0L;
-            int bytesRead;
+            long totalBytesRead = 0;
 
-            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+            while (true)
             {
-                await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                var bytesRead = await contentStream.ReadAsync(buffer, cancellationToken);
+                if (bytesRead == 0)
+                {
+                    break;
+                }
+
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
                 totalBytesRead += bytesRead;
 
                 if (canReportProgress)
                 {
-                    var progressPercentage = (int)((double)totalBytesRead / totalBytes * 100);
-                    progress?.Report(progressPercentage);
+                    progress!.Report((int)((double)totalBytesRead / totalBytes * 100));
                 }
             }
 
@@ -172,45 +163,40 @@ public class UpdateService : IUpdateService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error downloading update");
+            _logger.LogError(ex, "Error downloading update.");
             throw;
         }
     }
 
-    /// <summary>
-    /// Installs the update and restarts the application.
-    /// </summary>
     public async Task InstallAndRestartAsync(string installerPath)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(installerPath);
+
         try
         {
             _logger.LogInformation("Installing update from {Path}", installerPath);
 
             if (!File.Exists(installerPath))
             {
-                throw new FileNotFoundException("Installer file not found", installerPath);
+                throw new FileNotFoundException("Installer file not found.", installerPath);
             }
 
-            // Determine installer type
             var extension = Path.GetExtension(installerPath).ToLowerInvariant();
-
             ProcessStartInfo startInfo;
 
             switch (extension)
             {
                 case ".exe":
-                    // Execute installer with silent install flags (customize as needed)
                     startInfo = new ProcessStartInfo
                     {
                         FileName = installerPath,
                         Arguments = "/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
                         UseShellExecute = true,
-                        Verb = "runas" // Run as administrator
+                        Verb = "runas"
                     };
                     break;
 
                 case ".msi":
-                    // MSI installer
                     startInfo = new ProcessStartInfo
                     {
                         FileName = "msiexec.exe",
@@ -221,64 +207,61 @@ public class UpdateService : IUpdateService
                     break;
 
                 case ".zip":
-                    // For ZIP files, extract and replace application files
                     await ExtractAndReplaceAsync(installerPath);
                     RestartApplication();
                     return;
 
                 default:
-                    throw new NotSupportedException($"Installer type '{extension}' not supported");
+                    throw new NotSupportedException($"Installer type '{extension}' is not supported.");
             }
 
-            // Start installer
             Process.Start(startInfo);
+            _logger.LogInformation("Installer launched; exiting application to allow update.");
 
-            _logger.LogInformation("Installer started. Shutting down application...");
-
-            // Give installer time to start
             await Task.Delay(1000);
-
-            // Exit application to allow installer to proceed
             Environment.Exit(0);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error installing update");
+            _logger.LogError(ex, "Error installing update.");
             throw;
         }
     }
 
-    /// <summary>
-    /// Extracts ZIP update and replaces application files.
-    /// </summary>
+    public string GetCurrentVersion() => _versionService.GetVersion().TrimStart('v');
+
     private async Task ExtractAndReplaceAsync(string zipPath)
     {
-        var appDir = AppContext.BaseDirectory;
-        var tempExtractDir = Path.Combine(Path.GetTempPath(), "PackTracker", "Extract", Guid.NewGuid().ToString());
+        var applicationDirectory = AppContext.BaseDirectory;
+        var extractDirectory = Path.Combine(Path.GetTempPath(), "PackTracker", "Extract", Guid.NewGuid().ToString("N"));
 
         try
         {
-            // Extract to temp directory
-            System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, tempExtractDir);
+            ZipFile.ExtractToDirectory(zipPath, extractDirectory);
 
-            // Create batch script to replace files after app exits
-            var batchScript = Path.Combine(Path.GetTempPath(), "PackTracker_Update.bat");
-            var scriptContent = $@"
-@echo off
-timeout /t 2 /nobreak > nul
-echo Updating PackTracker...
-xcopy /E /Y /I ""{tempExtractDir}\*"" ""{appDir}""
-rmdir /S /Q ""{tempExtractDir}""
-del ""{zipPath}""
-start """" ""{Path.Combine(appDir, "PackTracker.Presentation.exe")}""
-del ""%~f0""
-";
-            await File.WriteAllTextAsync(batchScript, scriptContent);
+            var restartExecutable = _options.RestartExecutableName;
+            if (string.IsNullOrWhiteSpace(restartExecutable))
+            {
+                restartExecutable = Path.GetFileName(Process.GetCurrentProcess().MainModule?.FileName);
+            }
 
-            // Start batch script
+            var batchScriptPath = Path.Combine(Path.GetTempPath(), "PackTracker_Update.bat");
+            var scriptContent = $"""
+                                 @echo off
+                                 timeout /t 2 /nobreak > nul
+                                 echo Updating PackTracker...
+                                 xcopy /E /Y /I "{extractDirectory}\*" "{applicationDirectory}"
+                                 rmdir /S /Q "{extractDirectory}"
+                                 del "{zipPath}"
+                                 start "" "{Path.Combine(applicationDirectory, restartExecutable ?? "PackTracker.Presentation.exe")}"
+                                 del "%~f0"
+                                 """;
+
+            await File.WriteAllTextAsync(batchScriptPath, scriptContent);
+
             Process.Start(new ProcessStartInfo
             {
-                FileName = batchScript,
+                FileName = batchScriptPath,
                 UseShellExecute = true,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
@@ -286,60 +269,56 @@ del ""%~f0""
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extracting update");
+            _logger.LogError(ex, "Error extracting ZIP update.");
             throw;
         }
     }
 
-    /// <summary>
-    /// Restarts the application.
-    /// </summary>
     private void RestartApplication()
     {
-        var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-        if (exePath != null)
+        var executablePath = Process.GetCurrentProcess().MainModule?.FileName;
+        if (!string.IsNullOrWhiteSpace(executablePath))
         {
-            Process.Start(exePath);
+            Process.Start(executablePath);
         }
+
         Environment.Exit(0);
     }
 
-    /// <summary>
-    /// Gets the current application version.
-    /// </summary>
-    public string GetCurrentVersion()
+    private string GetLatestReleaseApiUrl() =>
+        $"https://api.github.com/repos/{_options.GitHubOwner}/{_options.GitHubRepository}/releases/latest";
+
+    private static string ResolveDownloadFileName(string downloadUrl)
     {
-        return _versionService.GetVersion().TrimStart('v');
+        if (Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri))
+        {
+            var fileName = Path.GetFileName(uri.LocalPath);
+            if (!string.IsNullOrWhiteSpace(fileName))
+            {
+                return fileName;
+            }
+        }
+
+        return $"packtracker-update-{Guid.NewGuid():N}.bin";
     }
 
-    /// <summary>
-    /// Compares version strings to determine if new version is newer.
-    /// </summary>
-    private bool IsNewerVersion(string currentVersion, string newVersion)
+    private static bool IsNewerVersion(string currentVersion, string newVersion)
     {
         try
         {
-            var current = Version.Parse(currentVersion);
-            var latest = Version.Parse(newVersion);
-            return latest > current;
+            return Version.Parse(newVersion) > Version.Parse(currentVersion);
         }
         catch
         {
-            // Fallback to string comparison
             return string.Compare(newVersion, currentVersion, StringComparison.OrdinalIgnoreCase) > 0;
         }
     }
 }
 
-#region GitHub API Models
-
-internal class GitHubRelease
+internal sealed class GitHubRelease
 {
     [JsonPropertyName("tag_name")]
     public string? TagName { get; set; }
-
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
 
     [JsonPropertyName("body")]
     public string? Body { get; set; }
@@ -351,7 +330,7 @@ internal class GitHubRelease
     public GitHubAsset[]? Assets { get; set; }
 }
 
-internal class GitHubAsset
+internal sealed class GitHubAsset
 {
     [JsonPropertyName("name")]
     public string? Name { get; set; }
@@ -362,5 +341,3 @@ internal class GitHubAsset
     [JsonPropertyName("size")]
     public long Size { get; set; }
 }
-
-#endregion

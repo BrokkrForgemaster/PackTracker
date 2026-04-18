@@ -1,8 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PackTracker.Application.Guides.Commands.UpsertGuideRequest;
+using PackTracker.Application.Guides.Queries.GetScheduledGuideRequests;
 using PackTracker.Domain.Entities;
-using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Api.Controllers;
 
@@ -10,49 +11,36 @@ namespace PackTracker.Api.Controllers;
 [Route("api/v1/guides")]
 public class GuideRequestsController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly ISender _sender;
     private readonly ILogger<GuideRequestsController> _logger;
 
-    public GuideRequestsController(AppDbContext db, ILogger<GuideRequestsController> logger)
+    public GuideRequestsController(ISender sender, ILogger<GuideRequestsController> logger)
     {
-        _db = db;
+        _sender = sender;
         _logger = logger;
     }
 
     [HttpGet("scheduled")]
-    public async Task<IActionResult> GetScheduled()
+    public async Task<IActionResult> GetScheduled(CancellationToken ct)
     {
-        var scheduled = await _db.GuideRequests
-            .Where(g => g.Status == "Scheduled" || g.Status == "Assigned")
-            .OrderBy(g => g.CreatedAt)
-            .ToListAsync();
+        var scheduled = await _sender.Send(new GetScheduledGuideRequestsQuery(), ct);
 
         _logger.LogInformation("Guide requests listed. Count={Count}", scheduled.Count);
         return Ok(scheduled);
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateOrUpdate(GuideRequest dto)
+    public async Task<IActionResult> CreateOrUpdate(GuideRequest dto, CancellationToken ct)
     {
-        var existing = await _db.GuideRequests.FirstOrDefaultAsync(x => x.ThreadId == dto.ThreadId);
-        if (existing == null)
-        {
-            _db.GuideRequests.Add(dto);
-            _logger.LogInformation(
-                "Guide request created. ThreadId={ThreadId} Title={Title} Requester={Requester} Status={Status}",
-                dto.ThreadId, dto.Title, dto.Requester, dto.Status);
-        }
-        else
-        {
-            _logger.LogInformation(
-                "Guide request updated. ThreadId={ThreadId} Title={Title} PreviousStatus={Previous} NewStatus={New}",
-                dto.ThreadId, dto.Title, existing.Status, dto.Status);
-            existing.Status = dto.Status;
-            existing.Title = dto.Title;
-            existing.Requester = dto.Requester;
-        }
+        await _sender.Send(new UpsertGuideRequestCommand(dto), ct);
 
-        await _db.SaveChangesAsync();
+        _logger.LogInformation(
+            "Guide request upserted. ThreadId={ThreadId} Title={Title} Requester={Requester} Status={Status}",
+            dto.ThreadId,
+            dto.Title,
+            dto.Requester,
+            dto.Status);
+
         return Ok();
     }
 }

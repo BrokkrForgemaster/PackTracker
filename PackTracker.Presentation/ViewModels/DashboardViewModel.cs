@@ -100,7 +100,7 @@ public class DashboardViewModel : ViewModelBase
         }
     }
 
-    private async Task LoadCurrentUserAsync()
+    public async Task LoadCurrentUserAsync()
     {
         try
         {

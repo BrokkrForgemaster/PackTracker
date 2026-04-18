@@ -23,5 +23,5 @@ public sealed class BlueprintDetailDto
     public int OutputQuantity { get; set; }
     public string? CraftingStationType { get; set; }
     public string? AcquisitionSummary { get; set; }
-    public object RewardPools { get; set; }
+    public object? RewardPools { get; set; }
 }

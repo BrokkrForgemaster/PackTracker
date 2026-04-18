@@ -34,6 +34,11 @@ public static class PackTrackerApiHostServiceCollectionExtensions
 
         var settings = settingsService.GetSettings();
 
+        if (string.IsNullOrWhiteSpace(settings.JwtKey))
+        {
+            throw new InvalidOperationException("Authentication:Jwt:Key must be configured for API hosting.");
+        }
+
         services.Configure<UexOptions>(options =>
         {
             options.ApiKey = settings.UexCorpApiKey;
@@ -123,10 +128,6 @@ public static class PackTrackerApiHostServiceCollectionExtensions
             })
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                var jwtKey = string.IsNullOrWhiteSpace(settings.JwtKey)
-                    ? hostOptions.FallbackJwtKey
-                    : settings.JwtKey;
-
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -135,7 +136,7 @@ public static class PackTrackerApiHostServiceCollectionExtensions
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = settings.JwtIssuer ?? "PackTracker",
                     ValidAudience = settings.JwtAudience ?? "PackTrackerClient",
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.JwtKey))
                 };
 
                 options.Events = new JwtBearerEvents
@@ -169,7 +170,6 @@ public sealed class PackTrackerApiHostOptions
     public string SmartScheme { get; set; } = "Smart";
     public string CookieScheme { get; set; } = "Cookies";
     public string DiscordScheme { get; set; } = "Discord";
-    public string FallbackJwtKey { get; set; } = "DytuDWjGyZaCucBzN5OmDFe5SBojkQJBoyK4Y48oDzk=";
     public CookieSecurePolicy CookieSecurePolicy { get; set; } = CookieSecurePolicy.Always;
     public Func<HttpContext, string> SelectScheme { get; set; } = _ => JwtBearerDefaults.AuthenticationScheme;
     public Func<HttpRequest, string?> GetSignalRAccessToken { get; set; } = _ => null;

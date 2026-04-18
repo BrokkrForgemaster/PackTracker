@@ -1,14 +1,18 @@
 using System.Security.Claims;
 using System.Diagnostics;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PackTracker.Api.Controllers;
 using PackTracker.Api.Hubs;
+using PackTracker.Application;
 using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
 using PackTracker.Infrastructure.Persistence;
@@ -45,16 +49,24 @@ public class CraftingRequestsControllerTests
         var hubMock = new Mock<IHubContext<RequestsHub>>();
         var clientsMock = new Mock<IHubClients>();
         var clientProxyMock = new Mock<IClientProxy>();
-
         clientsMock.Setup(c => c.All).Returns(clientProxyMock.Object);
         clientProxyMock.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         hubMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
+        var services = new ServiceCollection();
+        services.AddApplication();
+        services.AddScoped<IApplicationDbContext>(_ => db);
+        services.AddScoped<ICurrentUserService>(_ => new TestCurrentUserService(discordId, username));
+        services.AddScoped<ICraftingWorkflowNotifier>(_ => new TestCraftingWorkflowNotifier(hubMock.Object));
+        services.AddLogging();
+
+        var provider = services.BuildServiceProvider();
+        var mediator = provider.GetRequiredService<IMediator>();
+
         var controller = new CraftingRequestsController(
-            db,
-            NullLogger<CraftingRequestsController>.Instance,
-            hubMock.Object);
+            mediator,
+            NullLogger<CraftingRequestsController>.Instance);
 
         controller.ControllerContext = new ControllerContext
         {
@@ -351,5 +363,32 @@ public class CraftingRequestsControllerTests
         var chat = Assert.IsAssignableFrom<IReadOnlyList<RequestCommentDto>>(ok.Value);
         var message = Assert.Single(chat);
         Assert.Equal("Live ping", message.Content);
+    }
+
+    private sealed class TestCurrentUserService : ICurrentUserService
+    {
+        public TestCurrentUserService(string userId, string displayName)
+        {
+            UserId = userId;
+            DisplayName = displayName;
+        }
+
+        public string UserId { get; }
+        public string DisplayName { get; }
+        public bool IsAuthenticated => true;
+        public bool IsInRole(string role) => false;
+    }
+
+    private sealed class TestCraftingWorkflowNotifier : ICraftingWorkflowNotifier
+    {
+        private readonly IHubContext<RequestsHub> _hub;
+
+        public TestCraftingWorkflowNotifier(IHubContext<RequestsHub> hub)
+        {
+            _hub = hub;
+        }
+
+        public Task NotifyAsync(string eventName, Guid requestId, CancellationToken cancellationToken) =>
+            _hub.Clients.All.SendAsync(eventName, requestId, cancellationToken);
     }
 }

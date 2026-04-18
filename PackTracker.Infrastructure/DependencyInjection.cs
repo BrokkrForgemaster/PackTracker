@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.BackgroundServices;
-using PackTracker.Infrastructure.Logging;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
@@ -95,7 +94,7 @@ public static class DependencyInjection
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IWikiSyncService, WikiSyncService>();
-        services.AddSingleton(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+        services.AddScoped<IDatabaseDiagnostics, AppDbContextDiagnostics>();
 
         services.AddScoped<JwtTokenService>();
         services.AddSingleton<IRequestsService, RequestsService>();
@@ -106,7 +105,7 @@ public static class DependencyInjection
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="appSettings">The resolved application settings.</param>
-    private static void RegisterHttpClients(IServiceCollection services, dynamic appSettings)
+    private static void RegisterHttpClients(IServiceCollection services, PackTracker.Domain.Entities.AppSettings appSettings)
     {
         if (!string.IsNullOrWhiteSpace((string?)appSettings.UexBaseUrl))
         {

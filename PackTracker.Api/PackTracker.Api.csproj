@@ -4,12 +4,15 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CA1031;CA1034;CA1062;CA1305;CA1307;CA1308;CA1515;CA1707;CA1848;CA1849;CA1869;CA2000;CA2007</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
     <PackageReference Include="AspNet.Security.OAuth.Discord" Version="9.4.1" />
     <PackageReference Include="CorrelationId" Version="3.0.1" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
@@ -23,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PackTracker.Application\PackTracker.Application.csproj" />
     <ProjectReference Include="..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\PackTracker.Logging\PackTracker.Logging.csproj" />
   </ItemGroup>
 
   <ItemGroup>

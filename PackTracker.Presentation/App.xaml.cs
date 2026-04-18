@@ -7,11 +7,11 @@ using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Services;
+using PackTracker.Logging;
 using PackTracker.Presentation.Services;
 using PackTracker.Presentation.ViewModels;
 using PackTracker.Presentation.Views;
 using Serilog;
-using Serilog.Events;
 
 namespace PackTracker.Presentation;
 
@@ -43,22 +43,7 @@ public partial class App : System.Windows.Application
         var logsPath = Path.Combine(appDataPath, "logs");
         Directory.CreateDirectory(logsPath);
 
-        // 1️⃣ Logging configuration
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(cfg)
-            .Enrich.WithProperty("Application", "PackTracker")
-            .WriteTo.Async(writeTo => writeTo.File(
-                path: Path.Combine(logsPath, "packtracker-.log"),
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 14,
-                fileSizeLimitBytes: 10 * 1024 * 1024,
-                rollOnFileSizeLimit: true,
-                shared: true,
-                restrictedToMinimumLevel: LogEventLevel.Information,
-                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}"))
-            .CreateLogger();
-
-        services.AddLogging(b => b.AddSerilog());
+        services.AddPackTrackerLogging(cfg, "PackTracker.Presentation", logsPath);
 
         // 2️⃣ Settings service (merge environment, secrets, local file)
         var settingsLoggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
@@ -75,7 +60,8 @@ public partial class App : System.Windows.Application
 
         // 5️⃣ External API configs
         services.Configure<UexOptions>(cfg.GetSection("Uex"));
-        services.AddHttpClient<IUexService, UexService>();
+        services.Configure<UpdateOptions>(cfg.GetSection(UpdateOptions.SectionName));
+        services.AddHttpClient<IUpdateService, UpdateService>();
 
         // 6️⃣ Core presentation services
         services.AddSingleton<IThemeManager, ThemeManager>();
@@ -83,7 +69,6 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IApiClientProvider, ApiClientProvider>();
         services.AddSingleton<WikiBlueprintService>();
         services.AddSingleton<IVersionService, VersionService>();
-        services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<SignalRChatService>();
 
         // 7️⃣ Views + ViewModels

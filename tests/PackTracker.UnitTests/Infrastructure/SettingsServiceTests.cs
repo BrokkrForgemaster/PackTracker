@@ -30,7 +30,7 @@ public class SettingsServiceTests
                 service.UpdateSettingsAsync(settings =>
                 {
                     settings.PlayerName = "Bravo";
-                    settings.ApiBaseUrl = "https://packtracker.example.com/";
+                    settings.ApiBaseUrl = "https://packtracker-yke3.onrender.com";
                 }));
 
             var settingsPath = GetPrivateField<string>(service, "_userConfigPath");

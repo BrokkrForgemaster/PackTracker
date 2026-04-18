@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 
 namespace PackTracker.Infrastructure.Persistence;
@@ -10,7 +11,7 @@ namespace PackTracker.Infrastructure.Persistence;
 /// crafting workflows, procurement workflows, inventory, commodities,
 /// blueprints, and comments.
 /// </summary>
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, IApplicationDbContext
 {
     #region Constructor
 
