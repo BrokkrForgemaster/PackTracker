@@ -37,7 +37,10 @@
       "Bash(dotnet publish:*)",
       "Bash(xargs wc:*)",
       "Bash(grep:*)",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "Bash(dotnet add *)",
+      "Bash(dotnet remove *)",
+      "Bash(dotnet ef *)"
     ],
     "deny": [],
     "ask": []

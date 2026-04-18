@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
@@ -11,7 +12,7 @@ namespace PackTracker.Infrastructure.Persistence;
 /// crafting workflows, procurement workflows, inventory, commodities,
 /// blueprints, and comments.
 /// </summary>
-public class AppDbContext : DbContext, IApplicationDbContext
+public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKeyContext
 {
     #region Constructor
 
@@ -26,6 +27,11 @@ public class AppDbContext : DbContext, IApplicationDbContext
     #endregion
 
     #region DbSets - Security / Identity
+
+    /// <summary>
+    /// Stores ASP.NET Core DataProtection keys so they survive Render restarts and prevent OAuth state errors.
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     /// <summary>
     /// Gets the refresh tokens persisted for authenticated users.

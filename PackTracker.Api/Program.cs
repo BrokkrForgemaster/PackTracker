@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.DataProtection;
 using PackTracker.Api.Hosting;
 using PackTracker.Application.Interfaces;
+using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Logging;
 using Serilog;
@@ -21,6 +23,11 @@ var settingsService = new SettingsService(settingsLoggerFactory.CreateLogger<Set
 settingsService.EnsureBootstrapDefaults(builder.Configuration);
 
 builder.Services.AddSingleton<ISettingsService>(settingsService);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<AppDbContext>()
+    .SetApplicationName("PackTracker");
+
 PackTrackerApiComposition.ConfigureServices(builder, settingsService, isEmbeddedHost: false);
 
 var app = builder.Build();

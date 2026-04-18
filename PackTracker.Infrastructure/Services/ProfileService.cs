@@ -1,11 +1,11 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
-
 using Microsoft.Extensions.Options;
 using PackTracker.Application.Options;
 using PackTracker.Domain.Security;
@@ -25,7 +25,7 @@ public class ProfileService : IProfileService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISettingsService _settingsService;
     private readonly AuthOptions _authOptions;
-    
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProfileService"/> class.
@@ -48,7 +48,7 @@ public class ProfileService : IProfileService
         _logger = logger;
         _authOptions = authOptions.Value;
     }
-    
+
     private static string? ResolveAvatar(string? avatarUrl)
     {
         if (string.IsNullOrWhiteSpace(avatarUrl))
@@ -56,8 +56,8 @@ public class ProfileService : IProfileService
 
         return avatarUrl.Trim();
     }
-        
-    
+
+
     /// <summary>
     /// Creates or updates a profile using Discord-authenticated identity data.
     /// The user must belong to the configured required Discord guild.
@@ -97,7 +97,7 @@ public class ProfileService : IProfileService
             throw new InvalidOperationException(
                 "DiscordRequiredGuildId is not configured. Configure it before allowing Discord profile synchronization.");
         }
-        
+
         _logger.LogInformation(
             "Starting Discord profile upsert. DiscordId={DiscordId} Username={Username}",
             discordId,
@@ -123,9 +123,9 @@ public class ProfileService : IProfileService
 
             return null;
         }
-        
+
         var resolvedAvatarUrl = ResolveAvatar(avatarUrl);
-        
+
         // Fetch rank/role from Discord
         var highestRole = await GetDiscordRankAsync(accessToken, requiredGuildId, ct);
 
@@ -190,92 +190,190 @@ public class ProfileService : IProfileService
 
         return profile;
     }
-    
+
     private async Task<string> GetDiscordRankAsync(string accessToken, string guildId, CancellationToken ct)
     {
         try
         {
             _logger.LogInformation("Fetching Discord rank for GuildId={GuildId}", guildId);
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _logger.LogWarning("Discord access token was empty.");
+                return SecurityConstants.Roles.Foundling;
+            }
+
+            if (string.IsNullOrWhiteSpace(guildId))
+            {
+                _logger.LogWarning("GuildId was empty.");
+                return SecurityConstants.Roles.Foundling;
+            }
+
+            // Step 1: Fetch the current user's member object.
+            // Requires OAuth scope: guilds.members.read
             var client = _httpClientFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", accessToken);
 
-            // Fetch member details including roles
-            var response = await client.GetAsync($"https://discord.com/api/users/@me/guilds/{guildId}/member", ct);
-            if (!response.IsSuccessStatusCode)
+            using var memberResponse = await client.GetAsync(
+                $"https://discord.com/api/users/@me/guilds/{guildId}/member",
+                ct);
+
+            if (!memberResponse.IsSuccessStatusCode)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("Failed to fetch Discord member details. Status: {Status}, Error: {Error}", response.StatusCode, errorBody);
+                var errorBody = await memberResponse.Content.ReadAsStringAsync(ct);
+
+                _logger.LogWarning(
+                    "Failed to fetch Discord member details. Status={StatusCode}, Reason={ReasonPhrase}, Error={Error}. " +
+                    "This endpoint requires the guilds.members.read OAuth scope.",
+                    (int)memberResponse.StatusCode,
+                    memberResponse.ReasonPhrase,
+                    errorBody);
+
                 return SecurityConstants.Roles.Foundling;
             }
 
-            var member = await response.Content.ReadFromJsonAsync<DiscordMember>(ct);
-            if (member == null || member.Roles.Count == 0)
+            var member = await memberResponse.Content.ReadFromJsonAsync<DiscordMember>(cancellationToken: ct);
+
+            if (member == null)
             {
-                _logger.LogInformation("User has no roles in the guild.");
+                _logger.LogWarning("Discord member response deserialized to null.");
                 return SecurityConstants.Roles.Foundling;
             }
 
-            _logger.LogInformation("Found {Count} roles for user: {RoleIds}", member.Roles.Count, string.Join(", ", member.Roles));
+            if (member.Roles == null || member.Roles.Count == 0)
+            {
+                _logger.LogInformation("User has no roles in guild {GuildId}.", guildId);
+                return SecurityConstants.Roles.Foundling;
+            }
 
-            // Fetch guild roles to determine hierarchy.
-            // The /guilds/{id}/roles endpoint requires Bot authorization, not a user Bearer token.
+            _logger.LogInformation(
+                "Found {Count} Discord role IDs for user in guild {GuildId}: {RoleIds}",
+                member.Roles.Count,
+                guildId,
+                string.Join(", ", member.Roles));
+
+            // Step 2: Fetch all guild roles using the bot token.
+            // This lets us resolve names and hierarchy correctly.
             var botToken = _authOptions.Discord.BotToken;
             List<DiscordRole>? allRoles = null;
 
             if (!string.IsNullOrWhiteSpace(botToken))
             {
                 var botClient = _httpClientFactory.CreateClient();
-                botClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bot", botToken);
+                botClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bot", botToken);
 
-                var rolesResponse = await botClient.GetAsync($"https://discord.com/api/guilds/{guildId}/roles", ct);
+                using var rolesResponse = await botClient.GetAsync(
+                    $"https://discord.com/api/guilds/{guildId}/roles",
+                    ct);
+
                 if (rolesResponse.IsSuccessStatusCode)
                 {
-                    allRoles = await rolesResponse.Content.ReadFromJsonAsync<List<DiscordRole>>(ct);
+                    allRoles = await rolesResponse.Content.ReadFromJsonAsync<List<DiscordRole>>(cancellationToken: ct);
+
+                    _logger.LogInformation(
+                        "Fetched {Count} guild roles for GuildId={GuildId}.",
+                        allRoles?.Count ?? 0,
+                        guildId);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to fetch guild roles via Bot token. Status: {Status}", rolesResponse.StatusCode);
+                    var rolesError = await rolesResponse.Content.ReadAsStringAsync(ct);
+
+                    _logger.LogWarning(
+                        "Failed to fetch guild roles via bot token. Status={StatusCode}, Reason={ReasonPhrase}, Error={Error}",
+                        (int)rolesResponse.StatusCode,
+                        rolesResponse.ReasonPhrase,
+                        rolesError);
                 }
             }
             else
             {
-                _logger.LogInformation("No Discord Bot token configured; using known role hierarchy for rank resolution.");
+                _logger.LogWarning(
+                    "No Discord bot token configured. Rank resolution will rely only on fallback role ID mapping.");
             }
 
-            if (allRoles != null && allRoles.Count > 0)
+            // Step 3: If we have guild roles, resolve the user's roles properly.
+            if (allRoles is { Count: > 0 })
             {
-                // Find the highest role the user has by matching against our known hierarchy.
-                // This ensures we pick the highest *rank* role, not a cosmetic/division role.
-                var userRoleNames = allRoles
+                var userRoles = allRoles
                     .Where(r => member.Roles.Contains(r.Id))
-                    .Select(r => r.Name)
                     .ToList();
 
-                var highestKnown = ResolveHighestKnownRole(userRoleNames);
-                if (highestKnown != null)
+                if (userRoles.Count > 0)
                 {
-                    _logger.LogInformation("Highest rank identified via API: {RoleName}", highestKnown);
-                    return highestKnown;
-                }
+                    _logger.LogInformation(
+                        "Resolved {Count} guild role objects for the current user: {RoleNames}",
+                        userRoles.Count,
+                        string.Join(", ", userRoles.Select(r => r.Name)));
 
-                // Log unmatched role names to help diagnose hierarchy mismatches.
-                _logger.LogInformation("No hierarchy match found. User role names: {RoleNames}", string.Join(", ", userRoleNames));
+                    // A. Prefer your known organization hierarchy if available.
+                    var highestKnownRole = ResolveHighestKnownRole(
+                        userRoles.Select(r => r.Name).ToList());
+
+                    if (!string.IsNullOrWhiteSpace(highestKnownRole))
+                    {
+                        _logger.LogInformation(
+                            "Highest known PackTracker rank resolved via role names: {RoleName}",
+                            highestKnownRole);
+
+                        return highestKnownRole;
+                    }
+
+                    // B. If no known org role matches, fall back to actual Discord hierarchy.
+                    // Assumes DiscordRole has a Position property.
+                    var highestDiscordRole = userRoles
+                        .OrderByDescending(r => r.Position)
+                        .FirstOrDefault();
+
+                    if (highestDiscordRole != null)
+                    {
+                        _logger.LogInformation(
+                            "No known rank mapping matched. Highest Discord role by position is {RoleName} (Id={RoleId}, Position={Position}).",
+                            highestDiscordRole.Name,
+                            highestDiscordRole.Id,
+                            highestDiscordRole.Position);
+
+                        // If you do NOT want arbitrary Discord role names returned, remove this line
+                        // and rely only on your fallback mapping below.
+                        return highestDiscordRole.Name;
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "No guild role objects matched the member role IDs. Member role IDs: {RoleIds}",
+                        string.Join(", ", member.Roles));
+                }
             }
 
-            // Fallback: match member role IDs against the known House Wolf role mapping.
-            // This is used when no Bot token is configured or the API call fails.
+            // Step 4: Fallback to known static role ID mapping.
             var fallbackRole = ResolveHighestKnownRoleById(member.Roles);
-            if (fallbackRole != null)
+            if (!string.IsNullOrWhiteSpace(fallbackRole))
             {
-                _logger.LogInformation("Highest rank identified via fallback: {RoleName}", fallbackRole);
+                _logger.LogInformation(
+                    "Highest known PackTracker rank resolved via fallback role ID mapping: {RoleName}",
+                    fallbackRole);
+
                 return fallbackRole;
             }
 
+            _logger.LogInformation(
+                "No known rank could be resolved for guild {GuildId}. Returning default role {DefaultRole}.",
+                guildId,
+                SecurityConstants.Roles.Foundling);
+
             return SecurityConstants.Roles.Foundling;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Discord rank fetch was canceled.");
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Discord rank.");
+            _logger.LogError(ex, "Error fetching Discord rank for GuildId={GuildId}.", guildId);
             return SecurityConstants.Roles.Foundling;
         }
     }
@@ -536,26 +634,28 @@ public class ProfileService : IProfileService
     /// </summary>
     private sealed class DiscordGuild
     {
-        /// <summary>
-        /// Gets or sets the guild identifier.
-        /// </summary>
+        [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Gets or sets the guild name.
-        /// </summary>
+        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
     }
 
-    private sealed class DiscordMember
+    public sealed class DiscordMember
     {
+        [JsonPropertyName("roles")]
         public List<string> Roles { get; set; } = new();
     }
 
-    private sealed class DiscordRole
+    public sealed class DiscordRole
     {
+        [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("position")]
         public int Position { get; set; }
     }
 
