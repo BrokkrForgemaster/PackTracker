@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
+using Serilog.Enrichers.CorrelationId;
 using Serilog;
 using Serilog.Events;
 using Serilog.Exceptions;
