@@ -40,7 +40,9 @@
       "Bash(xargs cat *)",
       "Bash(dotnet add *)",
       "Bash(dotnet remove *)",
-      "Bash(dotnet ef *)"
+      "Bash(dotnet ef *)",
+      "Bash(git -C \"B:\\\\PackTracker\" diff --name-only HEAD)",
+      "Bash(git *)"
     ],
     "deny": [],
     "ask": []
