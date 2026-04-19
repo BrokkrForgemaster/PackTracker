@@ -9,7 +9,7 @@
     <SolidColorBrush x:Key="CardBackground"    Color="#162127"/>
 
     <BitmapImage x:Key="SidebarImage"
-                 UriSource="/Assets/ARCOPS.png"/>
+                 UriSource="/Assets/arcops.png"/>
 
     <DropShadowEffect x:Key="CardShadow"
                       Color="{DynamicResource AccentColor}"

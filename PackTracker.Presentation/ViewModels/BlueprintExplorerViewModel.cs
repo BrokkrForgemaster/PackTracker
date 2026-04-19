@@ -412,8 +412,9 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         if (SelectedBlueprintDetail is null)
             return;
 
+        var blueprintId = GetOperationBlueprintId();
         var formVm = new CraftingRequestFormViewModel(
-            SelectedBlueprintDetail.Id,
+            blueprintId,
             SelectedBlueprintDetail.BlueprintName);
 
         var dialog = new PackTracker.Presentation.Views.CraftingRequestFormDialog(formVm)
@@ -431,7 +432,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             using var client = _apiClientProvider.CreateClient();
             var dto = new CreateCraftingRequestDto
             {
-                BlueprintId = SelectedBlueprintDetail.Id,
+                BlueprintId = blueprintId,
                 CraftedItemName = SelectedBlueprintDetail.CraftedItemName,
                 QuantityRequested = formVm.QuantityRequested,
                 MinimumQuality = formVm.MinimumQuality,
@@ -526,7 +527,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         {
             IsLoading = true;
 
-            var blueprintId = SelectedBlueprintDetail.Id;
+            var blueprintId = GetOperationBlueprintId();
 
             using var client = _apiClientProvider.CreateClient();
             var dto = new RegisterBlueprintOwnershipRequest
@@ -547,7 +548,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
             System.Diagnostics.Debug.WriteLine($"Ownership post succeeded for blueprint {blueprintId}");
 
-            await LoadBlueprintDetailAsync(blueprintId);
+            await LoadBlueprintDetailAsync(GetLookupBlueprintId());
 
             System.Diagnostics.Debug.WriteLine(
                 $"After refresh, OwnerCount={SelectedBlueprintDetail?.OwnerCount}");
@@ -576,6 +577,26 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
         var compact = value.Replace("\r", " ").Replace("\n", " ").Trim();
         return compact.Length <= 300 ? compact : compact[..300] + "...";
+    }
+
+    private Guid GetOperationBlueprintId()
+    {
+        if (SelectedBlueprintDetail is null)
+            return Guid.Empty;
+
+        return SelectedBlueprintDetail.Id != Guid.Empty
+            ? SelectedBlueprintDetail.Id
+            : SelectedBlueprintDetail.WikiUuid;
+    }
+
+    private Guid GetLookupBlueprintId()
+    {
+        if (SelectedBlueprintDetail is null)
+            return Guid.Empty;
+
+        return SelectedBlueprintDetail.WikiUuid != Guid.Empty
+            ? SelectedBlueprintDetail.WikiUuid
+            : SelectedBlueprintDetail.Id;
     }
 
     #endregion

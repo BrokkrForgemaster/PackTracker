@@ -213,6 +213,8 @@ public class WikiBlueprintService
             if (apiResponse.IsSuccessStatusCode)
             {
                 localResult = await apiResponse.Content.ReadFromJsonAsync<BlueprintDetailDto>(cancellationToken: ct);
+                if (localResult is not null && localResult.WikiUuid == Guid.Empty)
+                    localResult.WikiUuid = wikiUuid;
             }
             else
             {
@@ -411,7 +413,8 @@ public class WikiBlueprintService
 
         return new BlueprintDetailDto
         {
-            Id = wikiUuid,
+            Id = Guid.Empty,
+            WikiUuid = wikiUuid,
             BlueprintName = $"{outputName} Blueprint",
             CraftedItemName = outputName,
             Category = category,

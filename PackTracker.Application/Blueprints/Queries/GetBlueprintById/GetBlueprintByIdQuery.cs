@@ -97,6 +97,7 @@ public sealed class GetBlueprintByIdQueryHandler : IRequestHandler<GetBlueprintB
         return new BlueprintDetailDto
         {
             Id = blueprint.Id,
+            WikiUuid = Guid.TryParse(blueprint.WikiUuid, out var wikiUuid) ? wikiUuid : request.Id,
             BlueprintName = blueprint.BlueprintName,
             CraftedItemName = blueprint.CraftedItemName,
             Category = blueprint.Category,

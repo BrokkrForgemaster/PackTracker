@@ -36,8 +36,11 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
         if (profile is null)
             return OperationResult<Guid>.Fail("Unauthorized");
 
+        var wikiUuidString = command.Request.BlueprintId.ToString();
         var blueprint = await _db.Blueprints
-            .FirstOrDefaultAsync(x => x.Id == command.Request.BlueprintId, cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.Id == command.Request.BlueprintId || x.WikiUuid == wikiUuidString,
+                cancellationToken);
         if (blueprint is null)
             return OperationResult<Guid>.Fail("Blueprint not found.");
 
@@ -56,7 +59,7 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
 
         var craftingRequest = new CraftingRequest
         {
-            BlueprintId = command.Request.BlueprintId,
+            BlueprintId = blueprint.Id,
             ItemName = !string.IsNullOrWhiteSpace(command.Request.CraftedItemName) ? command.Request.CraftedItemName.Trim() : null,
             RequesterProfileId = profile.Id,
             QuantityRequested = command.Request.QuantityRequested <= 0 ? 1 : command.Request.QuantityRequested,

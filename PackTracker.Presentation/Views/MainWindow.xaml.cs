@@ -13,6 +13,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -127,6 +128,7 @@ namespace PackTracker.Presentation.Views
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
             InitializeComponent();
+            InitializeStaticVisualAssets();
 
             DataContext = this;
             WindowState = WindowState.Maximized;
@@ -649,11 +651,73 @@ namespace PackTracker.Presentation.Views
         {
             try
             {
-                return new BitmapImage(new Uri("pack://application:,,,/Assets/HWiconnew.png"));
+                return LoadPackImage("Assets/HWiconnew.png") as ImageSource ?? new DrawingImage();
             }
             catch
             {
                 return new DrawingImage();
+            }
+        }
+
+        private void InitializeStaticVisualAssets()
+        {
+            Icon = LoadPackImage("Assets/housewolf2.ico");
+            MainBackgroundImage.Source = LoadPackImage("Assets/Pack_Tracker.png");
+            SidebarThemeImage.Source = ResolveSidebarThemeImage() ?? LoadPackImage("Assets/HWiconnew.png");
+        }
+
+        private ImageSource? ResolveSidebarThemeImage()
+        {
+            var theme = _settingsService.GetSettings().Theme;
+            var assetPath = theme?.Trim().ToLowerInvariant() switch
+            {
+                "tacops" => "Assets/tacops.png",
+                "specops" => "Assets/specops.png",
+                "locops" => "Assets/locops.png",
+                "arcops" => "Assets/arcops.png",
+                _ => "Assets/HWiconnew.png"
+            };
+
+            return LoadPackImage(assetPath);
+        }
+
+        private static BitmapImage? LoadPackImage(string relativeAssetPath)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(relativeAssetPath);
+
+            try
+            {
+                var uri = new Uri($"pack://application:,,,/{relativeAssetPath}", UriKind.Absolute);
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = uri;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze();
+                return bitmap;
+            }
+            catch
+            {
+                try
+                {
+                    var fullPath = Path.Combine(AppContext.BaseDirectory, relativeAssetPath.Replace('/', Path.DirectorySeparatorChar));
+                    if (!File.Exists(fullPath))
+                    {
+                        return null;
+                    }
+
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(fullPath, UriKind.Absolute);
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    return bitmap;
+                }
+                catch
+                {
+                    return null;
+                }
             }
         }
 

@@ -87,7 +87,23 @@ public sealed class RegisterBlueprintOwnershipCommandHandler
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            var persisted = await _db.MemberBlueprintOwnerships
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.BlueprintId == blueprint.Id && x.MemberProfileId == profile.Id,
+                    cancellationToken);
+
+            if (persisted is null)
+                throw;
+
+            existing = persisted;
+        }
 
         var ownerCount = await _db.MemberBlueprintOwnerships
             .AsNoTracking()

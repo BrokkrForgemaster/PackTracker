@@ -53,6 +53,7 @@ public sealed class SearchBlueprintsQueryHandler : IRequestHandler<SearchBluepri
             .Select(x => new BlueprintSearchItemDto
             {
                 Id = x.Id,
+                WikiUuid = Guid.TryParse(x.WikiUuid, out var wikiUuid) ? wikiUuid : x.Id,
                 BlueprintName = x.BlueprintName,
                 CraftedItemName = x.CraftedItemName,
                 Category = x.Category,
