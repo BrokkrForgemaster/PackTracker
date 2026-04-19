@@ -285,7 +285,7 @@ public class ProfileService : IProfileService
     private static string? ResolveDivisionRole(IEnumerable<string> roleNames)
     {
         return KnownDivisions.FirstOrDefault(d =>
-            roleNames.Any(r => string.Equals(r, d, StringComparison.OrdinalIgnoreCase)));
+            roleNames.Any(r => r.StartsWith(d, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>

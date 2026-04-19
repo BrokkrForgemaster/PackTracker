@@ -263,6 +263,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
             var discordBotToken = updatedSettings.DiscordBotToken;
             Assign(ref discordBotToken, discord["BotToken"]);
+            Assign(ref discordBotToken, configuration["DISCORD_BOT_TOKEN"]);
             updatedSettings.DiscordBotToken = discordBotToken;
 
             var regolithBase = updatedSettings.RegolithBaseUrl;

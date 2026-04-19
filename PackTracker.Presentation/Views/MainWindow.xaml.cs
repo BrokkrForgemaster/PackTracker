@@ -260,6 +260,7 @@ namespace PackTracker.Presentation.Views
             var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
             ContentFrame.Navigate(dashboardView);
             _ = dashboardView.ViewModel.LoadCurrentUserAsync();
+            _ = dashboardView.ViewModel.RefreshDataAsync();
             _ = RefreshSidebarProfileAsync();
         }
 
