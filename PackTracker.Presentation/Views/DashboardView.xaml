@@ -369,49 +369,92 @@
                             </Border>
                         </DockPanel>
 
-                        <ItemsControl ItemsSource="{Binding TopRequests}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource OpItemBorderStyle}"
-                                            Padding="8,6"
-                                            Margin="0,0,0,4"
-                                            Cursor="Hand"
-                                            MouseLeftButtonUp="ActiveRequest_MouseLeftButtonUp">
-                                        <DockPanel LastChildFill="True">
-                                            <Border DockPanel.Dock="Right"
-                                                    Background="#1A3A1A"
-                                                    CornerRadius="3"
-                                                    Padding="5,2"
-                                                    Margin="6,0,0,0"
-                                                    VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Status}"
-                                                           Foreground="#00A86B"
-                                                           FontSize="9"
-                                                           FontWeight="Bold" />
-                                            </Border>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="PINNED"
-                                                               Foreground="{StaticResource OpTextAccentBrush}"
-                                                               FontSize="8"
-                                                               FontWeight="Bold"
-                                                               Margin="0,0,4,0"
-                                                               VerticalAlignment="Center"
-                                                               Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibility}}"/>
-                                                    <TextBlock Text="{Binding Title}"
-                                                               Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                               FontSize="11"
-                                                               TextTrimming="CharacterEllipsis" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      MaxHeight="320">
+                            <ItemsControl ItemsSource="{Binding ActiveRequests}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource OpItemBorderStyle}"
+                                                Padding="8,6"
+                                                Margin="0,0,0,4"
+                                                Cursor="Hand"
+                                                MouseLeftButtonUp="ActiveRequest_MouseLeftButtonUp">
+                                            <DockPanel LastChildFill="True">
+                                                <Border DockPanel.Dock="Right"
+                                                        Background="#1A3A1A"
+                                                        CornerRadius="3"
+                                                        Padding="5,2"
+                                                        Margin="6,0,0,0"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Status}"
+                                                               Foreground="#00A86B"
+                                                               FontSize="9"
+                                                               FontWeight="Bold" />
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="PINNED"
+                                                                   Foreground="{StaticResource OpTextAccentBrush}"
+                                                                   FontSize="8"
+                                                                   FontWeight="Bold"
+                                                                   Margin="0,0,4,0"
+                                                                   VerticalAlignment="Center"
+                                                                   Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibility}}"/>
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                                   FontSize="11"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding RequestType}"
+                                                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                                                   FontSize="9"
+                                                                   VerticalAlignment="Center" />
+                                                        <Border Background="#16261A"
+                                                                BorderBrush="#245B36"
+                                                                BorderThickness="1"
+                                                                CornerRadius="3"
+                                                                Padding="4,1"
+                                                                Margin="6,0,0,0"
+                                                                Visibility="{Binding IsRequestedByCurrentUser, Converter={StaticResource BoolToVisibility}}">
+                                                            <TextBlock Text="MINE"
+                                                                       Foreground="#7ED6A5"
+                                                                       FontSize="8"
+                                                                       FontWeight="Bold" />
+                                                        </Border>
+                                                        <Border Background="#1E1927"
+                                                                BorderBrush="#5F4A8A"
+                                                                BorderThickness="1"
+                                                                CornerRadius="3"
+                                                                Padding="4,1"
+                                                                Margin="4,0,0,0"
+                                                                Visibility="{Binding IsAssignedToCurrentUser, Converter={StaticResource BoolToVisibility}}">
+                                                            <TextBlock Text="ASSIGNED"
+                                                                       Foreground="#B7A7F5"
+                                                                       FontSize="8"
+                                                                       FontWeight="Bold" />
+                                                        </Border>
+                                                        <Border Background="#1A2D34"
+                                                                BorderBrush="#3E7282"
+                                                                BorderThickness="1"
+                                                                CornerRadius="3"
+                                                                Padding="4,1"
+                                                                Margin="4,0,0,0"
+                                                                Visibility="{Binding IsAvailableToClaim, Converter={StaticResource BoolToVisibility}}">
+                                                            <TextBlock Text="AVAILABLE"
+                                                                       Foreground="#8FD4E7"
+                                                                       FontSize="8"
+                                                                       FontWeight="Bold" />
+                                                        </Border>
+                                                    </StackPanel>
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding RequestType}"
-                                                           Foreground="{StaticResource OpTextMutedBrush}"
-                                                           FontSize="9" />
-                                            </StackPanel>
-                                        </DockPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
 
                         <TextBlock Text="No active tasks."
                                    FontStyle="Italic"

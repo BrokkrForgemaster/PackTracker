@@ -21,7 +21,12 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
 
     public async Task<IReadOnlyList<MaterialProcurementRequestListItemDto>> Handle(GetProcurementRequestsQuery request, CancellationToken cancellationToken)
     {
-        var currentUsername = _currentUser.DisplayName;
+        var currentProfileId = await _db.Profiles
+            .AsNoTracking()
+            .Where(x => x.DiscordId == _currentUser.UserId)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         return await _db.MaterialProcurementRequests
             .AsNoTracking()
@@ -31,10 +36,8 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .OrderByDescending(x => x.CreatedAt)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
             .Where(x => x.Status == RequestStatus.Open
-                     || x.Status == RequestStatus.Accepted
-                     || x.Status == RequestStatus.InProgress
-                     || x.RequesterProfile!.Username == currentUsername
-                     || x.AssignedToProfile!.Username == currentUsername)
+                     || x.RequesterProfileId == currentProfileId
+                     || x.AssignedToProfileId == currentProfileId)
             .Select(x => new MaterialProcurementRequestListItemDto
             {
                 Id = x.Id,

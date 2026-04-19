@@ -32,9 +32,8 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
             .AsNoTracking()
             .Include(x => x.CreatedByProfile)
             .Include(x => x.AssignedToProfile)
+            .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
             .Where(x => x.Status == RequestStatus.Open
-                     || x.Status == RequestStatus.Accepted
-                     || x.Status == RequestStatus.InProgress
                      || x.CreatedByProfileId == currentProfileId
                      || x.AssignedToProfileId == currentProfileId)
             .Select(x => new ActiveRequestDto
@@ -45,6 +44,9 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 Status = x.Status.ToString(),
                 Priority = x.Priority.ToString(),
                 IsPinned = x.IsPinned,
+                IsRequestedByCurrentUser = x.CreatedByProfileId == currentProfileId,
+                IsAssignedToCurrentUser = x.AssignedToProfileId == currentProfileId,
+                IsAvailableToClaim = x.Status == RequestStatus.Open,
                 RequesterDisplayName = x.CreatedByProfile != null ? (x.CreatedByProfile.DiscordDisplayName ?? x.CreatedByProfile.Username) : "Unknown",
                 AssigneeDisplayName = x.AssignedToProfile != null ? (x.AssignedToProfile.DiscordDisplayName ?? x.AssignedToProfile.Username) : null,
                 CreatedAt = x.CreatedAt
@@ -57,9 +59,8 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
             .Include(x => x.Blueprint)
             .Include(x => x.RequesterProfile)
             .Include(x => x.AssignedCrafterProfile)
+            .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
             .Where(x => x.Status == RequestStatus.Open
-                     || x.Status == RequestStatus.Accepted
-                     || x.Status == RequestStatus.InProgress
                      || x.RequesterProfileId == currentProfileId
                      || x.AssignedCrafterProfileId == currentProfileId)
             .Select(x => new ActiveRequestDto
@@ -70,6 +71,9 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 Status = x.Status.ToString(),
                 Priority = x.Priority.ToString(),
                 IsPinned = false,
+                IsRequestedByCurrentUser = x.RequesterProfileId == currentProfileId,
+                IsAssignedToCurrentUser = x.AssignedCrafterProfileId == currentProfileId,
+                IsAvailableToClaim = x.Status == RequestStatus.Open,
                 RequesterDisplayName = x.RequesterProfile != null ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username) : "Unknown",
                 AssigneeDisplayName = x.AssignedCrafterProfile != null ? (x.AssignedCrafterProfile.DiscordDisplayName ?? x.AssignedCrafterProfile.Username) : null,
                 CreatedAt = x.CreatedAt
@@ -82,9 +86,8 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
             .Include(x => x.Material)
             .Include(x => x.RequesterProfile)
             .Include(x => x.AssignedToProfile)
+            .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
             .Where(x => x.Status == RequestStatus.Open
-                     || x.Status == RequestStatus.Accepted
-                     || x.Status == RequestStatus.InProgress
                      || x.RequesterProfileId == currentProfileId
                      || x.AssignedToProfileId == currentProfileId)
             .Select(x => new ActiveRequestDto
@@ -95,6 +98,9 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 Status = x.Status.ToString(),
                 Priority = x.Priority.ToString(),
                 IsPinned = false,
+                IsRequestedByCurrentUser = x.RequesterProfileId == currentProfileId,
+                IsAssignedToCurrentUser = x.AssignedToProfileId == currentProfileId,
+                IsAvailableToClaim = x.Status == RequestStatus.Open,
                 RequesterDisplayName = x.RequesterProfile != null ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username) : "Unknown",
                 AssigneeDisplayName = x.AssignedToProfile != null ? (x.AssignedToProfile.DiscordDisplayName ?? x.AssignedToProfile.Username) : null,
                 CreatedAt = x.CreatedAt
@@ -120,6 +126,9 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
         {
             ActiveRequests = assistance.Concat(crafting).Concat(procurement)
                 .OrderByDescending(x => x.IsPinned)
+                .ThenByDescending(x => x.IsAssignedToCurrentUser)
+                .ThenByDescending(x => x.IsRequestedByCurrentUser)
+                .ThenByDescending(x => x.IsAvailableToClaim)
                 .ThenByDescending(x => x.CreatedAt)
                 .ToList(),
             ScheduledGuides = guides

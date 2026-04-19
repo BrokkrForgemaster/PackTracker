@@ -272,8 +272,6 @@ public class DashboardViewModel : ViewModelBase
                     ActiveRequests.Clear();
                     foreach (var req in summary.ActiveRequests)
                         ActiveRequests.Add(req);
-                    
-                    OnPropertyChanged(nameof(TopRequests));
                 }));
 
                 await Guide.RefreshAsync();
@@ -315,9 +313,7 @@ public class DashboardViewModel : ViewModelBase
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
     public ObservableCollection<OnlineUserViewModel> OnlineUsers { get; }
     public ObservableCollection<ActiveRequestDto> ActiveRequests { get; }
-    
-    public IEnumerable<ActiveRequestDto> TopRequests => ActiveRequests.Take(5);
-    
+
     public GuideDashboardViewModel Guide { get; }
     public IEnumerable<PackTracker.Domain.Entities.GuideRequest> TopGuideRequests => Guide.Requests.Take(2);
 

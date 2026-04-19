@@ -16,6 +16,9 @@ public class ActiveRequestDto
     public string Status { get; set; } = string.Empty;
     public string Priority { get; set; } = string.Empty;
     public bool IsPinned { get; set; }
+    public bool IsRequestedByCurrentUser { get; set; }
+    public bool IsAssignedToCurrentUser { get; set; }
+    public bool IsAvailableToClaim { get; set; }
     public string RequesterDisplayName { get; set; } = string.Empty;
     public string? AssigneeDisplayName { get; set; }
     public DateTime CreatedAt { get; set; }

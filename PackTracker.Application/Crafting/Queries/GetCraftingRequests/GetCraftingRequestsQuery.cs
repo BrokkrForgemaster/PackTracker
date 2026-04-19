@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
@@ -12,72 +13,147 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<GetCraftingRequestsQueryHandler> _logger;
 
-    public GetCraftingRequestsQueryHandler(IApplicationDbContext db, ICurrentUserService currentUser)
+    public GetCraftingRequestsQueryHandler(
+        IApplicationDbContext db,
+        ICurrentUserService currentUser,
+        ILogger<GetCraftingRequestsQueryHandler> logger)
     {
         _db = db;
         _currentUser = currentUser;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<CraftingRequestListItemDto>> Handle(GetCraftingRequestsQuery request, CancellationToken cancellationToken)
     {
-        var currentUsername = _currentUser.DisplayName;
+        var currentProfileId = await _db.Profiles
+            .AsNoTracking()
+            .Where(x => x.DiscordId == _currentUser.UserId)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var rows = await (
-            from req in _db.CraftingRequests.AsNoTracking()
-            join blueprint in _db.Blueprints.AsNoTracking() on req.BlueprintId equals blueprint.Id into blueprintGroup
-            from blueprint in blueprintGroup.DefaultIfEmpty()
-            join requester in _db.Profiles.AsNoTracking() on req.RequesterProfileId equals requester.Id into requesterGroup
-            from requester in requesterGroup.DefaultIfEmpty()
-            join assignedCrafter in _db.Profiles.AsNoTracking() on req.AssignedCrafterProfileId equals assignedCrafter.Id into assignedCrafterGroup
-            from assignedCrafter in assignedCrafterGroup.DefaultIfEmpty()
-            join recipe in _db.BlueprintRecipes.AsNoTracking() on req.BlueprintId equals recipe.BlueprintId into recipeGroup
-            from recipe in recipeGroup.DefaultIfEmpty()
-            join recipeMaterial in _db.BlueprintRecipeMaterials.AsNoTracking() on recipe.Id equals recipeMaterial.BlueprintRecipeId into recipeMaterialGroup
-            from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
-            join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
-            from material in materialGroup.DefaultIfEmpty()
-            where req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed
-            where req.Status == RequestStatus.Open
-                || req.Status == RequestStatus.Accepted
-                || req.Status == RequestStatus.InProgress
-                || requester.Username == currentUsername
-                || assignedCrafter.Username == currentUsername
-            orderby req.CreatedAt descending
-            select new
-            {
-                RequestId = req.Id,
-                req.BlueprintId,
-                RequestItemName = req.ItemName,
-                BlueprintCraftedItemName = blueprint != null ? blueprint.CraftedItemName : null,
-                BlueprintName = blueprint != null ? blueprint.BlueprintName : null,
-                RequesterUsername = requester != null ? requester.Username : null,
-                RequesterDisplayName = requester != null ? requester.DiscordDisplayName : null,
-                AssignedCrafterUsername = assignedCrafter != null ? assignedCrafter.Username : null,
-                req.QuantityRequested,
-                req.MinimumQuality,
-                req.RefusalReason,
-                req.Priority,
-                req.Status,
-                req.MaterialSupplyMode,
-                req.DeliveryLocation,
-                req.RewardOffered,
-                req.RequiredBy,
-                req.Notes,
-                req.CreatedAt,
-                req.RequesterTimeZoneDisplayName,
-                req.RequesterUtcOffsetMinutes,
-                MaterialId = (Guid?)recipeMaterial.MaterialId,
-                MaterialName = material != null ? material.Name : null,
-                MaterialType = material != null ? material.MaterialType : null,
-                MaterialTier = material != null ? material.Tier : null,
-                MaterialSourceType = material != null ? material.SourceType.ToString() : null,
-                QuantityRequired = (double?)recipeMaterial.QuantityRequired,
-                Unit = recipeMaterial != null ? recipeMaterial.Unit : null,
-                IsOptional = (bool?)recipeMaterial.IsOptional,
-                IsIntermediateCraftable = (bool?)recipeMaterial.IsIntermediateCraftable
-            }).ToListAsync(cancellationToken);
+        try
+        {
+            var rows = await BuildFullProjectionQuery(currentProfileId).ToListAsync(cancellationToken);
+            return MapRows(rows);
+        }
+        catch (Exception ex) when (IsLegacyCraftingMetadataFailure(ex))
+        {
+            _logger.LogWarning(
+                ex,
+                "Crafting request query failed with newer metadata columns; retrying with legacy-safe projection.");
 
+            var rows = await BuildLegacyProjectionQuery(currentProfileId).ToListAsync(cancellationToken);
+            return MapRows(rows);
+        }
+    }
+
+    private IQueryable<CraftingRequestRow> BuildFullProjectionQuery(Guid? currentProfileId) =>
+        from req in _db.CraftingRequests.AsNoTracking()
+        join blueprint in _db.Blueprints.AsNoTracking() on req.BlueprintId equals blueprint.Id into blueprintGroup
+        from blueprint in blueprintGroup.DefaultIfEmpty()
+        join requester in _db.Profiles.AsNoTracking() on req.RequesterProfileId equals requester.Id into requesterGroup
+        from requester in requesterGroup.DefaultIfEmpty()
+        join assignedCrafter in _db.Profiles.AsNoTracking() on req.AssignedCrafterProfileId equals assignedCrafter.Id into assignedCrafterGroup
+        from assignedCrafter in assignedCrafterGroup.DefaultIfEmpty()
+        join recipe in _db.BlueprintRecipes.AsNoTracking() on req.BlueprintId equals recipe.BlueprintId into recipeGroup
+        from recipe in recipeGroup.DefaultIfEmpty()
+        join recipeMaterial in _db.BlueprintRecipeMaterials.AsNoTracking() on recipe.Id equals recipeMaterial.BlueprintRecipeId into recipeMaterialGroup
+        from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
+        join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
+        from material in materialGroup.DefaultIfEmpty()
+        where req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed
+        where req.Status == RequestStatus.Open
+            || req.RequesterProfileId == currentProfileId
+            || req.AssignedCrafterProfileId == currentProfileId
+        orderby req.CreatedAt descending
+        select new CraftingRequestRow(
+            req.Id,
+            req.BlueprintId,
+            req.ItemName,
+            blueprint != null ? blueprint.CraftedItemName : null,
+            blueprint != null ? blueprint.BlueprintName : null,
+            requester != null ? requester.Username : null,
+            requester != null ? requester.DiscordDisplayName : null,
+            assignedCrafter != null ? assignedCrafter.Username : null,
+            req.QuantityRequested,
+            req.MinimumQuality,
+            req.RefusalReason,
+            req.Priority,
+            req.Status,
+            req.MaterialSupplyMode,
+            req.DeliveryLocation,
+            req.RewardOffered,
+            req.RequiredBy,
+            req.Notes,
+            req.CreatedAt,
+            req.RequesterTimeZoneDisplayName,
+            req.RequesterUtcOffsetMinutes,
+            (Guid?)recipeMaterial.MaterialId,
+            material != null ? material.Name : null,
+            material != null ? material.MaterialType : null,
+            material != null ? material.Tier : null,
+            material != null ? material.SourceType.ToString() : null,
+            (double?)recipeMaterial.QuantityRequired,
+            recipeMaterial != null ? recipeMaterial.Unit : null,
+            (bool?)recipeMaterial.IsOptional,
+            (bool?)recipeMaterial.IsIntermediateCraftable);
+
+    private IQueryable<CraftingRequestRow> BuildLegacyProjectionQuery(Guid? currentProfileId) =>
+        from req in _db.CraftingRequests.AsNoTracking()
+        join blueprint in _db.Blueprints.AsNoTracking() on req.BlueprintId equals blueprint.Id into blueprintGroup
+        from blueprint in blueprintGroup.DefaultIfEmpty()
+        join requester in _db.Profiles.AsNoTracking() on req.RequesterProfileId equals requester.Id into requesterGroup
+        from requester in requesterGroup.DefaultIfEmpty()
+        join assignedCrafter in _db.Profiles.AsNoTracking() on req.AssignedCrafterProfileId equals assignedCrafter.Id into assignedCrafterGroup
+        from assignedCrafter in assignedCrafterGroup.DefaultIfEmpty()
+        join recipe in _db.BlueprintRecipes.AsNoTracking() on req.BlueprintId equals recipe.BlueprintId into recipeGroup
+        from recipe in recipeGroup.DefaultIfEmpty()
+        join recipeMaterial in _db.BlueprintRecipeMaterials.AsNoTracking() on recipe.Id equals recipeMaterial.BlueprintRecipeId into recipeMaterialGroup
+        from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
+        join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
+        from material in materialGroup.DefaultIfEmpty()
+        where req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed
+        where req.Status == RequestStatus.Open
+            || req.RequesterProfileId == currentProfileId
+            || req.AssignedCrafterProfileId == currentProfileId
+        orderby req.CreatedAt descending
+        select new CraftingRequestRow(
+            req.Id,
+            req.BlueprintId,
+            null,
+            blueprint != null ? blueprint.CraftedItemName : null,
+            blueprint != null ? blueprint.BlueprintName : null,
+            requester != null ? requester.Username : null,
+            requester != null ? requester.DiscordDisplayName : null,
+            assignedCrafter != null ? assignedCrafter.Username : null,
+            req.QuantityRequested,
+            req.MinimumQuality,
+            req.RefusalReason,
+            req.Priority,
+            req.Status,
+            req.MaterialSupplyMode,
+            req.DeliveryLocation,
+            req.RewardOffered,
+            req.RequiredBy,
+            req.Notes,
+            req.CreatedAt,
+            null,
+            null,
+            (Guid?)recipeMaterial.MaterialId,
+            material != null ? material.Name : null,
+            material != null ? material.MaterialType : null,
+            material != null ? material.Tier : null,
+            material != null ? material.SourceType.ToString() : null,
+            (double?)recipeMaterial.QuantityRequired,
+            recipeMaterial != null ? recipeMaterial.Unit : null,
+            (bool?)recipeMaterial.IsOptional,
+            (bool?)recipeMaterial.IsIntermediateCraftable);
+
+    private static List<CraftingRequestListItemDto> MapRows(IReadOnlyList<CraftingRequestRow> rows)
+    {
         return rows
             .GroupBy(x => new
             {
@@ -146,4 +222,45 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
             })
             .ToList();
     }
+
+    private static bool IsLegacyCraftingMetadataFailure(Exception ex)
+    {
+        var message = ex.ToString();
+        return message.Contains("ItemName", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("RequesterUtcOffsetMinutes", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("column", StringComparison.OrdinalIgnoreCase) && message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record CraftingRequestRow(
+        Guid RequestId,
+        Guid BlueprintId,
+        string? RequestItemName,
+        string? BlueprintCraftedItemName,
+        string? BlueprintName,
+        string? RequesterUsername,
+        string? RequesterDisplayName,
+        string? AssignedCrafterUsername,
+        int QuantityRequested,
+        int MinimumQuality,
+        string? RefusalReason,
+        RequestPriority Priority,
+        RequestStatus Status,
+        MaterialSupplyMode MaterialSupplyMode,
+        string? DeliveryLocation,
+        string? RewardOffered,
+        DateTime? RequiredBy,
+        string? Notes,
+        DateTime CreatedAt,
+        string? RequesterTimeZoneDisplayName,
+        int? RequesterUtcOffsetMinutes,
+        Guid? MaterialId,
+        string? MaterialName,
+        string? MaterialType,
+        string? MaterialTier,
+        string? MaterialSourceType,
+        double? QuantityRequired,
+        string? Unit,
+        bool? IsOptional,
+        bool? IsIntermediateCraftable);
 }
