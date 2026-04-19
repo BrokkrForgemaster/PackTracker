@@ -212,14 +212,28 @@ public static class PackTrackerApiComposition
             var logger = context.HttpContext.RequestServices
                 .GetRequiredService<ILoggingService<Program>>();
 
+            var message = context.Failure?.Message ?? "unknown";
+
             logger.LogError(
                 context.Failure ?? new InvalidOperationException("Unknown remote failure"),
                 "Discord remote failure: {Message}",
-                context.Failure?.Message ?? "unknown");
+                message);
 
-            context.Response.Redirect("/auth-error?message=" + Uri.EscapeDataString(context.Failure?.Message ?? "unknown"));
+            var safeMessage = System.Net.WebUtility.HtmlEncode(message);
+            context.Response.ContentType = "text/html";
+            context.Response.StatusCode = 200;
+            var html = $"""
+                <html>
+                  <body style="background:#121212;color:#fff;font-family:sans-serif;text-align:center;padding-top:15%">
+                    <h2>Discord Login Failed</h2>
+                    <p style="color:#aaa;max-width:480px;margin:16px auto">{safeMessage}</p>
+                    <p style="color:#888;font-size:13px">Close this tab and try logging in again.</p>
+                    <button style="padding:10px 20px;border:none;border-radius:6px;background:#c2a23a;color:#000;font-weight:bold;margin-top:20px;" onclick="window.close()">Close</button>
+                  </body>
+                </html>
+                """;
             context.HandleResponse();
-            return Task.CompletedTask;
+            return context.Response.WriteAsync(html);
         };
     }
 }
