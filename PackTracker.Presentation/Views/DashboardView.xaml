@@ -173,6 +173,89 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- New chat message menu styles -->
+        <Style x:Key="ChatMessageMenuButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1A1410" />
+                                <Setter Property="Foreground" Value="{StaticResource OpTextAccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2A211B" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChatMessageContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="#15110E" />
+            <Setter Property="BorderBrush" Value="{StaticResource OpBorderItemBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <StackPanel IsItemsHost="True" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChatMessageMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#24374A" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -401,7 +484,7 @@
                                                                    FontWeight="Bold"
                                                                    Margin="0,0,4,0"
                                                                    VerticalAlignment="Center"
-                                                                   Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibility}}"/>
+                                                                   Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibility}}" />
                                                         <TextBlock Text="{Binding Title}"
                                                                    Foreground="{StaticResource OpTextPrimaryBrush}"
                                                                    FontSize="11"
@@ -564,13 +647,17 @@
                                                         <TextBlock Text="{Binding DisplayName}">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
-                                                                    <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{StaticResource OpTextMutedBrush}" />
                                                                     <Setter Property="FontSize" Value="12" />
                                                                     <Setter Property="VerticalAlignment" Value="Center" />
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                            <Setter Property="Foreground" Value="{StaticResource OpTextTitleBrush}" />
-                                                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                                                        <DataTrigger Binding="{Binding IsSelected}"
+                                                                            Value="True">
+                                                                            <Setter Property="Foreground"
+                                                                                Value="{StaticResource OpTextTitleBrush}" />
+                                                                            <Setter Property="FontWeight"
+                                                                                Value="SemiBold" />
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
@@ -638,10 +725,13 @@
                                                     <Button.Style>
                                                         <Style TargetType="Button">
                                                             <Setter Property="Background" Value="#2A211B" />
-                                                            <Setter Property="Foreground" Value="{StaticResource OpTextAccentBrush}" />
+                                                            <Setter Property="Foreground"
+                                                                    Value="{StaticResource OpTextAccentBrush}" />
                                                             <Setter Property="Content" Value="MUTE" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding DataContext.ChatSoundMuted, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                                <DataTrigger
+                                                                    Binding="{Binding DataContext.ChatSoundMuted, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    Value="True">
                                                                     <Setter Property="Background" Value="#4A2424" />
                                                                     <Setter Property="Foreground" Value="#F8E8E8" />
                                                                     <Setter Property="Content" Value="MUTED" />
@@ -679,23 +769,14 @@
                                                             <Grid Margin="0,1,0,0">
                                                                 <Grid.Style>
                                                                     <Style TargetType="Grid">
-                                                                        <Setter Property="Background" Value="Transparent" />
+                                                                        <Setter Property="Background"
+                                                                            Value="Transparent" />
                                                                         <Style.Triggers>
-                                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                                <Setter Property="Background" Value="#0CFFFFFF" />
+                                                                            <Trigger Property="IsMouseOver"
+                                                                                Value="True">
+                                                                                <Setter Property="Background"
+                                                                                    Value="#0CFFFFFF" />
                                                                             </Trigger>
-                                                                            <DataTrigger Binding="{Binding IsOwnMessage}" Value="True">
-                                                                                <Setter Property="ContextMenu">
-                                                                                    <Setter.Value>
-                                                                                        <ContextMenu Style="{StaticResource DarkContextMenuStyle}">
-                                                                                            <MenuItem Header="Edit" Command="{Binding BeginEditCommand}"
-                                                                                                      Style="{StaticResource DarkMenuItemStyle}" />
-                                                                                            <MenuItem Header="Delete" Command="{Binding DeleteCommand}"
-                                                                                                      Style="{StaticResource DarkMenuItemStyle}" />
-                                                                                        </ContextMenu>
-                                                                                    </Setter.Value>
-                                                                                </Setter>
-                                                                            </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
                                                                 </Grid.Style>
@@ -703,11 +784,13 @@
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="44" />
                                                                     <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="32" />
                                                                 </Grid.ColumnDefinitions>
 
                                                                 <!-- Avatar circle -->
                                                                 <Border Grid.Column="0"
-                                                                        Width="36" Height="36"
+                                                                        Width="36"
+                                                                        Height="36"
                                                                         CornerRadius="18"
                                                                         Background="#5C3D1E"
                                                                         VerticalAlignment="Top"
@@ -715,18 +798,20 @@
                                                                         Margin="0,6,0,0">
                                                                     <Grid>
                                                                         <TextBlock Text="{Binding InitialLetter}"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"
-                                                                                   FontWeight="Bold"
-                                                                                   FontSize="13"
-                                                                                   Foreground="#E8C87A"
-                                                                                   Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                                                            HorizontalAlignment="Center"
+                                                                            VerticalAlignment="Center"
+                                                                            FontWeight="Bold"
+                                                                            FontSize="13"
+                                                                            Foreground="#E8C87A"
+                                                                            Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}" />
                                                                         <Image Source="{Binding AvatarImage}"
-                                                                               Width="36" Height="36"
+                                                                               Width="36"
+                                                                               Height="36"
                                                                                Stretch="UniformToFill"
                                                                                Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVisibility}}">
                                                                             <Image.Clip>
-                                                                                <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
+                                                                                <EllipseGeometry Center="18,18"
+                                                                                    RadiusX="18" RadiusY="18" />
                                                                             </Image.Clip>
                                                                         </Image>
                                                                     </Grid>
@@ -736,37 +821,37 @@
                                                                 <StackPanel Grid.Column="1" Margin="4,6,8,6">
                                                                     <DockPanel LastChildFill="False">
                                                                         <TextBlock Text="{Binding SenderDisplayName}"
-                                                                                   FontWeight="SemiBold"
-                                                                                   FontSize="12"
-                                                                                   Foreground="{StaticResource OpTextTitleBrush}"
-                                                                                   DockPanel.Dock="Left"
-                                                                                   VerticalAlignment="Center" />
+                                                                            FontWeight="SemiBold"
+                                                                            FontSize="12"
+                                                                            Foreground="{StaticResource OpTextTitleBrush}"
+                                                                            DockPanel.Dock="Left"
+                                                                            VerticalAlignment="Center" />
                                                                         <TextBlock Text="{Binding RoleDisplay}"
-                                                                                   FontSize="9"
-                                                                                   FontWeight="Bold"
-                                                                                   Foreground="#D4AF37"
-                                                                                   Margin="6,0,0,0"
-                                                                                   Padding="4,1"
-                                                                                   Background="#1AD4AF37"
-                                                                                   DockPanel.Dock="Left"
-                                                                                   VerticalAlignment="Center"
-                                                                                   Visibility="{Binding RoleDisplay, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                                            FontSize="9"
+                                                                            FontWeight="Bold"
+                                                                            Foreground="#D4AF37"
+                                                                            Margin="6,0,0,0"
+                                                                            Padding="4,1"
+                                                                            Background="#1AD4AF37"
+                                                                            DockPanel.Dock="Left"
+                                                                            VerticalAlignment="Center"
+                                                                            Visibility="{Binding RoleDisplay, Converter={StaticResource NullToVisibilityConverter}}" />
                                                                         <TextBlock Text="{Binding FormattedTime}"
-                                                                                   FontSize="9"
-                                                                                   Foreground="{StaticResource OpTextMutedBrush}"
-                                                                                   Margin="8,0,0,0"
-                                                                                   DockPanel.Dock="Left"
-                                                                                   VerticalAlignment="Center" />
+                                                                            FontSize="9"
+                                                                            Foreground="{StaticResource OpTextMutedBrush}"
+                                                                            Margin="8,0,0,0"
+                                                                            DockPanel.Dock="Left"
+                                                                            VerticalAlignment="Center" />
                                                                     </DockPanel>
 
                                                                     <controls:MarkdownTextBlock
-                                                                               Markdown="{Binding Content}"
-                                                                               FontSize="12"
-                                                                               Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                                               TextWrapping="Wrap"
-                                                                               Margin="0,2,0,0"
-                                                                               LineHeight="18"
-                                                                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibility}}" />
+                                                                        Markdown="{Binding Content}"
+                                                                        FontSize="12"
+                                                                        Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                                        TextWrapping="Wrap"
+                                                                        Margin="0,2,0,0"
+                                                                        LineHeight="18"
+                                                                        Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibility}}" />
 
                                                                     <Grid Margin="0,3,0,0"
                                                                           Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
@@ -775,38 +860,64 @@
                                                                             <ColumnDefinition Width="Auto" />
                                                                             <ColumnDefinition Width="Auto" />
                                                                         </Grid.ColumnDefinitions>
+
                                                                         <TextBox Grid.Column="0"
-                                                                                 Text="{Binding EditDraft, UpdateSourceTrigger=PropertyChanged}"
-                                                                                 Style="{StaticResource OpTextBoxStyle}"
-                                                                                 Padding="6,4"
-                                                                                 FontSize="11">
+                                                                            Text="{Binding EditDraft, UpdateSourceTrigger=PropertyChanged}"
+                                                                            Style="{StaticResource OpTextBoxStyle}"
+                                                                            Padding="6,4"
+                                                                            FontSize="11">
                                                                             <TextBox.InputBindings>
-                                                                                <KeyBinding Key="Return" Command="{Binding ConfirmEditCommand}" />
-                                                                                <KeyBinding Key="Escape" Command="{Binding CancelEditCommand}" />
+                                                                                <KeyBinding Key="Return"
+                                                                                    Command="{Binding ConfirmEditCommand}" />
+                                                                                <KeyBinding Key="Escape"
+                                                                                    Command="{Binding CancelEditCommand}" />
                                                                             </TextBox.InputBindings>
                                                                         </TextBox>
+
                                                                         <Button Grid.Column="1"
-                                                                                Content="Save"
-                                                                                Command="{Binding ConfirmEditCommand}"
-                                                                                Margin="4,0,0,0"
-                                                                                Padding="8,3"
-                                                                                FontSize="10"
-                                                                                Background="#2A3A2A"
-                                                                                Foreground="#AAD4AA"
-                                                                                BorderBrush="#5C8B5E"
-                                                                                BorderThickness="1" />
+                                                                            Content="Save"
+                                                                            Command="{Binding ConfirmEditCommand}"
+                                                                            Margin="4,0,0,0"
+                                                                            Padding="8,3"
+                                                                            FontSize="10"
+                                                                            Background="#2A3A2A"
+                                                                            Foreground="#AAD4AA"
+                                                                            BorderBrush="#5C8B5E"
+                                                                            BorderThickness="1" />
+
                                                                         <Button Grid.Column="2"
-                                                                                Content="Cancel"
-                                                                                Command="{Binding CancelEditCommand}"
-                                                                                Margin="4,0,0,0"
-                                                                                Padding="8,3"
-                                                                                FontSize="10"
-                                                                                Background="#2A211B"
-                                                                                Foreground="{StaticResource OpTextMutedBrush}"
-                                                                                BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                                                BorderThickness="1" />
+                                                                            Content="Cancel"
+                                                                            Command="{Binding CancelEditCommand}"
+                                                                            Margin="4,0,0,0"
+                                                                            Padding="8,3"
+                                                                            FontSize="10"
+                                                                            Background="#2A211B"
+                                                                            Foreground="{StaticResource OpTextMutedBrush}"
+                                                                            BorderBrush="{StaticResource OpBorderItemBrush}"
+                                                                            BorderThickness="1" />
                                                                     </Grid>
                                                                 </StackPanel>
+
+                                                                <!-- Three dots menu -->
+                                                                <Button Grid.Column="2"
+                                                                        Content="⋯"
+                                                                        Margin="0,6,4,0"
+                                                                        VerticalAlignment="Top"
+                                                                        HorizontalAlignment="Right"
+                                                                        Style="{StaticResource ChatMessageMenuButtonStyle}"
+                                                                        Visibility="{Binding IsOwnMessage, Converter={StaticResource BoolToVisibility}}">
+                                                                    <Button.ContextMenu>
+                                                                        <ContextMenu
+                                                                            Style="{StaticResource ChatMessageContextMenuStyle}">
+                                                                            <MenuItem Header="Edit"
+                                                                                Command="{Binding BeginEditCommand}"
+                                                                                Style="{StaticResource ChatMessageMenuItemStyle}" />
+                                                                            <MenuItem Header="Delete"
+                                                                                Command="{Binding DeleteCommand}"
+                                                                                Style="{StaticResource ChatMessageMenuItemStyle}" />
+                                                                        </ContextMenu>
+                                                                    </Button.ContextMenu>
+                                                                </Button>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -822,7 +933,8 @@
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Visibility" Value="Collapsed" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Messages.Count}" Value="0">
+                                                                <DataTrigger Binding="{Binding Messages.Count}"
+                                                                             Value="0">
                                                                     <Setter Property="Visibility" Value="Visible" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -855,7 +967,8 @@
                                                              VerticalContentAlignment="Center"
                                                              PreviewKeyDown="ChatInput_PreviewKeyDown">
                                                         <TextBox.InputBindings>
-                                                            <KeyBinding Key="Return" Command="{Binding SendMessageCommand}" />
+                                                            <KeyBinding Key="Return"
+                                                                        Command="{Binding SendMessageCommand}" />
                                                         </TextBox.InputBindings>
                                                     </TextBox>
                                                     <Button Grid.Column="1"
@@ -868,20 +981,20 @@
                                                            FontSize="9"
                                                            Foreground="{StaticResource OpTextMutedBrush}"
                                                            TextWrapping="Wrap">
-                                                    <Run Text="**bold**"/>
-                                                    <Run Text="  "/>
-                                                    <Run Text="*italic*"/>
-                                                    <Run Text="  "/>
-                                                    <Run Text="__underline__"/>
-                                                    <Run Text="  "/>
-                                                    <Run Text="~~strike~~"/>
-                                                    <Run Text="  "/>
-                                                    <Run FontFamily="Consolas" Text="`code`"/>
-                                                    <Run Text="  "/>
-                                                    <Run Text="||spoiler||"/>
-                                                    <Run Text="  "/>
-                                                    <Run Text="&gt; quote"/>
-                                                    <Run Text="  · Shift+Enter for new line" Foreground="#4E5058"/>
+                                                    <Run Text="**bold**" />
+                                                    <Run Text="  " />
+                                                    <Run Text="*italic*" />
+                                                    <Run Text="  " />
+                                                    <Run Text="__underline__" />
+                                                    <Run Text="  " />
+                                                    <Run Text="~~strike~~" />
+                                                    <Run Text="  " />
+                                                    <Run FontFamily="Consolas" Text="`code`" />
+                                                    <Run Text="  " />
+                                                    <Run Text="||spoiler||" />
+                                                    <Run Text="  " />
+                                                    <Run Text="&gt; quote" />
+                                                    <Run Text="  · Shift+Enter for new line" Foreground="#4E5058" />
                                                 </TextBlock>
                                             </StackPanel>
                                         </Border>
