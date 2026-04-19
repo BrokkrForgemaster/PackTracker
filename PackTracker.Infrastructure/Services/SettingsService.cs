@@ -286,6 +286,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
             if (apiBase.Contains("example.com", StringComparison.OrdinalIgnoreCase))
                 apiBase = string.Empty;
             Assign(ref apiBase, configuration["Api:BaseUrl"]);
+            Assign(ref apiBase, DefaultApiBaseUrl);
             updatedSettings.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBase) ? string.Empty : apiBase.TrimEnd('/');
 
             var blueprintUrl = updatedSettings.BlueprintDataSourceUrl;
@@ -414,10 +415,12 @@ public sealed class SettingsService : ISettingsService, IDisposable
             JwtRefreshToken = source.JwtRefreshToken
         };
 
+    private const string DefaultApiBaseUrl = "https://packtracker-yke3.onrender.com";
+
     private static AppSettings NormalizeSettings(AppSettings settings)
     {
         settings.ApiBaseUrl = string.IsNullOrWhiteSpace(settings.ApiBaseUrl)
-            ? string.Empty
+            ? DefaultApiBaseUrl
             : settings.ApiBaseUrl.TrimEnd('/');
 
         if (string.IsNullOrWhiteSpace(settings.BlueprintDataSourceUrl)
