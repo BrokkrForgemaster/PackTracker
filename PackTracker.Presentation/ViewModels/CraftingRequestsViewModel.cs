@@ -247,7 +247,10 @@ public partial class CraftingRequestsViewModel : ObservableObject
 
             if (!response.IsSuccessStatusCode)
             {
-                StatusMessage = $"Server Error: {(int)response.StatusCode}";
+                var errorDetail = await TryReadErrorDetailAsync(response);
+                StatusMessage = string.IsNullOrWhiteSpace(errorDetail)
+                    ? $"Server Error: {(int)response.StatusCode}"
+                    : $"Server Error: {(int)response.StatusCode} - {errorDetail}";
                 return;
             }
 
@@ -273,6 +276,24 @@ public partial class CraftingRequestsViewModel : ObservableObject
     }
 
     public Task RefreshDataAsync() => RefreshAsync();
+
+    private static async Task<string?> TryReadErrorDetailAsync(HttpResponseMessage response)
+    {
+        try
+        {
+            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return null;
+            }
+
+            return content.Trim();
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private async Task LoadCurrentUserAsync()
     {

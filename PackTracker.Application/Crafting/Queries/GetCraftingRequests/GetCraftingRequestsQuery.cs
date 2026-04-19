@@ -134,7 +134,7 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
             req.RefusalReason,
             req.Priority,
             req.Status,
-            req.MaterialSupplyMode,
+            MaterialSupplyMode.Negotiable,
             req.DeliveryLocation,
             req.RewardOffered,
             req.RequiredBy,
@@ -227,6 +227,7 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
     {
         var message = ex.ToString();
         return message.Contains("ItemName", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("MaterialSupplyMode", StringComparison.OrdinalIgnoreCase)
                || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
                || message.Contains("RequesterUtcOffsetMinutes", StringComparison.OrdinalIgnoreCase)
                || message.Contains("column", StringComparison.OrdinalIgnoreCase) && message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase);
