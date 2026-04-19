@@ -67,6 +67,11 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
     /// </summary>
     public DbSet<RequestComment> RequestComments => Set<RequestComment>();
 
+    /// <summary>
+    /// Gets the persisted lobby and direct-message chat history.
+    /// </summary>
+    public DbSet<LobbyChatMessage> LobbyChatMessages => Set<LobbyChatMessage>();
+
     #endregion
 
     #region DbSets - Trading / Commodities
@@ -182,6 +187,7 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
         ConfigureMaterialProcurementRequests(modelBuilder);
         ConfigureInventory(modelBuilder);
         ConfigureAssistanceRequests(modelBuilder);
+        ConfigureLobbyChatMessages(modelBuilder);
     }
 
     #endregion
@@ -674,4 +680,22 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
     }
 
     #endregion
+
+    private static void ConfigureLobbyChatMessages(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<LobbyChatMessage>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+            entity.Property(m => m.Id).HasMaxLength(64);
+            entity.Property(m => m.Channel).HasMaxLength(128).IsRequired();
+            entity.Property(m => m.Sender).HasMaxLength(256).IsRequired();
+            entity.Property(m => m.SenderDisplayName).HasMaxLength(256).IsRequired();
+            entity.Property(m => m.Content).IsRequired();
+            entity.Property(m => m.SenderDiscordId).HasMaxLength(64).IsRequired();
+            entity.Property(m => m.AvatarUrl).HasMaxLength(512);
+            entity.Property(m => m.SenderRole).HasMaxLength(128);
+            entity.HasIndex(m => m.Channel);
+            entity.HasIndex(m => m.SentAt);
+        });
+    }
 }

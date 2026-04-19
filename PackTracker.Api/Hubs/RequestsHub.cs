@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
@@ -192,7 +193,22 @@ public class RequestsHub : Hub
             AvatarUrl: avatarUrl,
             SenderRole: senderRole);
 
-        // Store in capped history queue
+        // Persist to database
+        _db.LobbyChatMessages.Add(new LobbyChatMessage
+        {
+            Id = message.Id,
+            Channel = normalizedLobby,
+            Sender = message.Sender,
+            SenderDisplayName = message.SenderDisplayName,
+            Content = message.Content,
+            SentAt = message.SentAt,
+            SenderDiscordId = message.SenderDiscordId,
+            AvatarUrl = message.AvatarUrl,
+            SenderRole = message.SenderRole
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
+
+        // Also keep in-memory cache for fast history within the same process lifetime
         StoreMessageHistory(normalizedLobby, message);
 
         // Broadcast to lobby group (exclude sender — they add the message locally for instant feedback)
@@ -220,37 +236,61 @@ public class RequestsHub : Hub
 
         var normalizedLobby = NormalizeLobbyName(lobbyName);
 
-        ChatMessage[] history;
-        if (_messageHistory.TryGetValue(normalizedLobby, out var queue))
+        // Load from DB — most recent 100 messages, oldest first
+        var dbMessages = await _db.LobbyChatMessages
+            .Where(m => m.Channel == normalizedLobby && !m.IsDeleted)
+            .OrderByDescending(m => m.SentAt)
+            .Take(100)
+            .OrderBy(m => m.SentAt)
+            .ToListAsync();
+
+        // Seed in-memory cache from DB so live edits/deletes within this process stay consistent
+        if (dbMessages.Count > 0)
         {
-            lock (queue)
+            var q = _messageHistory.GetOrAdd(normalizedLobby, _ => new Queue<ChatMessage>());
+            lock (q)
             {
-                history = queue.ToArray();
+                q.Clear();
+                foreach (var row in dbMessages)
+                    q.Enqueue(new ChatMessage(row.Id, row.Sender, row.SenderDisplayName,
+                        row.Content, row.SentAt, row.SenderDiscordId, row.AvatarUrl, row.SenderRole));
             }
         }
-        else
-        {
-            history = Array.Empty<ChatMessage>();
-        }
 
-        var messages = normalizedLobby == "lobby:general"
-            ? new[] { _generalWelcomeMessage }.Concat(history)
-            : history.AsEnumerable();
+        IEnumerable<object> messages = dbMessages.Select(m => (object)new
+        {
+            m.Id,
+            Channel = lobbyName,
+            m.Sender,
+            m.SenderDisplayName,
+            Content = m.EditedAt.HasValue ? m.Content : m.Content,
+            m.SentAt,
+            m.AvatarUrl,
+            m.SenderRole
+        });
+
+        if (normalizedLobby == "lobby:general")
+        {
+            messages = new object[]
+            {
+                new
+                {
+                    _generalWelcomeMessage.Id,
+                    Channel = lobbyName,
+                    _generalWelcomeMessage.Sender,
+                    _generalWelcomeMessage.SenderDisplayName,
+                    _generalWelcomeMessage.Content,
+                    _generalWelcomeMessage.SentAt,
+                    _generalWelcomeMessage.AvatarUrl,
+                    _generalWelcomeMessage.SenderRole
+                }
+            }.Concat(messages);
+        }
 
         await Clients.Caller.SendAsync("LobbyHistory", new
         {
             Channel = lobbyName,
-            Messages = messages.Select(m => new
-            {
-                m.Id,
-                Channel = lobbyName,
-                m.Sender,
-                m.SenderDisplayName,
-                m.Content,
-                m.SentAt,
-                m.AvatarUrl,
-                m.SenderRole
-            })
+            Messages = messages
         });
     }
 
@@ -269,30 +309,35 @@ public class RequestsHub : Hub
         var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         var normalizedLobby = NormalizeLobbyName(lobbyName);
 
+        var trimmedContent = newContent.Trim();
+        var editedAt = DateTime.UtcNow;
+
+        // Persist edit to DB
+        var dbMsg = await _db.LobbyChatMessages.FindAsync(messageId)
+            ?? throw new HubException("Message not found.");
+        if (dbMsg.SenderDiscordId != discordId)
+            throw new HubException("You can only edit your own messages.");
+        dbMsg.Content = trimmedContent;
+        dbMsg.EditedAt = editedAt;
+        await _db.SaveChangesAsync(CancellationToken.None);
+
+        // Update in-memory cache
         if (_messageHistory.TryGetValue(normalizedLobby, out var queue))
         {
             lock (queue)
             {
                 var msg = queue.FirstOrDefault(m => m.Id == messageId);
-                if (msg == null)
-                    throw new HubException("Message not found.");
-                if (msg.SenderDiscordId != discordId)
-                    throw new HubException("You can only edit your own messages.");
-
-                msg.Content = newContent.Trim();
+                if (msg != null)
+                    msg.Content = trimmedContent;
             }
-        }
-        else
-        {
-            throw new HubException("Message not found.");
         }
 
         await Clients.Group(normalizedLobby).SendAsync("LobbyMessageEdited", new
         {
             MessageId = messageId,
             Channel = lobbyName,
-            NewContent = newContent.Trim(),
-            EditedAt = DateTime.UtcNow
+            NewContent = trimmedContent,
+            EditedAt = editedAt
         });
     }
 
@@ -309,25 +354,24 @@ public class RequestsHub : Hub
         var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         var normalizedLobby = NormalizeLobbyName(lobbyName);
 
+        // Soft-delete in DB
+        var dbMsg = await _db.LobbyChatMessages.FindAsync(messageId)
+            ?? throw new HubException("Message not found.");
+        if (dbMsg.SenderDiscordId != discordId)
+            throw new HubException("You can only delete your own messages.");
+        dbMsg.IsDeleted = true;
+        await _db.SaveChangesAsync(CancellationToken.None);
+
+        // Remove from in-memory cache
         if (_messageHistory.TryGetValue(normalizedLobby, out var queue))
         {
             lock (queue)
             {
-                var msg = queue.FirstOrDefault(m => m.Id == messageId);
-                if (msg == null)
-                    throw new HubException("Message not found.");
-                if (msg.SenderDiscordId != discordId)
-                    throw new HubException("You can only delete your own messages.");
-
                 var updated = new Queue<ChatMessage>(queue.Where(m => m.Id != messageId));
                 queue.Clear();
                 foreach (var m in updated)
                     queue.Enqueue(m);
             }
-        }
-        else
-        {
-            throw new HubException("Message not found.");
         }
 
         await Clients.Group(normalizedLobby).SendAsync("LobbyMessageDeleted", new
@@ -484,6 +528,21 @@ public class RequestsHub : Hub
 
         StoreMessageHistory(senderChannel, message);
         StoreMessageHistory(recipientChannel, message);
+
+        // Persist DM to DB (stored once under sender's channel key)
+        _db.LobbyChatMessages.Add(new LobbyChatMessage
+        {
+            Id = message.Id,
+            Channel = senderChannel,
+            Sender = message.Sender,
+            SenderDisplayName = message.SenderDisplayName,
+            Content = message.Content,
+            SentAt = message.SentAt,
+            SenderDiscordId = message.SenderDiscordId,
+            AvatarUrl = message.AvatarUrl,
+            SenderRole = message.SenderRole
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
 
         // Send to the recipient
         await Clients.User(targetProfile.DiscordId).SendAsync("ReceiveDirectMessage", new
