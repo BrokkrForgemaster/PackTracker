@@ -10,7 +10,7 @@
         ResizeMode="CanResize"
         WindowStyle="SingleBorderWindow">
 
-    <Grid x:Name="RootGrid">
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="320"/>
             <ColumnDefinition Width="*"/>
