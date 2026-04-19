@@ -81,6 +81,8 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString);
             options.EnableDetailedErrors();
         });
+
+        services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
     }
 
     /// <summary>

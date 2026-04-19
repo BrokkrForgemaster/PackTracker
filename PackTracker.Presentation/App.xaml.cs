@@ -55,6 +55,16 @@ public partial class App : System.Windows.Application
         // 3️⃣ Infrastructure (requires settings)
         services.AddInfrastructure(settingsService);
 
+        // When using a remote Render API, override IUexService with the HTTP-based
+        // implementation so Trading Hub routes through Render instead of hitting Neon DB directly.
+        var apiBaseUrl = settingsService.GetSettings().ApiBaseUrl;
+        if (Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri)
+            && !apiUri.IsLoopback
+            && apiUri.Host != "localhost")
+        {
+            services.AddSingleton<IUexService, RemoteUexService>();
+        }
+
         // 4️⃣ Application shell
         services.AddSingleton<System.Windows.Application>(_ => Current);
 

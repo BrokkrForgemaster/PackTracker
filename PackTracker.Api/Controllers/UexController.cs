@@ -179,5 +179,28 @@ public class UexController : ControllerBase
             return StatusCode(500, new { traceId, success = false, error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// 🚀 GET VEHICLES
+    /// Retrieves a list of tradeable spacecraft from UEX.
+    /// </summary>
+    [HttpGet("vehicles")]
+    public async Task<IActionResult> GetVehicles([FromQuery] int? companyId = null, CancellationToken ct = default)
+    {
+        var traceId = Guid.NewGuid().ToString();
+        _logger.LogInformation("🚀 [{Trace}] Retrieving vehicles (companyId={CompanyId}).", traceId, companyId);
+
+        try
+        {
+            var vehicles = await _uex.GetVehiclesAsync(companyId, ct);
+            return Ok(new { traceId, success = true, count = vehicles.Count, data = vehicles });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ [{Trace}] Error retrieving vehicles.", traceId);
+            return StatusCode(500, new { traceId, success = false, error = ex.Message });
+        }
+    }
+
     #endregion
 }
