@@ -42,7 +42,7 @@ public class JwtTokenService
         _jwtIssuer = string.IsNullOrWhiteSpace(options.Issuer) ? "PackTracker" : options.Issuer;
         _jwtAudience = string.IsNullOrWhiteSpace(options.Audience) ? "PackTrackerClient" : options.Audience;
         _accessTokenMinutes = options.ExpiresInMinutes > 0 ? options.ExpiresInMinutes : 60;
-        _refreshTokenDays = 7;
+        _refreshTokenDays = options.RefreshTokenDays > 0 ? options.RefreshTokenDays : 30;
     }
 
     public string GenerateAccessToken(Profile user)

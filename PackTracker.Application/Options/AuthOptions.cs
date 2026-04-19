@@ -27,4 +27,5 @@ public class JwtOptions
     public string Issuer { get; set; } = "PackTracker";
     public string Audience { get; set; } = "PackTrackerClient";
     public int ExpiresInMinutes { get; set; } = 60;
+    public int RefreshTokenDays { get; set; } = 30;
 }
