@@ -24,15 +24,11 @@ public class DashboardController : ControllerBase
     public async Task<ActionResult<DashboardSummaryDto>> GetSummary(CancellationToken ct)
     {
         var summary = await _sender.Send(new GetDashboardSummaryQuery(), ct);
-        if (summary is null)
-        {
-            return Unauthorized();
-        }
 
         _logger.LogInformation(
             "Dashboard summary requested. ActiveRequests={ActiveRequests} ScheduledGuides={ScheduledGuides}",
-            summary.ActiveRequests.Count,
-            summary.ScheduledGuides.Count);
+            summary?.ActiveRequests.Count ?? 0,
+            summary?.ScheduledGuides.Count ?? 0);
 
         return Ok(summary);
     }

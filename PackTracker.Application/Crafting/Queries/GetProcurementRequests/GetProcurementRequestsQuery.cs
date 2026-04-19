@@ -31,6 +31,8 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .OrderByDescending(x => x.CreatedAt)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
             .Where(x => x.Status == RequestStatus.Open
+                     || x.Status == RequestStatus.Accepted
+                     || x.Status == RequestStatus.InProgress
                      || x.RequesterProfile!.Username == currentUsername
                      || x.AssignedToProfile!.Username == currentUsername)
             .Select(x => new MaterialProcurementRequestListItemDto

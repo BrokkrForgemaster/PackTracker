@@ -390,10 +390,19 @@
                                                            FontWeight="Bold" />
                                             </Border>
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Title}"
-                                                           Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                           FontSize="11"
-                                                           TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="PINNED"
+                                                               Foreground="{StaticResource OpTextAccentBrush}"
+                                                               FontSize="8"
+                                                               FontWeight="Bold"
+                                                               Margin="0,0,4,0"
+                                                               VerticalAlignment="Center"
+                                                               Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibility}}"/>
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                               FontSize="11"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
                                                 <TextBlock Text="{Binding RequestType}"
                                                            Foreground="{StaticResource OpTextMutedBrush}"
                                                            FontSize="9" />

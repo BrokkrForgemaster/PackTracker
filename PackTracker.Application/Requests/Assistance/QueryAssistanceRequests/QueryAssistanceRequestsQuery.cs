@@ -35,6 +35,8 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
             .Include(x => x.CreatedByProfile)
             .Include(x => x.AssignedToProfile)
             .Where(x => x.Status == RequestStatus.Open
+                     || x.Status == RequestStatus.Accepted
+                     || x.Status == RequestStatus.InProgress
                      || x.CreatedByProfileId == currentProfileId
                      || x.AssignedToProfileId == currentProfileId);
 

@@ -39,6 +39,8 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
             from material in materialGroup.DefaultIfEmpty()
             where req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed
             where req.Status == RequestStatus.Open
+                || req.Status == RequestStatus.Accepted
+                || req.Status == RequestStatus.InProgress
                 || requester.Username == currentUsername
                 || assignedCrafter.Username == currentUsername
             orderby req.CreatedAt descending

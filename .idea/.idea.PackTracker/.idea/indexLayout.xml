@@ -3,6 +3,7 @@
   <component name="UserContentModel">
     <attachedFolders>
       <Path>PackTracker.Presentation/bin/Debug/net9.0-windows/Logs</Path>
+      <Path>$USER_HOME$/AppData/Roaming/HouseWolf/PackTracker/Logs</Path>
     </attachedFolders>
     <explicitIncludes />
     <explicitExcludes />

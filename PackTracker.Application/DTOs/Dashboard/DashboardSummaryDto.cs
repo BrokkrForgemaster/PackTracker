@@ -15,6 +15,7 @@ public class ActiveRequestDto
     public string RequestType { get; set; } = string.Empty; // "Assistance", "Crafting", "Procurement"
     public string Status { get; set; } = string.Empty;
     public string Priority { get; set; } = string.Empty;
+    public bool IsPinned { get; set; }
     public string RequesterDisplayName { get; set; } = string.Empty;
     public string? AssigneeDisplayName { get; set; }
     public DateTime CreatedAt { get; set; }
