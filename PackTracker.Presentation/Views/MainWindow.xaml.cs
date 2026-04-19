@@ -147,14 +147,23 @@ namespace PackTracker.Presentation.Views
 
             Loaded += async (_, _) =>
             {
+                ApplyLayoutScale();
                 await RefreshSidebarProfileAsync();
                 await CheckForUpdateAsync();
             };
+
+            SizeChanged += (_, _) => ApplyLayoutScale();
         }
 
         #endregion
 
         #region Navigation
+
+        private void ApplyLayoutScale()
+        {
+            var scale = Math.Clamp(ActualWidth / 1600.0, 0.80, 1.40);
+            RootGrid.LayoutTransform = new ScaleTransform(scale, scale);
+        }
 
         private void NavigateToFirstView()
         {
