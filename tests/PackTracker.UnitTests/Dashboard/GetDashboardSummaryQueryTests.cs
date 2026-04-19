@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using PackTracker.Application.Dashboard.Queries.GetDashboardSummary;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
@@ -111,7 +112,8 @@ public sealed class GetDashboardSummaryQueryTests
 
         var handler = new GetDashboardSummaryQueryHandler(
             db,
-            new TestCurrentUserService(currentUser.DiscordId, currentUser.Username));
+            new TestCurrentUserService(currentUser.DiscordId, currentUser.Username),
+            NullLogger<GetDashboardSummaryQueryHandler>.Instance);
 
         var result = await handler.Handle(new GetDashboardSummaryQuery(), CancellationToken.None);
 

@@ -365,6 +365,42 @@ public class CraftingRequestsControllerTests
         Assert.Equal("Live ping", message.Content);
     }
 
+    [Fact]
+    public async Task DeleteCraftingRequest_AsCreator_SoftCancelsRequest()
+    {
+        var db = CreateDb();
+        var requester = await SeedProfileAsync(db, TestDiscordId, TestUsername, "Requester");
+
+        var blueprint = new Blueprint
+        {
+            BlueprintName = "FS-9 LMG Blueprint",
+            CraftedItemName = "FS-9 LMG",
+            Category = "Weapon",
+            Slug = "fs-9-lmg-blueprint"
+        };
+
+        var request = new CraftingRequest
+        {
+            BlueprintId = blueprint.Id,
+            RequesterProfileId = requester.Id,
+            Status = RequestStatus.Open,
+            Priority = RequestPriority.Normal
+        };
+
+        db.AddRange(blueprint, request);
+        await db.SaveChangesAsync();
+
+        var controller = BuildController(db);
+
+        var result = await controller.DeleteCraftingRequest(request.Id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(ok.Value);
+
+        var updated = await db.CraftingRequests.SingleAsync(x => x.Id == request.Id);
+        Assert.Equal(RequestStatus.Cancelled, updated.Status);
+    }
+
     private sealed class TestCurrentUserService : ICurrentUserService
     {
         public TestCurrentUserService(string userId, string displayName)

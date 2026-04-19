@@ -424,7 +424,10 @@ public partial class CraftingRequestsViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = $"Update failed ({(int)response.StatusCode})";
+                var errorDetail = await TryReadErrorDetailAsync(response);
+                StatusMessage = string.IsNullOrWhiteSpace(errorDetail)
+                    ? $"Update failed ({(int)response.StatusCode})"
+                    : $"Update failed ({(int)response.StatusCode}): {errorDetail}";
             }
         }
         catch (Exception ex)
