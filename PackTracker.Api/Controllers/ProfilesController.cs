@@ -57,7 +57,26 @@ public class ProfilesController : ControllerBase
             return NotFound();
         }
 
-        return Ok(profile);
+        // If DiscordDivision wasn't populated in the DB yet (e.g. migration just ran),
+        // fall back to the division claim embedded in the current JWT.
+        var effectiveDivision = profile.DiscordDivision
+            ?? User.FindFirstValue("urn:discord:division");
+
+        return Ok(new
+        {
+            profile.Id,
+            profile.DiscordId,
+            profile.Username,
+            profile.Discriminator,
+            profile.DiscordDisplayName,
+            profile.DiscordRank,
+            DiscordDivision = effectiveDivision,
+            profile.DiscordAvatarUrl,
+            profile.IsOnline,
+            profile.LastSeenAt,
+            profile.CreatedAt,
+            profile.LastLogin
+        });
     }
 
     #endregion

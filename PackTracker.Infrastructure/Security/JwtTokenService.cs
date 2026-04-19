@@ -63,6 +63,11 @@ public class JwtTokenService
             claims.Add(new Claim(ClaimTypes.Role, user.DiscordRank));
         }
 
+        if (!string.IsNullOrWhiteSpace(user.DiscordDivision))
+        {
+            claims.Add(new Claim("urn:discord:division", user.DiscordDivision));
+        }
+
         var token = new JwtSecurityToken(
             issuer: _jwtIssuer,
             audience: _jwtAudience,
