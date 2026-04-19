@@ -21,6 +21,20 @@ public class ChatMessageViewModel : ViewModelBase
         set => SetProperty(ref _content, value);
     }
 
+    private System.Windows.Media.ImageSource? _avatarImage;
+
+    public System.Windows.Media.ImageSource? AvatarImage
+    {
+        get => _avatarImage;
+        set
+        {
+            SetProperty(ref _avatarImage, value);
+            OnPropertyChanged(nameof(HasAvatar));
+        }
+    }
+
+    public bool HasAvatar => AvatarImage != null;
+
     public bool IsOwnMessage { get; set; }
     public string? AvatarUrl { get; set; }
 

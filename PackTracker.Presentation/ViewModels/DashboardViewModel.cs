@@ -19,6 +19,7 @@ public class DashboardViewModel : ViewModelBase
 {
     private readonly IApiClientProvider _apiClientProvider;
     private readonly SignalRChatService _signalR;
+    private readonly AvatarCacheService _avatarCache;
     private static readonly Regex DirectMentionPattern = new(
         @"^\s*@(?<username>[A-Za-z0-9_.-]+)\s+(?<message>.+)$",
         RegexOptions.Compiled);
@@ -35,10 +36,12 @@ public class DashboardViewModel : ViewModelBase
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
         SignalRChatService signalR,
-        GuideDashboardViewModel guideViewModel)
+        GuideDashboardViewModel guideViewModel,
+        AvatarCacheService avatarCache)
     {
         _apiClientProvider = apiClientProvider;
         _signalR = signalR;
+        _avatarCache = avatarCache;
         Guide = guideViewModel;
 
         AvailableChatChannels = new ObservableCollection<AvailableChannelViewModel>();
@@ -156,7 +159,8 @@ public class DashboardViewModel : ViewModelBase
                     msg.SenderDisplayName,
                     msg.Content,
                     msg.SentAt,
-                    msg.SenderRole);
+                    msg.SenderRole,
+                    msg.AvatarUrl);
                 PlayNotificationSound(window);
             }
         }));
@@ -427,7 +431,7 @@ public class DashboardViewModel : ViewModelBase
             return;
         }
 
-        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged)
+        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged, _avatarCache)
         {
             ChannelKey = channel.Key,
             Title = channel.DisplayName,
@@ -608,7 +612,7 @@ public class DashboardViewModel : ViewModelBase
             return existing;
         }
 
-        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged)
+        var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged, _avatarCache)
         {
             ChannelKey = channelKey,
             Title = $"DM // {displayName ?? username}",

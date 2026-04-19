@@ -28,7 +28,8 @@ public partial class CraftingRequestsViewModel : ObservableObject
     private readonly IApiClientProvider _apiClientProvider;
     private readonly SignalRChatService _signalR;
     private readonly ILogger<CraftingRequestsViewModel> _logger;
-    
+    private readonly AvatarCacheService _avatarCache;
+
     private string? _currentRequestRoomId;
     private string _currentUsername = string.Empty;
     private CancellationTokenSource? _switchRoomCts;
@@ -36,7 +37,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
     public ObservableCollection<CraftingRequestListItemDto> Requests { get; } = new();
     public ObservableCollection<RequestCommentDto> Comments { get; } = new();
     public ObservableCollection<BlueprintRecipeMaterialDto> RequiredMaterials { get; } = new();
-    public ObservableCollection<ChatMessageDto> LiveChat { get; } = new();
+    public ObservableCollection<ChatMessageViewModel> LiveChat { get; } = new();
 
     [ObservableProperty] private CraftingRequestListItemDto? selectedRequest;
     [ObservableProperty] private bool isLoading;
@@ -55,11 +56,13 @@ public partial class CraftingRequestsViewModel : ObservableObject
     public CraftingRequestsViewModel(
         IApiClientProvider apiClientProvider,
         SignalRChatService signalR,
-        ILogger<CraftingRequestsViewModel> logger)
+        ILogger<CraftingRequestsViewModel> logger,
+        AvatarCacheService avatarCache)
     {
         _apiClientProvider = apiClientProvider;
         _signalR = signalR;
         _logger = logger;
+        _avatarCache = avatarCache;
         
         _ = LoadCurrentUserAsync();
         _ = ConnectSignalRAsync();
@@ -88,8 +91,72 @@ public partial class CraftingRequestsViewModel : ObservableObject
         if (!string.Equals(msg.Channel, _currentRequestRoomId, StringComparison.OrdinalIgnoreCase))
             return;
 
+        var vm = BuildLiveChatVm(msg.Id, msg.Channel, msg.Sender, msg.SenderDisplayName, msg.Content, msg.SentAt, msg.AvatarUrl, msg.SenderRole);
         // Use BeginInvoke to prevent UI thread blocking during high-frequency messaging
-        System.Windows.Application.Current.Dispatcher.BeginInvoke(() => LiveChat.Add(msg));
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(() => LiveChat.Add(vm));
+    }
+
+    private ChatMessageViewModel BuildLiveChatVm(
+        string id,
+        string channel,
+        string sender,
+        string senderDisplayName,
+        string content,
+        DateTime sentAt,
+        string? avatarUrl,
+        string? senderRole = null)
+    {
+        var isOwn = string.Equals(sender, _currentUsername, StringComparison.OrdinalIgnoreCase);
+        var vm = new ChatMessageViewModel
+        {
+            Id = id,
+            Sender = sender,
+            SenderDisplayName = senderDisplayName,
+            SenderRole = senderRole,
+            Content = content,
+            SentAt = sentAt,
+            IsOwnMessage = isOwn,
+            AvatarUrl = avatarUrl
+        };
+
+        if (isOwn)
+        {
+            vm.BeginEditCommand = new PackTracker.Presentation.Commands.RelayCommand(() =>
+            {
+                vm.EditDraft = vm.Content;
+                vm.IsEditing = true;
+            });
+            vm.ConfirmEditCommand = new PackTracker.Presentation.Commands.RelayCommand(() =>
+            {
+                var trimmed = vm.EditDraft?.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed) && trimmed != vm.Content)
+                {
+                    _ = _signalR.EditMessageAsync(channel, vm.Id, trimmed);
+                    vm.Content = trimmed;
+                    vm.IsEdited = true;
+                }
+                vm.IsEditing = false;
+            });
+            vm.CancelEditCommand = new PackTracker.Presentation.Commands.RelayCommand(() => vm.IsEditing = false);
+            vm.DeleteCommand = new PackTracker.Presentation.Commands.RelayCommand(() => _ = _signalR.DeleteMessageAsync(channel, vm.Id));
+        }
+
+        if (!string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            _ = Task.Run(async () =>
+            {
+                var img = await _avatarCache.GetAvatarAsync(avatarUrl);
+                if (img != null)
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        vm.AvatarImage = img;
+                    });
+                }
+            });
+        }
+
+        return vm;
     }
 
     partial void OnSelectedRequestChanged(CraftingRequestListItemDto? value)
@@ -182,14 +249,15 @@ public partial class CraftingRequestsViewModel : ObservableObject
             LiveChat.Clear();
             foreach (var item in items)
             {
-                LiveChat.Add(new ChatMessageDto(
+                var vm = BuildLiveChatVm(
                     item.Id.ToString(),
                     requestId.ToString(),
                     item.AuthorUsername,
                     item.AuthorUsername,
                     item.Content,
                     item.CreatedAt,
-                    null));
+                    null);
+                LiveChat.Add(vm);
             }
         }
         catch (OperationCanceledException)

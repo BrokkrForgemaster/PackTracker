@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:behaviors="clr-namespace:PackTracker.Presentation.Behaviors"
              xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
+             xmlns:controls="clr-namespace:PackTracker.Presentation.Controls"
              mc:Ignorable="d"
              Background="Transparent">
 
@@ -13,6 +14,8 @@
         <converters:NullToInverseVisibilityConverter x:Key="NullToInverseVisibilityConverter" />
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -525,7 +528,7 @@
                                                                            VerticalAlignment="Center" />
                                                             </DockPanel>
 
-                                                            <TextBlock Text="{Binding Content}"
+                                                            <controls:MarkdownTextBlock Markdown="{Binding Content}"
                                                                        Foreground="{StaticResource OpTextPrimaryBrush}"
                                                                        FontSize="12"
                                                                        TextWrapping="Wrap"
@@ -600,31 +603,79 @@
                                                  HorizontalContentAlignment="Stretch">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Margin="0,0,0,6"
-                                                            Padding="8"
-                                                            Background="#1A1A2A"
-                                                            CornerRadius="4">
-                                                        <StackPanel>
-                                                            <DockPanel>
-                                                                <TextBlock Text="{Binding SenderDisplayName}"
-                                                                           Foreground="#B090E0"
-                                                                           FontWeight="Bold"
-                                                                           FontSize="11"
-                                                                           DockPanel.Dock="Left" />
-                                                                <TextBlock Text="{Binding SentAt, StringFormat={}{0:HH:mm}}"
-                                                                           Foreground="{StaticResource OpTextMutedBrush}"
-                                                                           FontSize="10"
-                                                                           DockPanel.Dock="Right"
-                                                                           VerticalAlignment="Center" />
-                                                            </DockPanel>
-
-                                                            <TextBlock Text="{Binding Content}"
-                                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                                       FontSize="12"
-                                                                       TextWrapping="Wrap"
-                                                                       Margin="0,3,0,0" />
+                                                    <Grid Margin="0,1,0,0">
+                                                        <Grid.Style>
+                                                            <Style TargetType="Grid">
+                                                                <Setter Property="Background" Value="Transparent"/>
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="#0CFFFFFF"/>
+                                                                    </Trigger>
+                                                                    <DataTrigger Binding="{Binding IsOwnMessage}" Value="True">
+                                                                        <Setter Property="ContextMenu">
+                                                                            <Setter.Value>
+                                                                                <ContextMenu>
+                                                                                    <MenuItem Header="Edit" Command="{Binding BeginEditCommand}"/>
+                                                                                    <MenuItem Header="Delete" Command="{Binding DeleteCommand}"/>
+                                                                                </ContextMenu>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Grid.Style>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="40"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16"
+                                                                Background="#3A2B4E" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                                            <Grid>
+                                                                <TextBlock Text="{Binding InitialLetter}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                           FontWeight="Bold" FontSize="12" Foreground="#B090E0"
+                                                                           Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                                                <Image Source="{Binding AvatarImage}" Width="32" Height="32" Stretch="UniformToFill"
+                                                                       Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVisibility}}">
+                                                                    <Image.Clip>
+                                                                        <EllipseGeometry Center="16,16" RadiusX="16" RadiusY="16"/>
+                                                                    </Image.Clip>
+                                                                </Image>
+                                                            </Grid>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" Margin="4,4,8,4">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding SenderDisplayName}" FontWeight="SemiBold" FontSize="12"
+                                                                           Foreground="#B090E0"/>
+                                                                <TextBlock Text="{Binding FormattedTime}" FontSize="9"
+                                                                           Foreground="{StaticResource OpTextMutedBrush}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            <controls:MarkdownTextBlock Markdown="{Binding Content}" FontSize="12"
+                                                                                        Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                                                        TextWrapping="Wrap" Margin="0,2,0,0" LineHeight="18"
+                                                                                        Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                                            <Grid Margin="0,3,0,0" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBox Grid.Column="0" Text="{Binding EditDraft, UpdateSourceTrigger=PropertyChanged}"
+                                                                         Style="{StaticResource OpTextBoxStyle}" Padding="6,4" FontSize="11">
+                                                                    <TextBox.InputBindings>
+                                                                        <KeyBinding Key="Return" Command="{Binding ConfirmEditCommand}"/>
+                                                                        <KeyBinding Key="Escape" Command="{Binding CancelEditCommand}"/>
+                                                                    </TextBox.InputBindings>
+                                                                </TextBox>
+                                                                <Button Grid.Column="1" Content="Save" Command="{Binding ConfirmEditCommand}"
+                                                                        Margin="4,0,0,0" Padding="8,3" FontSize="10"
+                                                                        Background="#2A3A2A" Foreground="#AAD4AA" BorderBrush="#5C8B5E" BorderThickness="1"/>
+                                                                <Button Grid.Column="2" Content="Cancel" Command="{Binding CancelEditCommand}"
+                                                                        Margin="4,0,0,0" Padding="8,3" FontSize="10"
+                                                                        Background="#2A211B" Foreground="{StaticResource OpTextMutedBrush}"
+                                                                        BorderBrush="{StaticResource OpBorderItemBrush}" BorderThickness="1"/>
+                                                            </Grid>
                                                         </StackPanel>
-                                                    </Border>
+                                                    </Grid>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>

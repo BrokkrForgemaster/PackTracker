@@ -707,18 +707,29 @@
 
                                                                 <!-- Avatar circle -->
                                                                 <Border Grid.Column="0"
-                                                                        Width="32" Height="32"
-                                                                        CornerRadius="16"
+                                                                        Width="36" Height="36"
+                                                                        CornerRadius="18"
                                                                         Background="#5C3D1E"
                                                                         VerticalAlignment="Top"
                                                                         HorizontalAlignment="Center"
                                                                         Margin="0,6,0,0">
-                                                                    <TextBlock Text="{Binding InitialLetter}"
-                                                                               HorizontalAlignment="Center"
-                                                                               VerticalAlignment="Center"
-                                                                               FontWeight="Bold"
-                                                                               FontSize="13"
-                                                                               Foreground="#E8C87A" />
+                                                                    <Grid>
+                                                                        <TextBlock Text="{Binding InitialLetter}"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"
+                                                                                   FontWeight="Bold"
+                                                                                   FontSize="13"
+                                                                                   Foreground="#E8C87A"
+                                                                                   Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                                                        <Image Source="{Binding AvatarImage}"
+                                                                               Width="36" Height="36"
+                                                                               Stretch="UniformToFill"
+                                                                               Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVisibility}}">
+                                                                            <Image.Clip>
+                                                                                <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
+                                                                            </Image.Clip>
+                                                                        </Image>
+                                                                    </Grid>
                                                                 </Border>
 
                                                                 <!-- Message body -->

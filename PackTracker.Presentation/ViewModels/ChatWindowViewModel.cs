@@ -2,9 +2,11 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 using PackTracker.Presentation.Commands;
+using PackTracker.Presentation.Services;
 
 namespace PackTracker.Presentation.ViewModels;
 
@@ -17,6 +19,7 @@ public class ChatWindowViewModel : ViewModelBase
     private readonly Action<ChatWindowViewModel> _closeAction;
     private readonly Action<ChatWindowViewModel> _bringToFrontAction;
     private readonly Action<ChatWindowViewModel> _stateChangedAction;
+    private readonly AvatarCacheService? _avatarCache;
 
     public event Action<string, string>? MessageSent;
     public event Action<string, string, string>? EditRequested;
@@ -37,11 +40,13 @@ public class ChatWindowViewModel : ViewModelBase
     public ChatWindowViewModel(
         Action<ChatWindowViewModel> closeAction,
         Action<ChatWindowViewModel> bringToFrontAction,
-        Action<ChatWindowViewModel> stateChangedAction)
+        Action<ChatWindowViewModel> stateChangedAction,
+        AvatarCacheService? avatarCache = null)
     {
         _closeAction = closeAction;
         _bringToFrontAction = bringToFrontAction;
         _stateChangedAction = stateChangedAction;
+        _avatarCache = avatarCache;
 
         Messages = new ObservableCollection<ChatMessageViewModel>();
 
@@ -170,13 +175,14 @@ public class ChatWindowViewModel : ViewModelBase
         string senderDisplayName,
         string content,
         DateTime sentAt,
-        string? senderRole = null)
+        string? senderRole = null,
+        string? avatarUrl = null)
     {
         if (!string.IsNullOrEmpty(id) && Messages.Any(m => m.Id == id))
             return;
 
         var isOwn = IsCurrentUser(sender, senderDisplayName);
-        Messages.Add(CreateMessageVm(id, sender, senderDisplayName, content, sentAt, senderRole, isOwn));
+        Messages.Add(CreateMessageVm(id, sender, senderDisplayName, content, sentAt, senderRole, isOwn, avatarUrl));
 
         if (IsCollapsed)
             UnreadCount++;
@@ -219,7 +225,8 @@ public class ChatWindowViewModel : ViewModelBase
         string content,
         DateTime sentAt,
         string? role,
-        bool isOwn)
+        bool isOwn,
+        string? avatarUrl = null)
     {
         var vm = new ChatMessageViewModel
         {
@@ -229,8 +236,24 @@ public class ChatWindowViewModel : ViewModelBase
             SenderRole = role,
             Content = content,
             SentAt = sentAt,
-            IsOwnMessage = isOwn
+            IsOwnMessage = isOwn,
+            AvatarUrl = avatarUrl
         };
+
+        if (!string.IsNullOrWhiteSpace(avatarUrl) && _avatarCache != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                var img = await _avatarCache.GetAvatarAsync(vm.AvatarUrl);
+                if (img != null)
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        vm.AvatarImage = img;
+                    });
+                }
+            });
+        }
 
         if (isOwn)
         {
