@@ -27,6 +27,7 @@ public partial class RequestsViewModel : ObservableObject
     private readonly IServiceProvider _services;
     private readonly ILogger<RequestsViewModel> _logger;
     private string? _currentRole;
+    private string? _currentUsername;
 
     #endregion
 
@@ -127,6 +128,14 @@ public partial class RequestsViewModel : ObservableObject
                           && SelectedRequest.Status != DomainRequestStatus.Completed.ToString()
                           && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString();
 
+    /// <summary>
+    /// True when the current user may edit the selected request (creator only, not terminal status).
+    /// </summary>
+    public bool CanEdit => SelectedRequest is not null
+                        && SelectedRequest.Status != DomainRequestStatus.Completed.ToString()
+                        && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString()
+                        && string.Equals(SelectedRequest.CreatedByUsername, _currentUsername, StringComparison.OrdinalIgnoreCase);
+
     public bool CanPin => SelectedRequest is not null
                        && SecurityConstants.IsElevatedRequestRole(_currentRole);
 
@@ -143,6 +152,7 @@ public partial class RequestsViewModel : ObservableObject
         OnPropertyChanged(nameof(CanClaim));
         OnPropertyChanged(nameof(CanComplete));
         OnPropertyChanged(nameof(CanDelete));
+        OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanPin));
         OnPropertyChanged(nameof(PinActionLabel));
     }
@@ -230,6 +240,28 @@ public partial class RequestsViewModel : ObservableObject
         {
             _logger.LogViewModelError(ex, "OpenNewRequestDialog");
             StatusMessage = $"Failed to open dialog: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task EditAsync()
+    {
+        if (SelectedRequest is null || !CanEdit) return;
+
+        try
+        {
+            var vm = _services.GetRequiredService<NewRequestViewModel>();
+            vm.LoadForEdit(SelectedRequest);
+            var dialog = new NewRequestDialog(vm);
+            var result = dialog.ShowDialog();
+
+            if (result == true)
+                await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogViewModelError(ex, "OpenEditRequestDialog");
+            StatusMessage = $"Failed to open edit dialog: {ex.Message}";
         }
     }
 
@@ -354,7 +386,9 @@ public partial class RequestsViewModel : ObservableObject
 
             var profile = await response.Content.ReadFromJsonAsync<CurrentUserDto>();
             _currentRole = profile?.DiscordRank;
+            _currentUsername = profile?.Username;
             OnPropertyChanged(nameof(CanPin));
+            OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(PinActionLabel));
         }
         catch (Exception ex)

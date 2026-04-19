@@ -22,6 +22,10 @@ public partial class NewRequestViewModel : ObservableObject
     #region Fields
 
     private readonly IApiClientProvider _apiClient;
+    private Guid? _editingRequestId;
+    public bool IsEditMode => _editingRequestId.HasValue;
+    public string DialogTitle => IsEditMode ? "EDIT ASSISTANCE REQUEST" : "NEW ASSISTANCE REQUEST";
+    public string SubmitButtonLabel => IsEditMode ? "SAVE CHANGES" : "SUBMIT REQUEST";
 
     #endregion
 
@@ -37,6 +41,27 @@ public partial class NewRequestViewModel : ObservableObject
         // Default values
         SelectedKind = RequestKind.MiningMaterials;
         SelectedPriority = RequestPriority.Normal;
+    }
+
+    #endregion
+
+    #region Edit Mode
+
+    public void LoadForEdit(AssistanceRequestDto existing)
+    {
+        _editingRequestId = existing.Id;
+        Title = existing.Title;
+        Description = existing.Description ?? "";
+        SelectedKind = existing.Kind;
+        SelectedPriority = existing.Priority;
+        MaterialName = existing.MaterialName;
+        QuantityNeededText = existing.QuantityNeeded?.ToString();
+        MeetingLocation = existing.MeetingLocation;
+        RewardOffered = existing.RewardOffered;
+        NumberOfHelpersNeededText = existing.NumberOfHelpersNeeded?.ToString();
+        OnPropertyChanged(nameof(IsEditMode));
+        OnPropertyChanged(nameof(DialogTitle));
+        OnPropertyChanged(nameof(SubmitButtonLabel));
     }
 
     #endregion
@@ -160,7 +185,11 @@ public partial class NewRequestViewModel : ObservableObject
             };
 
             using var client = _apiClient.CreateClient();
-            var response = await client.PostAsJsonAsync("api/v1/requests", dto);
+            HttpResponseMessage response;
+            if (_editingRequestId.HasValue)
+                response = await client.PutAsJsonAsync($"api/v1/requests/{_editingRequestId.Value}", dto);
+            else
+                response = await client.PostAsJsonAsync("api/v1/requests", dto);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -169,7 +198,7 @@ public partial class NewRequestViewModel : ObservableObject
             }
 
             MessageBox.Show(
-                "✅ Request submitted successfully!",
+                IsEditMode ? "✅ Request updated successfully!" : "✅ Request submitted successfully!",
                 "Success",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);

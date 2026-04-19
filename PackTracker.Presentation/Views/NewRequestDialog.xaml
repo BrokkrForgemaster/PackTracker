@@ -43,7 +43,7 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="NEW ASSISTANCE REQUEST"
+                <TextBlock Text="{Binding DialogTitle}"
                            FontSize="24" FontWeight="Black"
                            Foreground="{StaticResource OpTextTitleBrush}"/>
                 <TextBlock Text="Request help from House Wolf members for materials, missions, escorts, and ad-hoc support."
@@ -212,7 +212,7 @@
                             BorderBrush="#4F6A84"
                             BorderThickness="1"
                             Margin="0,0,10,0"/>
-                    <Button Content="SUBMIT REQUEST"
+                    <Button Content="{Binding SubmitButtonLabel}"
                             Command="{Binding SubmitCommand}"
                             Padding="18,10"
                             FontWeight="Bold"

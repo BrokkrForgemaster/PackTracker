@@ -8,6 +8,7 @@ using PackTracker.Application.Requests.Assistance.ClaimAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.CompleteAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.CreateAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.PinAssistanceRequest;
+using PackTracker.Application.Requests.Assistance.UpdateAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.QueryAssistanceRequests;
 using PackTracker.Domain.Enums;
 
@@ -55,6 +56,15 @@ public class AssistanceRequestsController : ControllerBase
 
         _logger.LogInformation("Assistance request created. RequestId={RequestId}", result.Data);
         return Ok(new { requestId = result.Data });
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateRequest(Guid id, [FromBody] RequestCreateDto dto, CancellationToken ct)
+    {
+        var result = await _sender.Send(new UpdateAssistanceRequestCommand(id, dto), ct);
+        if (!result.Success)
+            return ToFailureResult(result, "Failed to update request.");
+        return Ok(new { message = "Request updated.", requestId = result.Data });
     }
 
     [HttpPatch("{id:guid}/claim")]
@@ -148,6 +158,11 @@ public class AssistanceRequestsController : ControllerBase
         }
 
         if (string.Equals(result.Message, "Only the creator may cancel this request.", StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { error = result.Message });
+        }
+
+        if (string.Equals(result.Message, "Only the creator may edit this request.", StringComparison.Ordinal))
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { error = result.Message });
         }

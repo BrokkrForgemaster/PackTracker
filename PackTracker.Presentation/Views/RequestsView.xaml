@@ -222,6 +222,13 @@
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#5A4A14" Foreground="#F8E9D4"
                                         BorderBrush="#A38A2F" BorderThickness="1"/>
+                                <Button Content="EDIT REQUEST"
+                                        Command="{Binding EditCommand}"
+                                        Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        Padding="14,8" FontWeight="Bold"
+                                        Background="#1A3A2A" Foreground="#A8D8A8"
+                                        BorderBrush="#2E6A4A" BorderThickness="1"
+                                        Margin="0,0,0,8"/>
                                 <Button Content="DELETE REQUEST"
                                         Command="{Binding DeleteCommand}"
                                         Padding="12,8" FontWeight="Bold"
