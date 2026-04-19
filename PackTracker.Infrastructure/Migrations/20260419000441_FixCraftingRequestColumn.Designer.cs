@@ -12,8 +12,8 @@ using PackTracker.Infrastructure.Persistence;
 namespace PackTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260418214358_AddDataProtectionKeys")]
-    partial class AddDataProtectionKeys
+    [Migration("20260419000441_FixCraftingRequestColumn")]
+    partial class FixCraftingRequestColumn
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

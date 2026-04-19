@@ -6,11 +6,25 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace PackTracker.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddDataProtectionKeys : Migration
+    public partial class FixCraftingRequestColumn : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<bool>(
+                name: "IsLiveChat",
+                table: "RequestComments",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "IsPinned",
+                table: "AssistanceRequests",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false);
+
             migrationBuilder.CreateTable(
                 name: "DataProtectionKeys",
                 columns: table => new
@@ -31,6 +45,14 @@ namespace PackTracker.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "DataProtectionKeys");
+
+            migrationBuilder.DropColumn(
+                name: "IsLiveChat",
+                table: "RequestComments");
+
+            migrationBuilder.DropColumn(
+                name: "IsPinned",
+                table: "AssistanceRequests");
         }
     }
 }
