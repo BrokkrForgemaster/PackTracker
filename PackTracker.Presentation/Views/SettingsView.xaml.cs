@@ -80,9 +80,12 @@ public partial class SettingsView : UserControl
             MessageBox.Show("Settings saved successfully.", "Success",
                 MessageBoxButton.OK, MessageBoxImage.Information);
 
-            // ✅ Navigate to dashboard (or last view)
+            // Navigate to dashboard and refresh sidebar patch/profile
             if (Window.GetWindow(this) is MainWindow mainWindow)
+            {
                 mainWindow.ContentFrame.Navigate(_serviceProvider.GetRequiredService<DashboardView>());
+                _ = mainWindow.RefreshSidebarProfileAsync();
+            }
         }
         catch (Exception ex)
         {
