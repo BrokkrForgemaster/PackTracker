@@ -203,7 +203,7 @@ public class ChatWindowViewModel : ViewModelBase
 
     private void SendMessage()
     {
-        var text = DraftMessage?.Trim();
+        var text = DraftMessage?.TrimEnd();
         if (string.IsNullOrWhiteSpace(text))
             return;
 

@@ -41,4 +41,20 @@ public partial class DashboardView : UserControl
         if (Window.GetWindow(this) is MainWindow mw)
             await mw.NavigateToActiveRequestAsync(request);
     }
+
+    private void ChatInput_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Return &&
+            (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == System.Windows.Input.ModifierKeys.Shift)
+        {
+            if (sender is System.Windows.Controls.TextBox tb)
+            {
+                var caret = tb.CaretIndex;
+                tb.Text = tb.Text.Insert(caret, "\n");
+                tb.CaretIndex = caret + 1;
+                tb.AcceptsReturn = false;
+                e.Handled = true;
+            }
+        }
+    }
 }

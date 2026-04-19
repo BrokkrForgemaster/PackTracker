@@ -6,6 +6,7 @@
              xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
              xmlns:vm="clr-namespace:PackTracker.Presentation.ViewModels"
              xmlns:global="clr-namespace:"
+             xmlns:controls="clr-namespace:PackTracker.Presentation.Controls"
              Background="Transparent">
 
     <UserControl.Resources>
@@ -747,7 +748,8 @@
                                                                                    VerticalAlignment="Center" />
                                                                     </DockPanel>
 
-                                                                    <TextBlock Text="{Binding Content}"
+                                                                    <controls:MarkdownTextBlock
+                                                                               Markdown="{Binding Content}"
                                                                                FontSize="12"
                                                                                Foreground="{StaticResource OpTextPrimaryBrush}"
                                                                                TextWrapping="Wrap"
@@ -824,27 +826,53 @@
                                                 Background="{StaticResource OpBackgroundInputBrush}"
                                                 BorderBrush="{StaticResource OpBorderPanelBrush}"
                                                 BorderThickness="0,1,0,0"
-                                                Padding="12,8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox Grid.Column="0"
-                                                         Text="{Binding DraftMessage, UpdateSourceTrigger=PropertyChanged}"
-                                                         Style="{StaticResource OpTextBoxStyle}"
-                                                         Padding="10,8"
-                                                         VerticalAlignment="Center">
-                                                    <TextBox.InputBindings>
-                                                        <KeyBinding Key="Return" Command="{Binding SendMessageCommand}" />
-                                                    </TextBox.InputBindings>
-                                                </TextBox>
-                                                <Button Grid.Column="1"
-                                                        Content="SEND"
-                                                        Command="{Binding SendMessageCommand}"
-                                                        Style="{StaticResource ChatSendButtonStyle}"
-                                                        Margin="8,0,0,0" />
-                                            </Grid>
+                                                Padding="12,8,12,6">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox x:Name="ChatInputBox"
+                                                             Grid.Column="0"
+                                                             Text="{Binding DraftMessage, UpdateSourceTrigger=PropertyChanged}"
+                                                             Style="{StaticResource OpTextBoxStyle}"
+                                                             Padding="10,8"
+                                                             MaxHeight="100"
+                                                             AcceptsReturn="False"
+                                                             VerticalScrollBarVisibility="Auto"
+                                                             VerticalContentAlignment="Center"
+                                                             PreviewKeyDown="ChatInput_PreviewKeyDown">
+                                                        <TextBox.InputBindings>
+                                                            <KeyBinding Key="Return" Command="{Binding SendMessageCommand}" />
+                                                        </TextBox.InputBindings>
+                                                    </TextBox>
+                                                    <Button Grid.Column="1"
+                                                            Content="SEND"
+                                                            Command="{Binding SendMessageCommand}"
+                                                            Style="{StaticResource ChatSendButtonStyle}"
+                                                            Margin="8,0,0,0" />
+                                                </Grid>
+                                                <TextBlock Margin="2,4,0,0"
+                                                           FontSize="9"
+                                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                                           TextWrapping="Wrap">
+                                                    <Run Text="**bold**"/>
+                                                    <Run Text="  "/>
+                                                    <Run Text="*italic*"/>
+                                                    <Run Text="  "/>
+                                                    <Run Text="__underline__"/>
+                                                    <Run Text="  "/>
+                                                    <Run Text="~~strike~~"/>
+                                                    <Run Text="  "/>
+                                                    <Run FontFamily="Consolas" Text="`code`"/>
+                                                    <Run Text="  "/>
+                                                    <Run Text="||spoiler||"/>
+                                                    <Run Text="  "/>
+                                                    <Run Text="&gt; quote"/>
+                                                    <Run Text="  · Shift+Enter for new line" Foreground="#4E5058"/>
+                                                </TextBlock>
+                                            </StackPanel>
                                         </Border>
                                     </Grid>
                                 </DataTemplate>
