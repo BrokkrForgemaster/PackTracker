@@ -60,7 +60,6 @@ namespace PackTracker.Presentation.Views
         private readonly IServiceProvider _serviceProvider;
         private readonly ISettingsService _settingsService;
         private readonly IUpdateService _updateService;
-        private readonly AppDbContext _dbContext;
         private readonly DispatcherTimer _timer;
 
         private UpdateInfo? _pendingUpdate;
@@ -119,13 +118,11 @@ namespace PackTracker.Presentation.Views
         public MainWindow(
             IServiceProvider serviceProvider,
             ISettingsService settingsService,
-            IUpdateService updateService,
-            AppDbContext dbContext)
+            IUpdateService updateService)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
-            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
             InitializeComponent();
             InitializeStaticVisualAssets();
