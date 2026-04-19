@@ -265,7 +265,30 @@ public class DashboardViewModel : ViewModelBase
         {
             RequestLoadError = null;
             using var client = _apiClientProvider.CreateClient();
-            var summary = await client.GetFromJsonAsync<DashboardSummaryDto>("api/v1/dashboard/summary");
+            using var response = await client.GetAsync("api/v1/dashboard/summary");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                // Try to extract just the message field from the error JSON
+                string errorDetail;
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(body);
+                    errorDetail = doc.RootElement.TryGetProperty("message", out var msg)
+                        ? msg.GetString() ?? body
+                        : body;
+                }
+                catch { errorDetail = body; }
+
+                System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
+                {
+                    RequestLoadError = $"Server error ({(int)response.StatusCode}): {errorDetail}";
+                }));
+                return;
+            }
+
+            var summary = await response.Content.ReadFromJsonAsync<DashboardSummaryDto>();
 
             if (summary != null)
             {
