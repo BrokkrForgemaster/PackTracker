@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
 using PackTracker.Api.Hosting;
 using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Logging;
 using Serilog;
+
 DotNetEnv.Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 
-builder.Host.UsePackTrackerSerilog(
+builder.Services.AddPackTrackerLogging(
+    configuration: builder.Configuration,
     applicationName: "PackTracker.Api",
     logDirectory: Path.Combine(builder.Environment.ContentRootPath, "Logs"));
 
@@ -36,7 +40,7 @@ await PackTrackerApiComposition.InitializeDatabaseAsync(app, app.Lifetime.Applic
 
 try
 {
-    var logger = app.Services.GetRequiredService<ILoggingService<Program>>();
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
     logger.LogInformation("Starting PackTracker API...");
     logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);

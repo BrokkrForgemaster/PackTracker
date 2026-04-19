@@ -265,16 +265,6 @@ public class AuthController : ControllerBase
                                                  color: #9e9e9e;
                                                }
 
-                                               button {
-                                                 margin-top: 20px;
-                                                 padding: 12px 20px;
-                                                 border: none;
-                                                 border-radius: 8px;
-                                                 cursor: pointer;
-                                                 background: #c2a23a;
-                                                 color: #111;
-                                                 font-weight: 700;
-                                               }
 
                                                #fallbackMessage {
                                                  display: none;
@@ -359,9 +349,7 @@ public class AuthController : ControllerBase
                                                  This tab will try to close automatically. If your browser blocks it,
                                                  use the button below or close the tab manually.
                                                </p>
-                                               <button type="button" onclick="window.close(); setTimeout(function(){ if (!window.closed) document.getElementById('fallbackMessage').style.display='block'; }, 300);">
-                                                 Close Tab
-                                               </button>
+                                                  <button style="padding:10px 20px;border:none;border-radius:6px;background:#c2a23a;color:#000;font-weight:bold;margin-top:20px;" onclick="window.close()">Close Window</button>
                                                <p id="fallbackMessage">
                                                  Your browser blocked automatic tab closing. Please close this tab manually.
                                                </p>
