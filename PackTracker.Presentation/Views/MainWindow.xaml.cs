@@ -586,7 +586,6 @@ namespace PackTracker.Presentation.Views
                         "arcops" => "Assets/arcops.png",
                         _ => "Assets/HWiconnew.png"
                     };
-                    SidebarThemeImage.Source = LoadPackImage(patchAsset) ?? LoadPackImage("Assets/HWiconnew.png");
                 });
             }
             catch (Exception ex)
@@ -674,7 +673,7 @@ namespace PackTracker.Presentation.Views
         {
             Icon = LoadPackImage("Assets/housewolf2.ico");
             MainBackgroundImage.Source = LoadPackImage("Assets/Pack_Tracker.png");
-            SidebarThemeImage.Source = ResolveSidebarThemeImage() ?? LoadPackImage("Assets/HWiconnew.png");
+         
         }
 
         private ImageSource? ResolveSidebarThemeImage()
