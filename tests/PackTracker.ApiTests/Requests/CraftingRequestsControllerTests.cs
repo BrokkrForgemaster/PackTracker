@@ -368,7 +368,10 @@ public class CraftingRequestsControllerTests
     [Fact]
     public async Task DeleteCraftingRequest_AsCreator_SoftCancelsRequest()
     {
-        var db = CreateDb();
+        var (db, connection) = CreateSqliteDb();
+        await using var _ = db;
+        await using var __ = connection;
+
         var requester = await SeedProfileAsync(db, TestDiscordId, TestUsername, "Requester");
 
         var blueprint = new Blueprint
@@ -397,7 +400,10 @@ public class CraftingRequestsControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.NotNull(ok.Value);
 
-        var updated = await db.CraftingRequests.SingleAsync(x => x.Id == request.Id);
+        db.ChangeTracker.Clear();
+        var updated = await db.CraftingRequests
+            .AsNoTracking()
+            .SingleAsync(x => x.Id == request.Id);
         Assert.Equal(RequestStatus.Cancelled, updated.Status);
     }
 

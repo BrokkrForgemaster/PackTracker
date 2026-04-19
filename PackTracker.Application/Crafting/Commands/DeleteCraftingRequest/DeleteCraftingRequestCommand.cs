@@ -35,7 +35,15 @@ public sealed class DeleteCraftingRequestCommandHandler : IRequestHandler<Delete
             return OperationResult<Guid>.Fail("Unauthorized");
 
         var request = await _db.CraftingRequests
-            .FirstOrDefaultAsync(x => x.Id == command.RequestId, cancellationToken);
+            .AsNoTracking()
+            .Where(x => x.Id == command.RequestId)
+            .Select(x => new
+            {
+                x.Id,
+                x.RequesterProfileId,
+                x.Status
+            })
+            .FirstOrDefaultAsync(cancellationToken);
         if (request is null)
             return OperationResult<Guid>.Fail("Crafting request not found.");
 
@@ -45,9 +53,16 @@ public sealed class DeleteCraftingRequestCommandHandler : IRequestHandler<Delete
         if (request.Status == RequestStatus.Cancelled)
             return OperationResult<Guid>.Fail("Request is already cancelled.");
 
-        request.Status = RequestStatus.Cancelled;
-        request.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        await _db.ExecuteSqlInterpolatedAsync(
+            $"""
+            UPDATE "CraftingRequests"
+            SET "Status" = {(int)RequestStatus.Cancelled},
+                "UpdatedAt" = {now}
+            WHERE "Id" = {command.RequestId}
+            """,
+            cancellationToken);
+
         await _notifier.NotifyAsync("CraftingRequestUpdated", command.RequestId, cancellationToken);
 
         return OperationResult<Guid>.Ok(command.RequestId);
