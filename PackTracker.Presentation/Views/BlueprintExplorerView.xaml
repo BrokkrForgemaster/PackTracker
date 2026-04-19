@@ -331,6 +331,7 @@
 
                 <ComboBox ItemsSource="{Binding Results}"
                           SelectedItem="{Binding SelectedBlueprint}"
+                          IsDropDownOpen="{Binding IsResultsDropDownOpen, Mode=TwoWay}"
                           Style="{StaticResource OpComboBoxStyle}"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"

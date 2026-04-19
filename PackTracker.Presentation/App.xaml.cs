@@ -70,6 +70,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<WikiBlueprintService>();
         services.AddSingleton<IVersionService, VersionService>();
         services.AddSingleton<SignalRChatService>();
+        services.AddSingleton<AvatarCacheService>();
+        services.AddHttpClient();
 
         // 7️⃣ Views + ViewModels
         services.AddTransient<MainWindow>();

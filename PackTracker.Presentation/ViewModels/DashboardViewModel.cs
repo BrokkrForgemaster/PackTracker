@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using PackTracker.Application.DTOs.Dashboard;
 using PackTracker.Presentation.Commands;
 using PackTracker.Presentation.Services;
@@ -28,6 +29,7 @@ public class DashboardViewModel : ViewModelBase
     private string? _currentUserRole = "Member";
     private bool _chatSoundMuted;
     private string? _currentUsername;
+    private ChatWindowViewModel? _activeChatWindow;
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
@@ -46,14 +48,15 @@ public class DashboardViewModel : ViewModelBase
         OnlineUsers = new ObservableCollection<OnlineUserViewModel>();
         ActiveRequests = new ObservableCollection<ActiveRequestDto>();
 
-        OpenChatWindowCommand = new RelayCommand<AvailableChannelViewModel>(OpenChatWindow);
+        OpenChatWindowCommand = new RelayCommand<AvailableChannelViewModel>(SelectChannel);
+        SelectChannelCommand = new RelayCommand<AvailableChannelViewModel>(SelectChannel);
         OpenDirectMessageCommand = new RelayCommand<OnlineUserViewModel>(OpenDirectMessage);
         CascadeChatWindowsCommand = new RelayCommand(CascadeWindows);
         CollapseAllChatWindowsCommand = new RelayCommand(CollapseAllWindows);
         ExpandAllChatWindowsCommand = new RelayCommand(ExpandAllWindows);
         ToggleMuteCommand = new RelayCommand(() => ChatSoundMuted = !ChatSoundMuted);
 
-        LoadChatChannelsForRole(CurrentUserRole);
+        LoadChatChannelsForRole(null);
         OpenDefaultWindows();
 
         _ = InitAsync();
@@ -70,16 +73,18 @@ public class DashboardViewModel : ViewModelBase
             await LoadCurrentUserAsync();
             await _signalR.ConnectAsync();
 
+            // Subscribe before joining so history messages aren't lost between
+            // GetLobbyHistory and the handler being wired up.
+            _signalR.MessageReceived += OnMessageReceived;
+            _signalR.MessageEdited += OnMessageEdited;
+            _signalR.MessageDeleted += OnMessageDeleted;
+            _signalR.PresenceUpdated += OnPresenceUpdated;
+
             // Join any channels whose windows were already opened in the constructor
             foreach (var window in OpenChatWindows)
                 await _signalR.JoinChannelAsync(window.ChannelKey);
 
             await RefreshDataAsync();
-
-            _signalR.MessageReceived += OnMessageReceived;
-            _signalR.MessageEdited += OnMessageEdited;
-            _signalR.MessageDeleted += OnMessageDeleted;
-            _signalR.PresenceUpdated += OnPresenceUpdated;
 
             _signalR.AssistanceRequestCreated += id => _ = RefreshDataAsync();
             _signalR.AssistanceRequestUpdated += id => _ = RefreshDataAsync();
@@ -122,10 +127,7 @@ public class DashboardViewModel : ViewModelBase
                     window.CurrentUserDisplayName = CurrentUserDisplayName;
                 }
 
-                // Rebuild the available channel list for the real role.
-                // Already-open windows are unaffected; new role-gated channels
-                // become available for the user to open manually.
-                LoadChatChannelsForRole(CurrentUserRole);
+                LoadChatChannelsForRole(profile.DiscordDivision);
             }
         }
         catch
@@ -136,7 +138,7 @@ public class DashboardViewModel : ViewModelBase
 
     private void OnMessageReceived(ChatMessageDto msg)
     {
-        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
         {
             var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == msg.Channel);
             if (window == null && msg.Channel.StartsWith("direct:", StringComparison.OrdinalIgnoreCase))
@@ -156,42 +158,103 @@ public class DashboardViewModel : ViewModelBase
                     msg.SenderRole);
                 PlayNotificationSound(window);
             }
-        });
+        }));
     }
 
     private void OnMessageEdited(ChatMessageEditedDto edit)
     {
-        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
         {
             var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == edit.Channel);
             window?.ApplyEdit(edit.MessageId, edit.NewContent);
-        });
+        }));
     }
 
     private void OnMessageDeleted(ChatMessageDeletedDto del)
     {
-        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
         {
             var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == del.Channel);
             window?.ApplyDelete(del.MessageId);
-        });
+        }));
     }
 
+    private static BitmapImage? CreateAvatarImage(string? avatarUrl)
+    {
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            return null;
+        }
+
+        try
+        {
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri(avatarUrl, UriKind.Absolute);
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch
+        {
+            return null;
+        }
+    }
     private void OnPresenceUpdated(IReadOnlyList<OnlineUserDto> users)
     {
-        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        _ = Task.Run(async () =>
         {
-            OnlineUsers.Clear();
+            var vms = new List<(OnlineUserViewModel vm, byte[]? avatarBytes)>();
+
             foreach (var u in users)
             {
-                OnlineUsers.Add(new OnlineUserViewModel
+                byte[]? avatarBytes = null;
+                if (!string.IsNullOrWhiteSpace(u.AvatarUrl) && Uri.TryCreate(u.AvatarUrl, UriKind.Absolute, out _))
+                {
+                    try
+                    {
+                        using var http = new System.Net.Http.HttpClient();
+                        http.Timeout = TimeSpan.FromSeconds(10);
+                        avatarBytes = await http.GetByteArrayAsync(u.AvatarUrl);
+                    }
+                    catch { }
+                }
+
+                var vm = new OnlineUserViewModel
                 {
                     Username = u.Username,
-                    DisplayName = u.DisplayName,
+                    ContactLabel = u.DisplayName ?? u.Username,
+                    DiscordDisplayName = u.DisplayName,
                     Role = u.Role,
                     RoleColorBrush = OnlineUserViewModel.GetRoleColor(u.Role)
-                });
+                };
+                vms.Add((vm, avatarBytes));
             }
+
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                OnlineUsers.Clear();
+                foreach (var (vm, avatarBytes) in vms)
+                {
+                    if (avatarBytes != null)
+                    {
+                        try
+                        {
+                            var bmp = new BitmapImage();
+                            bmp.BeginInit();
+                            bmp.StreamSource = new System.IO.MemoryStream(avatarBytes);
+                            bmp.CacheOption = BitmapCacheOption.OnLoad;
+                            bmp.EndInit();
+                            bmp.Freeze();
+                            vm.AvatarImage = bmp;
+                        }
+                        catch { }
+                    }
+                    OnlineUsers.Add(vm);
+                }
+            });
         });
     }
 
@@ -204,17 +267,17 @@ public class DashboardViewModel : ViewModelBase
             
             if (summary != null)
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
                     ActiveRequests.Clear();
                     foreach (var req in summary.ActiveRequests)
                         ActiveRequests.Add(req);
                     
                     OnPropertyChanged(nameof(TopRequests));
-                });
+                }));
 
                 await Guide.RefreshAsync();
-                System.Windows.Application.Current.Dispatcher.Invoke(() => OnPropertyChanged(nameof(TopGuideRequests)));
+                System.Windows.Application.Current.Dispatcher.Invoke(new Action(() => OnPropertyChanged(nameof(TopGuideRequests))));
             }
         }
         catch (Exception)
@@ -258,33 +321,42 @@ public class DashboardViewModel : ViewModelBase
     public GuideDashboardViewModel Guide { get; }
     public IEnumerable<PackTracker.Domain.Entities.GuideRequest> TopGuideRequests => Guide.Requests.Take(2);
 
+    public ChatWindowViewModel? ActiveChatWindow
+    {
+        get => _activeChatWindow;
+        private set => SetProperty(ref _activeChatWindow, value);
+    }
+
     public ICommand OpenChatWindowCommand { get; }
+    public ICommand SelectChannelCommand { get; }
     public ICommand OpenDirectMessageCommand { get; }
     public ICommand CascadeChatWindowsCommand { get; }
     public ICommand CollapseAllChatWindowsCommand { get; }
     public ICommand ExpandAllChatWindowsCommand { get; }
     public ICommand ToggleMuteCommand { get; }
 
-    private void LoadChatChannelsForRole(string? role)
+    private void LoadChatChannelsForRole(string? division)
     {
         AvailableChatChannels.Clear();
 
         AddChannel("direct", "Direct Message", "Private conversations", "#6A4F8B");
         AddChannel("general", "General", "All members", "#4F6A84");
 
-        if (role is "LOCOPS" or "Leadership")
+        bool isLeadership = string.Equals(division, "Leadership", StringComparison.OrdinalIgnoreCase);
+
+        if (isLeadership || string.Equals(division, "LOCOPS", StringComparison.OrdinalIgnoreCase))
             AddChannel("locops", "LOCOPS", "LOCOPS members", "#5C8B5E");
 
-        if (role is "TACOPS" or "Leadership")
+        if (isLeadership || string.Equals(division, "TACOPS", StringComparison.OrdinalIgnoreCase))
             AddChannel("tacops", "TACOPS", "TACOPS members", "#A36E2F");
 
-        if (role is "SPECOPS" or "Leadership")
+        if (isLeadership || string.Equals(division, "SPECOPS", StringComparison.OrdinalIgnoreCase))
             AddChannel("specops", "SPECOPS", "SPECOPS members", "#844F4F");
 
-        if (role is "ARCOPS" or "Leadership")
+        if (isLeadership || string.Equals(division, "ARCOPS", StringComparison.OrdinalIgnoreCase))
             AddChannel("arcops", "ARCOPS", "ARCOPS members", "#1A6E6E");
 
-        if (role == "Leadership")
+        if (isLeadership)
             AddChannel("leadership", "Leadership", "Leadership only", "#B090E0");
     }
 
@@ -303,30 +375,27 @@ public class DashboardViewModel : ViewModelBase
     {
         var general = AvailableChatChannels.FirstOrDefault(x => x.Key == "general");
         if (general != null)
-            OpenChatWindow(general);
-
-        var division = AvailableChatChannels.FirstOrDefault(x =>
-            x.Key is "locops" or "tacops" or "specops" or "arcops");
-        if (division != null)
-            OpenChatWindow(division);
+            SelectChannel(general);
     }
 
-    private void OpenChatWindow(AvailableChannelViewModel? channel)
+    private void SelectChannel(AvailableChannelViewModel? channel)
     {
-        if (channel == null)
-            return;
+        if (channel == null) return;
+
+        foreach (var ch in AvailableChatChannels)
+            ch.IsSelected = false;
+        channel.IsSelected = true;
+        channel.HasUnread = false;
+        channel.UnreadCount = 0;
 
         var existing = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == channel.Key);
         if (existing != null)
         {
-            existing.IsCollapsed = false;
             existing.UnreadCount = 0;
-            BringToFront(existing);
-            RefreshCollapsedAlerts();
+            existing.HasUnread = false;
+            ActiveChatWindow = existing;
             return;
         }
-
-        var index = OpenChatWindows.Count;
 
         var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged)
         {
@@ -335,40 +404,35 @@ public class DashboardViewModel : ViewModelBase
             AccentBrush = channel.AccentBrush,
             CurrentUserDisplayName = CurrentUserDisplayName,
             CurrentUsername = _currentUsername,
-            Left = 30 + (index * 40),
-            Top = 25 + (index * 35),
-            Width = 380,
-            WindowHeight = 420,
-            ZIndex = GetNextZIndex()
         };
 
         window.Messages.CollectionChanged += (_, _) => SyncUnreadState(window, channel);
-        window.MessageSent += (_, content) =>
-        {
-            var sendTask = SendWindowMessageAsync(window, content);
-        };
-        window.EditRequested += (ch, msgId, newContent) =>
-        {
-            _ = _signalR.EditMessageAsync(ch, msgId, newContent);
-        };
-        window.DeleteRequested += (ch, msgId) =>
-        {
-            _ = _signalR.DeleteMessageAsync(ch, msgId);
-        };
+        window.MessageSent += (s, content) => { _ = SendWindowMessageAsync(window, content); };
+        window.EditRequested += (ch, msgId, newContent) => { _ = _signalR.EditMessageAsync(ch, msgId, newContent); };
+        window.DeleteRequested += (ch, msgId) => { _ = _signalR.DeleteMessageAsync(ch, msgId); };
 
         OpenChatWindows.Add(window);
-        FloatingChatWindows.Add(window);
-        RefreshCollapsedAlerts();
 
         if (_signalR.IsConnected)
             _ = _signalR.JoinChannelAsync(channel.Key);
+
+        ActiveChatWindow = window;
     }
 
     private void SyncUnreadState(ChatWindowViewModel window, AvailableChannelViewModel channel)
     {
-        channel.UnreadCount = window.UnreadCount;
-        channel.HasUnread = window.HasUnread;
-        RefreshCollapsedAlerts();
+        if (ActiveChatWindow == window)
+        {
+            window.UnreadCount = 0;
+            window.HasUnread = false;
+            channel.UnreadCount = 0;
+            channel.HasUnread = false;
+        }
+        else
+        {
+            channel.UnreadCount = window.UnreadCount;
+            channel.HasUnread = window.HasUnread;
+        }
     }
 
     private void CloseWindow(ChatWindowViewModel window)
@@ -500,7 +564,8 @@ public class DashboardViewModel : ViewModelBase
         if (user == null || string.IsNullOrWhiteSpace(user.Username))
             return;
 
-        EnsureDirectMessageWindow(user.Username, user.DisplayName);
+        var window = EnsureDirectMessageWindow(user.Username, user.DiscordDisplayName);
+        ActiveChatWindow = window;
     }
 
     private ChatWindowViewModel EnsureDirectMessageWindow(string username, string? displayName)
@@ -509,10 +574,7 @@ public class DashboardViewModel : ViewModelBase
         var existing = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == channelKey);
         if (existing != null)
         {
-            existing.IsCollapsed = false;
             existing.UnreadCount = 0;
-            BringToFront(existing);
-            RefreshCollapsedAlerts();
             return existing;
         }
 
@@ -525,21 +587,12 @@ public class DashboardViewModel : ViewModelBase
             CurrentUserDisplayName = CurrentUserDisplayName,
             CurrentUsername = _currentUsername,
             AccentBrush = BrushFromHex("#6A4F8B"),
-            Left = 30 + (OpenChatWindows.Count * 40),
-            Top = 25 + (OpenChatWindows.Count * 35),
-            Width = 380,
-            WindowHeight = 420,
-            ZIndex = GetNextZIndex()
         };
 
-        window.MessageSent += (_, content) =>
-        {
-            var sendTask = SendWindowMessageAsync(window, content);
-        };
-        window.Messages.CollectionChanged += (_, _) => RefreshCollapsedAlerts();
+        window.MessageSent += (s, content) => { _ = SendWindowMessageAsync(window, content); };
+        window.EditRequested += (ch, msgId, newContent) => { _ = _signalR.EditMessageAsync(ch, msgId, newContent); };
+        window.DeleteRequested += (ch, msgId) => { _ = _signalR.DeleteMessageAsync(ch, msgId); };
         OpenChatWindows.Add(window);
-        FloatingChatWindows.Add(window);
-        RefreshCollapsedAlerts();
 
         if (_signalR.IsConnected)
             _ = _signalR.JoinChannelAsync(channelKey);
@@ -557,8 +610,7 @@ public class DashboardViewModel : ViewModelBase
 
     private void PlayNotificationSound(ChatWindowViewModel window)
     {
-        // Only notify when the window is collapsed or the app is not focused
-        if (!window.IsCollapsed)
+        if (ActiveChatWindow == window)
             return;
 
         if (!ChatSoundMuted)
@@ -624,5 +676,6 @@ public class DashboardViewModel : ViewModelBase
     private record CurrentUserDto(
         string Username,
         string? DiscordDisplayName,
-        string? DiscordRank);
+        string? DiscordRank,
+        string? DiscordDivision);
 }

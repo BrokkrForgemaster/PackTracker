@@ -5,12 +5,44 @@
              xmlns:behaviors="clr-namespace:PackTracker.Presentation.Behaviors"
              xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
              xmlns:vm="clr-namespace:PackTracker.Presentation.ViewModels"
+             xmlns:global="clr-namespace:"
              Background="Transparent">
 
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+
+        <Style x:Key="DarkMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="#C8A96E" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                Padding="12,6">
+                            <ContentPresenter ContentSource="Header"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              TextElement.FontSize="12" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#3A2E24" />
+                                <Setter Property="Foreground" Value="#E8C87E" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="#1E1A16" />
+            <Setter Property="BorderBrush" Value="#3A2E24" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="0,2" />
+        </Style>
 
         <Style x:Key="ChatSendButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource OpBackgroundPillBrush}" />
@@ -45,7 +77,94 @@
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Background" Value="#1A1512" />
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource OpBorderItemBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush"
+                                        Value="{StaticResource OpBorderItemBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="OnlineUserCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#120D0A" />
+            <Setter Property="BorderBrush" Value="{StaticResource OpBorderItemBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <Style x:Key="OnlineUserActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#24374A" />
+            <Setter Property="Foreground" Value="#E8F0F8" />
+            <Setter Property="BorderBrush" Value="#4F6A84" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2F4A63" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1F3142" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="#1A1512" />
+                                <Setter TargetName="Bd" Property="BorderBrush"
+                                        Value="{StaticResource OpBorderItemBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="OnlineUserContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="#15110E" />
+            <Setter Property="BorderBrush" Value="{StaticResource OpBorderItemBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+
+        <Style x:Key="OnlineUserContextMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#24374A" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -315,580 +434,360 @@
             <!-- CENTER CHAT PANEL -->
             <Border Grid.Column="2" Style="{StaticResource OpPanelBorderStyle}">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                    <Border Grid.Row="0"
-                            Background="{StaticResource OpBackgroundHeaderBrush}"
+                    <!-- Channel list sidebar -->
+                    <Border Grid.Column="0"
                             BorderBrush="{StaticResource OpBorderPanelBrush}"
-                            BorderThickness="0,0,0,1"
-                            CornerRadius="10,10,0,0"
-                            Padding="12,10">
-                        <DockPanel LastChildFill="True">
-                            <StackPanel DockPanel.Dock="Left">
-                                <TextBlock Text="COMMS WORKSPACE"
+                            BorderThickness="0,0,1,0"
+                            Background="#0A0705">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top"
+                                    Padding="12,10"
+                                    Background="#080503"
+                                    BorderBrush="{StaticResource OpBorderPanelBrush}"
+                                    BorderThickness="0,0,0,1">
+                                <TextBlock Text="CHANNELS"
                                            Foreground="{StaticResource OpTextTitleBrush}"
-                                           FontSize="13"
+                                           FontSize="11"
                                            FontWeight="Bold" />
-                                <TextBlock Text="Open, move, collapse, and monitor active communication channels."
-                                           Foreground="{StaticResource OpTextMutedBrush}"
-                                           FontSize="10"
-                                           Margin="0,2,0,0" />
-                            </StackPanel>
+                            </Border>
 
-                            <StackPanel DockPanel.Dock="Right"
-                                        Orientation="Horizontal"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center">
-                                <Button Content="CASCADE"
-                                        Command="{Binding CascadeChatWindowsCommand}"
-                                        Margin="0,0,8,0"
-                                        Padding="12,6"
-                                        FontSize="10"
-                                        FontWeight="Bold"
-                                        Background="#24374A"
-                                        Foreground="#E8F0F8"
-                                        BorderBrush="#4F6A84"
-                                        BorderThickness="1" />
-
-                                <Button Content="MINIMIZE ALL"
-                                        Command="{Binding CollapseAllChatWindowsCommand}"
-                                        Margin="0,0,8,0"
-                                        Padding="12,6"
-                                        FontSize="10"
-                                        FontWeight="Bold"
-                                        Background="#4A3424"
-                                        Foreground="#F4EBDD"
-                                        BorderBrush="#84654F"
-                                        BorderThickness="1" />
-
-                                <Button Content="RESTORE ALL"
-                                        Command="{Binding ExpandAllChatWindowsCommand}"
-                                        Padding="12,6"
-                                        FontSize="10"
-                                        FontWeight="Bold"
-                                        Background="#2B4E2E"
-                                        Foreground="#EEF6EE"
-                                        BorderBrush="#5C8B5E"
-                                        BorderThickness="1" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-
-                    <Grid Grid.Row="1" ClipToBounds="True" Background="#090705">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Channel launcher -->
-                        <Border Grid.Column="0"
-                                BorderBrush="{StaticResource OpBorderPanelBrush}"
-                                BorderThickness="0,0,1,0"
-                                Background="#0D0907"
-                                Padding="10">
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                                    <TextBlock Text="AVAILABLE CHANNELS"
-                                               Foreground="{StaticResource OpTextTitleBrush}"
-                                               FontSize="11"
-                                               FontWeight="Bold" />
-                                    <TextBlock Text="Shown based on your Discord role access."
-                                               Foreground="{StaticResource OpTextMutedBrush}"
-                                               FontSize="10"
-                                               Margin="0,2,0,0" />
-                                </StackPanel>
-
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                              HorizontalScrollBarVisibility="Disabled">
-                                    <ItemsControl ItemsSource="{Binding AvailableChatChannels}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Margin="0,0,0,8"
-                                                        Padding="10"
-                                                        Background="#15110E"
-                                                        BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="6">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="Auto" />
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <StackPanel>
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <Ellipse Width="8"
-                                                                         Height="8"
-                                                                         Margin="0,0,6,0"
-                                                                         VerticalAlignment="Center"
-                                                                         Fill="{Binding AccentBrush}" />
-                                                                <TextBlock Text="{Binding DisplayName}"
-                                                                           Foreground="{StaticResource OpTextTitleBrush}"
-                                                                           FontSize="11"
-                                                                           FontWeight="SemiBold" />
-                                                            </StackPanel>
-
-                                                            <TextBlock Text="{Binding AccessSummary}"
-                                                                       Foreground="{StaticResource OpTextMutedBrush}"
-                                                                       FontSize="9"
-                                                                       Margin="14,2,0,0"
-                                                                       TextWrapping="Wrap" />
-                                                        </StackPanel>
-
-                                                        <StackPanel Grid.Column="1"
-                                                                    Orientation="Horizontal"
-                                                                    VerticalAlignment="Center">
-                                                            <Border Background="#8B1A0F"
-                                                                    CornerRadius="8"
-                                                                    Padding="5,1"
-                                                                    Margin="0,0,6,0"
-                                                                    Visibility="{Binding HasUnread, Converter={StaticResource BoolToVisibility}}">
-                                                                <TextBlock Text="{Binding UnreadCount}"
-                                                                           Foreground="#F4EBDD"
-                                                                           FontSize="9"
-                                                                           FontWeight="Bold" />
-                                                            </Border>
-
-                                                            <Button Content="OPEN"
-                                                                    Command="{Binding DataContext.OpenChatWindowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Padding="10,4"
-                                                                    FontSize="9"
-                                                                    FontWeight="Bold"
-                                                                    Background="#24374A"
-                                                                    Foreground="#E8F0F8"
-                                                                    BorderBrush="#4F6A84"
-                                                                    BorderThickness="1" />
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
-                            </DockPanel>
-                        </Border>
-
-                        <!-- Floating windows -->
-                        <Border Grid.Column="1"
-                                Background="#070504"
-                                Padding="8">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-
-                                <Canvas x:Name="ChatWorkspaceCanvas"
-                                        Grid.Row="0"
-                                        Background="Transparent">
-                                    <ItemsControl ItemsSource="{Binding FloatingChatWindows}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <Canvas />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-
-                                        <ItemsControl.ItemContainerStyle>
-                                            <Style TargetType="ContentPresenter">
-                                                <Setter Property="Canvas.Left" Value="{Binding Left}" />
-                                                <Setter Property="Canvas.Top" Value="{Binding Top}" />
-                                                <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}" />
-                                            </Style>
-                                        </ItemsControl.ItemContainerStyle>
-
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Width="{Binding Width}"
-                                                        Height="{Binding WindowHeight}"
-                                                        MinWidth="300"
-                                                        MaxWidth="520"
-                                                        Background="#120D0A"
-                                                        BorderBrush="{Binding AccentBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="8">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="*" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-
-                                                        <Border Grid.Row="0"
-                                                                Background="#1A1410"
-                                                                BorderBrush="{Binding AccentBrush}"
-                                                                BorderThickness="0,0,0,1"
-                                                                CornerRadius="8,8,0,0"
-                                                                Padding="10,8"
-                                                                Cursor="Hand"
-                                                                MouseLeftButtonDown="ChatHeader_MouseLeftButtonDown"
-                                                                MouseMove="ChatHeader_MouseMove"
-                                                                MouseLeftButtonUp="ChatHeader_MouseLeftButtonUp">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <Ellipse Width="8"
-                                                                             Height="8"
-                                                                             Margin="0,0,6,0"
-                                                                             VerticalAlignment="Center"
-                                                                             Fill="{Binding AccentBrush}" />
-                                                                    <TextBlock Text="{Binding Title}"
-                                                                               Foreground="{StaticResource OpTextTitleBrush}"
-                                                                               FontSize="11"
-                                                                               FontWeight="Bold"
-                                                                               VerticalAlignment="Center" />
-                                                                    <Border Background="#8B1A0F"
-                                                                            CornerRadius="8"
-                                                                            Padding="5,1"
-                                                                            Margin="8,0,0,0"
-                                                                            Visibility="{Binding ShowUnreadBadge, Converter={StaticResource BoolToVisibility}}">
-                                                                        <TextBlock Text="{Binding UnreadCount}"
-                                                                                   Foreground="#F4EBDD"
-                                                                                   FontSize="9"
-                                                                                   FontWeight="Bold" />
-                                                                    </Border>
-                                                                </StackPanel>
-
-                                                                <StackPanel Grid.Column="1"
-                                                                            Orientation="Horizontal">
-                                                                    <Button Content="_"
-                                                                            Command="{Binding CollapseCommand}"
-                                                                            Width="26"
-                                                                            Height="22"
-                                                                            Margin="0,0,4,0"
-                                                                            FontWeight="Bold"
-                                                                            Background="#2A211B"
-                                                                            Foreground="{StaticResource OpTextAccentBrush}"
-                                                                            BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                                            BorderThickness="1" />
-
-                                                                    <Button Content="□"
-                                                                            Command="{Binding PopFrontCommand}"
-                                                                            Width="26"
-                                                                            Height="22"
-                                                                            Margin="0,0,4,0"
-                                                                            FontWeight="Bold"
-                                                                            Background="#2A211B"
-                                                                            Foreground="{StaticResource OpTextAccentBrush}"
-                                                                            BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                                            BorderThickness="1" />
-
-                                                                    <Button Content="X"
-                                                                            Command="{Binding CloseCommand}"
-                                                                            Width="26"
-                                                                            Height="22"
-                                                                            FontWeight="Bold"
-                                                                            Background="#4A2424"
-                                                                            Foreground="#F8E8E8"
-                                                                            BorderBrush="#844F4F"
-                                                                            BorderThickness="1" />
-                                                                </StackPanel>
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <ScrollViewer Grid.Row="1"
-                                                                      behaviors:AutoScrollBehavior.AutoScrollSource="{Binding Messages}"
-                                                                      VerticalScrollBarVisibility="Auto"
-                                                                      HorizontalScrollBarVisibility="Disabled"
-                                                                      Padding="8">
-                                                            <StackPanel>
-                                                                <ItemsControl ItemsSource="{Binding Messages}">
-                                                                    <ItemsControl.ItemTemplate>
-                                                                        <DataTemplate>
-                                                                            <Border Margin="0,0,0,6"
-                                                                                    Padding="8"
-                                                                                    Background="#1A1411"
-                                                                                    BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                                                    BorderThickness="1"
-                                                                                    CornerRadius="4">
-
-                                                                                <!-- Context menu for own messages -->
-                                                                                <Border.Style>
-                                                                                    <Style TargetType="Border">
-                                                                                        <Style.Triggers>
-                                                                                            <DataTrigger Binding="{Binding IsOwnMessage}" Value="True">
-                                                                                                <Setter Property="ContextMenu">
-                                                                                                    <Setter.Value>
-                                                                                                        <ContextMenu>
-                                                                                                            <MenuItem Header="Edit" Command="{Binding BeginEditCommand}" />
-                                                                                                            <MenuItem Header="Delete" Command="{Binding DeleteCommand}" />
-                                                                                                        </ContextMenu>
-                                                                                                    </Setter.Value>
-                                                                                                </Setter>
-                                                                                            </DataTrigger>
-                                                                                        </Style.Triggers>
-                                                                                    </Style>
-                                                                                </Border.Style>
-
-                                                                                <StackPanel>
-                                                                                    <DockPanel LastChildFill="False">
-                                                                                        <TextBlock Text="{Binding SenderDisplayName}"
-                                                                                                   Foreground="{StaticResource OpTextTitleBrush}"
-                                                                                                   FontSize="11"
-                                                                                                   FontWeight="SemiBold"
-                                                                                                   DockPanel.Dock="Left" />
-                                                                                        <TextBlock Text="{Binding RoleDisplay}"
-                                                                                                   Foreground="#D4AF37"
-                                                                                                   FontSize="9"
-                                                                                                   FontWeight="Bold"
-                                                                                                   Margin="6,1,0,0"
-                                                                                                   DockPanel.Dock="Left"
-                                                                                                   Visibility="{Binding RoleDisplay, Converter={StaticResource NullToVisibilityConverter}}" />
-                                                                                        <TextBlock Text="{Binding FormattedTime}"
-                                                                                                   Foreground="{StaticResource OpTextMutedBrush}"
-                                                                                                   FontSize="9"
-                                                                                                   Margin="8,1,0,0"
-                                                                                                   DockPanel.Dock="Left" />
-                                                                                    </DockPanel>
-
-                                                                                    <!-- Normal content display -->
-                                                                                    <TextBlock Text="{Binding Content}"
-                                                                                               Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                                                               FontSize="11"
-                                                                                               Margin="0,3,0,0"
-                                                                                               TextWrapping="Wrap"
-                                                                                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibility}}" />
-
-                                                                                    <!-- Edit mode -->
-                                                                                    <Grid Margin="0,3,0,0"
-                                                                                          Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
-                                                                                        <Grid.ColumnDefinitions>
-                                                                                            <ColumnDefinition Width="*" />
-                                                                                            <ColumnDefinition Width="Auto" />
-                                                                                            <ColumnDefinition Width="Auto" />
-                                                                                        </Grid.ColumnDefinitions>
-                                                                                        <TextBox Grid.Column="0"
-                                                                                                 Text="{Binding EditDraft, UpdateSourceTrigger=PropertyChanged}"
-                                                                                                 Style="{StaticResource OpTextBoxStyle}"
-                                                                                                 Padding="6,4"
-                                                                                                 FontSize="11">
-                                                                                            <TextBox.InputBindings>
-                                                                                                <KeyBinding Key="Return" Command="{Binding ConfirmEditCommand}" />
-                                                                                                <KeyBinding Key="Escape" Command="{Binding CancelEditCommand}" />
-                                                                                            </TextBox.InputBindings>
-                                                                                        </TextBox>
-                                                                                        <Button Grid.Column="1"
-                                                                                                Content="Save"
-                                                                                                Command="{Binding ConfirmEditCommand}"
-                                                                                                Margin="4,0,0,0"
-                                                                                                Padding="8,3"
-                                                                                                FontSize="10"
-                                                                                                Background="#2A3A2A"
-                                                                                                Foreground="#AAD4AA"
-                                                                                                BorderBrush="#5C8B5E"
-                                                                                                BorderThickness="1" />
-                                                                                        <Button Grid.Column="2"
-                                                                                                Content="Cancel"
-                                                                                                Command="{Binding CancelEditCommand}"
-                                                                                                Margin="4,0,0,0"
-                                                                                                Padding="8,3"
-                                                                                                FontSize="10"
-                                                                                                Background="#2A211B"
-                                                                                                Foreground="{StaticResource OpTextMutedBrush}"
-                                                                                                BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                                                                BorderThickness="1" />
-                                                                                    </Grid>
-                                                                                </StackPanel>
-                                                                            </Border>
-                                                                        </DataTemplate>
-                                                                    </ItemsControl.ItemTemplate>
-                                                                </ItemsControl>
-
-                                                                <TextBlock Text="No messages yet."
-                                                                           Foreground="{StaticResource OpTextMutedBrush}"
-                                                                           FontStyle="Italic"
-                                                                           FontSize="11"
-                                                                           HorizontalAlignment="Center"
-                                                                           Margin="0,18,0,8">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding Messages.Count}" Value="0">
-                                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
-                                                            </StackPanel>
-                                                        </ScrollViewer>
-
-                                                        <Border Grid.Row="2"
-                                                                Background="{StaticResource OpBackgroundInputBrush}"
-                                                                BorderBrush="{StaticResource OpBorderPanelBrush}"
-                                                                BorderThickness="0,1,0,0"
-                                                                Padding="8">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <TextBox Grid.Column="0"
-                                                                         Text="{Binding DraftMessage, UpdateSourceTrigger=PropertyChanged}"
-                                                                         Style="{StaticResource OpTextBoxStyle}"
-                                                                         Padding="10,8"
-                                                                         VerticalAlignment="Center">
-                                                                    <TextBox.InputBindings>
-                                                                        <KeyBinding Key="Return"
-                                                                                    Command="{Binding SendMessageCommand}" />
-                                                                    </TextBox.InputBindings>
-                                                                </TextBox>
-
-                                                                <Button Grid.Column="1"
-                                                                        Content="SEND"
-                                                                        Command="{Binding SendMessageCommand}"
-                                                                        Style="{StaticResource ChatSendButtonStyle}"
-                                                                        Margin="8,0,0,0" />
-                                                            </Grid>
-                                                        </Border>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Canvas>
-
-                                <!-- Minimized bar -->
-                                <ItemsControl Grid.Row="1"
-                                              ItemsSource="{Binding MinimizedChatWindows}"
-                                              Margin="0,8,0,0">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding AvailableChatChannels}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Command="{Binding ExpandCommand}"
-                                                    Margin="0,0,8,8"
-                                                    Padding="12,8"
-                                                    Background="#1A1410"
-                                                    BorderBrush="{Binding AccentBrush}"
-                                                    BorderThickness="1"
-                                                    MinWidth="160">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <Ellipse Width="8"
-                                                             Height="8"
-                                                             Margin="0,0,8,0"
-                                                             Fill="{Binding AccentBrush}"
-                                                             VerticalAlignment="Center" />
-
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Title}"
-                                                               Foreground="{StaticResource OpTextTitleBrush}"
-                                                               FontSize="10"
-                                                               FontWeight="Bold"
-                                                               VerticalAlignment="Center" />
-
-                                                    <Border Grid.Column="2"
+                                        <DataTemplate DataType="{x:Type vm:AvailableChannelViewModel}">
+                                            <Border Margin="4,1"
+                                                    Padding="8,7"
+                                                    CornerRadius="4"
+                                                    Cursor="Hand"
+                                                    MouseLeftButtonUp="Channel_MouseLeftButtonUp">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="Transparent" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="Background" Value="#2A211B" />
+                                                            </DataTrigger>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#1A1410" />
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <DockPanel LastChildFill="True">
+                                                    <Border DockPanel.Dock="Right"
                                                             Background="#8B1A0F"
                                                             CornerRadius="8"
                                                             Padding="5,1"
-                                                            Margin="8,0,0,0"
                                                             Visibility="{Binding HasUnread, Converter={StaticResource BoolToVisibility}}">
                                                         <TextBlock Text="{Binding UnreadCount}"
                                                                    Foreground="#F4EBDD"
                                                                    FontSize="9"
                                                                    FontWeight="Bold" />
                                                     </Border>
-                                                </Grid>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Grid>
-                        </Border>
-                    </Grid>
-
-                    <!-- Bottom docked collapsed alerts -->
-                    <Border Grid.Row="2"
-                            Background="{StaticResource OpBackgroundInputBrush}"
-                            BorderBrush="{StaticResource OpBorderPanelBrush}"
-                            BorderThickness="0,1,0,0"
-                            CornerRadius="0,0,10,10"
-                            Padding="10,8">
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right"
-                                    Command="{Binding ToggleMuteCommand}"
-                                    Padding="8,4"
-                                    Margin="6,0,0,0"
-                                    FontSize="9"
-                                    FontWeight="Bold"
-                                    BorderBrush="{StaticResource OpBorderItemBrush}"
-                                    BorderThickness="1"
-                                    VerticalAlignment="Center"
-                                    Cursor="Hand">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Background" Value="#2A211B" />
-                                        <Setter Property="Foreground" Value="{StaticResource OpTextAccentBrush}" />
-                                        <Setter Property="Content" Value="MUTE" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ChatSoundMuted}" Value="True">
-                                                <Setter Property="Background" Value="#4A2424" />
-                                                <Setter Property="Foreground" Value="#F8E8E8" />
-                                                <Setter Property="Content" Value="MUTED" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-
-                            <TextBlock DockPanel.Dock="Left"
-                                       Text="COLLAPSED ALERTS"
-                                       Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,10,0" />
-
-                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                          VerticalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding CollapsedWindowsWithUnread}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Content="{Binding AlertCaption}"
-                                                    Command="{Binding ExpandCommand}"
-                                                    Margin="0,0,8,0"
-                                                    Padding="10,5"
-                                                    FontSize="10"
-                                                    FontWeight="Bold"
-                                                    Background="#4A2424"
-                                                    Foreground="#F8E8E8"
-                                                    BorderBrush="#844F4F"
-                                                    BorderThickness="1" />
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="# "
+                                                                   Foreground="{Binding AccentBrush}"
+                                                                   FontSize="13"
+                                                                   VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding DisplayName}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}" />
+                                                                    <Setter Property="FontSize" Value="12" />
+                                                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{StaticResource OpTextTitleBrush}" />
+                                                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
                         </DockPanel>
                     </Border>
+
+                    <!-- Active chat area -->
+                    <Grid Grid.Column="1">
+                        <!-- Empty state -->
+                        <TextBlock Text="Select a channel to start chatting"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="13"
+                                   FontStyle="Italic">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ActiveChatWindow}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- Active channel panel -->
+                        <ContentControl Content="{Binding ActiveChatWindow}"
+                                        Visibility="{Binding ActiveChatWindow, Converter={StaticResource NullToVisibilityConverter}}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate DataType="{x:Type vm:ChatWindowViewModel}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Channel header -->
+                                        <Border Grid.Row="0"
+                                                Background="{StaticResource OpBackgroundHeaderBrush}"
+                                                BorderBrush="{StaticResource OpBorderPanelBrush}"
+                                                BorderThickness="0,0,0,1"
+                                                Padding="16,10">
+                                            <DockPanel LastChildFill="False">
+                                                <Button DockPanel.Dock="Right"
+                                                        Command="{Binding DataContext.ToggleMuteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Padding="8,4"
+                                                        FontSize="9"
+                                                        FontWeight="Bold"
+                                                        BorderBrush="{StaticResource OpBorderItemBrush}"
+                                                        BorderThickness="1"
+                                                        VerticalAlignment="Center"
+                                                        Cursor="Hand">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button">
+                                                            <Setter Property="Background" Value="#2A211B" />
+                                                            <Setter Property="Foreground" Value="{StaticResource OpTextAccentBrush}" />
+                                                            <Setter Property="Content" Value="MUTE" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding DataContext.ChatSoundMuted, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                                    <Setter Property="Background" Value="#4A2424" />
+                                                                    <Setter Property="Foreground" Value="#F8E8E8" />
+                                                                    <Setter Property="Content" Value="MUTED" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="# "
+                                                               Foreground="{Binding AccentBrush}"
+                                                               FontSize="15"
+                                                               FontWeight="Bold"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                                               FontSize="15"
+                                                               FontWeight="Bold"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+
+                                        <!-- Messages -->
+                                        <ScrollViewer Grid.Row="1"
+                                                      behaviors:AutoScrollBehavior.AutoScrollSource="{Binding Messages}"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      Padding="8">
+                                            <StackPanel>
+                                                <ItemsControl ItemsSource="{Binding Messages}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,1,0,0">
+                                                                <Grid.Style>
+                                                                    <Style TargetType="Grid">
+                                                                        <Setter Property="Background" Value="Transparent" />
+                                                                        <Style.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter Property="Background" Value="#0CFFFFFF" />
+                                                                            </Trigger>
+                                                                            <DataTrigger Binding="{Binding IsOwnMessage}" Value="True">
+                                                                                <Setter Property="ContextMenu">
+                                                                                    <Setter.Value>
+                                                                                        <ContextMenu Style="{StaticResource DarkContextMenuStyle}">
+                                                                                            <MenuItem Header="Edit" Command="{Binding BeginEditCommand}"
+                                                                                                      Style="{StaticResource DarkMenuItemStyle}" />
+                                                                                            <MenuItem Header="Delete" Command="{Binding DeleteCommand}"
+                                                                                                      Style="{StaticResource DarkMenuItemStyle}" />
+                                                                                        </ContextMenu>
+                                                                                    </Setter.Value>
+                                                                                </Setter>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Grid.Style>
+
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="44" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <!-- Avatar circle -->
+                                                                <Border Grid.Column="0"
+                                                                        Width="32" Height="32"
+                                                                        CornerRadius="16"
+                                                                        Background="#5C3D1E"
+                                                                        VerticalAlignment="Top"
+                                                                        HorizontalAlignment="Center"
+                                                                        Margin="0,6,0,0">
+                                                                    <TextBlock Text="{Binding InitialLetter}"
+                                                                               HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               FontWeight="Bold"
+                                                                               FontSize="13"
+                                                                               Foreground="#E8C87A" />
+                                                                </Border>
+
+                                                                <!-- Message body -->
+                                                                <StackPanel Grid.Column="1" Margin="4,6,8,6">
+                                                                    <DockPanel LastChildFill="False">
+                                                                        <TextBlock Text="{Binding SenderDisplayName}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   FontSize="12"
+                                                                                   Foreground="{StaticResource OpTextTitleBrush}"
+                                                                                   DockPanel.Dock="Left"
+                                                                                   VerticalAlignment="Center" />
+                                                                        <TextBlock Text="{Binding RoleDisplay}"
+                                                                                   FontSize="9"
+                                                                                   FontWeight="Bold"
+                                                                                   Foreground="#D4AF37"
+                                                                                   Margin="6,0,0,0"
+                                                                                   Padding="4,1"
+                                                                                   Background="#1AD4AF37"
+                                                                                   DockPanel.Dock="Left"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Visibility="{Binding RoleDisplay, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                                        <TextBlock Text="{Binding FormattedTime}"
+                                                                                   FontSize="9"
+                                                                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                                                                   Margin="8,0,0,0"
+                                                                                   DockPanel.Dock="Left"
+                                                                                   VerticalAlignment="Center" />
+                                                                    </DockPanel>
+
+                                                                    <TextBlock Text="{Binding Content}"
+                                                                               FontSize="12"
+                                                                               Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                                               TextWrapping="Wrap"
+                                                                               Margin="0,2,0,0"
+                                                                               LineHeight="18"
+                                                                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                                                                    <Grid Margin="0,3,0,0"
+                                                                          Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <TextBox Grid.Column="0"
+                                                                                 Text="{Binding EditDraft, UpdateSourceTrigger=PropertyChanged}"
+                                                                                 Style="{StaticResource OpTextBoxStyle}"
+                                                                                 Padding="6,4"
+                                                                                 FontSize="11">
+                                                                            <TextBox.InputBindings>
+                                                                                <KeyBinding Key="Return" Command="{Binding ConfirmEditCommand}" />
+                                                                                <KeyBinding Key="Escape" Command="{Binding CancelEditCommand}" />
+                                                                            </TextBox.InputBindings>
+                                                                        </TextBox>
+                                                                        <Button Grid.Column="1"
+                                                                                Content="Save"
+                                                                                Command="{Binding ConfirmEditCommand}"
+                                                                                Margin="4,0,0,0"
+                                                                                Padding="8,3"
+                                                                                FontSize="10"
+                                                                                Background="#2A3A2A"
+                                                                                Foreground="#AAD4AA"
+                                                                                BorderBrush="#5C8B5E"
+                                                                                BorderThickness="1" />
+                                                                        <Button Grid.Column="2"
+                                                                                Content="Cancel"
+                                                                                Command="{Binding CancelEditCommand}"
+                                                                                Margin="4,0,0,0"
+                                                                                Padding="8,3"
+                                                                                FontSize="10"
+                                                                                Background="#2A211B"
+                                                                                Foreground="{StaticResource OpTextMutedBrush}"
+                                                                                BorderBrush="{StaticResource OpBorderItemBrush}"
+                                                                                BorderThickness="1" />
+                                                                    </Grid>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <TextBlock Text="No messages yet."
+                                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                                           FontStyle="Italic"
+                                                           FontSize="11"
+                                                           HorizontalAlignment="Center"
+                                                           Margin="0,18,0,8">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Messages.Count}" Value="0">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </ScrollViewer>
+
+                                        <!-- Input -->
+                                        <Border Grid.Row="2"
+                                                Background="{StaticResource OpBackgroundInputBrush}"
+                                                BorderBrush="{StaticResource OpBorderPanelBrush}"
+                                                BorderThickness="0,1,0,0"
+                                                Padding="12,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding DraftMessage, UpdateSourceTrigger=PropertyChanged}"
+                                                         Style="{StaticResource OpTextBoxStyle}"
+                                                         Padding="10,8"
+                                                         VerticalAlignment="Center">
+                                                    <TextBox.InputBindings>
+                                                        <KeyBinding Key="Return" Command="{Binding SendMessageCommand}" />
+                                                    </TextBox.InputBindings>
+                                                </TextBox>
+                                                <Button Grid.Column="1"
+                                                        Content="SEND"
+                                                        Command="{Binding SendMessageCommand}"
+                                                        Style="{StaticResource ChatSendButtonStyle}"
+                                                        Margin="8,0,0,0" />
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
+                    </Grid>
                 </Grid>
             </Border>
-
             <GridSplitter Grid.Column="3"
                           Width="8"
                           HorizontalAlignment="Stretch"
@@ -918,10 +817,13 @@
                         <ItemsControl ItemsSource="{Binding OnlineUsers}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:OnlineUserViewModel}">
-                                    <Border Margin="0,4" Padding="4">
+                                    <Border x:Name="UserCard"
+                                            Style="{StaticResource OnlineUserCardStyle}">
                                         <Border.ContextMenu>
-                                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <ContextMenu Style="{StaticResource OnlineUserContextMenuStyle}"
+                                                         DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                                 <MenuItem Header="Message"
+                                                          Style="{StaticResource OnlineUserContextMenuItemStyle}"
                                                           Command="{Binding DataContext.OpenDirectMessageCommand, Source={x:Reference RootDashboard}}"
                                                           CommandParameter="{Binding}" />
                                             </ContextMenu>
@@ -929,34 +831,46 @@
 
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="36" />
+                                                <ColumnDefinition Width="42" />
                                                 <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
+                                            <!-- Avatar -->
                                             <Border Grid.Column="0"
                                                     Width="34"
                                                     Height="34"
                                                     CornerRadius="17"
-                                                    VerticalAlignment="Top"
-                                                    Background="{Binding RoleColorBrush}">
-                                                <TextBlock Text="{Binding InitialLetter}"
-                                                           Foreground="#15120F"
-                                                           FontSize="13"
-                                                           FontWeight="Bold"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center" />
+                                                    VerticalAlignment="Center"
+                                                    Background="{Binding RoleColorBrush}"
+                                                    ClipToBounds="True">
+                                                <Grid>
+                                                    <Image Source="{Binding AvatarImage}"
+                                                           Stretch="UniformToFill"
+                                                           Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVisibility}}" />
+
+                                                    <TextBlock Text="{Binding InitialLetter}"
+                                                               Foreground="#15120F"
+                                                               FontSize="13"
+                                                               FontWeight="Bold"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}" />
+                                                </Grid>
                                             </Border>
 
+                                            <!-- Name and role -->
                                             <StackPanel Grid.Column="1"
-                                                        Margin="8,0,0,0"
+                                                        Margin="8,0,8,0"
                                                         VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding ContactLabel}"
                                                            Foreground="{StaticResource OpTextTitleBrush}"
                                                            FontSize="11"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Foreground="{StaticResource OpTextMutedBrush}"
-                                                           FontSize="10"
+
+                                                <TextBlock FontSize="10"
+                                                           Foreground="{StaticResource OpTextMutedBrush}"
                                                            TextTrimming="CharacterEllipsis">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
@@ -965,13 +879,34 @@
                                                                 <DataTrigger Binding="{Binding Role}" Value="{x:Null}">
                                                                     <Setter Property="Text" Value="Member" />
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Role}" Value="">
+                                                                    <Setter Property="Text" Value="Member" />
+                                                                </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
                                             </StackPanel>
+
+                                            <!-- Hover action -->
+                                            <Button x:Name="MessageButton"
+                                                    Grid.Column="2"
+                                                    Content="MESSAGE"
+                                                    Style="{StaticResource OnlineUserActionButtonStyle}"
+                                                    VerticalAlignment="Center"
+                                                    Command="{Binding DataContext.OpenDirectMessageCommand, Source={x:Reference RootDashboard}}"
+                                                    CommandParameter="{Binding}" />
                                         </Grid>
                                     </Border>
+
+                                    <DataTemplate.Triggers>
+                                        <Trigger SourceName="UserCard" Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="MessageButton" Property="Visibility" Value="Visible" />
+                                            <Setter TargetName="UserCard" Property="BorderBrush"
+                                                    Value="{StaticResource OpBorderPillBrush}" />
+                                            <Setter TargetName="UserCard" Property="Background" Value="#18120E" />
+                                        </Trigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

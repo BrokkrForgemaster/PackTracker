@@ -39,9 +39,15 @@ public class Profile
     public string? DiscordDisplayName { get; set; }
 
     /// <summary>
-    /// Rank or role within the organization.
+    /// Rank or role within the organization hierarchy.
     /// </summary>
     public string? DiscordRank { get; set; }
+
+    /// <summary>
+    /// Division membership (LOCOPS, TACOPS, SPECOPS, ARCOPS, Leadership), if any.
+    /// Stored separately from rank as users can belong to a division at any hierarchy rank.
+    /// </summary>
+    public string? DiscordDivision { get; set; }
 
     /// <summary>
     /// Avatar URL from Discord.

@@ -1,46 +1,105 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Windows.Media;
-using PackTracker.Domain.Security;
+using System.Windows.Media.Imaging;
 
 namespace PackTracker.Presentation.ViewModels;
 
-public class OnlineUserViewModel : ViewModelBase
+public sealed class OnlineUserViewModel : INotifyPropertyChanged
 {
-    public string Username { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-    public string? Role { get; set; }
-    public Brush RoleColorBrush { get; set; } = Brushes.Gray;
+    private ImageSource? _avatarImage;
+    private string? _avatarUrl;
+    private string? _contactLabel;
+    private string? _role;
+    private Brush? _roleColorBrush;
 
-    public string ContactLabel => string.IsNullOrWhiteSpace(Username)
-        ? DisplayName
-        : $"{DisplayName} (@{Username})";
+    public string? Username { get; set; }
 
-    public string InitialLetter => string.IsNullOrWhiteSpace(DisplayName)
-        ? "?"
-        : DisplayName.Substring(0, 1).ToUpperInvariant();
+    public string? DiscordDisplayName { get; set; }
 
-    /// <summary>
-    /// Returns a color appropriate for the user's rank.
-    /// </summary>
     public static Brush GetRoleColor(string? role)
     {
-        if (string.IsNullOrWhiteSpace(role))
-            return BrushFromHex("#B89C78");
-
-        if (SecurityConstants.IsElevatedRequestRole(role))
-            return BrushFromHex("#D4AF37"); // gold for leadership
-
-        var pos = SecurityConstants.GetRolePosition(role);
-        return pos switch
+        return role switch
         {
-            >= 6 => BrushFromHex("#D4AF37"),  // Captain+ gold
-            >= 3 => BrushFromHex("#C0C0C0"),  // Platoon Sergeant+ silver
-            >= 0 => BrushFromHex("#CD7F32"),   // Foundling+ bronze
-            _ => BrushFromHex("#B89C78")       // unknown
+            "LOCOPS" => BrushFromHex("#5C8B5E"),
+            "TACOPS" => BrushFromHex("#A36E2F"),
+            "SPECOPS" => BrushFromHex("#844F4F"),
+            "ARCOPS" => BrushFromHex("#1A6E6E"),
+            "Leadership" => BrushFromHex("#B090E0"),
+            _ => BrushFromHex("#808080")
         };
     }
 
     private static Brush BrushFromHex(string hex)
     {
-        return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)!);
+        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)!);
+        brush.Freeze();
+        return brush;
     }
+    
+    public ImageSource? AvatarImage
+    {
+        get => _avatarImage;
+        set
+        {
+            if (!Equals(_avatarImage, value))
+            {
+                _avatarImage = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasAvatar));
+            }
+        }
+    }
+
+    public bool HasAvatar => AvatarImage != null;
+
+    public string? ContactLabel
+    {
+        get => _contactLabel;
+        set
+        {
+            if (_contactLabel != value)
+            {
+                _contactLabel = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(InitialLetter));
+            }
+        }
+    }
+
+    public string InitialLetter =>
+        !string.IsNullOrWhiteSpace(ContactLabel)
+            ? ContactLabel.Substring(0, 1).ToUpperInvariant()
+            : "?";
+
+    public string? Role
+    {
+        get => _role;
+        set
+        {
+            if (_role != value)
+            {
+                _role = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public Brush? RoleColorBrush
+    {
+        get => _roleColorBrush;
+        set
+        {
+            if (_roleColorBrush != value)
+            {
+                _roleColorBrush = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

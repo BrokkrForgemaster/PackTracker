@@ -35,8 +35,8 @@ public partial class WelcomeView : UserControl
         UexcorpCheck.Visibility = string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text)
             ? Visibility.Collapsed : Visibility.Visible;
         UexcorpStatus.Text = string.IsNullOrWhiteSpace(UexcorpApiKeyBox.Text)
-            ? "No API key found. Please paste and save your key or opt out."
-            : "✅ UEXCorp API key saved.";
+            ? "No UEXCorp API key found. Follow the setup guide above, paste your key, then click SAVE. You can also skip this for now."
+            : "✅ UEXCorp API key saved. Trading and commodity enrichment are now available.";
 
         LogCheck.Visibility = string.IsNullOrWhiteSpace(LogLocationBox.Text)
             ? Visibility.Collapsed : Visibility.Visible;
@@ -49,8 +49,12 @@ public partial class WelcomeView : UserControl
 
     private async void SaveUexCorpApiKey_Click(object sender, RoutedEventArgs e)
     {
-        var apiKey = UexcorpApiKeyBox.Text.Trim();
+        var apiKey = (UexcorpApiKeyBox.Text ?? string.Empty).Trim();
+
+        UexcorpApiKeyBox.Text = apiKey;
+
         await _settings.UpdateSettingsAsync(cfg => cfg.UexCorpApiKey = apiKey);
+
         CheckAllIntegrations();
         UpdateProceedButtonState();
     }

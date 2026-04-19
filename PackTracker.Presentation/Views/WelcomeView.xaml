@@ -9,9 +9,9 @@
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- ── Header ── -->
@@ -20,10 +20,11 @@
                 <StackPanel DockPanel.Dock="Left">
                     <TextBlock Text="FIRST-RUN CONFIGURATION"
                                Foreground="{StaticResource OpTextTitleBrush}"
-                               FontSize="22" FontWeight="Bold"/>
-                    <TextBlock Text="Establish integrations, configure credentials, and prepare the desktop client for House Wolf operations."
-                               Foreground="{StaticResource OpTextSecondaryBrush}"
-                               FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                               FontSize="22" FontWeight="Bold" />
+                    <TextBlock
+                        Text="Establish integrations, configure credentials, and prepare the desktop client for House Wolf operations."
+                        Foreground="{StaticResource OpTextSecondaryBrush}"
+                        FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap" />
                 </StackPanel>
                 <Border DockPanel.Dock="Right"
                         Background="{StaticResource OpBackgroundPillBrush}"
@@ -34,7 +35,7 @@
                         VerticalAlignment="Center">
                     <TextBlock Text="SETUP WIZARD"
                                Foreground="{StaticResource OpTextAccentBrush}"
-                               FontSize="10" FontWeight="Bold"/>
+                               FontSize="10" FontWeight="Bold" />
                 </Border>
             </DockPanel>
         </Border>
@@ -45,8 +46,8 @@
                       HorizontalScrollBarVisibility="Disabled">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.4*"/>
-                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="1.4*" />
+                    <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
 
                 <!-- ── Left column: integration forms ── -->
@@ -59,42 +60,176 @@
                                 <TextBlock Text="UEXCORP API KEY"
                                            Foreground="{StaticResource OpTextTitleBrush}"
                                            FontSize="14" FontWeight="Bold"
-                                           DockPanel.Dock="Left"/>
+                                           DockPanel.Dock="Left" />
                                 <TextBlock x:Name="UexcorpCheck"
                                            Text="✓ CONFIGURED"
                                            Foreground="{StaticResource OpTextAccentBrush}"
                                            FontSize="11" FontWeight="Bold"
                                            Visibility="Collapsed"
                                            VerticalAlignment="Center"
-                                           DockPanel.Dock="Right"/>
+                                           DockPanel.Dock="Right" />
                             </DockPanel>
 
                             <TextBlock Text="Enables commodity and route intelligence inside the trading hub."
                                        Foreground="{StaticResource OpTextSecondaryBrush}"
-                                       FontSize="12" TextWrapping="Wrap"/>
-                            <TextBlock Margin="0,6,0,0" FontSize="11">
-                                <Run Text="Need a key? " Foreground="{StaticResource OpTextMutedBrush}"/>
-                                <Hyperlink NavigateUri="https://uexcorp.space" RequestNavigate="UexcorpLink_RequestNavigate">
-                                    <Run Text="Open uexcorp.space"/>
-                                </Hyperlink>
-                            </TextBlock>
+                                       FontSize="12"
+                                       TextWrapping="Wrap" />
 
-                            <TextBlock Text="API KEY" Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="10" FontWeight="Bold" Margin="0,16,0,6"/>
+                            <Border Margin="0,12,0,0"
+                                    Padding="14"
+                                    CornerRadius="6"
+                                    Background="{StaticResource OpBackgroundPillBrush}"
+                                    BorderBrush="{StaticResource OpBorderPillBrush}"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="WHAT THIS DOES"
+                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                               FontSize="11"
+                                               FontWeight="Bold" />
+
+                                    <TextBlock Margin="0,8,0,0"
+                                               Text="Your UEXCorp API key allows PackTracker to securely connect to UEX market and commodity data. This powers trading-related features inside the app."
+                                               Foreground="{StaticResource OpTextSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap" />
+
+                                    <TextBlock Margin="0,12,0,0"
+                                               Text="STEP-BY-STEP SETUP"
+                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                               FontSize="11"
+                                               FontWeight="Bold" />
+
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6">
+                                            <Run Text="1. " />
+                                            <Run Text="Open the UEX website using the link below." />
+                                        </TextBlock>
+                                        <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6">
+                                            <Run Text="2. " />
+                                            <Run Text="Sign in to your UEX account, or create one if needed." />
+                                        </TextBlock>
+                                        <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6">
+                                            <Run Text="3. " />
+                                            <Run Text="Open the API area, then go to " />
+                                            <Run Text="My Apps" FontWeight="SemiBold"
+                                                 Foreground="{StaticResource OpTextTitleBrush}" />
+                                            <Run
+                                                Text=". This is where UEX provides your access token after you create an app." />
+                                        </TextBlock>
+                                        <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6">
+                                            <Run Text="4. " />
+                                            <Run Text="Create a new app and give it a simple name such as " />
+                                            <Run Text="PackTracker" FontWeight="SemiBold"
+                                                 Foreground="{StaticResource OpTextTitleBrush}" />
+                                            <Run Text="." />
+                                        </TextBlock>
+                                        <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6">
+                                            <Run Text="5. " />
+                                            <Run
+                                                Text="After the app is created, copy the generated API key or access token exactly as shown." />
+                                        </TextBlock>
+                                        <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6">
+                                            <Run Text="6. " />
+                                            <Run
+                                                Text="Return to PackTracker, paste the key into the field below, then click " />
+                                            <Run Text="SAVE" FontWeight="SemiBold"
+                                                 Foreground="{StaticResource OpTextTitleBrush}" />
+                                            <Run Text="." />
+                                        </TextBlock>
+                                        <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                                   TextWrapping="Wrap">
+                                            <Run Text="7. " />
+                                            <Run Text="When saved successfully, this section will show as configured." />
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <TextBlock Margin="0,12,0,0"
+                                               Text="QUICK LINKS"
+                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                               FontSize="11"
+                                               FontWeight="Bold" />
+
+                                    <TextBlock Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap">
+                                        <Run Text="• " Foreground="{StaticResource OpTextMutedBrush}" />
+                                        <Hyperlink NavigateUri="https://uexcorp.space"
+                                                   RequestNavigate="UexcorpLink_RequestNavigate">
+                                            <Run Text="Open UEXCorp" />
+                                        </Hyperlink>
+                                    </TextBlock>
+
+                                    <TextBlock Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap">
+                                        <Run Text="• " Foreground="{StaticResource OpTextMutedBrush}" />
+                                        <Hyperlink NavigateUri="https://uexcorp.space/api/documentation/"
+                                                   RequestNavigate="UexcorpLink_RequestNavigate">
+                                            <Run Text="Open UEX API Documentation" />
+                                        </Hyperlink>
+                                    </TextBlock>
+
+                                    <Border Margin="0,14,0,0"
+                                            Padding="12"
+                                            CornerRadius="4"
+                                            Background="{DynamicResource WarningFillBrush}"
+                                            BorderBrush="#33FFB347"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="COMMON ISSUES"
+                                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                                       FontSize="11"
+                                                       FontWeight="Bold" />
+                                            <TextBlock Margin="0,8,0,0"
+                                                       Text="• Make sure you are signed in before looking for My Apps."
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Text="• Copy the full token with no extra spaces before or after it."
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Text="• If the key does not work, go back to your UEX app and copy it again."
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Text="• You can skip this for now and add it later from Settings."
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="API KEY"
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Margin="0,16,0,6" />
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
+
                                 <TextBox x:Name="UexcorpApiKeyBox"
                                          Grid.Column="0"
                                          Style="{StaticResource OpTextBoxStyle}"
-                                         Margin="0,0,10,0"/>
+                                         Margin="0,0,10,0"
+                                         ToolTip="Paste the API key or access token you copied from your UEX My Apps page." />
+
                                 <Button Grid.Column="1"
                                         Content="SAVE"
                                         Width="90"
                                         Click="SaveUexCorpApiKey_Click"
-                                        Style="{StaticResource PrimaryActionButtonStyle}"/>
+                                        Style="{StaticResource PrimaryActionButtonStyle}" />
                             </Grid>
 
                             <CheckBox x:Name="UexcorpOptOutCheckBox"
@@ -102,20 +237,26 @@
                                       Margin="0,14,0,0"
                                       Checked="OptOutCheckBox_Checked"
                                       Unchecked="OptOutCheckBox_Unchecked"
-                                      Foreground="{StaticResource OpTextSecondaryBrush}"/>
+                                      Foreground="{StaticResource OpTextSecondaryBrush}" />
 
                             <TextBlock x:Name="UexcorpStatus"
-                                       FontSize="11" Margin="0,8,0,0"
+                                       FontSize="11"
+                                       Margin="0,8,0,0"
                                        Foreground="{StaticResource OpTextAccentBrush}"
-                                       TextWrapping="Wrap"/>
+                                       TextWrapping="Wrap" />
 
                             <Border Background="{DynamicResource WarningFillBrush}"
-                                    BorderBrush="#33FFB347" BorderThickness="1"
-                                    CornerRadius="4" Padding="12" Margin="0,10,0,0"
+                                    BorderBrush="#33FFB347"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="12"
+                                    Margin="0,10,0,0"
                                     Visibility="{Binding IsChecked, ElementName=UexcorpOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="Skipping UEXCorp disables trading and commodity enrichment until the key is added later."
-                                           Foreground="{StaticResource OpTextSecondaryBrush}"
-                                           FontSize="11" TextWrapping="Wrap"/>
+                                <TextBlock
+                                    Text="Skipping UEXCorp disables trading and commodity enrichment until the key is added later."
+                                    Foreground="{StaticResource OpTextSecondaryBrush}"
+                                    FontSize="11"
+                                    TextWrapping="Wrap" />
                             </Border>
                         </StackPanel>
                     </Border>
@@ -127,39 +268,39 @@
                                 <TextBlock Text="STAR CITIZEN GAME LOG"
                                            Foreground="{StaticResource OpTextTitleBrush}"
                                            FontSize="14" FontWeight="Bold"
-                                           DockPanel.Dock="Left"/>
+                                           DockPanel.Dock="Left" />
                                 <TextBlock x:Name="LogCheck"
                                            Text="✓ CONFIGURED"
                                            Foreground="{StaticResource OpTextAccentBrush}"
                                            FontSize="11" FontWeight="Bold"
                                            Visibility="Collapsed"
                                            VerticalAlignment="Center"
-                                           DockPanel.Dock="Right"/>
+                                           DockPanel.Dock="Right" />
                             </DockPanel>
 
                             <TextBlock Text="Required for kill/event parsing and future combat telemetry automation."
                                        Foreground="{StaticResource OpTextSecondaryBrush}"
-                                       FontSize="12" TextWrapping="Wrap"/>
+                                       FontSize="12" TextWrapping="Wrap" />
                             <TextBlock Text="C:\Roberts_Space_Industries\StarCitizen\LIVE\Game.log"
                                        Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                       FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap" />
 
                             <TextBlock Text="LOG PATH" Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="10" FontWeight="Bold" Margin="0,16,0,6"/>
+                                       FontSize="10" FontWeight="Bold" Margin="0,16,0,6" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="LogLocationBox"
                                          Grid.Column="0"
                                          Style="{StaticResource OpTextBoxStyle}"
-                                         Margin="0,0,10,0"/>
+                                         Margin="0,0,10,0" />
                                 <Button Grid.Column="1"
                                         Content="SAVE"
                                         Width="90"
                                         Click="SaveLogLocation_Click"
-                                        Style="{StaticResource PrimaryActionButtonStyle}"/>
+                                        Style="{StaticResource PrimaryActionButtonStyle}" />
                             </Grid>
 
                             <CheckBox x:Name="LogOptOutCheckBox"
@@ -167,20 +308,21 @@
                                       Margin="0,14,0,0"
                                       Checked="OptOutCheckBox_Checked"
                                       Unchecked="OptOutCheckBox_Unchecked"
-                                      Foreground="{StaticResource OpTextSecondaryBrush}"/>
+                                      Foreground="{StaticResource OpTextSecondaryBrush}" />
 
                             <TextBlock x:Name="LogLocationStatus"
                                        FontSize="11" Margin="0,8,0,0"
                                        Foreground="{StaticResource OpTextAccentBrush}"
-                                       TextWrapping="Wrap"/>
+                                       TextWrapping="Wrap" />
 
                             <Border Background="{DynamicResource WarningFillBrush}"
                                     BorderBrush="#33FFB347" BorderThickness="1"
                                     CornerRadius="4" Padding="12" Margin="0,10,0,0"
                                     Visibility="{Binding IsChecked, ElementName=LogOptOutCheckBox, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="Skipping the game log path disables local telemetry and future automated kill/event ingestion."
-                                           Foreground="{StaticResource OpTextSecondaryBrush}"
-                                           FontSize="11" TextWrapping="Wrap"/>
+                                <TextBlock
+                                    Text="Skipping the game log path disables local telemetry and future automated kill/event ingestion."
+                                    Foreground="{StaticResource OpTextSecondaryBrush}"
+                                    FontSize="11" TextWrapping="Wrap" />
                             </Border>
                         </StackPanel>
                     </Border>
@@ -194,10 +336,11 @@
                         <StackPanel>
                             <TextBlock Text="SETUP CHECKLIST"
                                        Foreground="{StaticResource OpTextTitleBrush}"
-                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <TextBlock Text="Each integration can be configured now or intentionally skipped. Proceed unlocks when every item is either saved or deferred."
-                                       Foreground="{StaticResource OpTextSecondaryBrush}"
-                                       FontSize="12" TextWrapping="Wrap"/>
+                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock
+                                Text="Each integration can be configured now or intentionally skipped. Proceed unlocks when every item is either saved or deferred."
+                                Foreground="{StaticResource OpTextSecondaryBrush}"
+                                FontSize="12" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
 
@@ -205,15 +348,19 @@
                         <StackPanel>
                             <TextBlock Text="WHY THIS MATTERS"
                                        Foreground="{StaticResource OpTextTitleBrush}"
-                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
                             <StackPanel>
-                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,0,0,6" TextWrapping="Wrap">
-                                    <Run Text="UEXCorp" FontWeight="SemiBold" Foreground="{StaticResource OpTextTitleBrush}"/>
-                                    <Run Text=" — trade and commodity market enrichment"/>
+                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                           Margin="0,0,0,6" TextWrapping="Wrap">
+                                    <Run Text="UEXCorp" FontWeight="SemiBold"
+                                         Foreground="{StaticResource OpTextTitleBrush}" />
+                                    <Run Text=" — trade and commodity market enrichment" />
                                 </TextBlock>
-                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" TextWrapping="Wrap">
-                                    <Run Text="Game Log" FontWeight="SemiBold" Foreground="{StaticResource OpTextTitleBrush}"/>
-                                    <Run Text=" — future basis for combat telemetry and kill tracking"/>
+                                <TextBlock Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"
+                                           TextWrapping="Wrap">
+                                    <Run Text="Game Log" FontWeight="SemiBold"
+                                         Foreground="{StaticResource OpTextTitleBrush}" />
+                                    <Run Text=" — future basis for combat telemetry and kill tracking" />
                                 </TextBlock>
                             </StackPanel>
                         </StackPanel>
@@ -223,13 +370,14 @@
                         <StackPanel>
                             <TextBlock Text="SECURITY POSTURE"
                                        Foreground="{StaticResource OpTextTitleBrush}"
-                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <TextBlock Text="Settings are stored locally for the current user profile. Sensitive values are processed through the application's protected storage layer before persistence."
-                                       Foreground="{StaticResource OpTextSecondaryBrush}"
-                                       FontSize="12" TextWrapping="Wrap"/>
+                                       FontSize="14" FontWeight="Bold" Margin="0,0,0,10" />
+                            <TextBlock
+                                Text="Settings are stored locally for the current user profile. Sensitive values are processed through the application's protected storage layer before persistence."
+                                Foreground="{StaticResource OpTextSecondaryBrush}"
+                                FontSize="12" TextWrapping="Wrap" />
                             <TextBlock Text="All credentials can be updated at any time from the Settings area."
                                        Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                       FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
 
@@ -241,12 +389,12 @@
         <Border Grid.Row="2" Style="{StaticResource OpHeaderBorderStyle}" Margin="0,12,0,0" Padding="12">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Proceed activates once every integration is either configured or explicitly skipped."
                            Foreground="{StaticResource OpTextSecondaryBrush}"
-                           FontSize="12" VerticalAlignment="Center"/>
+                           FontSize="12" VerticalAlignment="Center" />
                 <Button Grid.Column="1"
                         Content="PROCEED TO APP"
                         x:Name="ProceedBtn"
@@ -255,7 +403,7 @@
                         Height="36"
                         Padding="24,0"
                         FontSize="13"
-                        Style="{StaticResource PrimaryActionButtonStyle}"/>
+                        Style="{StaticResource PrimaryActionButtonStyle}" />
             </Grid>
         </Border>
     </Grid>

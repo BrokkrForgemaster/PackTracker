@@ -72,7 +72,7 @@ public class ChatWindowViewModelTests
     {
         var sut = new OnlineUserViewModel
         {
-            DisplayName = "Ghost",
+            DiscordDisplayName = "Ghost",
             Username = "ghost"
         };
 

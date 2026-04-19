@@ -12,6 +12,8 @@ public class AvailableChannelViewModel : ViewModelBase
     public string AccessSummary { get; set; } = string.Empty;
     public Brush AccentBrush { get; set; } = Brushes.Gray;
 
+    private bool _isSelected;
+
     public bool HasUnread
     {
         get => _hasUnread;
@@ -22,5 +24,11 @@ public class AvailableChannelViewModel : ViewModelBase
     {
         get => _unreadCount;
         set => SetProperty(ref _unreadCount, value);
+    }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
     }
 }

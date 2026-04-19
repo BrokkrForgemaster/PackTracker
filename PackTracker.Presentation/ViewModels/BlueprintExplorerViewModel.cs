@@ -79,6 +79,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     private readonly IApiClientProvider _apiClientProvider;
     private readonly WikiBlueprintService _wikiBlueprints;
     private readonly ILogger<BlueprintExplorerViewModel> _logger;
+    private CancellationTokenSource? _searchDebounce;
 
     private const string AllCategoriesLabel = "All Categories";
 
@@ -99,6 +100,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private string? selectedCategory;
     [ObservableProperty] private bool inGameOnly;
+    [ObservableProperty] private bool isResultsDropDownOpen;
     [ObservableProperty] private bool isLoading;
     [ObservableProperty] private string statusMessage = "Loading blueprints...";
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
@@ -210,6 +212,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             StatusMessage = Results.Count == 0
                 ? "No blueprints matched your search."
                 : $"{Results.Count} results.";
+
+            IsResultsDropDownOpen = Results.Count > 0 && !string.IsNullOrWhiteSpace(SearchText);
         }
         catch (Exception ex)
         {
@@ -222,7 +226,28 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         }
     }
 
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchDebounce?.Cancel();
+        _searchDebounce = new CancellationTokenSource();
+        var token = _searchDebounce.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, token);
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(SearchAsync);
+            }
+            catch (OperationCanceledException) { }
+        }, token);
+    }
+
     partial void OnSelectedCategoryChanged(string? value)
+    {
+        _ = SearchAsync();
+    }
+
+    partial void OnInGameOnlyChanged(bool value)
     {
         _ = SearchAsync();
     }
