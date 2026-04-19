@@ -575,7 +575,10 @@ namespace PackTracker.Presentation.Views
 
                     SidebarAvatarImage.Source = CurrentUserAvatar;
 
-                    var patchAsset = profile.DiscordDivision?.Trim().ToLowerInvariant() switch
+                    // Division patch takes priority; fall back to user's selected theme, then HW icon.
+                    var key = profile.DiscordDivision?.Trim().ToLowerInvariant()
+                              ?? _settingsService.GetSettings().Theme?.Trim().ToLowerInvariant();
+                    var patchAsset = key switch
                     {
                         "tacops" => "Assets/tacops.png",
                         "specops" => "Assets/specops.png",
