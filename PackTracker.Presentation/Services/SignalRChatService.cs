@@ -153,8 +153,14 @@ public class SignalRChatService : IAsyncDisposable
                 DateTime sentAt = DateTime.UtcNow;
                 if (json.TryGetProperty("sentAt", out var sa) || json.TryGetProperty("SentAt", out sa))
                 {
-                    if (sa.ValueKind == JsonValueKind.String && DateTime.TryParse(sa.GetString(), out var parsed))
-                        sentAt = parsed;
+                    if (sa.ValueKind == JsonValueKind.String &&
+                        DateTime.TryParse(sa.GetString(),
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.RoundtripKind,
+                            out var parsed))
+                        sentAt = parsed.Kind == DateTimeKind.Unspecified
+                            ? DateTime.SpecifyKind(parsed, DateTimeKind.Utc)
+                            : parsed;
                 }
 
                 var msg = new ChatMessageDto(id, requestId, sender, senderDisplayName, content, sentAt, avatarUrl);
@@ -525,8 +531,14 @@ public class SignalRChatService : IAsyncDisposable
         DateTime sentAt = DateTime.UtcNow;
         if (json.TryGetProperty("sentAt", out var sa) || json.TryGetProperty("SentAt", out sa))
         {
-            if (sa.ValueKind == JsonValueKind.String && DateTime.TryParse(sa.GetString(), out var parsed))
-                sentAt = parsed;
+            if (sa.ValueKind == JsonValueKind.String &&
+                DateTime.TryParse(sa.GetString(),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.RoundtripKind,
+                    out var parsed))
+                sentAt = parsed.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(parsed, DateTimeKind.Utc)
+                    : parsed;
         }
 
         return new ChatMessageDto(id, channel, sender, senderDisplayName, content, sentAt, avatarUrl, senderRole);
