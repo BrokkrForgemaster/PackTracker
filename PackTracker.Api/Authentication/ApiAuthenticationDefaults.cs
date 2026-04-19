@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
 
 namespace PackTracker.Api.Authentication;
 
+/// <summary name="ApiAuthenticationDefaults">
+/// Defines default values for API authentication schemes and related utilities.
+/// </summary>
 public static class ApiAuthenticationDefaults
 {
     public const string SmartScheme = "Smart";

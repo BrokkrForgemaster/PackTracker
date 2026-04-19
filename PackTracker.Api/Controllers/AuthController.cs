@@ -201,7 +201,6 @@ public class AuthController : ControllerBase
                  <html>
                    <body style="background:#121212;color:#fff;font-family:sans-serif;text-align:center;padding-top:15%">
                      <h2>{message}</h2>
-                     <button style="padding:10px 20px;border:none;border-radius:6px;background:#c2a23a;color:#000;font-weight:bold;margin-top:20px;" onclick="window.close()">Close Window</button>
                    </body>
                  </html>
                  """, "text/html");
@@ -235,6 +234,13 @@ public class AuthController : ControllerBase
                                                  border: 1px solid rgba(255, 255, 255, 0.08);
                                                }
 
+                                               .logo {
+                                                 display: block;
+                                                 margin: 0 auto 20px auto;
+                                                 width: 64px;
+                                                 height: 64px;
+                                               }
+
                                                .pill {
                                                  display: inline-block;
                                                  padding: 8px 12px;
@@ -265,6 +271,26 @@ public class AuthController : ControllerBase
                                                  color: #9e9e9e;
                                                }
 
+                                               .close-btn {
+                                                 margin-top: 20px;
+                                                 padding: 10px 16px;
+                                                 border-radius: 10px;
+                                                 border: 1px solid rgba(194, 162, 58, 0.4);
+                                                 background: rgba(194, 162, 58, 0.12);
+                                                 color: #e5ca6f;
+                                                 font-size: 14px;
+                                                 font-weight: 600;
+                                                 cursor: pointer;
+                                                 transition: background 0.2s ease, transform 0.1s ease;
+                                               }
+
+                                               .close-btn:hover {
+                                                 background: rgba(194, 162, 58, 0.20);
+                                               }
+
+                                               .close-btn:active {
+                                                 transform: scale(0.98);
+                                               }
 
                                                #fallbackMessage {
                                                  display: none;
@@ -317,6 +343,17 @@ public class AuthController : ControllerBase
                                                    }
                                                  }
 
+                                                 function manualClose() {
+                                                   tryClose();
+
+                                                   setTimeout(function () {
+                                                     if (!window.closed) {
+                                                       showFallback();
+                                                       alert("Your browser blocked automatic closing. Please close this tab manually, or use Ctrl + W.");
+                                                     }
+                                                   }, 500);
+                                                 }
+
                                                  function startCloseSequence() {
                                                    notifyOpener();
                                                    tryClose();
@@ -332,6 +369,8 @@ public class AuthController : ControllerBase
                                                    }, 1800);
                                                  }
 
+                                                 window.manualClose = manualClose;
+
                                                  if (document.readyState === "loading") {
                                                    document.addEventListener("DOMContentLoaded", startCloseSequence);
                                                  } else {
@@ -342,16 +381,29 @@ public class AuthController : ControllerBase
                                            </head>
                                            <body>
                                              <div class="card">
+                                               <img
+                                                 class="logo"
+                                                 src="https://imgur.com/iFT2tWJ"
+                                                 alt="PackTracker Logo" />
+
                                                <div class="pill">HOUSE WOLF // AUTHORIZED</div>
+
                                                <h1>Discord authentication complete</h1>
+
                                                <p>PackTracker has received your login. You can return to the desktop app now.</p>
+
                                                <p class="hint">
                                                  This tab will try to close automatically. If your browser blocks it,
                                                  use the button below or close the tab manually.
                                                </p>
-                                                  <button style="padding:10px 20px;border:none;border-radius:6px;background:#c2a23a;color:#000;font-weight:bold;margin-top:20px;" onclick="window.close()">Close Window</button>
+
+                                               <button type="button" class="close-btn" onclick="manualClose()">
+                                                 Close Tab
+                                               </button>
+
                                                <p id="fallbackMessage">
-                                                 Your browser blocked automatic tab closing. Please close this tab manually.
+                                                 Your browser blocked automatic closing.<br />
+                                                 Click <strong>Close Tab</strong> again, or press <strong>Ctrl + W</strong> to close this tab manually.
                                                </p>
                                              </div>
                                            </body>

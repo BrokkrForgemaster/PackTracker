@@ -13,7 +13,7 @@ using PackTracker.Domain.Enums;
 
 namespace PackTracker.Api.Controllers;
 
-/// <summary>
+/// <summary name="AssistanceRequestsController">
 /// Handles general assistance request workflows for the Assistance Hub feature.
 /// </summary>
 [ApiController]
