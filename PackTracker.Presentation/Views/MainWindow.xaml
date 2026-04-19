@@ -113,7 +113,8 @@
                             <StackPanel>
                                 <Border Style="{StaticResource GlassPanelStyle}"
                                         Padding="18"
-                                        Margin="0,0,0,18">
+                                        Margin="0,0,0,18"
+                                        Effect="{x:Null}">
                                     <StackPanel>
                                         <Image x:Name="SidebarThemeImage"
                                                Width="120"

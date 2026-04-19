@@ -577,6 +577,16 @@ namespace PackTracker.Presentation.Views
                     }
 
                     SidebarAvatarImage.Source = CurrentUserAvatar;
+
+                    var patchAsset = profile.DiscordDivision?.Trim().ToLowerInvariant() switch
+                    {
+                        "tacops" => "Assets/tacops.png",
+                        "specops" => "Assets/specops.png",
+                        "locops" => "Assets/locops.png",
+                        "arcops" => "Assets/arcops.png",
+                        _ => "Assets/HWiconnew.png"
+                    };
+                    SidebarThemeImage.Source = LoadPackImage(patchAsset) ?? LoadPackImage("Assets/HWiconnew.png");
                 });
             }
             catch (Exception ex)
