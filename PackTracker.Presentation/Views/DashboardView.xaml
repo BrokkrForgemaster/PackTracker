@@ -456,6 +456,15 @@
                             </ItemsControl>
                         </ScrollViewer>
 
+                        <!-- Error message (API failure) -->
+                        <TextBlock Text="{Binding RequestLoadError}"
+                                   Foreground="#CC4444"
+                                   FontSize="10"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4"
+                                   Visibility="{Binding RequestLoadError, Converter={StaticResource NullToVisibilityConverter}}" />
+
+                        <!-- Empty state (no error, no items) -->
                         <TextBlock Text="No active tasks."
                                    FontStyle="Italic"
                                    Foreground="{StaticResource OpTextMutedBrush}"
@@ -465,9 +474,13 @@
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ActiveRequests.Count}" Value="0">
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding ActiveRequests.Count}" Value="0" />
+                                                <Condition Binding="{Binding RequestLoadError}" Value="{x:Null}" />
+                                            </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
+                                        </MultiDataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>

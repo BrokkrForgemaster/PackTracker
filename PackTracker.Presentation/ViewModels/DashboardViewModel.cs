@@ -30,6 +30,7 @@ public class DashboardViewModel : ViewModelBase
     private bool _chatSoundMuted;
     private string? _currentUsername;
     private ChatWindowViewModel? _activeChatWindow;
+    private string? _requestLoadError;
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
@@ -262,9 +263,10 @@ public class DashboardViewModel : ViewModelBase
     {
         try
         {
+            RequestLoadError = null;
             using var client = _apiClientProvider.CreateClient();
             var summary = await client.GetFromJsonAsync<DashboardSummaryDto>("api/v1/dashboard/summary");
-            
+
             if (summary != null)
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
@@ -278,9 +280,12 @@ public class DashboardViewModel : ViewModelBase
                 System.Windows.Application.Current.Dispatcher.Invoke(new Action(() => OnPropertyChanged(nameof(TopGuideRequests))));
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Handle
+            System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                RequestLoadError = $"Failed to load requests: {ex.Message}";
+            }));
         }
     }
 
@@ -313,6 +318,12 @@ public class DashboardViewModel : ViewModelBase
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
     public ObservableCollection<OnlineUserViewModel> OnlineUsers { get; }
     public ObservableCollection<ActiveRequestDto> ActiveRequests { get; }
+
+    public string? RequestLoadError
+    {
+        get => _requestLoadError;
+        private set => SetProperty(ref _requestLoadError, value);
+    }
 
     public GuideDashboardViewModel Guide { get; }
     public IEnumerable<PackTracker.Domain.Entities.GuideRequest> TopGuideRequests => Guide.Requests.Take(2);
