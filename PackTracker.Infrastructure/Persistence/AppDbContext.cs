@@ -43,6 +43,11 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
     /// </summary>
     public DbSet<Profile> Profiles => Set<Profile>();
 
+    public Task<int> ExecuteSqlInterpolatedAsync(
+        FormattableString sql,
+        CancellationToken cancellationToken = default) =>
+        Database.ExecuteSqlInterpolatedAsync(sql, cancellationToken);
+
     #endregion
 
     #region DbSets - Requests / Collaboration

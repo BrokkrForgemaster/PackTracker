@@ -19,4 +19,5 @@ public interface IApplicationDbContext
     DbSet<Material> Materials { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<int> ExecuteSqlInterpolatedAsync(FormattableString sql, CancellationToken cancellationToken = default);
 }

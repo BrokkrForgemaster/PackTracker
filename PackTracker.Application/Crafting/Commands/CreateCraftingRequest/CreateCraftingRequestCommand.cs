@@ -80,9 +80,41 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
         };
 
         _db.CraftingRequests.Add(craftingRequest);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsLegacyCraftingSchemaFailure(ex))
+        {
+            _db.CraftingRequests.Remove(craftingRequest);
+
+            await _db.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO "CraftingRequests"
+                ("Id", "BlueprintId", "RequesterProfileId", "AssignedCrafterProfileId", "QuantityRequested", "MinimumQuality",
+                 "RefusalReason", "Priority", "Status", "DeliveryLocation", "RewardOffered", "RequiredBy", "Notes",
+                 "CreatedAt", "UpdatedAt", "CompletedAt")
+                VALUES
+                ({craftingRequest.Id}, {craftingRequest.BlueprintId}, {craftingRequest.RequesterProfileId}, {craftingRequest.AssignedCrafterProfileId},
+                 {craftingRequest.QuantityRequested}, {craftingRequest.MinimumQuality}, {craftingRequest.RefusalReason}, {(int)craftingRequest.Priority},
+                 {(int)craftingRequest.Status}, {craftingRequest.DeliveryLocation}, {craftingRequest.RewardOffered}, {craftingRequest.RequiredBy},
+                 {craftingRequest.Notes}, {craftingRequest.CreatedAt}, {craftingRequest.UpdatedAt}, {craftingRequest.CompletedAt})
+                """,
+                cancellationToken);
+        }
+
         await _notifier.NotifyAsync("CraftingRequestCreated", craftingRequest.Id, cancellationToken);
 
         return OperationResult<Guid>.Ok(craftingRequest.Id);
+    }
+
+    private static bool IsLegacyCraftingSchemaFailure(Exception ex)
+    {
+        var message = ex.ToString();
+        return message.Contains("ItemName", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("MaterialSupplyMode", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("RequesterUtcOffsetMinutes", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("column", StringComparison.OrdinalIgnoreCase) && message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase);
     }
 }
