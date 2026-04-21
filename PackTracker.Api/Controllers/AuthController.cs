@@ -132,7 +132,11 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during /api/v1/auth/complete processing.");
-            return HtmlMessage($"Error completing login:<br><code>{WebUtility.HtmlEncode(ex.Message)}</code>");
+            var inner = ex.InnerException?.Message ?? string.Empty;
+            var detail = string.IsNullOrEmpty(inner)
+                ? WebUtility.HtmlEncode(ex.Message)
+                : $"{WebUtility.HtmlEncode(ex.Message)}<br><small>{WebUtility.HtmlEncode(inner)}</small>";
+            return HtmlMessage($"Error completing login:<br><code>{detail}</code>");
         }
     }
 

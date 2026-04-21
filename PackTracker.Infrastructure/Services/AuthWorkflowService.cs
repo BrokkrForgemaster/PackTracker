@@ -55,18 +55,29 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
 
         if (!string.IsNullOrWhiteSpace(request.ClientState))
         {
-            // PERSIST TO DATABASE for multi-instance support
-            var state = new LoginState
+            // Upsert login state — if two OAuth callbacks race (browser retry on slow cold start),
+            // the second insert would violate the unique index on ClientState.
+            var existing = await _db.LoginStates
+                .FirstOrDefaultAsync(s => s.ClientState == request.ClientState, cancellationToken);
+
+            if (existing is null)
             {
-                ClientState = request.ClientState,
-                AccessToken = access,
-                RefreshToken = refresh,
-                ExpiresIn = expires
-            };
+                _db.LoginStates.Add(new LoginState
+                {
+                    ClientState = request.ClientState,
+                    AccessToken = access,
+                    RefreshToken = refresh,
+                    ExpiresIn = expires
+                });
+            }
+            else
+            {
+                existing.AccessToken = access;
+                existing.RefreshToken = refresh;
+                existing.ExpiresIn = expires;
+            }
 
-            _db.LoginStates.Add(state);
             await _db.SaveChangesAsync(cancellationToken);
-
             _logger.LogInformation("Stored OAuth completion payload for client state {ClientState}.", request.ClientState);
         }
         else
