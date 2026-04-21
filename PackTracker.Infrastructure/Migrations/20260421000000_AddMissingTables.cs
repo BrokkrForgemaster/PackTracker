@@ -1,11 +1,15 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using PackTracker.Infrastructure.Persistence;
 
 #nullable disable
 
 namespace PackTracker.Infrastructure.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260421000000_AddMissingTables")]
     public partial class AddMissingTables : Migration
     {
         /// <inheritdoc />
