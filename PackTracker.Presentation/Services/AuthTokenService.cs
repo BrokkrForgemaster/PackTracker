@@ -45,13 +45,21 @@ public sealed class AuthTokenService
             if (!NeedsRefresh(token))
                 return token;
 
-            var refreshed = await RefreshAsync(
+            var (refreshed, invalidToken) = await RefreshAsync(
                 settings.ApiBaseUrl,
                 settings.JwtRefreshToken!,
                 cancellationToken).ConfigureAwait(false);
 
             if (refreshed is null)
+            {
+                if (invalidToken)
+                {
+                    // Revoked/expired token — clear it so we don't retry on every request
+                    await _settingsService.UpdateSettingsAsync(s => s.JwtRefreshToken = string.Empty)
+                        .ConfigureAwait(false);
+                }
                 return token;
+            }
 
             await _settingsService.UpdateSettingsAsync(s =>
             {
@@ -67,13 +75,13 @@ public sealed class AuthTokenService
         }
     }
 
-    private async Task<TokenPayload?> RefreshAsync(
+    private async Task<(TokenPayload? Payload, bool InvalidToken)> RefreshAsync(
         string apiBaseUrl,
         string refreshToken,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(apiBaseUrl))
-            return null;
+            return (null, false);
 
         try
         {
@@ -90,17 +98,19 @@ public sealed class AuthTokenService
                 _logger.LogWarning(
                     "JWT refresh failed with status code {StatusCode}.",
                     (int)response.StatusCode);
-                return null;
+                // 401 means the token is invalid/revoked — stop retrying
+                return (null, response.StatusCode == System.Net.HttpStatusCode.Unauthorized);
             }
 
-            return await response.Content
+            var payload = await response.Content
                 .ReadFromJsonAsync<TokenPayload>(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
+            return (payload, false);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "JWT refresh request failed.");
-            return null;
+            return (null, false);
         }
     }
 
