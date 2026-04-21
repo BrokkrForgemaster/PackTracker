@@ -127,6 +127,52 @@ public static class PackTrackerApiComposition
         var maintenance = scope.ServiceProvider.GetRequiredService<IDataMaintenanceService>();
         var seedService = scope.ServiceProvider.GetRequiredService<CraftingSeedService>();
 
+        // Defensive: ensure critical auth tables exist even if EF migrations fail.
+        // These tables have no prior migration and will be absent on an existing DB.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""LoginStates"" (
+                    ""Id"" uuid NOT NULL,
+                    ""ClientState"" character varying(256) NOT NULL,
+                    ""AccessToken"" text NOT NULL DEFAULT '',
+                    ""RefreshToken"" text NOT NULL DEFAULT '',
+                    ""ExpiresIn"" integer NOT NULL DEFAULT 0,
+                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""ExpiresAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    CONSTRAINT ""PK_LoginStates"" PRIMARY KEY (""Id"")
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_LoginStates_ClientState""
+                    ON ""LoginStates""(""ClientState"");
+
+                CREATE TABLE IF NOT EXISTS ""SyncMetadatas"" (
+                    ""Id"" uuid NOT NULL,
+                    ""TaskName"" character varying(128) NOT NULL,
+                    ""LastStartedAt"" timestamp with time zone,
+                    ""LastCompletedAt"" timestamp with time zone,
+                    ""IsSuccess"" boolean NOT NULL DEFAULT false,
+                    ""LastErrorMessage"" text,
+                    ""ItemsProcessed"" integer NOT NULL DEFAULT 0,
+                    CONSTRAINT ""PK_SyncMetadatas"" PRIMARY KEY (""Id"")
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SyncMetadatas_TaskName""
+                    ON ""SyncMetadatas""(""TaskName"");
+
+                CREATE TABLE IF NOT EXISTS ""DistributedLocks"" (
+                    ""LockKey"" character varying(128) NOT NULL,
+                    ""LockedBy"" character varying(128) NOT NULL,
+                    ""LockedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""ExpiresAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    CONSTRAINT ""PK_DistributedLocks"" PRIMARY KEY (""LockKey"")
+                );
+            ", cancellationToken);
+            logger.LogInformation("Critical auth tables verified.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not verify critical auth tables (non-fatal).");
+        }
+
         try
         {
             logger.LogInformation("Applying database migrations...");
