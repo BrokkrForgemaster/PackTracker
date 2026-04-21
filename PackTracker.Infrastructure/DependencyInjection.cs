@@ -80,6 +80,10 @@ public static class DependencyInjection
         {
             options.UseNpgsql(connectionString);
             options.EnableDetailedErrors();
+            // Snapshot is intentionally behind the model when manual migrations are added
+            // without regenerating the snapshot. Tables are created defensively at startup.
+            options.ConfigureWarnings(w =>
+                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
