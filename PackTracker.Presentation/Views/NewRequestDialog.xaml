@@ -177,10 +177,10 @@
                                        FontWeight="Bold"
                                        Margin="0,0,0,12"/>
 
-                            <TextBlock Text="HELPERS NEEDED" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding NumberOfHelpersNeededText, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBlock Text="MAX CLAIMS" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding MaxClaimsText, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource DialogTextBox}"
-                                     ToolTip="How many people do you need? You can enter a range like 3-4."
+                                     ToolTip="Maximum number of members who can claim this request (default 1)."
                                      Margin="0,0,0,10"/>
 
                             <TextBlock Text="MEETING LOCATION" Style="{StaticResource FieldLabel}"/>

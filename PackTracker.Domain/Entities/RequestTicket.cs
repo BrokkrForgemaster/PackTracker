@@ -147,6 +147,11 @@ public class RequestTicket
     /// </summary>
     public string RecordingPermission { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets whether the request is pinned to the top of the dashboard.
+    /// </summary>
+    public bool IsPinned { get; set; }
+
     #endregion
 
     #region Material / Resource Request Fields
@@ -172,9 +177,9 @@ public class RequestTicket
     public string? RewardOffered { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of helpers needed.
+    /// Gets or sets the maximum number of members who can claim this request.
     /// </summary>
-    public int? NumberOfHelpersNeeded { get; set; }
+    public int MaxClaims { get; set; } = 1;
 
     #endregion
 

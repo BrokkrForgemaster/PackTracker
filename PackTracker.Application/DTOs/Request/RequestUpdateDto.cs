@@ -91,10 +91,10 @@ public sealed class RequestUpdateDto
     public string? RewardOffered { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of helpers needed, if applicable.
+    /// Gets or sets the maximum number of claims allowed.
     /// </summary>
-    [Range(1, 100)]
-    public int? NumberOfHelpersNeeded { get; set; }
+    [Range(1, 1000)]
+    public int? MaxClaims { get; set; }
 
     #endregion
 }

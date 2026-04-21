@@ -23,9 +23,9 @@ public sealed class CreateLegacyRequestCommandValidator : AbstractValidator<Crea
         RuleFor(x => x.Request.QuantityNeeded)
             .GreaterThan(0)
             .When(x => x.Request.QuantityNeeded.HasValue);
-        RuleFor(x => x.Request.NumberOfHelpersNeeded)
-            .InclusiveBetween(1, 100)
-            .When(x => x.Request.NumberOfHelpersNeeded.HasValue);
+        RuleFor(x => x.Request.MaxClaims)
+            .InclusiveBetween(1, 1000)
+            .When(x => x.Request.MaxClaims.HasValue);
     }
 }
 
@@ -61,7 +61,8 @@ public sealed class CreateLegacyRequestCommandHandler : IRequestHandler<CreateLe
             QuantityNeeded = request.Request.QuantityNeeded,
             MeetingLocation = request.Request.MeetingLocation,
             RewardOffered = request.Request.RewardOffered,
-            NumberOfHelpersNeeded = request.Request.NumberOfHelpersNeeded
+            MaxClaims = request.Request.MaxClaims ?? 1,
+            IsPinned = request.Request.IsPinned
         };
 
         _dbContext.RequestTickets.Add(entity);

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
+using PackTracker.Domain.Security;
 using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Api.Hubs;
@@ -96,7 +97,7 @@ public class RequestsHub : Hub
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? Context.User?.FindFirstValue("sub");
         var username = Context.User?.Identity?.Name ?? "Unknown";
         var connectionId = Context.ConnectionId;
 
@@ -241,7 +242,8 @@ public class RequestsHub : Hub
         if (normalizedLobby.StartsWith("dm:", StringComparison.OrdinalIgnoreCase))
         {
             var parts = normalizedLobby.Split(':');
-            if (parts.Length < 3 || (parts[1] != currentUsername.ToLowerInvariant() && parts[2] != currentUsername.ToLowerInvariant()))
+            var lowerUser = currentUsername.ToLowerInvariant();
+            if (parts.Length < 3 || (parts[1] != lowerUser && parts[2] != lowerUser))
             {
                 throw new HubException("Access Denied: You do not have permission to view this conversation.");
             }
@@ -326,8 +328,18 @@ public class RequestsHub : Hub
         // Persist edit to DB
         var dbMsg = await _db.LobbyChatMessages.FindAsync(messageId)
             ?? throw new HubException("Message not found.");
-        if (dbMsg.SenderDiscordId != discordId)
-            throw new HubException("You can only edit your own messages.");
+
+        var isModerator = false;
+        try
+        {
+            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
+            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
+        }
+        catch { /* ignore */ }
+
+        if (dbMsg.SenderDiscordId != discordId && !isModerator)
+            throw new HubException("You do not have permission to edit this message.");
+
         dbMsg.Content = trimmedContent;
         dbMsg.EditedAt = editedAt;
         await _db.SaveChangesAsync(CancellationToken.None);
@@ -368,8 +380,18 @@ public class RequestsHub : Hub
         // Soft-delete in DB
         var dbMsg = await _db.LobbyChatMessages.FindAsync(messageId)
             ?? throw new HubException("Message not found.");
-        if (dbMsg.SenderDiscordId != discordId)
-            throw new HubException("You can only delete your own messages.");
+
+        var isModerator = false;
+        try
+        {
+            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
+            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
+        }
+        catch { /* ignore */ }
+
+        if (dbMsg.SenderDiscordId != discordId && !isModerator)
+            throw new HubException("You do not have permission to delete this message.");
+
         dbMsg.IsDeleted = true;
         await _db.SaveChangesAsync(CancellationToken.None);
 
@@ -476,6 +498,7 @@ public class RequestsHub : Hub
             {
                 _db.RequestComments.Add(new RequestComment
                 {
+                    Id = Guid.Parse(message.Id),
                     RequestId = parsedRequestId,
                     AuthorProfileId = profile.Id,
                     Content = message.Content,
@@ -500,6 +523,97 @@ public class RequestsHub : Hub
         });
     }
 
+    /// <summary>
+    /// Edits an existing request-room message.
+    /// </summary>
+    public async Task EditRequestMessage(string requestId, string messageId, string newContent)
+    {
+        if (string.IsNullOrWhiteSpace(requestId))
+            throw new HubException("Request ID is required.");
+        if (string.IsNullOrWhiteSpace(messageId))
+            throw new HubException("Message ID is required.");
+        if (string.IsNullOrWhiteSpace(newContent))
+            throw new HubException("New content cannot be empty.");
+
+        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var trimmedContent = newContent.Trim();
+        var editedAt = DateTime.UtcNow;
+
+        if (!Guid.TryParse(messageId, out var commentId))
+            throw new HubException("Invalid message ID.");
+
+        var dbMsg = await _db.RequestComments.FindAsync(commentId)
+            ?? throw new HubException("Message not found.");
+
+        var isModerator = false;
+        try
+        {
+            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
+            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
+            
+            // Allow if original author or moderator
+            if (profile != null && dbMsg.AuthorProfileId != profile.Id && !isModerator)
+                throw new HubException("You do not have permission to edit this message.");
+        }
+        catch (HubException) { throw; }
+        catch { throw new HubException("Authorization failed."); }
+
+        dbMsg.Content = trimmedContent;
+        dbMsg.EditedAt = editedAt;
+        await _db.SaveChangesAsync(CancellationToken.None);
+
+        var groupName = GetRequestGroupName(requestId);
+        await Clients.Group(groupName).SendAsync("RequestMessageEdited", new
+        {
+            MessageId = messageId,
+            RequestId = requestId,
+            NewContent = trimmedContent,
+            EditedAt = editedAt
+        });
+    }
+
+    /// <summary>
+    /// Deletes (soft-deletes) an existing request-room message.
+    /// </summary>
+    public async Task DeleteRequestMessage(string requestId, string messageId)
+    {
+        if (string.IsNullOrWhiteSpace(requestId))
+            throw new HubException("Request ID is required.");
+        if (string.IsNullOrWhiteSpace(messageId))
+            throw new HubException("Message ID is required.");
+
+        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
+        if (!Guid.TryParse(messageId, out var commentId))
+            throw new HubException("Invalid message ID.");
+
+        var dbMsg = await _db.RequestComments.FindAsync(commentId)
+            ?? throw new HubException("Message not found.");
+
+        var isModerator = false;
+        try
+        {
+            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
+            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
+            
+            // Allow if original author or moderator
+            if (profile != null && dbMsg.AuthorProfileId != profile.Id && !isModerator)
+                throw new HubException("You do not have permission to delete this message.");
+        }
+        catch (HubException) { throw; }
+        catch { throw new HubException("Authorization failed."); }
+
+        dbMsg.IsDeleted = true;
+        await _db.SaveChangesAsync(CancellationToken.None);
+
+        var groupName = GetRequestGroupName(requestId);
+        await Clients.Group(groupName).SendAsync("RequestMessageDeleted", new
+        {
+            MessageId = messageId,
+            RequestId = requestId
+        });
+    }
+
     public async Task SendDirectMessage(string targetUsername, string content)
     {
         if (string.IsNullOrWhiteSpace(targetUsername))
@@ -508,7 +622,7 @@ public class RequestsHub : Hub
         if (string.IsNullOrWhiteSpace(content))
             throw new HubException("Message content cannot be empty.");
 
-        var senderDiscordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var senderDiscordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? Context.User?.FindFirstValue("sub") ?? string.Empty;
         var senderUsername = Context.User?.Identity?.Name ?? "Unknown";
 
         var senderProfile = await _profiles.GetByDiscordIdAsync(senderDiscordId, CancellationToken.None);

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Common;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
 
 namespace PackTracker.Application.Crafting.Commands.AssignCraftingRequest;
@@ -42,7 +43,32 @@ public sealed class AssignCraftingRequestCommandHandler : IRequestHandler<Assign
         if (request.Status != RequestStatus.Open)
             return OperationResult<Guid>.Fail("Only open requests can be assigned.");
 
-        request.AssignedCrafterProfileId = profile.Id;
+        var currentClaims = await _db.RequestClaims
+            .CountAsync(c => c.RequestId == command.RequestId && c.RequestType == "Crafting", cancellationToken);
+
+        if (request.MaxClaims > 0 && currentClaims >= request.MaxClaims)
+        {
+            return OperationResult<Guid>.Fail("This request has already reached its maximum number of claims.");
+        }
+
+        var alreadyClaimed = await _db.RequestClaims
+            .AnyAsync(c => c.RequestId == command.RequestId && c.RequestType == "Crafting" && c.ProfileId == profile.Id, cancellationToken);
+
+        if (alreadyClaimed)
+        {
+            return OperationResult<Guid>.Fail("You have already claimed this request.");
+        }
+
+        var claim = new RequestClaim
+        {
+            RequestId = command.RequestId,
+            RequestType = "Crafting",
+            ProfileId = profile.Id,
+            ClaimedAt = DateTime.UtcNow
+        };
+
+        _db.RequestClaims.Add(claim);
+
         request.Status = RequestStatus.Accepted;
         request.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);

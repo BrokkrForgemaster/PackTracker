@@ -25,9 +25,9 @@ public sealed class UpdateLegacyRequestCommandValidator : AbstractValidator<Upda
         RuleFor(x => x.Request.QuantityNeeded)
             .GreaterThan(0)
             .When(x => x.Request.QuantityNeeded.HasValue);
-        RuleFor(x => x.Request.NumberOfHelpersNeeded)
-            .InclusiveBetween(1, 100)
-            .When(x => x.Request.NumberOfHelpersNeeded.HasValue);
+        RuleFor(x => x.Request.MaxClaims)
+            .InclusiveBetween(1, 1000)
+            .When(x => x.Request.MaxClaims.HasValue);
     }
 }
 
@@ -62,7 +62,7 @@ public sealed class UpdateLegacyRequestCommandHandler : IRequestHandler<UpdateLe
         entity.QuantityNeeded = request.Request.QuantityNeeded;
         entity.MeetingLocation = request.Request.MeetingLocation;
         entity.RewardOffered = request.Request.RewardOffered;
-        entity.NumberOfHelpersNeeded = request.Request.NumberOfHelpersNeeded;
+        entity.MaxClaims = request.Request.MaxClaims ?? entity.MaxClaims;
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);

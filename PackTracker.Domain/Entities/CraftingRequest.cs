@@ -65,6 +65,16 @@ public class CraftingRequest
     public RequestStatus Status { get; set; } = RequestStatus.Open;
 
     /// <summary>
+    /// Gets or sets whether the request is pinned to the top of the dashboard.
+    /// </summary>
+    public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of members who can claim this request.
+    /// </summary>
+    public int MaxClaims { get; set; } = 1;
+
+    /// <summary>
     /// Gets or sets the delivery location for the crafted item.
     /// </summary>
     /// <summary>

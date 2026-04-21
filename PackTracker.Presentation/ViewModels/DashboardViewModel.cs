@@ -57,6 +57,8 @@ public class DashboardViewModel : ViewModelBase
         CollapsedWindowsWithUnread = new ObservableCollection<ChatWindowViewModel>();
         OnlineUsers = new ObservableCollection<OnlineUserViewModel>();
         ActiveRequests = new ObservableCollection<ActiveRequestDto>();
+        PinnedRequests = new ObservableCollection<ActiveRequestDto>();
+        RegularRequests = new ObservableCollection<ActiveRequestDto>();
         MyActiveTasks = new ObservableCollection<ActiveRequestDto>();
         MyOpenRequests = new ObservableCollection<ActiveRequestDto>();
 
@@ -332,8 +334,17 @@ public class DashboardViewModel : ViewModelBase
                 System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
                     ActiveRequests.Clear();
+                    PinnedRequests.Clear();
+                    RegularRequests.Clear();
+
                     foreach (var req in summary.ActiveRequests)
+                    {
                         ActiveRequests.Add(req);
+                        if (req.IsPinned)
+                            PinnedRequests.Add(req);
+                        else
+                            RegularRequests.Add(req);
+                    }
 
                     MyActiveTasks.Clear();
                     foreach (var req in personalContext.MyActiveTasks)
@@ -342,6 +353,9 @@ public class DashboardViewModel : ViewModelBase
                     MyOpenRequests.Clear();
                     foreach (var req in personalContext.MyPendingRequests)
                         MyOpenRequests.Add(req);
+                    
+                    OnPropertyChanged(nameof(PinnedRequests));
+                    OnPropertyChanged(nameof(RegularRequests));
                 }));
 
                 await Guide.RefreshAsync();
@@ -392,6 +406,8 @@ public class DashboardViewModel : ViewModelBase
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
     public ObservableCollection<OnlineUserViewModel> OnlineUsers { get; }
     public ObservableCollection<ActiveRequestDto> ActiveRequests { get; }
+    public ObservableCollection<ActiveRequestDto> PinnedRequests { get; }
+    public ObservableCollection<ActiveRequestDto> RegularRequests { get; }
     public ObservableCollection<ActiveRequestDto> MyActiveTasks { get; }
     public ObservableCollection<ActiveRequestDto> MyOpenRequests { get; }
 

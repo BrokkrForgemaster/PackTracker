@@ -143,7 +143,7 @@
                                 <TextBlock Text="{Binding SelectedRequest.QuantityDelivered, StringFormat='Quantity Delivered: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.MinimumQuality, StringFormat='Minimum Quality: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.PreferredForm, StringFormat='Preferred Form: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
-                                <TextBlock Text="{Binding SelectedRequest.NumberOfHelpersNeeded, StringFormat='Helpers Needed: {0}', TargetNullValue='Helpers Needed: Any'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding SelectedRequest.MaxClaims, StringFormat='Max Claims: {0}'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.DeliveryLocation, StringFormat='Delivery: {0}', TargetNullValue='Delivery: Not specified'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.RewardOffered, StringFormat='Reward: {0}', TargetNullValue='Reward: None'}" Foreground="{StaticResource OpTextPrimaryBrush}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding SelectedRequest.LinkedCraftingRequestId, StringFormat='Linked Request: {0}', TargetNullValue='Linked Request: None'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" Margin="0,0,0,6"/>

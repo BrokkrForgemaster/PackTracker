@@ -36,6 +36,8 @@ public class ActiveRequestDto
     public string RequesterDisplayName { get; set; } = string.Empty;
     public string? AssigneeDisplayName { get; set; }
     public DateTime CreatedAt { get; set; }
+    public int MaxClaims { get; set; }
+    public int ClaimCount { get; set; }
 }
 
 public class GuideRequestDto

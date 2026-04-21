@@ -32,12 +32,7 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .AsNoTracking()
             .Include(x => x.Material)
             .Include(x => x.RequesterProfile)
-            .Include(x => x.AssignedToProfile)
-            .OrderByDescending(x => x.CreatedAt)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
-            .Where(x => x.Status == RequestStatus.Open
-                     || x.RequesterProfileId == currentProfileId
-                     || x.AssignedToProfileId == currentProfileId)
             .Select(x => new MaterialProcurementRequestListItemDto
             {
                 Id = x.Id,
@@ -48,19 +43,27 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
                 RequesterDisplayName = x.RequesterProfile != null
                     ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username)
                     : "Unknown",
-                AssignedToUsername = x.AssignedToProfile != null ? x.AssignedToProfile.Username : null,
+                AssignedToUsername = _db.RequestClaims
+                    .Where(c => c.RequestId == x.Id && c.RequestType == "Procurement")
+                    .Include(c => c.Profile)
+                    .Select(c => c.Profile != null ? (c.Profile.DiscordDisplayName ?? c.Profile.Username) : "User")
+                    .FirstOrDefault(),
                 QuantityRequested = x.QuantityRequested,
                 QuantityDelivered = x.QuantityDelivered,
                 MinimumQuality = x.MinimumQuality,
                 PreferredForm = x.PreferredForm.ToString(),
                 Priority = x.Priority.ToString(),
                 Status = x.Status.ToString(),
+                IsPinned = x.IsPinned,
                 DeliveryLocation = x.DeliveryLocation,
-                NumberOfHelpersNeeded = x.NumberOfHelpersNeeded,
+                MaxClaims = x.MaxClaims,
+                ClaimCount = _db.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Procurement"),
                 RewardOffered = x.RewardOffered,
                 Notes = x.Notes,
                 CreatedAt = x.CreatedAt
             })
+            .OrderByDescending(x => x.IsPinned)
+            .ThenByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 }

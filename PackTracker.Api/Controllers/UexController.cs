@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
 using PackTracker.Domain.Security;
 
 namespace PackTracker.Api.Controllers;
@@ -44,7 +45,7 @@ public class UexController : ControllerBase
         try
         {
             var data = await _uex.CommoditiesAsync(ct);
-            return Ok(new { traceId, success = true, count = data.Count, data });
+            return Ok(new { traceId, success = true, count = data?.Count ?? 0, data = data ?? new List<Commodity>() });
         }
         catch (Exception ex)
         {

@@ -78,6 +78,8 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
                 ? null
                 : command.Request.RequesterTimeZoneDisplayName.Trim(),
             RequesterUtcOffsetMinutes = command.Request.RequesterUtcOffsetMinutes,
+            IsPinned = command.Request.IsPinned,
+            MaxClaims = command.Request.MaxClaims ?? 1,
             Status = RequestStatus.Open,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

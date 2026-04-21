@@ -106,9 +106,9 @@ public sealed class RequestTicketDto
     public string? RewardOffered { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of helpers needed, if applicable.
+    /// Gets or sets the maximum number of claims allowed.
     /// </summary>
-    public int? NumberOfHelpersNeeded { get; set; }
+    public int MaxClaims { get; set; }
 
     #endregion
 }

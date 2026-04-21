@@ -24,7 +24,7 @@ public sealed class GetProcurementRequestCommentsQueryHandler : IRequestHandler<
 
         return await _db.RequestComments
             .AsNoTracking()
-            .Where(x => x.RequestId == request.RequestId && !x.IsLiveChat)
+            .Where(x => x.RequestId == request.RequestId && !x.IsDeleted)
             .Include(x => x.AuthorProfile)
             .OrderBy(x => x.CreatedAt)
             .Select(x => new RequestCommentDto
@@ -33,7 +33,8 @@ public sealed class GetProcurementRequestCommentsQueryHandler : IRequestHandler<
                 RequestId = x.RequestId,
                 AuthorUsername = x.AuthorProfile != null ? x.AuthorProfile.Username : "Unknown",
                 Content = x.Content,
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                EditedAt = x.EditedAt
             })
             .ToListAsync(cancellationToken);
     }

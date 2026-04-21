@@ -23,7 +23,7 @@ internal static class AssistanceRequestMappings
             QuantityNeeded = request.QuantityNeeded,
             MeetingLocation = request.MeetingLocation,
             RewardOffered = request.RewardOffered,
-            NumberOfHelpersNeeded = request.NumberOfHelpersNeeded,
+            MaxClaims = request.MaxClaims,
             CreatedAt = request.CreatedAt
         };
     }

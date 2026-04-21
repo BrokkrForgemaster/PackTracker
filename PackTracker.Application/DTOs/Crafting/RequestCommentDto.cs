@@ -59,5 +59,10 @@ public sealed class RequestCommentDto
     /// </summary>
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>
+    /// Gets or sets when the comment was last edited.
+    /// </summary>
+    public DateTime? EditedAt { get; set; }
+
     #endregion
 }

@@ -75,14 +75,19 @@ public class MaterialProcurementRequest
     public RequestStatus Status { get; set; } = RequestStatus.Open;
 
     /// <summary>
+    /// Gets or sets whether the request is pinned to the top of the dashboard.
+    /// </summary>
+    public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of members who can claim this request.
+    /// </summary>
+    public int MaxClaims { get; set; } = 1;
+
+    /// <summary>
     /// Gets or sets the delivery location for the materials.
     /// </summary>
     public string? DeliveryLocation { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of helpers needed to fulfill the request.
-    /// </summary>
-    public int? NumberOfHelpersNeeded { get; set; }
 
     /// <summary>
     /// Gets or sets any reward offered for fulfilling the request.

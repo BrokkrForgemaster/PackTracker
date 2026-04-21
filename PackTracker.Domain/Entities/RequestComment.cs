@@ -48,6 +48,16 @@ public class RequestComment
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets or sets whether this comment has been soft-deleted by a moderator or the author.
+    /// </summary>
+    public bool IsDeleted { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the comment was last edited.
+    /// </summary>
+    public DateTime? EditedAt { get; set; }
+
     #endregion
 
     #region Navigation Properties

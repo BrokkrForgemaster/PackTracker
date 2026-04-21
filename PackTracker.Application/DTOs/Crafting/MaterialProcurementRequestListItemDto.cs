@@ -81,14 +81,24 @@ public sealed class MaterialProcurementRequestListItemDto
     public string Status { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets whether the request is pinned.
+    /// </summary>
+    public bool IsPinned { get; set; }
+
+    /// <summary>
     /// Gets or sets the delivery location.
     /// </summary>
     public string? DeliveryLocation { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of helpers required.
+    /// Gets or sets the maximum number of claims allowed.
     /// </summary>
-    public int? NumberOfHelpersNeeded { get; set; }
+    public int MaxClaims { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current number of claims.
+    /// </summary>
+    public int ClaimCount { get; set; }
 
     /// <summary>
     /// Gets or sets the reward offered.

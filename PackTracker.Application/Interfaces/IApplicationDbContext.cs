@@ -20,6 +20,8 @@ public interface IApplicationDbContext
     DbSet<OrgInventoryItem> OrgInventoryItems { get; }
     DbSet<Commodity> Commodities { get; }
     DbSet<CommodityPrice> CommodityPrices { get; }
+    DbSet<RequestClaim> RequestClaims { get; }
+    DbSet<LobbyChatMessage> LobbyChatMessages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task<int> ExecuteSqlInterpolatedAsync(FormattableString sql, CancellationToken cancellationToken = default);

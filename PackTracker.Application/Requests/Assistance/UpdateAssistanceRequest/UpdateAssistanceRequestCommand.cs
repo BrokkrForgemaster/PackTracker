@@ -20,7 +20,7 @@ public sealed class UpdateAssistanceRequestCommandValidator : AbstractValidator<
         RuleFor(x => x.Dto.MeetingLocation).MaximumLength(200);
         RuleFor(x => x.Dto.RewardOffered).MaximumLength(100);
         RuleFor(x => x.Dto.QuantityNeeded).GreaterThan(0).When(x => x.Dto.QuantityNeeded.HasValue);
-        RuleFor(x => x.Dto.NumberOfHelpersNeeded).InclusiveBetween(1, 100).When(x => x.Dto.NumberOfHelpersNeeded.HasValue);
+        RuleFor(x => x.Dto.MaxClaims).InclusiveBetween(1, 1000).When(x => x.Dto.MaxClaims.HasValue);
     }
 }
 
@@ -49,8 +49,8 @@ public sealed class UpdateAssistanceRequestCommandHandler : IRequestHandler<Upda
         if (entity is null)
             return OperationResult<Guid>.Fail("Assistance request not found.");
 
-        // Only the creator may edit (elevated roles checked via AssistanceRequestAccess but keep it simple: creator only)
-        if (entity.CreatedByProfileId != profile.Id)
+        // Only the creator or authorized leadership (Captain+) may edit
+        if (!CanManage(profile, entity))
             return OperationResult<Guid>.Fail("Only the creator may edit this request.");
 
         entity.Title = request.Dto.Title.Trim();
@@ -61,7 +61,7 @@ public sealed class UpdateAssistanceRequestCommandHandler : IRequestHandler<Upda
         entity.QuantityNeeded = request.Dto.QuantityNeeded;
         entity.MeetingLocation = request.Dto.MeetingLocation?.Trim();
         entity.RewardOffered = request.Dto.RewardOffered?.Trim();
-        entity.NumberOfHelpersNeeded = request.Dto.NumberOfHelpersNeeded;
+        entity.MaxClaims = request.Dto.MaxClaims ?? entity.MaxClaims;
         entity.DueAt = request.Dto.DueAt;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -69,4 +69,7 @@ public sealed class UpdateAssistanceRequestCommandHandler : IRequestHandler<Upda
 
         return OperationResult<Guid>.Ok(entity.Id);
     }
+
+    private bool CanManage(Domain.Entities.Profile profile, Domain.Entities.AssistanceRequest assistanceRequest) =>
+        _currentUser.CanManage(profile, assistanceRequest);
 }

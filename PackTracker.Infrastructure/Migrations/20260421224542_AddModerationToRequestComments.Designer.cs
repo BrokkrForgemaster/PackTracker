@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PackTracker.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using PackTracker.Infrastructure.Persistence;
 namespace PackTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260421224542_AddModerationToRequestComments")]
+    partial class AddModerationToRequestComments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -78,12 +81,12 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("MaxClaims")
-                        .HasColumnType("integer");
-
                     b.Property<string>("MeetingLocation")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("NumberOfHelpersNeeded")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
@@ -492,16 +495,10 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<bool>("IsPinned")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("ItemName")
                         .HasColumnType("text");
 
                     b.Property<int>("MaterialSupplyMode")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MaxClaims")
                         .HasColumnType("integer");
 
                     b.Property<int>("MinimumQuality")
@@ -799,23 +796,20 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<bool>("IsPinned")
-                        .HasColumnType("boolean");
-
                     b.Property<Guid?>("LinkedCraftingRequestId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("MaxClaims")
-                        .HasColumnType("integer");
-
                     b.Property<int>("MinimumQuality")
                         .HasColumnType("integer");
 
                     b.Property<string>("Notes")
                         .HasColumnType("text");
+
+                    b.Property<int?>("NumberOfHelpersNeeded")
+                        .HasColumnType("integer");
 
                     b.Property<int>("PreferredForm")
                         .HasColumnType("integer");
@@ -1071,36 +1065,6 @@ namespace PackTracker.Infrastructure.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("PackTracker.Domain.Entities.RequestClaim", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("ClaimedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("ProfileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("RequestId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RequestType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProfileId");
-
-                    b.HasIndex("RequestId", "RequestType", "ProfileId")
-                        .IsUnique();
-
-                    b.ToTable("RequestClaims");
-                });
-
             modelBuilder.Entity("PackTracker.Domain.Entities.RequestComment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1212,9 +1176,6 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Property<bool>("HasMic")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsPinned")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
 
@@ -1222,12 +1183,12 @@ namespace PackTracker.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("MaxClaims")
-                        .HasColumnType("integer");
-
                     b.Property<string>("MeetingLocation")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("NumberOfHelpersNeeded")
+                        .HasColumnType("integer");
 
                     b.Property<string>("PlatformSpecs")
                         .IsRequired()
@@ -1500,17 +1461,6 @@ namespace PackTracker.Infrastructure.Migrations
                     b.HasOne("PackTracker.Domain.Entities.Profile", "Profile")
                         .WithMany()
                         .HasForeignKey("ProfileId");
-
-                    b.Navigation("Profile");
-                });
-
-            modelBuilder.Entity("PackTracker.Domain.Entities.RequestClaim", b =>
-                {
-                    b.HasOne("PackTracker.Domain.Entities.Profile", "Profile")
-                        .WithMany()
-                        .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Profile");
                 });

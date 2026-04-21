@@ -34,7 +34,7 @@ public class BlueprintOwnershipController : ControllerBase
             "Ownership register. BlueprintId={BlueprintId} InterestType={InterestType}",
             blueprintId, request.InterestType);
 
-        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         var result = await _mediator.Send(new RegisterBlueprintOwnershipCommand(blueprintId, discordId, request), ct);
 
         return result.Status switch

@@ -24,6 +24,6 @@ internal static class RequestTicketMappings
             QuantityNeeded = requestTicket.QuantityNeeded,
             MeetingLocation = requestTicket.MeetingLocation,
             RewardOffered = requestTicket.RewardOffered,
-            NumberOfHelpersNeeded = requestTicket.NumberOfHelpersNeeded
+            MaxClaims = requestTicket.MaxClaims
         };
 }

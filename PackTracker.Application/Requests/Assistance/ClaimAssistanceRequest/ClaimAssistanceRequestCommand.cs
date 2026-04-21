@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Common;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
 
 namespace PackTracker.Application.Requests.Assistance.ClaimAssistanceRequest;
@@ -58,7 +59,34 @@ public sealed class ClaimAssistanceRequestCommandHandler : IRequestHandler<Claim
             return OperationResult<Guid>.Fail("Only open requests can be claimed.");
         }
 
-        assistanceRequest.AssignedToProfileId = profile.Id;
+        var currentClaims = await _dbContext.RequestClaims
+            .CountAsync(c => c.RequestId == assistanceRequest.Id && c.RequestType == "Assistance", cancellationToken)
+            .ConfigureAwait(false);
+
+        if (assistanceRequest.MaxClaims > 0 && currentClaims >= assistanceRequest.MaxClaims)
+        {
+            return OperationResult<Guid>.Fail("This request has already reached its maximum number of claims.");
+        }
+
+        var alreadyClaimed = await _dbContext.RequestClaims
+            .AnyAsync(c => c.RequestId == assistanceRequest.Id && c.RequestType == "Assistance" && c.ProfileId == profile.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (alreadyClaimed)
+        {
+            return OperationResult<Guid>.Fail("You have already claimed this request.");
+        }
+
+        var claim = new RequestClaim
+        {
+            RequestId = assistanceRequest.Id,
+            RequestType = "Assistance",
+            ProfileId = profile.Id,
+            ClaimedAt = DateTime.UtcNow
+        };
+
+        _dbContext.RequestClaims.Add(claim);
+        
         assistanceRequest.Status = RequestStatus.Accepted;
         assistanceRequest.UpdatedAt = DateTime.UtcNow;
 

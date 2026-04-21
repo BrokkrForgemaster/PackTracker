@@ -20,7 +20,7 @@ public class AssistanceRequest
     public int? QuantityNeeded { get; set; }
     public string? MeetingLocation { get; set; }
     public string? RewardOffered { get; set; }
-    public int? NumberOfHelpersNeeded { get; set; }
+    public int MaxClaims { get; set; } = 1;
     public DateTime? DueAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -60,10 +60,16 @@ public sealed class CreateMaterialProcurementRequestDto
     public string? DeliveryLocation { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of helpers needed, if applicable.
+    /// Gets or sets whether the request is pinned to the top of the dashboard.
     /// </summary>
-    [Range(1, 100)]
-    public int? NumberOfHelpersNeeded { get; set; }
+    public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of members who can claim this request.
+    /// If null, default is 1.
+    /// </summary>
+    [Range(1, 1000)]
+    public int? MaxClaims { get; set; }
 
     /// <summary>
     /// Gets or sets the reward offered for fulfilling the request.

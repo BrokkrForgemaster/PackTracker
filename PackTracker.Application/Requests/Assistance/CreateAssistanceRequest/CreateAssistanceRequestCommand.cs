@@ -24,9 +24,9 @@ public sealed class CreateAssistanceRequestCommandValidator : AbstractValidator<
         RuleFor(x => x.Request.QuantityNeeded)
             .GreaterThan(0)
             .When(x => x.Request.QuantityNeeded.HasValue);
-        RuleFor(x => x.Request.NumberOfHelpersNeeded)
-            .InclusiveBetween(1, 100)
-            .When(x => x.Request.NumberOfHelpersNeeded.HasValue);
+        RuleFor(x => x.Request.MaxClaims)
+            .InclusiveBetween(1, 1000)
+            .When(x => x.Request.MaxClaims.HasValue);
     }
 }
 
@@ -64,12 +64,13 @@ public sealed class CreateAssistanceRequestCommandHandler : IRequestHandler<Crea
             Description = request.Request.Description?.Trim(),
             Priority = request.Request.Priority,
             Status = RequestStatus.Open,
+            IsPinned = request.Request.IsPinned,
             CreatedByProfileId = profile.Id,
             MaterialName = request.Request.MaterialName?.Trim(),
             QuantityNeeded = request.Request.QuantityNeeded,
             MeetingLocation = request.Request.MeetingLocation?.Trim(),
             RewardOffered = request.Request.RewardOffered?.Trim(),
-            NumberOfHelpersNeeded = request.Request.NumberOfHelpersNeeded,
+            MaxClaims = request.Request.MaxClaims ?? 1,
             DueAt = request.Request.DueAt,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

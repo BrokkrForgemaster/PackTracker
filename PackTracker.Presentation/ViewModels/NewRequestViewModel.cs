@@ -58,7 +58,7 @@ public partial class NewRequestViewModel : ObservableObject
         QuantityNeededText = existing.QuantityNeeded?.ToString();
         MeetingLocation = existing.MeetingLocation;
         RewardOffered = existing.RewardOffered;
-        NumberOfHelpersNeededText = existing.NumberOfHelpersNeeded?.ToString();
+        MaxClaimsText = existing.MaxClaims > 1 ? existing.MaxClaims.ToString() : null;
         OnPropertyChanged(nameof(IsEditMode));
         OnPropertyChanged(nameof(DialogTitle));
         OnPropertyChanged(nameof(SubmitButtonLabel));
@@ -105,7 +105,7 @@ public partial class NewRequestViewModel : ObservableObject
     [ObservableProperty] private string? quantityNeededText;
     [ObservableProperty] private string? meetingLocation;
     [ObservableProperty] private string? rewardOffered;
-    [ObservableProperty] private string? numberOfHelpersNeededText;
+    [ObservableProperty] private string? maxClaimsText;
 
     #endregion
 
@@ -161,10 +161,10 @@ public partial class NewRequestViewModel : ObservableObject
                 return;
             }
 
-            if (!TryParseOptionalPositiveInteger(NumberOfHelpersNeededText, out var numberOfHelpersNeeded))
+            if (!TryParseOptionalPositiveInteger(MaxClaimsText, out var maxClaims))
             {
                 MessageBox.Show(
-                    "Helpers needed must contain at least one whole number. For flexible staffing, enter something like '3-4' or '3 or 4'.",
+                    "Max claims must be a whole number greater than zero.",
                     "Validation Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -181,7 +181,7 @@ public partial class NewRequestViewModel : ObservableObject
                 QuantityNeeded = quantityNeeded,
                 MeetingLocation = MeetingLocation,
                 RewardOffered = RewardOffered,
-                NumberOfHelpersNeeded = numberOfHelpersNeeded,
+                MaxClaims = maxClaims,
             };
 
             using var client = _apiClient.CreateClient();

@@ -85,5 +85,17 @@ public sealed class CreateCraftingRequestDto
     /// </summary>
     public int? RequesterUtcOffsetMinutes { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the request is pinned to the top of the dashboard.
+    /// </summary>
+    public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of members who can claim this request.
+    /// If null, default is 1.
+    /// </summary>
+    [Range(1, 1000)]
+    public int? MaxClaims { get; set; }
+
     #endregion
 }

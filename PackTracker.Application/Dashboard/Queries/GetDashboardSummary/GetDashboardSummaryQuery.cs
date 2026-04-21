@@ -37,11 +37,7 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
         var assistance = await _dbContext.AssistanceRequests
             .AsNoTracking()
             .Include(x => x.CreatedByProfile)
-            .Include(x => x.AssignedToProfile)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
-            .Where(x => x.Status == RequestStatus.Open
-                     || x.CreatedByProfileId == currentProfileId
-                     || x.AssignedToProfileId == currentProfileId)
             .Select(x => new ActiveRequestDto
             {
                 Id = x.Id,
@@ -51,12 +47,19 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 Priority = x.Priority.ToString(),
                 IsPinned = x.IsPinned,
                 IsRequestedByCurrentUser = x.CreatedByProfileId == currentProfileId,
-                IsAssignedToCurrentUser = x.AssignedToProfileId == currentProfileId,
-                IsAvailableToClaim = x.Status == RequestStatus.Open,
+                IsAssignedToCurrentUser = _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Assistance" && c.ProfileId == currentProfileId),
+                IsAvailableToClaim = x.Status == RequestStatus.Open && _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Assistance") < x.MaxClaims,
                 RequesterDisplayName = x.CreatedByProfile != null ? (x.CreatedByProfile.DiscordDisplayName ?? x.CreatedByProfile.Username) : "Unknown",
-                AssigneeDisplayName = x.AssignedToProfile != null ? (x.AssignedToProfile.DiscordDisplayName ?? x.AssignedToProfile.Username) : null,
-                CreatedAt = x.CreatedAt
+                AssigneeDisplayName = _dbContext.RequestClaims
+                    .Where(c => c.RequestId == x.Id && c.RequestType == "Assistance")
+                    .Include(c => c.Profile)
+                    .Select(c => c.Profile != null ? (c.Profile.DiscordDisplayName ?? c.Profile.Username) : "User")
+                    .FirstOrDefault(),
+                CreatedAt = x.CreatedAt,
+                MaxClaims = x.MaxClaims,
+                ClaimCount = _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Assistance")
             })
+            .Where(x => x.IsRequestedByCurrentUser || x.IsAssignedToCurrentUser || x.Status == RequestStatus.Open.ToString())
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -82,11 +85,7 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
             .AsNoTracking()
             .Include(x => x.Material)
             .Include(x => x.RequesterProfile)
-            .Include(x => x.AssignedToProfile)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
-            .Where(x => x.Status == RequestStatus.Open
-                     || x.RequesterProfileId == currentProfileId
-                     || x.AssignedToProfileId == currentProfileId)
             .Select(x => new ActiveRequestDto
             {
                 Id = x.Id,
@@ -94,14 +93,21 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 RequestType = "Procurement",
                 Status = x.Status.ToString(),
                 Priority = x.Priority.ToString(),
-                IsPinned = false,
+                IsPinned = x.IsPinned,
                 IsRequestedByCurrentUser = x.RequesterProfileId == currentProfileId,
-                IsAssignedToCurrentUser = x.AssignedToProfileId == currentProfileId,
-                IsAvailableToClaim = x.Status == RequestStatus.Open,
+                IsAssignedToCurrentUser = _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Procurement" && c.ProfileId == currentProfileId),
+                IsAvailableToClaim = x.Status == RequestStatus.Open && _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Procurement") < x.MaxClaims,
                 RequesterDisplayName = x.RequesterProfile != null ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username) : "Unknown",
-                AssigneeDisplayName = x.AssignedToProfile != null ? (x.AssignedToProfile.DiscordDisplayName ?? x.AssignedToProfile.Username) : null,
-                CreatedAt = x.CreatedAt
+                AssigneeDisplayName = _dbContext.RequestClaims
+                    .Where(c => c.RequestId == x.Id && c.RequestType == "Procurement")
+                    .Include(c => c.Profile)
+                    .Select(c => c.Profile != null ? (c.Profile.DiscordDisplayName ?? c.Profile.Username) : "User")
+                    .FirstOrDefault(),
+                CreatedAt = x.CreatedAt,
+                MaxClaims = x.MaxClaims,
+                ClaimCount = _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Procurement")
             })
+            .Where(x => x.IsRequestedByCurrentUser || x.IsAssignedToCurrentUser || x.Status == RequestStatus.Open.ToString())
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -171,11 +177,7 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
             .AsNoTracking()
             .Include(x => x.Blueprint)
             .Include(x => x.RequesterProfile)
-            .Include(x => x.AssignedCrafterProfile)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
-            .Where(x => x.Status == RequestStatus.Open
-                     || x.RequesterProfileId == currentProfileId
-                     || x.AssignedCrafterProfileId == currentProfileId)
             .Select(x => new ActiveRequestDto
             {
                 Id = x.Id,
@@ -183,25 +185,28 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 RequestType = "Crafting",
                 Status = x.Status.ToString(),
                 Priority = x.Priority.ToString(),
-                IsPinned = false,
+                IsPinned = x.IsPinned,
                 IsRequestedByCurrentUser = x.RequesterProfileId == currentProfileId,
-                IsAssignedToCurrentUser = x.AssignedCrafterProfileId == currentProfileId,
-                IsAvailableToClaim = x.Status == RequestStatus.Open,
+                IsAssignedToCurrentUser = _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Crafting" && c.ProfileId == currentProfileId),
+                IsAvailableToClaim = x.Status == RequestStatus.Open && _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Crafting") < x.MaxClaims,
                 RequesterDisplayName = x.RequesterProfile != null ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username) : "Unknown",
-                AssigneeDisplayName = x.AssignedCrafterProfile != null ? (x.AssignedCrafterProfile.DiscordDisplayName ?? x.AssignedCrafterProfile.Username) : null,
-                CreatedAt = x.CreatedAt
-            });
+                AssigneeDisplayName = _dbContext.RequestClaims
+                    .Where(c => c.RequestId == x.Id && c.RequestType == "Crafting")
+                    .Include(c => c.Profile)
+                    .Select(c => c.Profile != null ? (c.Profile.DiscordDisplayName ?? c.Profile.Username) : "User")
+                    .FirstOrDefault(),
+                CreatedAt = x.CreatedAt,
+                MaxClaims = x.MaxClaims,
+                ClaimCount = _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Crafting")
+            })
+            .Where(x => x.IsRequestedByCurrentUser || x.IsAssignedToCurrentUser || x.Status == RequestStatus.Open.ToString());
 
     private IQueryable<ActiveRequestDto> BuildLegacyCraftingActiveRequestsQuery(Guid? currentProfileId) =>
         _dbContext.CraftingRequests
             .AsNoTracking()
             .Include(x => x.Blueprint)
             .Include(x => x.RequesterProfile)
-            .Include(x => x.AssignedCrafterProfile)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
-            .Where(x => x.Status == RequestStatus.Open
-                     || x.RequesterProfileId == currentProfileId
-                     || x.AssignedCrafterProfileId == currentProfileId)
             .Select(x => new ActiveRequestDto
             {
                 Id = x.Id,
@@ -209,14 +214,21 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 RequestType = "Crafting",
                 Status = x.Status.ToString(),
                 Priority = x.Priority.ToString(),
-                IsPinned = false,
+                IsPinned = x.IsPinned,
                 IsRequestedByCurrentUser = x.RequesterProfileId == currentProfileId,
-                IsAssignedToCurrentUser = x.AssignedCrafterProfileId == currentProfileId,
-                IsAvailableToClaim = x.Status == RequestStatus.Open,
+                IsAssignedToCurrentUser = _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Crafting" && c.ProfileId == currentProfileId),
+                IsAvailableToClaim = x.Status == RequestStatus.Open && _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Crafting") < x.MaxClaims,
                 RequesterDisplayName = x.RequesterProfile != null ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username) : "Unknown",
-                AssigneeDisplayName = x.AssignedCrafterProfile != null ? (x.AssignedCrafterProfile.DiscordDisplayName ?? x.AssignedCrafterProfile.Username) : null,
-                CreatedAt = x.CreatedAt
-            });
+                AssigneeDisplayName = _dbContext.RequestClaims
+                    .Where(c => c.RequestId == x.Id && c.RequestType == "Crafting")
+                    .Include(c => c.Profile)
+                    .Select(c => c.Profile != null ? (c.Profile.DiscordDisplayName ?? c.Profile.Username) : "User")
+                    .FirstOrDefault(),
+                CreatedAt = x.CreatedAt,
+                MaxClaims = x.MaxClaims,
+                ClaimCount = _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Crafting")
+            })
+            .Where(x => x.IsRequestedByCurrentUser || x.IsAssignedToCurrentUser || x.Status == RequestStatus.Open.ToString());
 
     private static bool IsLegacyCraftingSchemaFailure(Exception ex)
     {

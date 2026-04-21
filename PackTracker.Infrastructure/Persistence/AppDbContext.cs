@@ -110,6 +110,11 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
     /// </summary>
     public DbSet<AssistanceRequest> AssistanceRequests => Set<AssistanceRequest>();
 
+    /// <summary>
+    /// Gets the request claim records.
+    /// </summary>
+    public DbSet<RequestClaim> RequestClaims => Set<RequestClaim>();
+
     #endregion
 
     #region DbSets - Crafting / Procurement
@@ -206,6 +211,7 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
         ConfigureInventory(modelBuilder);
         ConfigureAssistanceRequests(modelBuilder);
         ConfigureLobbyChatMessages(modelBuilder);
+        ConfigureRequestClaims(modelBuilder);
     }
 
     #endregion
@@ -753,6 +759,21 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
             entity.Property(m => m.SenderRole).HasMaxLength(128);
             entity.HasIndex(m => m.Channel);
             entity.HasIndex(m => m.SentAt);
+        });
+    }
+
+    private static void ConfigureRequestClaims(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<RequestClaim>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.RequestType).HasMaxLength(50).IsRequired();
+            entity.HasIndex(x => new { x.RequestId, x.RequestType, x.ProfileId }).IsUnique();
+
+            entity.HasOne(x => x.Profile)
+                .WithMany()
+                .HasForeignKey(x => x.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -78,9 +78,9 @@ public class AssistanceRequestDto
     public string? RewardOffered { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of helpers needed, if applicable.
+    /// Gets or sets the maximum number of members who can claim this request.
     /// </summary>
-    public int? NumberOfHelpersNeeded { get; set; }
+    public int MaxClaims { get; set; }
 
     /// <summary>
     /// Gets or sets when the request was created.
