@@ -504,7 +504,6 @@ namespace PackTracker.Presentation.Views
             try
             {
                 using var scope = _serviceProvider.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var logger = scope.ServiceProvider.GetService<ILogger<MainWindow>>();
 
                 var settings = _settingsService.GetSettings();
@@ -517,52 +516,16 @@ namespace PackTracker.Presentation.Views
                 }
 
                 var apiProvider = scope.ServiceProvider.GetRequiredService<IApiClientProvider>();
-                var isRemote = !apiProvider.BaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase);
-
-                Profile? profile;
-
-                if (isRemote)
+                using var client = apiProvider.CreateClient();
+                var response = await client.GetAsync("api/v1/profiles/me");
+                if (!response.IsSuccessStatusCode)
                 {
-                    using var client = apiProvider.CreateClient();
-                    var response = await client.GetAsync("api/v1/profiles/me");
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        logger?.LogWarning("GET /api/v1/profiles/me returned {Status}", response.StatusCode);
-                        await Dispatcher.InvokeAsync(SetDefaultProfile);
-                        return;
-                    }
-                    profile = await response.Content.ReadFromJsonAsync<Profile>();
+                    logger?.LogWarning("GET /api/v1/profiles/me returned {Status}", response.StatusCode);
+                    await Dispatcher.InvokeAsync(SetDefaultProfile);
+                    return;
                 }
-                else
-                {
-                    var (candidateDisplayName, candidateUsername) = ExtractJwtIdentity(jwtToken);
 
-                    if (string.IsNullOrWhiteSpace(candidateDisplayName) &&
-                        string.IsNullOrWhiteSpace(candidateUsername))
-                    {
-                        logger?.LogWarning("JWT did not contain a usable display name or username.");
-                        await Dispatcher.InvokeAsync(SetDefaultProfile);
-                        return;
-                    }
-
-                    var query = db.Profiles.AsNoTracking();
-                    profile =
-                        (!string.IsNullOrWhiteSpace(candidateDisplayName)
-                            ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateDisplayName)
-                            : null)
-                        ??
-                        (!string.IsNullOrWhiteSpace(candidateUsername)
-                            ? await query.FirstOrDefaultAsync(p => p.Username == candidateUsername)
-                            : null)
-                        ??
-                        (!string.IsNullOrWhiteSpace(candidateUsername)
-                            ? await query.FirstOrDefaultAsync(p => p.DiscordDisplayName == candidateUsername)
-                            : null)
-                        ??
-                        (!string.IsNullOrWhiteSpace(candidateDisplayName)
-                            ? await query.FirstOrDefaultAsync(p => p.Username == candidateDisplayName)
-                            : null);
-                }
+                var profile = await response.Content.ReadFromJsonAsync<Profile>();
 
                 if (profile == null)
                 {
