@@ -164,7 +164,8 @@ namespace PackTracker.Presentation.Views
 
             if (!settings.FirstRunComplete)
             {
-                NavigateToSettings();
+                var welcomeView = _serviceProvider.GetRequiredService<WelcomeView>();
+                ContentFrame.Navigate(welcomeView);
                 return;
             }
 
@@ -182,24 +183,30 @@ namespace PackTracker.Presentation.Views
             {
                 try
                 {
+                    // Wait for the embedded API to be ready before attempting the refresh
                     var apiProvider = _serviceProvider.GetRequiredService<IApiClientProvider>();
-                    using var client = apiProvider.CreateAnonymousClient();
-                    var response = await client.PostAsJsonAsync("api/v1/auth/refresh",
-                        new { RefreshToken = refreshToken });
+                    var apiReady = await WaitForApiAsync($"{apiProvider.BaseUrl}/health");
 
-                    if (response.IsSuccessStatusCode)
+                    if (apiReady)
                     {
-                        var payload = await response.Content.ReadFromJsonAsync<TokenPayload>();
-                        if (payload is not null)
-                        {
-                            await _settingsService.UpdateSettingsAsync(s =>
-                            {
-                                s.JwtToken = payload.access_token;
-                                s.JwtRefreshToken = payload.refresh_token;
-                            });
+                        using var client = apiProvider.CreateAnonymousClient();
+                        var response = await client.PostAsJsonAsync("api/v1/auth/refresh",
+                            new { RefreshToken = refreshToken });
 
-                            NavigateToDashboard();
-                            return;
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var payload = await response.Content.ReadFromJsonAsync<TokenPayload>();
+                            if (payload is not null)
+                            {
+                                await _settingsService.UpdateSettingsAsync(s =>
+                                {
+                                    s.JwtToken = payload.access_token;
+                                    s.JwtRefreshToken = payload.refresh_token;
+                                });
+
+                                NavigateToDashboard();
+                                return;
+                            }
                         }
                     }
                 }
@@ -211,6 +218,23 @@ namespace PackTracker.Presentation.Views
             }
 
             NavigateToLogin();
+        }
+
+        private static async Task<bool> WaitForApiAsync(string healthUrl)
+        {
+            using var client = new System.Net.Http.HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(2);
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    var response = await client.GetAsync(healthUrl);
+                    if (response.IsSuccessStatusCode) return true;
+                }
+                catch { }
+                await Task.Delay(500);
+            }
+            return false;
         }
 
         private bool IsJwtValid(string token)

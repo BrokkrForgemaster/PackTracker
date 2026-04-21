@@ -186,14 +186,8 @@ public partial class App : System.Windows.Application
             if (!string.IsNullOrWhiteSpace(settings.Theme))
                 themeManager.ApplyTheme(settings.Theme);
 
-            // Setup main window
+            // Setup main window — NavigateToFirstView in the constructor handles routing
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-
-            if (settings.FirstRunComplete)
-                mainWindow.ContentFrame.Navigate(_serviceProvider.GetRequiredService<LoginView>());
-            else
-                mainWindow.ContentFrame.Navigate(_serviceProvider.GetRequiredService<WelcomeView>());
-
             mainWindow.Show();
             Log.Information("✅ PackTracker started successfully.");
         }
