@@ -118,6 +118,8 @@ public class UexService : IUexService
         entity.Slug = dto.Slug ?? dto.Code.ToLowerInvariant();
         entity.Kind = dto.Kind;
         entity.WeightScu = (int?)dto.Weight_Scu;
+        entity.PriceBuy = (decimal?)dto.Price_Buy;
+        entity.PriceSell = (decimal?)dto.Price_Sell;
         entity.IsAvailable = dto.Is_Available == 1;
         entity.IsAvailableLive = dto.Is_Available_Live == 1;
         entity.IsVisible = dto.Is_Visible == 1;
@@ -152,7 +154,14 @@ public class UexService : IUexService
         {
             var commodity = await _db.Commodities
                 .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Code == commodityCode, ct);
+                .Where(c => c.Code == commodityCode)
+                .OrderByDescending(c => c.IsBuyable && c.IsSellable)
+                .ThenByDescending(c => c.IsAvailableLive)
+                .ThenByDescending(c => c.IsVisible)
+                .ThenByDescending(c => c.IsRefined)
+                .ThenBy(c => c.IsRaw)
+                .ThenBy(c => c.Id)
+                .FirstOrDefaultAsync(ct);
 
             if (commodity == null)
             {
@@ -218,14 +227,64 @@ public class UexService : IUexService
         if (string.IsNullOrWhiteSpace(code))
             return null;
 
+        // 1. Try Cache
         if (_codeToId.TryGetValue(code, out var cached))
             return cached;
 
-        _logger.LogInformation("🔎 Resolving UEX id for commodity code {Code}...", code);
-        var result = await _httpClient.GetFromJsonAsync<UexApiResponse<List<UexCommodityMini>>>("commodities", JsonOptions, ct);
+        // 2. Try Database (since we sync commodities)
+        var fromDbCandidates = await _db.Commodities.AsNoTracking()
+            .Where(c => c.Code == code)
+            .Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.IsBuyable,
+                c.IsSellable,
+                c.IsVisible,
+                c.IsAvailableLive,
+                c.IsRaw,
+                c.IsRefined
+            })
+            .ToListAsync(ct);
 
-        foreach (var c in result?.Data ?? [])
-            _codeToId[c.Code] = c.Id;
+        if (fromDbCandidates.Count > 1)
+        {
+            _logger.LogWarning(
+                "Multiple commodities matched code {Code}: {Names}. Preferring the tradeable non-raw variant.",
+                code,
+                string.Join(", ", fromDbCandidates.Select(c => $"{c.Name}#{c.Id}")));
+        }
+
+        var fromDb = fromDbCandidates
+            .OrderByDescending(c => c.IsBuyable && c.IsSellable)
+            .ThenByDescending(c => c.IsAvailableLive)
+            .ThenByDescending(c => c.IsVisible)
+            .ThenByDescending(c => c.IsRefined)
+            .ThenBy(c => c.IsRaw)
+            .ThenBy(c => c.Id)
+            .FirstOrDefault();
+
+        if (fromDb != null)
+        {
+            _codeToId[code] = fromDb.Id;
+            return fromDb.Id;
+        }
+
+        // 3. Last Resort: Fetch fresh list from API
+        _logger.LogInformation("🔎 Resolving UEX id for commodity code {Code} from API...", code);
+        try
+        {
+            var result = await _httpClient.GetFromJsonAsync<UexApiResponse<List<UexCommodityMini>>>("commodities", JsonOptions, ct);
+            if (result?.Data != null)
+            {
+                foreach (var c in result.Data)
+                    _codeToId[c.Code] = c.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch commodity list for resolution.");
+        }
 
         return _codeToId.TryGetValue(code, out var id) ? id : null;
     }
@@ -283,10 +342,57 @@ public class UexService : IUexService
         int limit = 100,
         CancellationToken ct = default)
     {
-        var commodity = await _db.Commodities.AsNoTracking().FirstOrDefaultAsync(c => c.Id == commodityId, ct);
-        return commodity != null
-            ? await GetRoutesByCommodityCodeAsync(commodity.Code, limit, ct)
-            : new();
+        return await FetchRoutesByUexCommodityIdAsync(commodityId, $"id {commodityId}", ct);
+    }
+
+    private async Task<List<UexTradeRouteDto>> FetchRoutesByUexCommodityIdAsync(
+        int uexCommodityId,
+        string lookupLabel,
+        CancellationToken ct)
+    {
+        var url = $"commodities_routes?id_commodity={uexCommodityId}";
+        _logger.LogInformation("Requesting UEX routes from {Url} for {Lookup}", url, lookupLabel);
+
+        try
+        {
+            var json = await _httpClient.GetStringAsync(url, ct);
+            var previewLen = Math.Min(json?.Length ?? 0, 800);
+            _logger.LogTrace("UEX RAW JSON (preview): {Json}", json?.Substring(0, previewLen));
+
+            var payload = JsonSerializer.Deserialize<UexApiResponse<List<UexTradeRouteDto>>>(json!, JsonOptions);
+            var routes = payload?.Data ?? new();
+
+            foreach (var route in routes.Take(3))
+            {
+                _logger.LogInformation(
+                    "Route: {Origin} -> {Destination} | Buy={Buy} Sell={Sell} ROI={ROI} Profit={Profit} (Commodity={Commodity})",
+                    route.OriginTerminalName,
+                    route.DestinationTerminalName,
+                    route.PriceOrigin,
+                    route.PriceDestination,
+                    route.PriceRoi,
+                    route.Profit,
+                    route.CommodityName);
+            }
+
+            var first = routes.FirstOrDefault();
+            if (first is not null)
+            {
+                _logger.LogInformation(
+                    "First route for {Commodity}: Origin={Origin}, Buy={Buy}, Sell={Sell}",
+                    first.CommodityName,
+                    first.OriginTerminalName,
+                    first.PriceOrigin,
+                    first.PriceDestination);
+            }
+
+            return routes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch routes for UEX commodity {Lookup}", lookupLabel);
+            return new();
+        }
     }
     
     public async Task<List<UexVehicleDto>> GetVehiclesAsync(int? companyId = null, CancellationToken ct = default)
