@@ -118,8 +118,6 @@ public class UexService : IUexService
         entity.Slug = dto.Slug ?? dto.Code.ToLowerInvariant();
         entity.Kind = dto.Kind;
         entity.WeightScu = (int?)dto.Weight_Scu;
-        entity.PriceBuy = (decimal?)dto.Price_Buy;
-        entity.PriceSell = (decimal?)dto.Price_Sell;
         entity.IsAvailable = dto.Is_Available == 1;
         entity.IsAvailableLive = dto.Is_Available_Live == 1;
         entity.IsVisible = dto.Is_Visible == 1;
