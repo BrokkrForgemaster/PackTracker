@@ -420,9 +420,12 @@ public class DashboardViewModel : ViewModelBase
 
     private void LoadChatChannelsForRole(string? division)
     {
+        // Preserve any DM channel entries that were dynamically added
+        var existingDms = AvailableChatChannels.Where(c => c.IsDirectMessage).ToList();
         AvailableChatChannels.Clear();
+        foreach (var dm in existingDms)
+            AvailableChatChannels.Add(dm);
 
-        AddChannel("direct", "Direct Message", "Private conversations", "#6A4F8B");
         AddChannel("general", "General", "All members", "#4F6A84");
 
         bool isLeadership = string.Equals(division, "Leadership", StringComparison.OrdinalIgnoreCase);
@@ -464,6 +467,20 @@ public class DashboardViewModel : ViewModelBase
     private void SelectChannel(AvailableChannelViewModel? channel)
     {
         if (channel == null) return;
+
+        // DM sidebar entries route through EnsureDirectMessageWindow
+        if (channel.IsDirectMessage && !string.IsNullOrWhiteSpace(channel.TargetUsername))
+        {
+            foreach (var ch in AvailableChatChannels)
+                ch.IsSelected = false;
+            channel.IsSelected = true;
+            channel.HasUnread = false;
+            channel.UnreadCount = 0;
+
+            var dmWindow = EnsureDirectMessageWindow(channel.TargetUsername, channel.DisplayName);
+            ActiveChatWindow = dmWindow;
+            return;
+        }
 
         foreach (var ch in AvailableChatChannels)
             ch.IsSelected = false;
@@ -654,24 +671,41 @@ public class DashboardViewModel : ViewModelBase
     private ChatWindowViewModel EnsureDirectMessageWindow(string username, string? displayName)
     {
         var channelKey = BuildDirectChannelKey(username);
+        var label = displayName ?? username;
+
+        // Add/update sidebar channel entry for this DM
+        var sidebarEntry = AvailableChatChannels.FirstOrDefault(c => c.IsDirectMessage && c.TargetUsername == username);
+        if (sidebarEntry == null)
+        {
+            sidebarEntry = new AvailableChannelViewModel
+            {
+                Key = channelKey,
+                DisplayName = label,
+                AccessSummary = "Direct message",
+                AccentBrush = BrushFromHex("#6A4F8B"),
+                IsDirectMessage = true,
+                TargetUsername = username,
+            };
+            // Insert DM entries at the top of the list
+            AvailableChatChannels.Insert(0, sidebarEntry);
+        }
+
         var existing = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == channelKey);
         if (existing != null)
-        {
-            existing.UnreadCount = 0;
             return existing;
-        }
 
         var window = new ChatWindowViewModel(CloseWindow, BringToFront, OnWindowStateChanged, _avatarCache)
         {
             ChannelKey = channelKey,
-            Title = $"DM // {displayName ?? username}",
+            Title = $"DM // {label}",
             TargetUsername = username,
-            TargetDisplayName = displayName ?? username,
+            TargetDisplayName = label,
             CurrentUserDisplayName = CurrentUserDisplayName,
             CurrentUsername = _currentUsername,
             AccentBrush = BrushFromHex("#6A4F8B"),
         };
 
+        window.Messages.CollectionChanged += (_, _) => SyncUnreadState(window, sidebarEntry);
         window.MessageSent += (s, content) => { _ = SendWindowMessageAsync(window, content); };
         window.EditRequested += (ch, msgId, newContent) => { _ = _signalR.EditMessageAsync(ch, msgId, newContent); };
         window.DeleteRequested += (ch, msgId) => { _ = _signalR.DeleteMessageAsync(ch, msgId); };

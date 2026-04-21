@@ -11,6 +11,8 @@ public class AvailableChannelViewModel : ViewModelBase
     public string DisplayName { get; set; } = string.Empty;
     public string AccessSummary { get; set; } = string.Empty;
     public Brush AccentBrush { get; set; } = Brushes.Gray;
+    public bool IsDirectMessage { get; set; }
+    public string? TargetUsername { get; set; }
 
     private bool _isSelected;
 

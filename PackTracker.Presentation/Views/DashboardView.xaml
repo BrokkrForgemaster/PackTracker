@@ -497,7 +497,7 @@
 
                     <!-- GUIDE ROTA -->
                     <Border Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,10">
-                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="False">
                             <Expander.Header>
                                 <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
                                     <TextBlock Text="GUIDE ROTA"
@@ -572,7 +572,7 @@
 
                     <!-- MY ACTIVE TASKS -->
                     <Border Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,10">
-                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="False">
                             <Expander.Header>
                                 <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
                                     <TextBlock Text="MY ACTIVE TASKS"
@@ -623,7 +623,7 @@
 
                     <!-- MY OPEN REQUESTS -->
                     <Border Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,10">
-                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="False">
                             <Expander.Header>
                                 <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
                                     <TextBlock Text="MY OPEN REQUESTS"
@@ -674,7 +674,7 @@
 
                     <!-- ACTIVE REQUESTS -->
                     <Border Style="{StaticResource OpPanelBorderStyle}">
-                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="False">
                             <Expander.Header>
                                 <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
                                     <TextBlock Text="ACTIVE REQUESTS"
@@ -802,10 +802,20 @@
                                                                    FontWeight="Bold" />
                                                     </Border>
                                                     <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="# "
-                                                                   Foreground="{Binding AccentBrush}"
+                                                        <TextBlock Foreground="{Binding AccentBrush}"
                                                                    FontSize="13"
-                                                                   VerticalAlignment="Center" />
+                                                                   VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Text" Value="# " />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsDirectMessage}" Value="True">
+                                                                            <Setter Property="Text" Value="@ " />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
                                                         <TextBlock Text="{Binding DisplayName}">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
