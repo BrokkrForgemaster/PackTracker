@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using PackTracker.Api.Authentication;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
 
@@ -97,7 +98,7 @@ public class AuthController : ControllerBase
 
             _logger.LogInformation("Authenticated Discord user {User} ({DiscordId})", username, discordId);
 
-            var accessToken = await HttpContext.GetTokenAsync("access_token");
+            var accessToken = await HttpContext.GetTokenAsync(ApiAuthenticationDefaults.CookieScheme, "access_token");
             if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(discordId))
             {
                 _logger.LogWarning("Missing Discord access token or Discord identifier in context.");
