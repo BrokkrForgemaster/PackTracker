@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using PackTracker.Application.Crafting.Commands.CreateCraftingRequest;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.Interfaces;
@@ -37,7 +38,8 @@ public sealed class CreateCraftingRequestCommandHandlerTests
         var handler = new CreateCraftingRequestCommandHandler(
             db,
             new TestCurrentUserService(profile.DiscordId, profile.Username),
-            new TestCraftingWorkflowNotifier());
+            new TestCraftingWorkflowNotifier(),
+            NullLogger<CreateCraftingRequestCommandHandler>.Instance);
 
         var command = new CreateCraftingRequestCommand(new CreateCraftingRequestDto
         {

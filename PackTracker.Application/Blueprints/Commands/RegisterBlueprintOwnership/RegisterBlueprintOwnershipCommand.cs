@@ -29,8 +29,13 @@ public sealed class RegisterBlueprintOwnershipCommandHandler
     : IRequestHandler<RegisterBlueprintOwnershipCommand, BlueprintOwnershipRegistrationResult>
 {
     private readonly IApplicationDbContext _db;
+    private readonly IWikiSyncService _wikiSync;
 
-    public RegisterBlueprintOwnershipCommandHandler(IApplicationDbContext db) => _db = db;
+    public RegisterBlueprintOwnershipCommandHandler(IApplicationDbContext db, IWikiSyncService wikiSync)
+    {
+        _db = db;
+        _wikiSync = wikiSync;
+    }
 
     public async Task<BlueprintOwnershipRegistrationResult> Handle(
         RegisterBlueprintOwnershipCommand command, CancellationToken cancellationToken)
@@ -47,12 +52,21 @@ public sealed class RegisterBlueprintOwnershipCommandHandler
         if (profile is null)
         {
             return new BlueprintOwnershipRegistrationResult(
-                BlueprintOwnershipRegistrationStatus.Unauthorized, null, null, "Unauthorized");
+                BlueprintOwnershipRegistrationStatus.Unauthorized,
+                null,
+                null,
+                "No PackTracker profile was found for the authenticated user. Sign out and sign back in.");
         }
 
         var wikiUuidString = command.BlueprintId.ToString();
-        var blueprint = await _db.Blueprints
-            .FirstOrDefaultAsync(x => x.Id == command.BlueprintId || x.WikiUuid == wikiUuidString, cancellationToken);
+        var blueprint = await FindBlueprintAsync(command.BlueprintId, wikiUuidString, cancellationToken);
+
+        if (blueprint is null)
+        {
+            var synced = await _wikiSync.SyncBlueprintAsync(command.BlueprintId, cancellationToken);
+            if (synced)
+                blueprint = await FindBlueprintAsync(command.BlueprintId, wikiUuidString, cancellationToken);
+        }
 
         if (blueprint is null)
         {
@@ -116,4 +130,12 @@ public sealed class RegisterBlueprintOwnershipCommandHandler
             ownerCount,
             "Blueprint ownership registered.");
     }
+
+    private Task<Blueprint?> FindBlueprintAsync(
+        Guid blueprintId,
+        string wikiUuidString,
+        CancellationToken cancellationToken) =>
+        _db.Blueprints.FirstOrDefaultAsync(
+            x => x.Id == blueprintId || x.WikiUuid == wikiUuidString,
+            cancellationToken);
 }

@@ -3,6 +3,8 @@ using PackTracker.Application.Blueprints.Commands.RegisterBlueprintOwnership;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
+using PackTracker.Application.DTOs.Wiki;
+using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.UnitTests.Blueprints;
@@ -41,7 +43,7 @@ public sealed class RegisterBlueprintOwnershipCommandTests
         db.AddRange(profile, blueprint, existing);
         await db.SaveChangesAsync();
 
-        var handler = new RegisterBlueprintOwnershipCommandHandler(db);
+        var handler = new RegisterBlueprintOwnershipCommandHandler(db, new NoOpWikiSyncService());
 
         var result = await handler.Handle(
             new RegisterBlueprintOwnershipCommand(
@@ -65,8 +67,86 @@ public sealed class RegisterBlueprintOwnershipCommandTests
         Assert.Equal(1, result.OwnerCount);
     }
 
+    [Fact]
+    public async Task Handle_SyncsMissingBlueprintBeforeRegisteringOwnership()
+    {
+        await using var db = CreateDb();
+
+        var profile = new Profile
+        {
+            DiscordId = "discord-123",
+            Username = "sentinel"
+        };
+
+        db.Add(profile);
+        await db.SaveChangesAsync();
+
+        var wikiUuid = Guid.NewGuid();
+        var handler = new RegisterBlueprintOwnershipCommandHandler(
+            db,
+            new TestWikiSyncService(async ct =>
+            {
+                db.Blueprints.Add(new Blueprint
+                {
+                    BlueprintName = "Arrowhead Sniper Rifle Blueprint",
+                    CraftedItemName = "Arrowhead Sniper Rifle",
+                    Category = "Weapon",
+                    Slug = "arrowhead-sniper-rifle-blueprint",
+                    WikiUuid = wikiUuid.ToString()
+                });
+
+                await db.SaveChangesAsync(ct);
+                return true;
+            }));
+
+        var result = await handler.Handle(
+            new RegisterBlueprintOwnershipCommand(
+                wikiUuid,
+                profile.DiscordId,
+                new RegisterBlueprintOwnershipRequest
+                {
+                    InterestType = MemberBlueprintInterestType.Owns,
+                    AvailabilityStatus = "Available"
+                }),
+            CancellationToken.None);
+
+        Assert.Equal(BlueprintOwnershipRegistrationStatus.Success, result.Status);
+        Assert.Equal(1, await db.MemberBlueprintOwnerships.CountAsync());
+        Assert.Equal(1, result.OwnerCount);
+    }
+
     private static AppDbContext CreateDb() =>
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
+
+    private sealed class NoOpWikiSyncService : IWikiSyncService
+    {
+        public Task<WikiSyncResult> SyncBlueprintsAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<WikiSyncResult> SyncItemsAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> SyncBlueprintAsync(Guid wikiUuid, CancellationToken ct) =>
+            Task.FromResult(false);
+    }
+
+    private sealed class TestWikiSyncService : IWikiSyncService
+    {
+        private readonly Func<CancellationToken, Task<bool>> _syncBlueprint;
+
+        public TestWikiSyncService(Func<CancellationToken, Task<bool>> syncBlueprint)
+        {
+            _syncBlueprint = syncBlueprint;
+        }
+
+        public Task<WikiSyncResult> SyncBlueprintsAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<WikiSyncResult> SyncItemsAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> SyncBlueprintAsync(Guid wikiUuid, CancellationToken ct) => _syncBlueprint(ct);
+    }
 }

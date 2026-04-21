@@ -8,6 +8,7 @@ using PackTracker.Api.Middleware;
 using PackTracker.Api.Services;
 using PackTracker.Application;
 using PackTracker.Application.Interfaces;
+using PackTracker.Application.Options;
 using PackTracker.Infrastructure.ApiHosting;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
@@ -29,11 +30,41 @@ public static class PackTrackerApiComposition
         builder.Services.AddScoped<ICraftingWorkflowNotifier, SignalRCraftingWorkflowNotifier>();
         builder.Services.AddScoped<IRequestTicketNotifier, SignalRRequestTicketNotifier>();
 
+        var securityOptions = builder.Configuration.GetSection(SecurityOptions.Section).Get<SecurityOptions>() ?? new();
+
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             options.KnownNetworks.Clear();
             options.KnownProxies.Clear();
+
+            foreach (var proxy in securityOptions.TrustedProxies)
+            {
+                if (System.Net.IPAddress.TryParse(proxy, out var address))
+                {
+                    options.KnownProxies.Add(address);
+                }
+            }
+        });
+
+        builder.Services.AddCors(cors =>
+        {
+            cors.AddPolicy("PackTrackerDefault", policy =>
+            {
+                if (securityOptions.AllowedCorsOrigins.Count > 0)
+                {
+                    policy.WithOrigins(securityOptions.AllowedCorsOrigins.ToArray())
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                }
+                else
+                {
+                    policy.AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowAnyOrigin();
+                }
+            });
         });
 
         builder.Services.AddPackTrackerApiHost(settingsService, options =>
@@ -57,15 +88,9 @@ public static class PackTrackerApiComposition
         bool useHttpsRedirection,
         bool enableSwaggerUi)
     {
-        var forwardedOptions = new ForwardedHeadersOptions
-        {
-            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-        };
+        app.UseForwardedHeaders();
+        app.UseCors("PackTrackerDefault");
 
-        forwardedOptions.KnownNetworks.Clear();
-        forwardedOptions.KnownProxies.Clear();
-
-        app.UseForwardedHeaders(forwardedOptions);
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -99,6 +124,7 @@ public static class PackTrackerApiComposition
 
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
+        var maintenance = scope.ServiceProvider.GetRequiredService<IDataMaintenanceService>();
         var seedService = scope.ServiceProvider.GetRequiredService<CraftingSeedService>();
 
         try
@@ -106,36 +132,7 @@ public static class PackTrackerApiComposition
             logger.LogInformation("Applying database migrations...");
             await db.Database.MigrateAsync(cancellationToken);
 
-            logger.LogInformation("Running database cleanup scripts...");
-
-            var fixedCount = await db.Database.ExecuteSqlRawAsync(
-                @"UPDATE ""Blueprints"" SET ""IsInGameAvailable"" = TRUE WHERE ""IsInGameAvailable"" = FALSE",
-                cancellationToken);
-
-            if (fixedCount > 0)
-            {
-                logger.LogInformation("Fixed {Count} blueprint records", fixedCount);
-            }
-
-            await db.Database.ExecuteSqlRawAsync(
-                @"DELETE FROM ""Blueprints"" WHERE ""WikiUuid"" = ''",
-                cancellationToken);
-
-            await db.Database.ExecuteSqlRawAsync(
-                @"UPDATE ""Blueprints"" SET ""Category"" = CASE ""Category""
-                    WHEN 'WeaponPersonal'        THEN 'Personal Weapon'
-                    WHEN 'WeaponAttachment'      THEN 'Weapon Attachment'
-                    WHEN 'Char_Armor_Torso'      THEN 'Armor - Torso'
-                    WHEN 'Char_Armor_Arms'       THEN 'Armor - Arms'
-                    WHEN 'Char_Armor_Legs'       THEN 'Armor - Legs'
-                    WHEN 'Char_Armor_Helmet'     THEN 'Armor - Helmet'
-                    WHEN 'Char_Armor_Undersuit'  THEN 'Armor - Undersuit'
-                    WHEN 'Char_Armor_Backpack'   THEN 'Armor - Backpack'
-                    ELSE ""Category""
-                END",
-                cancellationToken);
-
-            logger.LogInformation("Database cleanup completed");
+            await maintenance.PerformDataMaintenanceAsync(cancellationToken);
 
             var preferredPath = Path.GetFullPath(
                 Path.Combine(app.Environment.ContentRootPath, "..", "scunpacked-data", "blueprints.json"));

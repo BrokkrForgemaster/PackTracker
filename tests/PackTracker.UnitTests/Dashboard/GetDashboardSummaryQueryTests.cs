@@ -139,6 +139,22 @@ public sealed class GetDashboardSummaryQueryTests
                 Assert.Equal("Procurement", fourth.RequestType);
                 Assert.True(fourth.IsAvailableToClaim);
             });
+
+        Assert.Collection(
+            result.PersonalContext.MyActiveTasks,
+            first =>
+            {
+                Assert.Equal("FS-9 LMG", first.Title);
+                Assert.True(first.IsAssignedToCurrentUser);
+            });
+
+        Assert.Collection(
+            result.PersonalContext.MyPendingRequests,
+            first =>
+            {
+                Assert.Equal("My beacon", first.Title);
+                Assert.True(first.IsRequestedByCurrentUser);
+            });
     }
 
     private static AppDbContext CreateDb() =>

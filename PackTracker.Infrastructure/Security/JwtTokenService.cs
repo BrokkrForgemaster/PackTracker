@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -36,13 +37,20 @@ public class JwtTokenService
         var options = authOptions.Value.Jwt;
 
         _jwtKey = options.Key ?? string.Empty;
-        if (_jwtKey.Length < 16)
-            throw new InvalidOperationException("JWT key too short; must be at least 16 characters.");
+        if (_jwtKey.Length < 32)
+            throw new InvalidOperationException("JWT key too short; must be at least 32 characters for HS256.");
 
         _jwtIssuer = string.IsNullOrWhiteSpace(options.Issuer) ? "PackTracker" : options.Issuer;
         _jwtAudience = string.IsNullOrWhiteSpace(options.Audience) ? "PackTrackerClient" : options.Audience;
         _accessTokenMinutes = options.ExpiresInMinutes > 0 ? options.ExpiresInMinutes : 60;
         _refreshTokenDays = options.RefreshTokenDays > 0 ? options.RefreshTokenDays : 30;
+    }
+
+    private static string HashToken(string token)
+    {
+        using var sha256 = SHA256.Create();
+        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token));
+        return Convert.ToBase64String(hashedBytes);
     }
 
     public string GenerateAccessToken(Profile user)
@@ -81,16 +89,31 @@ public class JwtTokenService
         return jwt;
     }
 
-    public async Task<RefreshToken> GenerateRefreshTokenAsync(Guid userId, CancellationToken ct)
+    public async Task<string> GenerateRefreshTokenAsync(Guid userId, CancellationToken ct)
     {
+        // 1. Revoke existing tokens for this user (Rotation Policy)
+        var activeTokens = await _db.RefreshTokens
+            .Where(rt => rt.UserId == userId && !rt.IsRevoked)
+            .ToListAsync(ct);
+
+        foreach (var active in activeTokens)
+        {
+            active.IsRevoked = true;
+            active.RevokedAt = DateTime.UtcNow;
+        }
+
+        // 2. Generate new plain-text token
+        var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+            .Replace("+", "")
+            .Replace("/", "")
+            .Replace("=", "");
+
+        // 3. Store the HASHED version
         var refresh = new RefreshToken
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Token = Convert.ToBase64String(Guid.NewGuid().ToByteArray())
-                       .Replace("+", "")
-                       .Replace("/", "")
-                       .Replace("=", ""),
+            Token = HashToken(rawToken),
             CreatedAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenDays),
             IsRevoked = false
@@ -99,16 +122,19 @@ public class JwtTokenService
         await _db.RefreshTokens.AddAsync(refresh, ct);
         await _db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("✅ Created refresh token for user {UserId}, expiring in {Days} days.", userId, _refreshTokenDays);
-        return refresh;
+        _logger.LogInformation("✅ Created new refresh token for user {UserId}, expiring in {Days} days.", userId, _refreshTokenDays);
+        return rawToken; // Return the plain text to the user ONCE
     }
 
     public async Task<Profile?> ValidateRefreshTokenAsync(string token, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+
+        var hashed = HashToken(token);
+
         var refresh = await _db.RefreshTokens
-            .AsNoTracking()
             .Include(r => r.Profile)
-            .FirstOrDefaultAsync(r => r.Token == token && !r.IsRevoked, ct);
+            .FirstOrDefaultAsync(r => r.Token == hashed && !r.IsRevoked, ct);
 
         if (refresh == null)
         {
@@ -128,7 +154,10 @@ public class JwtTokenService
 
     public async Task RevokeRefreshTokenAsync(string token, CancellationToken ct)
     {
-        var refresh = await _db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token, ct);
+        if (string.IsNullOrWhiteSpace(token)) return;
+        var hashed = HashToken(token);
+
+        var refresh = await _db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == hashed, ct);
         if (refresh == null) return;
 
         refresh.IsRevoked = true;
@@ -142,8 +171,8 @@ public class JwtTokenService
     public async Task<(string accessToken, string refreshToken, int expiresIn)> IssueTokenPairAsync(Profile user, CancellationToken ct)
     {
         var accessToken = GenerateAccessToken(user);
-        var refresh = await GenerateRefreshTokenAsync(user.Id, ct);
+        var refreshToken = await GenerateRefreshTokenAsync(user.Id, ct);
 
-        return (accessToken, refresh.Token, _accessTokenMinutes * 60);
+        return (accessToken, refreshToken, _accessTokenMinutes * 60);
     }
 }

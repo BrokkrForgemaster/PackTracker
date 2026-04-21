@@ -15,6 +15,11 @@ public static class ApiAuthenticationDefaults
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+
         var auth = context.Request.Headers.Authorization.ToString();
         if (!string.IsNullOrWhiteSpace(auth) &&
             auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))

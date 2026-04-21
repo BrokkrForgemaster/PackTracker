@@ -119,18 +119,52 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        var allActiveRequests = assistance
+            .Concat(crafting)
+            .Concat(procurement)
+            .ToList();
+
         return new DashboardSummaryDto
         {
-            ActiveRequests = assistance.Concat(crafting).Concat(procurement)
-                .OrderByDescending(x => x.IsPinned)
-                .ThenByDescending(x => x.IsAssignedToCurrentUser)
-                .ThenByDescending(x => x.IsRequestedByCurrentUser)
-                .ThenByDescending(x => x.IsAvailableToClaim)
-                .ThenByDescending(x => x.CreatedAt)
-                .ToList(),
-            ScheduledGuides = guides
+            ActiveRequests = OrderDashboardRequests(allActiveRequests),
+            ScheduledGuides = guides,
+            PersonalContext = new PersonalContextDto
+            {
+                MyActiveTasks = OrderPersonalTasks(allActiveRequests
+                    .Where(x => x.IsAssignedToCurrentUser)
+                    .ToList()),
+                MyPendingRequests = OrderPersonalRequests(allActiveRequests
+                    .Where(x => x.IsRequestedByCurrentUser)
+                    .ToList())
+            }
         };
     }
+
+    private static List<ActiveRequestDto> OrderDashboardRequests(IEnumerable<ActiveRequestDto> requests) =>
+        requests
+            .OrderByDescending(x => x.IsPinned)
+            .ThenByDescending(x => x.IsAssignedToCurrentUser)
+            .ThenByDescending(x => x.IsRequestedByCurrentUser)
+            .ThenByDescending(x => x.IsAvailableToClaim)
+            .ThenByDescending(x => x.CreatedAt)
+            .ToList();
+
+    private static List<ActiveRequestDto> OrderPersonalTasks(IEnumerable<ActiveRequestDto> requests) =>
+        requests
+            .OrderByDescending(x => x.IsPinned)
+            .ThenByDescending(x => string.Equals(x.Priority, RequestPriority.Critical.ToString(), StringComparison.Ordinal))
+            .ThenByDescending(x => string.Equals(x.Priority, RequestPriority.High.ToString(), StringComparison.Ordinal))
+            .ThenByDescending(x => x.CreatedAt)
+            .ToList();
+
+    private static List<ActiveRequestDto> OrderPersonalRequests(IEnumerable<ActiveRequestDto> requests) =>
+        requests
+            .OrderByDescending(x => x.IsPinned)
+            .ThenByDescending(x => x.IsAvailableToClaim)
+            .ThenByDescending(x => string.Equals(x.Priority, RequestPriority.Critical.ToString(), StringComparison.Ordinal))
+            .ThenByDescending(x => string.Equals(x.Priority, RequestPriority.High.ToString(), StringComparison.Ordinal))
+            .ThenByDescending(x => x.CreatedAt)
+            .ToList();
 
     private IQueryable<ActiveRequestDto> BuildCraftingActiveRequestsQuery(Guid? currentProfileId) =>
         _dbContext.CraftingRequests

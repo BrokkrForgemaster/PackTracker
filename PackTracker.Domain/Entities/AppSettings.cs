@@ -41,6 +41,7 @@ public class AppSettings
 
     // --- External API ---
     public string ApiBaseUrl { get; set; } = string.Empty;
+    public List<string> TrustedProxies { get; set; } = new();
 
     // --- Game Integration ---
     public string GameLogFilePath { get; set; } = string.Empty;

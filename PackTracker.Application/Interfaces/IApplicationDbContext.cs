@@ -17,6 +17,9 @@ public interface IApplicationDbContext
     DbSet<BlueprintRecipeMaterial> BlueprintRecipeMaterials { get; }
     DbSet<RequestComment> RequestComments { get; }
     DbSet<Material> Materials { get; }
+    DbSet<OrgInventoryItem> OrgInventoryItems { get; }
+    DbSet<Commodity> Commodities { get; }
+    DbSet<CommodityPrice> CommodityPrices { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task<int> ExecuteSqlInterpolatedAsync(FormattableString sql, CancellationToken cancellationToken = default);

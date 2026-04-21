@@ -14,6 +14,13 @@ public class DiscordOptions
     public string ClientSecret { get; set; } = string.Empty;
     public string CallbackPath { get; set; } = "/signin-discord";
     public string RequiredGuildId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Maps Discord Role IDs to internal Rank names.
+    /// This avoids hardcoding IDs that might change if roles are recreated.
+    /// </summary>
+    public Dictionary<string, string> RoleMappings { get; set; } = new();
+
     /// <summary>
     /// Optional Discord Bot token used to fetch guild role hierarchy.
     /// The /guilds/{id}/roles endpoint requires Bot authorization.
@@ -28,4 +35,11 @@ public class JwtOptions
     public string Audience { get; set; } = "PackTrackerClient";
     public int ExpiresInMinutes { get; set; } = 60;
     public int RefreshTokenDays { get; set; } = 30;
+}
+
+public class SecurityOptions
+{
+    public const string Section = "Security";
+    public List<string> TrustedProxies { get; set; } = new();
+    public List<string> AllowedCorsOrigins { get; set; } = new();
 }

@@ -44,7 +44,10 @@
       "Bash(git -C \"B:\\\\PackTracker\" diff --name-only HEAD)",
       "Bash(git *)",
       "Bash(reg query *)",
-      "Bash(dotnet user-secrets *)"
+      "Bash(dotnet user-secrets *)",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\('B:\\\\PackTracker\\\\PackTracker.Presentation\\\\Assets\\\\Pack_Tracker.png'\\)\\)\")",
+      "PowerShell($b64 = [Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\('B:\\\\PackTracker\\\\PackTracker.Presentation\\\\Assets\\\\Pack_Tracker.png'\\)\\); Write-Output $b64.Length)",
+      "PowerShell(Out-File *)"
     ],
     "deny": [],
     "ask": []

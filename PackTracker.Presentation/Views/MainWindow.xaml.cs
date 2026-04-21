@@ -155,6 +155,11 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToFirstView()
         {
+            _ = NavigateToFirstViewAsync();
+        }
+
+        private async Task NavigateToFirstViewAsync()
+        {
             var settings = _settingsService.GetSettings();
 
             if (!settings.FirstRunComplete)
@@ -165,13 +170,47 @@ namespace PackTracker.Presentation.Views
 
             var jwtToken = settings.JwtToken;
 
-            if (string.IsNullOrWhiteSpace(jwtToken) || !IsJwtValid(jwtToken))
+            if (!string.IsNullOrWhiteSpace(jwtToken) && IsJwtValid(jwtToken))
             {
-                NavigateToLogin();
+                NavigateToDashboard();
                 return;
             }
 
-            NavigateToDashboard();
+            // Access token expired or missing — try the refresh token before forcing re-login
+            var refreshToken = settings.JwtRefreshToken;
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+            {
+                try
+                {
+                    var apiProvider = _serviceProvider.GetRequiredService<IApiClientProvider>();
+                    using var client = apiProvider.CreateAnonymousClient();
+                    var response = await client.PostAsJsonAsync("api/v1/auth/refresh",
+                        new { RefreshToken = refreshToken });
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var payload = await response.Content.ReadFromJsonAsync<TokenPayload>();
+                        if (payload is not null)
+                        {
+                            await _settingsService.UpdateSettingsAsync(s =>
+                            {
+                                s.JwtToken = payload.access_token;
+                                s.JwtRefreshToken = payload.refresh_token;
+                            });
+
+                            NavigateToDashboard();
+                            return;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
+                    logger?.LogWarning(ex, "Silent token refresh failed on startup.");
+                }
+            }
+
+            NavigateToLogin();
         }
 
         private bool IsJwtValid(string token)
@@ -421,11 +460,8 @@ namespace PackTracker.Presentation.Views
             System.Windows.Application.Current.Shutdown();
         }
 
-        protected override async void OnClosing(System.ComponentModel.CancelEventArgs e)
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            e.Cancel = true;
-            await LogoutAsync();
-            e.Cancel = false;
             base.OnClosing(e);
             System.Windows.Application.Current.Shutdown();
         }
@@ -434,6 +470,21 @@ namespace PackTracker.Presentation.Views
         {
             try
             {
+                var settings = _settingsService.GetSettings();
+
+                // Revoke refresh token on the server so it can't be reused after explicit logout
+                if (!string.IsNullOrWhiteSpace(settings.JwtRefreshToken))
+                {
+                    try
+                    {
+                        var apiProvider = _serviceProvider.GetRequiredService<IApiClientProvider>();
+                        using var client = apiProvider.CreateAnonymousClient();
+                        await client.PostAsJsonAsync("api/v1/auth/logout",
+                            new { RefreshToken = settings.JwtRefreshToken });
+                    }
+                    catch { /* best effort */ }
+                }
+
                 await _settingsService.UpdateSettingsAsync(s =>
                 {
                     s.JwtToken = string.Empty;

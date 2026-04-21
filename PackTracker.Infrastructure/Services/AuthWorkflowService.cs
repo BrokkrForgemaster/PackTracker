@@ -1,6 +1,7 @@
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
+using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 
@@ -11,20 +12,17 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
     private readonly IProfileService _profiles;
     private readonly JwtTokenService _jwt;
     private readonly AppDbContext _db;
-    private readonly IMemoryCache _cache;
     private readonly ILogger<AuthWorkflowService> _logger;
 
     public AuthWorkflowService(
         IProfileService profiles,
         JwtTokenService jwt,
         AppDbContext db,
-        IMemoryCache cache,
         ILogger<AuthWorkflowService> logger)
     {
         _profiles = profiles;
         _jwt = jwt;
         _db = db;
-        _cache = cache;
         _logger = logger;
     }
 
@@ -57,10 +55,17 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
 
         if (!string.IsNullOrWhiteSpace(request.ClientState))
         {
-            _cache.Set(
-                GetCacheKey(request.ClientState),
-                new LoginTokenPayload(access, refresh, expires),
-                TimeSpan.FromMinutes(5));
+            // PERSIST TO DATABASE for multi-instance support
+            var state = new LoginState
+            {
+                ClientState = request.ClientState,
+                AccessToken = access,
+                RefreshToken = refresh,
+                ExpiresIn = expires
+            };
+
+            _db.LoginStates.Add(state);
+            await _db.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Stored OAuth completion payload for client state {ClientState}.", request.ClientState);
         }
@@ -72,17 +77,30 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
         return new AuthCompletionResult(AuthCompletionStatus.Success, "Success");
     }
 
-    public Task<LoginTokenPayload?> PollAsync(string clientState, CancellationToken cancellationToken)
+    public async Task<LoginTokenPayload?> PollAsync(string clientState, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(clientState)) return null;
 
-        if (_cache.TryGetValue<LoginTokenPayload>(GetCacheKey(clientState), out var payload))
+        var state = await _db.LoginStates
+            .FirstOrDefaultAsync(s => s.ClientState == clientState, cancellationToken);
+
+        if (state == null) return null;
+
+        if (state.IsExpired)
         {
-            _cache.Remove(GetCacheKey(clientState));
-            return Task.FromResult<LoginTokenPayload?>(payload);
+            _logger.LogWarning("Login state for {ClientState} has expired.", clientState);
+            _db.LoginStates.Remove(state);
+            await _db.SaveChangesAsync(cancellationToken);
+            return null;
         }
 
-        return Task.FromResult<LoginTokenPayload?>(null);
+        var payload = new LoginTokenPayload(state.AccessToken, state.RefreshToken, state.ExpiresIn);
+
+        // Remove after successful poll (One-time use)
+        _db.LoginStates.Remove(state);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return payload;
     }
 
     public async Task<AuthRefreshResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
@@ -100,6 +118,4 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
 
     public Task LogoutAsync(string refreshToken, CancellationToken cancellationToken)
         => _jwt.RevokeRefreshTokenAsync(refreshToken, cancellationToken);
-
-    private static string GetCacheKey(string state) => $"login-state:{state}";
 }

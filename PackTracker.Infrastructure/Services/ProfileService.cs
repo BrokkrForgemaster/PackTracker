@@ -63,17 +63,14 @@ public class ProfileService : IProfileService
     /// The user must belong to the configured required Discord guild.
     /// </summary>
     /// <param name="accessToken">The OAuth access token used to query Discord.</param>
-    /// <param name="discordId">The Discord user identifier.</param>
-    /// <param name="username">The Discord username.</param>
+    /// <param name="discordId">The Discord user identifier from the provider.</param>
+    /// <param name="username">The Discord username from the provider.</param>
     /// <param name="avatarUrl">The Discord avatar URL, if available.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>
     /// The created or updated profile if the user is valid and belongs to the required guild;
     /// otherwise <c>null</c>.
     /// </returns>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the required Discord guild configuration is missing.
-    /// </exception>
     public async Task<Profile?> UpsertFromDiscordAsync(
         string accessToken,
         string discordId,
@@ -84,11 +81,14 @@ public class ProfileService : IProfileService
         if (string.IsNullOrWhiteSpace(accessToken))
             throw new ArgumentException("A Discord access token is required.", nameof(accessToken));
 
-        if (string.IsNullOrWhiteSpace(discordId))
-            throw new ArgumentException("A Discord user ID is required.", nameof(discordId));
-
-        if (string.IsNullOrWhiteSpace(username))
-            throw new ArgumentException("A Discord username is required.", nameof(username));
+        // SECURITY: Verify identity via Discord API instead of trusting parameters from the client
+        var discordUser = await GetDiscordUserProfileAsync(accessToken, ct);
+        if (discordUser == null || discordUser.Id != discordId)
+        {
+            _logger.LogWarning("Discord identity verification failed. Expected={Expected} Actual={Actual}",
+                discordId, discordUser?.Id);
+            return null;
+        }
 
         var requiredGuildId = _authOptions.Discord.RequiredGuildId;
 
@@ -535,9 +535,55 @@ public class ProfileService : IProfileService
         return avatarUrl.Trim();
     }
 
+    private async Task<DiscordUserResponse?> GetDiscordUserProfileAsync(string accessToken, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        try
+        {
+            return await client.GetFromJsonAsync<DiscordUserResponse>(
+                "https://discord.com/api/users/@me",
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve Discord user profile.");
+            return null;
+        }
+    }
+
+    private async Task<DiscordMember?> GetGuildMemberAsync(string accessToken, string guildId, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        try
+        {
+            using var response = await client.GetAsync($"https://discord.com/api/users/@me/guilds/{guildId}/member", ct);
+            if (!response.IsSuccessStatusCode) return null;
+
+            return await response.Content.ReadFromJsonAsync<DiscordMember>(cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve Discord guild member details.");
+            return null;
+        }
+    }
+
     #endregion
 
     #region Private Types
+
+    private sealed class DiscordUserResponse
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("username")]
+        public string Username { get; set; } = string.Empty;
+    }
 
     /// <summary>
     /// Represents a minimal Discord guild payload returned by the Discord API.

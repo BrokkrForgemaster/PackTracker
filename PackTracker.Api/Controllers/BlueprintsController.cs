@@ -7,6 +7,7 @@ using PackTracker.Application.Blueprints.Queries.GetBlueprintCategories;
 using PackTracker.Application.Blueprints.Queries.PingBlueprints;
 using PackTracker.Application.Blueprints.Queries.SearchBlueprints;
 using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Application.Blueprints.Queries.GetBlueprintEconomicSummary;
 
 namespace PackTracker.Api.Controllers;
 
@@ -113,5 +114,13 @@ public class BlueprintsController : ControllerBase
             _logger.LogError(ex, "Failed to load blueprint categories.");
             return StatusCode(500, new { message = "Failed to load categories.", detail = ex.Message });
         }
+    }
+
+    [HttpGet("{id:guid}/economic-summary")]
+    public async Task<ActionResult<BlueprintEconomicSummaryDto>> GetEconomicSummary(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetBlueprintEconomicSummaryQuery(id), ct);
+        if (!result.Success) return NotFound(new { message = result.Message });
+        return Ok(result.Data);
     }
 }

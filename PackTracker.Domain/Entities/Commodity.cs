@@ -14,6 +14,8 @@ public class Commodity
     public int? WeightScu { get; set; }
     
     public decimal? ROI { get; set; }
+    public decimal? PriceBuy { get; set; }
+    public decimal? PriceSell { get; set; }
     public bool IsAvailable { get; set; }
     public bool IsAvailableLive { get; set; }
     public bool IsVisible { get; set; }

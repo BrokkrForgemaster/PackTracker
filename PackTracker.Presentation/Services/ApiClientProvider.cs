@@ -7,6 +7,7 @@ namespace PackTracker.Presentation.Services;
 public interface IApiClientProvider
 {
     HttpClient CreateClient();
+    HttpClient CreateAnonymousClient();
     string BaseUrl { get; }
 }
 
@@ -45,4 +46,7 @@ public class ApiClientProvider : IApiClientProvider
 
         return client;
     }
+
+    public HttpClient CreateAnonymousClient() =>
+        new HttpClient { BaseAddress = new Uri($"{BaseUrl}/") };
 }

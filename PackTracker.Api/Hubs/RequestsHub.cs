@@ -235,6 +235,17 @@ public class RequestsHub : Hub
             throw new HubException("Lobby name is required.");
 
         var normalizedLobby = NormalizeLobbyName(lobbyName);
+        var currentUsername = Context.User?.Identity?.Name ?? string.Empty;
+
+        // PRIVACY: Prevent users from requesting history of DM channels they don't belong to
+        if (normalizedLobby.StartsWith("dm:", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = normalizedLobby.Split(':');
+            if (parts.Length < 3 || (parts[1] != currentUsername.ToLowerInvariant() && parts[2] != currentUsername.ToLowerInvariant()))
+            {
+                throw new HubException("Access Denied: You do not have permission to view this conversation.");
+            }
+        }
 
         // Load from DB — most recent 100 messages, oldest first
         var dbMessages = await _db.LobbyChatMessages
@@ -513,8 +524,9 @@ public class RequestsHub : Hub
         var timestamp = DateTime.UtcNow;
         var messageId = Guid.NewGuid().ToString();
         var trimmedContent = content.Trim();
-        var senderChannel = BuildDirectChannelName(targetProfile.Username);
-        var recipientChannel = BuildDirectChannelName(senderUsername);
+        
+        // SHARED CHANNEL for both users
+        var dmChannel = BuildPrivateChannelName(senderUsername, targetProfile.Username);
 
         var message = new ChatMessage(
             Id: messageId,
@@ -526,14 +538,13 @@ public class RequestsHub : Hub
             AvatarUrl: senderAvatarUrl,
             SenderRole: senderRole);
 
-        StoreMessageHistory(senderChannel, message);
-        StoreMessageHistory(recipientChannel, message);
+        StoreMessageHistory(dmChannel, message);
 
-        // Persist DM to DB (stored once under sender's channel key)
+        // Persist DM to DB
         _db.LobbyChatMessages.Add(new LobbyChatMessage
         {
             Id = message.Id,
-            Channel = senderChannel,
+            Channel = dmChannel,
             Sender = message.Sender,
             SenderDisplayName = message.SenderDisplayName,
             Content = message.Content,
@@ -548,7 +559,7 @@ public class RequestsHub : Hub
         await Clients.User(targetProfile.DiscordId).SendAsync("ReceiveDirectMessage", new
         {
             Id = messageId,
-            Channel = recipientChannel,
+            Channel = dmChannel,
             Sender = senderUsername,
             SenderDisplayName = senderDisplayName,
             Content = trimmedContent,
@@ -559,11 +570,11 @@ public class RequestsHub : Hub
             CounterpartDisplayName = senderDisplayName
         });
 
-        // Echo back to the sender (they do not add DMs locally — the echo is the authoritative copy)
+        // Echo back to the sender
         await Clients.Caller.SendAsync("ReceiveDirectMessage", new
         {
             Id = messageId,
-            Channel = senderChannel,
+            Channel = dmChannel,
             Sender = senderUsername,
             SenderDisplayName = senderDisplayName,
             Content = trimmedContent,
@@ -685,6 +696,13 @@ public class RequestsHub : Hub
 
     private static string BuildDirectChannelName(string username) =>
         $"direct:{username.Trim().ToLowerInvariant()}";
+
+    private static string BuildPrivateChannelName(string userA, string userB)
+    {
+        var list = new List<string> { userA.Trim().ToLowerInvariant(), userB.Trim().ToLowerInvariant() };
+        list.Sort();
+        return $"dm:{list[0]}:{list[1]}";
+    }
 
     private static void StoreMessageHistory(string normalizedLobby, ChatMessage message)
     {

@@ -6,6 +6,20 @@ public class DashboardSummaryDto
 {
     public List<ActiveRequestDto> ActiveRequests { get; set; } = new();
     public List<GuideRequestDto> ScheduledGuides { get; set; } = new();
+    public PersonalContextDto PersonalContext { get; set; } = new();
+}
+
+public class PersonalContextDto
+{
+    /// <summary>
+    /// Everything the current user is assigned to or has claimed.
+    /// </summary>
+    public List<ActiveRequestDto> MyActiveTasks { get; set; } = new();
+
+    /// <summary>
+    /// Everything the current user has requested that is not yet completed.
+    /// </summary>
+    public List<ActiveRequestDto> MyPendingRequests { get; set; } = new();
 }
 
 public class ActiveRequestDto

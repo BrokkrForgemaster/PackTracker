@@ -70,7 +70,7 @@ public static class PackTrackerApiHostServiceCollectionExtensions
             {
                 options.DefaultScheme = hostOptions.SmartScheme;
                 options.DefaultAuthenticateScheme = hostOptions.SmartScheme;
-                options.DefaultChallengeScheme = hostOptions.DiscordScheme;
+                options.DefaultChallengeScheme = hostOptions.SmartScheme;
             })
             .AddPolicyScheme(
                 hostOptions.SmartScheme,

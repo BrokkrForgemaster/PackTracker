@@ -43,6 +43,21 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
     /// </summary>
     public DbSet<Profile> Profiles => Set<Profile>();
 
+    /// <summary>
+    /// Gets the temporary login states used for desktop polling.
+    /// </summary>
+    public DbSet<LoginState> LoginStates => Set<LoginState>();
+
+    /// <summary>
+    /// Gets the synchronization metadata for various tasks.
+    /// </summary>
+    public DbSet<SyncMetadata> SyncMetadatas => Set<SyncMetadata>();
+
+    /// <summary>
+    /// Gets the distributed locks used to coordinate tasks across instances.
+    /// </summary>
+    public DbSet<DistributedLock> DistributedLocks => Set<DistributedLock>();
+
     public Task<int> ExecuteSqlInterpolatedAsync(
         FormattableString sql,
         CancellationToken cancellationToken = default) =>
@@ -161,7 +176,7 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
                 .EnableDetailedErrors()
                 .EnableSensitiveDataLogging(
                     Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
-                .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+                .UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll)
                 .EnableServiceProviderCaching();
         }
     }
@@ -174,6 +189,9 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
     {
         ConfigureRefreshTokens(modelBuilder);
         ConfigureProfiles(modelBuilder);
+        ConfigureLoginStates(modelBuilder);
+        ConfigureSyncMetadata(modelBuilder);
+        ConfigureDistributedLocks(modelBuilder);
         ConfigureRequestTickets(modelBuilder);
         ConfigureGuideRequests(modelBuilder);
         ConfigureRequestComments(modelBuilder);
@@ -676,6 +694,45 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
                 .WithMany()
                 .HasForeignKey(x => x.AssignedToProfileId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+    }
+
+    /// <summary>
+    /// Configures the login state persistence rules.
+    /// </summary>
+    private static void ConfigureLoginStates(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<LoginState>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.ClientState).IsUnique();
+            entity.Property(x => x.ClientState).HasMaxLength(256).IsRequired();
+        });
+    }
+
+    /// <summary>
+    /// Configures the sync metadata persistence rules.
+    /// </summary>
+    private static void ConfigureSyncMetadata(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SyncMetadata>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.TaskName).IsUnique();
+            entity.Property(x => x.TaskName).HasMaxLength(128).IsRequired();
+        });
+    }
+
+    /// <summary>
+    /// Configures the distributed lock persistence rules.
+    /// </summary>
+    private static void ConfigureDistributedLocks(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DistributedLock>(entity =>
+        {
+            entity.HasKey(x => x.LockKey);
+            entity.Property(x => x.LockKey).HasMaxLength(128);
+            entity.Property(x => x.LockedBy).HasMaxLength(128).IsRequired();
         });
     }
 

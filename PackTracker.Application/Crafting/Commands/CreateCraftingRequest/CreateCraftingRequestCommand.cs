@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.Common;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.Interfaces;
@@ -15,15 +16,18 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly ICraftingWorkflowNotifier _notifier;
+    private readonly ILogger<CreateCraftingRequestCommandHandler> _logger;
 
     public CreateCraftingRequestCommandHandler(
         IApplicationDbContext db,
         ICurrentUserService currentUser,
-        ICraftingWorkflowNotifier notifier)
+        ICraftingWorkflowNotifier notifier,
+        ILogger<CreateCraftingRequestCommandHandler> logger)
     {
         _db = db;
         _currentUser = currentUser;
         _notifier = notifier;
+        _logger = logger;
     }
 
     public async Task<OperationResult<Guid>> Handle(CreateCraftingRequestCommand command, CancellationToken cancellationToken)
@@ -80,41 +84,76 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
         };
 
         _db.CraftingRequests.Add(craftingRequest);
-        try
-        {
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException ex) when (IsLegacyCraftingSchemaFailure(ex))
-        {
-            _db.CraftingRequests.Remove(craftingRequest);
+        await _db.SaveChangesAsync(cancellationToken);
 
-            await _db.ExecuteSqlInterpolatedAsync(
-                $"""
-                INSERT INTO "CraftingRequests"
-                ("Id", "BlueprintId", "RequesterProfileId", "AssignedCrafterProfileId", "QuantityRequested", "MinimumQuality",
-                 "RefusalReason", "Priority", "Status", "DeliveryLocation", "RewardOffered", "RequiredBy", "Notes",
-                 "CreatedAt", "UpdatedAt", "CompletedAt")
-                VALUES
-                ({craftingRequest.Id}, {craftingRequest.BlueprintId}, {craftingRequest.RequesterProfileId}, {craftingRequest.AssignedCrafterProfileId},
-                 {craftingRequest.QuantityRequested}, {craftingRequest.MinimumQuality}, {craftingRequest.RefusalReason}, {(int)craftingRequest.Priority},
-                 {(int)craftingRequest.Status}, {craftingRequest.DeliveryLocation}, {craftingRequest.RewardOffered}, {craftingRequest.RequiredBy},
-                 {craftingRequest.Notes}, {craftingRequest.CreatedAt}, {craftingRequest.UpdatedAt}, {craftingRequest.CompletedAt})
-                """,
-                cancellationToken);
+        // --- ENHANCEMENT: Automated Procurement Chain ---
+        if (craftingRequest.MaterialSupplyMode == MaterialSupplyMode.CrafterMustSupply)
+        {
+            await SpawnProcurementRequestsAsync(craftingRequest, cancellationToken);
         }
 
         await _notifier.NotifyAsync("CraftingRequestCreated", craftingRequest.Id, cancellationToken);
-
         return OperationResult<Guid>.Ok(craftingRequest.Id);
     }
 
-    private static bool IsLegacyCraftingSchemaFailure(Exception ex)
+    private async Task SpawnProcurementRequestsAsync(CraftingRequest craftingRequest, CancellationToken ct)
     {
-        var message = ex.ToString();
-        return message.Contains("ItemName", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("MaterialSupplyMode", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("RequesterUtcOffsetMinutes", StringComparison.OrdinalIgnoreCase)
-               || message.Contains("column", StringComparison.OrdinalIgnoreCase) && message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase);
+        // 1. Get the primary recipe for the blueprint
+        var recipe = await _db.BlueprintRecipes
+            .Include(r => r.Blueprint)
+            .FirstOrDefaultAsync(r => r.BlueprintId == craftingRequest.BlueprintId, ct);
+
+        if (recipe == null) return;
+
+        // 2. Get recipe materials
+        var materials = await _db.BlueprintRecipeMaterials
+            .Include(m => m.Material)
+            .Where(m => m.BlueprintRecipeId == recipe.Id)
+            .ToListAsync(ct);
+
+        if (materials.Count == 0) return;
+
+        // 3. Get current Org Inventory for these materials
+        var materialIds = materials.Select(m => m.MaterialId).ToList();
+        var inventory = await _db.OrgInventoryItems
+            .Where(i => materialIds.Contains(i.MaterialId))
+            .ToListAsync(ct);
+
+        foreach (var recipeMaterial in materials)
+        {
+            var totalRequired = (decimal)recipeMaterial.QuantityRequired * craftingRequest.QuantityRequested;
+            var invItem = inventory.FirstOrDefault(i => i.MaterialId == recipeMaterial.MaterialId);
+            
+            var available = invItem != null 
+                ? Math.Max(0, invItem.QuantityOnHand - invItem.QuantityReserved) 
+                : 0;
+
+            if (available < totalRequired)
+            {
+                var missing = totalRequired - available;
+
+                var procurementRequest = new MaterialProcurementRequest
+                {
+                    LinkedCraftingRequestId = craftingRequest.Id,
+                    MaterialId = recipeMaterial.MaterialId,
+                    RequesterProfileId = craftingRequest.RequesterProfileId,
+                    QuantityRequested = missing,
+                    Priority = craftingRequest.Priority,
+                    Status = RequestStatus.Open,
+                    DeliveryLocation = craftingRequest.DeliveryLocation,
+                    Notes = $"Automated procurement for Crafting Request {craftingRequest.Id} ({craftingRequest.ItemName ?? recipe.Blueprint?.CraftedItemName}).",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _db.MaterialProcurementRequests.Add(procurementRequest);
+                
+                _logger.LogInformation(
+                    "Auto-procurement: Created request for {Quantity} units of {MaterialName} (Required={Required}, Available={Available})",
+                    missing, recipeMaterial.Material?.Name ?? "Unknown Material", totalRequired, available);
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
     }
 }

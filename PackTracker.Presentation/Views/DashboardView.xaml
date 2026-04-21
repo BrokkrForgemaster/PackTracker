@@ -5,6 +5,7 @@
              xmlns:behaviors="clr-namespace:PackTracker.Presentation.Behaviors"
              xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
              xmlns:vm="clr-namespace:PackTracker.Presentation.ViewModels"
+             xmlns:dto="clr-namespace:PackTracker.Application.DTOs.Dashboard;assembly=PackTracker.Application"
              xmlns:global="clr-namespace:"
              xmlns:controls="clr-namespace:PackTracker.Presentation.Controls"
              Background="Transparent">
@@ -256,6 +257,143 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="SectionExpanderStyle" TargetType="Expander">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Expander">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Top"
+                                          IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          OverridesDefaultStyle="True"
+                                          HorizontalContentAlignment="Stretch"
+                                          Focusable="False"
+                                          Cursor="Hand">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Bd"
+                                                Background="Transparent"
+                                                Padding="12,11">
+                                            <DockPanel LastChildFill="True">
+                                                <TextBlock x:Name="Arrow"
+                                                           DockPanel.Dock="Right"
+                                                           Text="▼"
+                                                           FontSize="8"
+                                                           Foreground="#6E5A46"
+                                                           VerticalAlignment="Center"
+                                                           Margin="8,0,0,0" />
+                                                <ContentPresenter HorizontalAlignment="Stretch" />
+                                            </DockPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="False">
+                                                <Setter TargetName="Arrow" Property="Text" Value="▶" />
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#0D0A07" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter Content="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </ToggleButton>
+                            <Border DockPanel.Dock="Top"
+                                    BorderBrush="{StaticResource OpBorderPanelBrush}"
+                                    BorderThickness="0,1,0,0">
+                                <ContentPresenter x:Name="ExpandSite"
+                                                  Focusable="False"
+                                                  Visibility="Collapsed" />
+                            </Border>
+                        </DockPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="ActiveRequestCardTemplate" DataType="{x:Type dto:ActiveRequestDto}">
+            <Border Style="{StaticResource OpItemBorderStyle}"
+                    Padding="10,9"
+                    Margin="0,0,0,6"
+                    Cursor="Hand"
+                    MouseLeftButtonUp="ActiveRequest_MouseLeftButtonUp">
+                <DockPanel LastChildFill="True">
+                    <Border DockPanel.Dock="Right"
+                            Background="#1A3A1A"
+                            CornerRadius="3"
+                            Padding="6,3"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Status}"
+                                   Foreground="#00A86B"
+                                   FontSize="9"
+                                   FontWeight="Bold" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="PINNED"
+                                       Foreground="{StaticResource OpTextAccentBrush}"
+                                       FontSize="8"
+                                       FontWeight="Bold"
+                                       Margin="0,0,5,0"
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{Binding Title}"
+                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding RequestType}"
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="9"
+                                       VerticalAlignment="Center" />
+                            <Border Background="#16261A"
+                                    BorderBrush="#245B36"
+                                    BorderThickness="1"
+                                    CornerRadius="3"
+                                    Padding="5,2"
+                                    Margin="6,0,0,0"
+                                    Visibility="{Binding IsRequestedByCurrentUser, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="MINE"
+                                           Foreground="#7ED6A5"
+                                           FontSize="8"
+                                           FontWeight="Bold" />
+                            </Border>
+                            <Border Background="#1E1927"
+                                    BorderBrush="#5F4A8A"
+                                    BorderThickness="1"
+                                    CornerRadius="3"
+                                    Padding="5,2"
+                                    Margin="4,0,0,0"
+                                    Visibility="{Binding IsAssignedToCurrentUser, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="ASSIGNED"
+                                           Foreground="#B7A7F5"
+                                           FontSize="8"
+                                           FontWeight="Bold" />
+                            </Border>
+                            <Border Background="#1A2D34"
+                                    BorderBrush="#3E7282"
+                                    BorderThickness="1"
+                                    CornerRadius="3"
+                                    Padding="5,2"
+                                    Margin="4,0,0,0"
+                                    Visibility="{Binding IsAvailableToClaim, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="AVAILABLE"
+                                           Foreground="#8FD4E7"
+                                           FontSize="8"
+                                           FontWeight="Bold" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -352,227 +490,251 @@
             </Grid.ColumnDefinitions>
 
             <!-- LEFT SIDEBAR -->
-            <DockPanel Grid.Column="0">
+            <ScrollViewer Grid.Column="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
 
-                <Border DockPanel.Dock="Top"
-                        Style="{StaticResource OpPanelBorderStyle}"
-                        Padding="10,8"
-                        Margin="0,0,0,8">
-                    <StackPanel>
-                        <DockPanel LastChildFill="False" Margin="0,0,0,6">
-                            <TextBlock Text="GUIDE ROTA"
-                                       DockPanel.Dock="Left"
-                                       Foreground="{StaticResource OpTextTitleBrush}"
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       VerticalAlignment="Center" />
-                            <Border DockPanel.Dock="Right"
-                                    Background="{StaticResource OpBackgroundPillBrush}"
-                                    BorderBrush="{StaticResource OpBorderPillBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="5,1">
-                                <TextBlock Text="{Binding Guide.Requests.Count, StringFormat={}{0} SCHEDULED}"
-                                           Foreground="{StaticResource OpTextAccentBrush}"
-                                           FontSize="9"
-                                           FontWeight="Bold" />
-                            </Border>
-                        </DockPanel>
-
-                        <ItemsControl ItemsSource="{Binding TopGuideRequests}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource OpItemBorderStyle}"
-                                            Padding="7,4"
-                                            Margin="0,0,0,3">
-                                        <DockPanel LastChildFill="True">
-                                            <Border DockPanel.Dock="Right"
-                                                    Background="#1D1813"
-                                                    BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="3"
-                                                    Padding="4,1"
-                                                    Margin="4,0,0,0"
-                                                    VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Status}"
-                                                           Foreground="{StaticResource OpTextAccentBrush}"
-                                                           FontSize="9"
-                                                           FontWeight="Bold" />
-                                            </Border>
-                                            <TextBlock Text="{Binding Title}"
-                                                       Foreground="{StaticResource OpTextMutedBrush}"
-                                                       FontSize="10"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       VerticalAlignment="Center" />
-                                        </DockPanel>
+                    <!-- GUIDE ROTA -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,10">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                            <Expander.Header>
+                                <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
+                                    <TextBlock Text="GUIDE ROTA"
+                                               DockPanel.Dock="Left"
+                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center" />
+                                    <Border DockPanel.Dock="Right"
+                                            Background="{StaticResource OpBackgroundPillBrush}"
+                                            BorderBrush="{StaticResource OpBorderPillBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="5,1">
+                                        <TextBlock Text="{Binding Guide.Requests.Count, StringFormat={}{0} SCHEDULED}"
+                                                   Foreground="{StaticResource OpTextAccentBrush}"
+                                                   FontSize="9"
+                                                   FontWeight="Bold" />
                                     </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <TextBlock Text="No guide shifts scheduled."
-                                   FontStyle="Italic"
-                                   Foreground="{StaticResource OpTextMutedBrush}"
-                                   FontSize="10"
-                                   Margin="0,2">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Guide.Requests.Count}" Value="0">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
-                </Border>
-
-                <Border DockPanel.Dock="Top"
-                        Style="{StaticResource OpPanelBorderStyle}"
-                        Padding="12">
-                    <StackPanel>
-                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                            <TextBlock Text="ACTIVE REQUESTS"
-                                       DockPanel.Dock="Left"
-                                       Foreground="{StaticResource OpTextTitleBrush}"
-                                       FontSize="12"
-                                       FontWeight="Bold"
-                                       VerticalAlignment="Center" />
-                            <Border DockPanel.Dock="Right"
-                                    Background="{StaticResource OpBackgroundPillBrush}"
-                                    BorderBrush="{StaticResource OpBorderPillBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="6,2">
-                                <TextBlock Text="{Binding ActiveRequests.Count, StringFormat={}{0} TASKS}"
-                                           Foreground="{StaticResource OpTextAccentBrush}"
-                                           FontSize="9"
-                                           FontWeight="Bold" />
-                            </Border>
-                        </DockPanel>
-
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      MaxHeight="320">
-                            <ItemsControl ItemsSource="{Binding ActiveRequests}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Style="{StaticResource OpItemBorderStyle}"
-                                                Padding="8,6"
-                                                Margin="0,0,0,4"
-                                                Cursor="Hand"
-                                                MouseLeftButtonUp="ActiveRequest_MouseLeftButtonUp">
-                                            <DockPanel LastChildFill="True">
-                                                <Border DockPanel.Dock="Right"
-                                                        Background="#1A3A1A"
-                                                        CornerRadius="3"
-                                                        Padding="5,2"
-                                                        Margin="6,0,0,0"
-                                                        VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Status}"
-                                                               Foreground="#00A86B"
-                                                               FontSize="9"
-                                                               FontWeight="Bold" />
-                                                </Border>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="PINNED"
+                                </DockPanel>
+                            </Expander.Header>
+                            <StackPanel Margin="12,10,12,12">
+                                <ItemsControl ItemsSource="{Binding TopGuideRequests}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource OpItemBorderStyle}"
+                                                    Padding="7,5"
+                                                    Margin="0,0,0,4">
+                                                <DockPanel LastChildFill="True">
+                                                    <Border DockPanel.Dock="Right"
+                                                            Background="#1D1813"
+                                                            BorderBrush="{StaticResource OpBorderItemBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="3"
+                                                            Padding="4,1"
+                                                            Margin="4,0,0,0"
+                                                            VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Status}"
                                                                    Foreground="{StaticResource OpTextAccentBrush}"
-                                                                   FontSize="8"
-                                                                   FontWeight="Bold"
-                                                                   Margin="0,0,4,0"
-                                                                   VerticalAlignment="Center"
-                                                                   Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibility}}" />
-                                                        <TextBlock Text="{Binding Title}"
-                                                                   Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                                   FontSize="11"
-                                                                   TextTrimming="CharacterEllipsis" />
-                                                    </StackPanel>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding RequestType}"
-                                                                   Foreground="{StaticResource OpTextMutedBrush}"
                                                                    FontSize="9"
-                                                                   VerticalAlignment="Center" />
-                                                        <Border Background="#16261A"
-                                                                BorderBrush="#245B36"
-                                                                BorderThickness="1"
-                                                                CornerRadius="3"
-                                                                Padding="4,1"
-                                                                Margin="6,0,0,0"
-                                                                Visibility="{Binding IsRequestedByCurrentUser, Converter={StaticResource BoolToVisibility}}">
-                                                            <TextBlock Text="MINE"
-                                                                       Foreground="#7ED6A5"
-                                                                       FontSize="8"
-                                                                       FontWeight="Bold" />
-                                                        </Border>
-                                                        <Border Background="#1E1927"
-                                                                BorderBrush="#5F4A8A"
-                                                                BorderThickness="1"
-                                                                CornerRadius="3"
-                                                                Padding="4,1"
-                                                                Margin="4,0,0,0"
-                                                                Visibility="{Binding IsAssignedToCurrentUser, Converter={StaticResource BoolToVisibility}}">
-                                                            <TextBlock Text="ASSIGNED"
-                                                                       Foreground="#B7A7F5"
-                                                                       FontSize="8"
-                                                                       FontWeight="Bold" />
-                                                        </Border>
-                                                        <Border Background="#1A2D34"
-                                                                BorderBrush="#3E7282"
-                                                                BorderThickness="1"
-                                                                CornerRadius="3"
-                                                                Padding="4,1"
-                                                                Margin="4,0,0,0"
-                                                                Visibility="{Binding IsAvailableToClaim, Converter={StaticResource BoolToVisibility}}">
-                                                            <TextBlock Text="AVAILABLE"
-                                                                       Foreground="#8FD4E7"
-                                                                       FontSize="8"
-                                                                       FontWeight="Bold" />
-                                                        </Border>
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </DockPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                                                                   FontWeight="Bold" />
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                                               FontSize="10"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="No guide shifts scheduled."
+                                           FontStyle="Italic"
+                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="10"
+                                           Margin="0,2">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Guide.Requests.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Expander>
+                    </Border>
 
-                        <!-- Error message (API failure) -->
-                        <TextBlock Text="{Binding RequestLoadError}"
-                                   Foreground="#CC4444"
-                                   FontSize="10"
-                                   TextWrapping="Wrap"
-                                   Margin="0,4"
-                                   Visibility="{Binding RequestLoadError, Converter={StaticResource NullToVisibilityConverter}}" />
+                    <!-- MY ACTIVE TASKS -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,10">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                            <Expander.Header>
+                                <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
+                                    <TextBlock Text="MY ACTIVE TASKS"
+                                               DockPanel.Dock="Left"
+                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center" />
+                                    <Border DockPanel.Dock="Right"
+                                            Background="#1E1927"
+                                            BorderBrush="#5F4A8A"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="6,1">
+                                        <TextBlock Text="{Binding MyActiveTasks.Count, StringFormat={}{0} OWNED}"
+                                                   Foreground="#B7A7F5"
+                                                   FontSize="9"
+                                                   FontWeight="Bold" />
+                                    </Border>
+                                </DockPanel>
+                            </Expander.Header>
+                            <StackPanel Margin="12,10,12,12">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              MaxHeight="160">
+                                    <ItemsControl ItemsSource="{Binding MyActiveTasks}"
+                                                  ItemTemplate="{StaticResource ActiveRequestCardTemplate}" />
+                                </ScrollViewer>
+                                <TextBlock Text="Nothing assigned to you right now."
+                                           FontStyle="Italic"
+                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="11"
+                                           Margin="0,4,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MyActiveTasks.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Expander>
+                    </Border>
 
-                        <!-- Empty state (no error, no items) -->
-                        <TextBlock Text="No active tasks."
-                                   FontStyle="Italic"
-                                   Foreground="{StaticResource OpTextMutedBrush}"
-                                   FontSize="11"
-                                   Margin="0,4">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding ActiveRequests.Count}" Value="0" />
-                                                <Condition Binding="{Binding RequestLoadError}" Value="{x:Null}" />
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
-                </Border>
+                    <!-- MY OPEN REQUESTS -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,10">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                            <Expander.Header>
+                                <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
+                                    <TextBlock Text="MY OPEN REQUESTS"
+                                               DockPanel.Dock="Left"
+                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center" />
+                                    <Border DockPanel.Dock="Right"
+                                            Background="#16261A"
+                                            BorderBrush="#245B36"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="6,1">
+                                        <TextBlock Text="{Binding MyOpenRequests.Count, StringFormat={}{0} PENDING}"
+                                                   Foreground="#7ED6A5"
+                                                   FontSize="9"
+                                                   FontWeight="Bold" />
+                                    </Border>
+                                </DockPanel>
+                            </Expander.Header>
+                            <StackPanel Margin="12,10,12,12">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              MaxHeight="160">
+                                    <ItemsControl ItemsSource="{Binding MyOpenRequests}"
+                                                  ItemTemplate="{StaticResource ActiveRequestCardTemplate}" />
+                                </ScrollViewer>
+                                <TextBlock Text="You have no outstanding requests."
+                                           FontStyle="Italic"
+                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="11"
+                                           Margin="0,4,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MyOpenRequests.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Expander>
+                    </Border>
 
-            </DockPanel>
+                    <!-- ACTIVE REQUESTS -->
+                    <Border Style="{StaticResource OpPanelBorderStyle}">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                            <Expander.Header>
+                                <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
+                                    <TextBlock Text="ACTIVE REQUESTS"
+                                               DockPanel.Dock="Left"
+                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center" />
+                                    <Border DockPanel.Dock="Right"
+                                            Background="{StaticResource OpBackgroundPillBrush}"
+                                            BorderBrush="{StaticResource OpBorderPillBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="6,1">
+                                        <TextBlock Text="{Binding ActiveRequests.Count, StringFormat={}{0} TASKS}"
+                                                   Foreground="{StaticResource OpTextAccentBrush}"
+                                                   FontSize="9"
+                                                   FontWeight="Bold" />
+                                    </Border>
+                                </DockPanel>
+                            </Expander.Header>
+                            <StackPanel Margin="12,10,12,12">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              MaxHeight="240">
+                                    <ItemsControl ItemsSource="{Binding ActiveRequests}"
+                                                  ItemTemplate="{StaticResource ActiveRequestCardTemplate}" />
+                                </ScrollViewer>
+                                <TextBlock Text="{Binding RequestLoadError}"
+                                           Foreground="#CC4444"
+                                           FontSize="10"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4"
+                                           Visibility="{Binding RequestLoadError, Converter={StaticResource NullToVisibilityConverter}}" />
+                                <TextBlock Text="No active tasks."
+                                           FontStyle="Italic"
+                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="11"
+                                           Margin="0,4">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding ActiveRequests.Count}" Value="0" />
+                                                        <Condition Binding="{Binding RequestLoadError}" Value="{x:Null}" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Expander>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
 
             <GridSplitter Grid.Column="1"
                           Width="8"

@@ -212,12 +212,8 @@ public partial class UexViewModel : ObservableObject
             }
 
             var validRoutes = routes
-                .Where(r =>
-                    !string.IsNullOrWhiteSpace(r.OriginTerminalName) &&
-                    !string.IsNullOrWhiteSpace(r.DestinationTerminalName) &&
-                    r.PriceRoi.HasValue &&
-                    r.PriceOrigin.HasValue &&
-                    r.PriceDestination.HasValue)
+                .Where(HasMinimumRouteData)
+                .Select(NormalizeRouteMetrics)
                 .ToList();
 
             AllRoutes = new ObservableCollection<UexTradeRouteDto>(validRoutes);
@@ -255,4 +251,41 @@ public partial class UexViewModel : ObservableObject
     }
 
     #endregion
+
+    private static bool HasMinimumRouteData(UexTradeRouteDto route)
+    {
+        return !string.IsNullOrWhiteSpace(route.OriginTerminalName) &&
+               !string.IsNullOrWhiteSpace(route.DestinationTerminalName) &&
+               route.PriceOrigin.HasValue &&
+               route.PriceDestination.HasValue &&
+               route.PriceDestination.Value > route.PriceOrigin.Value;
+    }
+
+    private static UexTradeRouteDto NormalizeRouteMetrics(UexTradeRouteDto route)
+    {
+        var originPrice = route.PriceOrigin ?? 0m;
+        var destinationPrice = route.PriceDestination ?? 0m;
+        var margin = route.PriceMargin ?? (destinationPrice - originPrice);
+
+        decimal? roi = route.PriceRoi;
+        if (!roi.HasValue && originPrice > 0)
+        {
+            roi = Math.Round((margin / originPrice) * 100m, 2);
+        }
+
+        return new UexTradeRouteDto
+        {
+            Id = route.Id,
+            IdCommodity = route.IdCommodity,
+            OriginTerminalName = route.OriginTerminalName,
+            DestinationTerminalName = route.DestinationTerminalName,
+            PriceOrigin = route.PriceOrigin,
+            PriceDestination = route.PriceDestination,
+            PriceMargin = margin,
+            PriceRoi = roi,
+            Profit = route.Profit ?? margin,
+            Distance = route.Distance,
+            CommodityName = route.CommodityName
+        };
+    }
 }

@@ -21,4 +21,6 @@ public class Blueprint
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     
     public int OwnerCount { get; set; } 
+
+    public BlueprintRecipe? Recipe { get; set; }
 }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -23,6 +25,10 @@ public class DashboardViewModel : ViewModelBase
     private static readonly Regex DirectMentionPattern = new(
         @"^\s*@(?<username>[A-Za-z0-9_.-]+)\s+(?<message>.+)$",
         RegexOptions.Compiled);
+    private static readonly System.Text.Json.JsonSerializerOptions DashboardJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
     
     private int _nextZIndex = 1;
     private bool _isConnected = true;
@@ -51,6 +57,8 @@ public class DashboardViewModel : ViewModelBase
         CollapsedWindowsWithUnread = new ObservableCollection<ChatWindowViewModel>();
         OnlineUsers = new ObservableCollection<OnlineUserViewModel>();
         ActiveRequests = new ObservableCollection<ActiveRequestDto>();
+        MyActiveTasks = new ObservableCollection<ActiveRequestDto>();
+        MyOpenRequests = new ObservableCollection<ActiveRequestDto>();
 
         OpenChatWindowCommand = new RelayCommand<AvailableChannelViewModel>(SelectChannel);
         SelectChannelCommand = new RelayCommand<AvailableChannelViewModel>(SelectChannel);
@@ -66,9 +74,9 @@ public class DashboardViewModel : ViewModelBase
         _ = InitAsync();
     }
 
-    public ObservableCollection<ChatWindowViewModel> MinimizedChatWindows { get; set; }
+    public ObservableCollection<ChatWindowViewModel> MinimizedChatWindows { get; }
 
-    public ObservableCollection<ChatWindowViewModel> FloatingChatWindows { get; set; }
+    public ObservableCollection<ChatWindowViewModel> FloatingChatWindows { get; }
 
     private async Task InitAsync()
     {
@@ -270,10 +278,10 @@ public class DashboardViewModel : ViewModelBase
             RequestLoadError = null;
             using var client = _apiClientProvider.CreateClient();
             using var response = await client.GetAsync("api/v1/dashboard/summary");
+            var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync();
                 // Try to extract just the message field from the error JSON
                 string errorDetail;
                 try
@@ -292,15 +300,48 @@ public class DashboardViewModel : ViewModelBase
                 return;
             }
 
-            var summary = await response.Content.ReadFromJsonAsync<DashboardSummaryDto>();
+            DashboardSummaryDto? summary;
+            try
+            {
+                summary = System.Text.Json.JsonSerializer.Deserialize<DashboardSummaryDto>(
+                    body,
+                    DashboardJsonOptions);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                var snippet = body.Trim();
+                if (snippet.Length > 160)
+                    snippet = snippet[..160] + "...";
+
+                var detail = response.Content.Headers.ContentType?.MediaType is { } mediaType
+                    && mediaType.Contains("html", StringComparison.OrdinalIgnoreCase)
+                    ? "Received HTML instead of JSON. Authentication may have expired."
+                    : $"Received an invalid response from the server: {snippet}";
+
+                System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
+                {
+                    RequestLoadError = detail;
+                }));
+                return;
+            }
 
             if (summary != null)
             {
+                var personalContext = summary.PersonalContext ?? new PersonalContextDto();
+
                 System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
                     ActiveRequests.Clear();
                     foreach (var req in summary.ActiveRequests)
                         ActiveRequests.Add(req);
+
+                    MyActiveTasks.Clear();
+                    foreach (var req in personalContext.MyActiveTasks)
+                        MyActiveTasks.Add(req);
+
+                    MyOpenRequests.Clear();
+                    foreach (var req in personalContext.MyPendingRequests)
+                        MyOpenRequests.Add(req);
                 }));
 
                 await Guide.RefreshAsync();
@@ -311,6 +352,12 @@ public class DashboardViewModel : ViewModelBase
         {
             System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
             {
+                if (ex is HttpRequestException httpEx && httpEx.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                {
+                    RequestLoadError = "Authentication expired. Please sign in again.";
+                    return;
+                }
+
                 RequestLoadError = $"Failed to load requests: {ex.Message}";
             }));
         }
@@ -345,6 +392,8 @@ public class DashboardViewModel : ViewModelBase
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
     public ObservableCollection<OnlineUserViewModel> OnlineUsers { get; }
     public ObservableCollection<ActiveRequestDto> ActiveRequests { get; }
+    public ObservableCollection<ActiveRequestDto> MyActiveTasks { get; }
+    public ObservableCollection<ActiveRequestDto> MyOpenRequests { get; }
 
     public string? RequestLoadError
     {

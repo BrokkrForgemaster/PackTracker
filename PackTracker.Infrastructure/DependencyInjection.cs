@@ -96,6 +96,8 @@ public static class DependencyInjection
 
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IWikiSyncService, WikiSyncService>();
+        services.AddScoped<IDistributedLockService, DatabaseDistributedLockService>();
+        services.AddScoped<IDataMaintenanceService, DataMaintenanceService>();
         services.AddScoped<IDatabaseDiagnostics, AppDbContextDiagnostics>();
 
         services.AddScoped<JwtTokenService>();
@@ -142,6 +144,7 @@ public static class DependencyInjection
     private static void RegisterBackgroundServices(IServiceCollection services)
     {
         services.AddHostedService<WikiSyncBackgroundService>();
+        services.AddHostedService<TokenCleanupBackgroundService>();
     }
 
     #endregion

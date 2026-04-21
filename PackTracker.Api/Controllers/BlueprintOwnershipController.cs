@@ -50,7 +50,10 @@ public class BlueprintOwnershipController : ControllerBase
                 message = result.Message,
                 blueprintId
             }),
-            _ => Unauthorized()
+            _ => Unauthorized(new
+            {
+                message = result.Message
+            })
         };
     }
 

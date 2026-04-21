@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Net.Http.Json;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -574,6 +575,25 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(value))
             return "<empty response>";
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            if (document.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                if (document.RootElement.TryGetProperty("message", out var messageElement)
+                    && messageElement.ValueKind == JsonValueKind.String)
+                    return messageElement.GetString() ?? "<empty response>";
+
+                if (document.RootElement.TryGetProperty("error", out var errorElement)
+                    && errorElement.ValueKind == JsonValueKind.String)
+                    return errorElement.GetString() ?? "<empty response>";
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall back to compact text rendering for non-JSON payloads.
+        }
 
         var compact = value.Replace("\r", " ").Replace("\n", " ").Trim();
         return compact.Length <= 300 ? compact : compact[..300] + "...";

@@ -21,8 +21,8 @@ public sealed class WikiSyncService : IWikiSyncService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppDbContext _db;
     private readonly ILogger<WikiSyncService> _logger;
-
-    private static readonly SemaphoreSlim SyncLock = new(1, 1);
+    private readonly IDistributedLockService _lockService;
+    private readonly string _instanceId = Guid.NewGuid().ToString("N");
 
     private static readonly JsonSerializerOptions WikiJsonOptions = new()
     {
@@ -40,10 +40,12 @@ public sealed class WikiSyncService : IWikiSyncService
     public WikiSyncService(
         IHttpClientFactory httpClientFactory,
         AppDbContext db,
+        IDistributedLockService lockService,
         ILogger<WikiSyncService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _db = db;
+        _lockService = lockService;
         _logger = logger;
     }
 
@@ -56,13 +58,22 @@ public sealed class WikiSyncService : IWikiSyncService
     /// </summary>
     public async Task<WikiSyncResult> SyncBlueprintsAsync(CancellationToken ct = default)
     {
-        if (!await SyncLock.WaitAsync(0, ct))
+        const string taskName = "WikiBlueprints";
+        if (!await _lockService.AcquireLockAsync(taskName, _instanceId, TimeSpan.FromMinutes(30), ct))
         {
-            return new WikiSyncResult
-            {
-                ErrorMessage = "A wiki sync is already in progress."
-            };
+            return new WikiSyncResult { ErrorMessage = "A wiki sync is already in progress on another instance." };
         }
+
+        var metadata = await _db.SyncMetadatas.FirstOrDefaultAsync(m => m.TaskName == taskName, ct);
+        if (metadata == null)
+        {
+            metadata = new SyncMetadata { TaskName = taskName };
+            _db.SyncMetadatas.Add(metadata);
+        }
+
+        metadata.LastStartedAt = DateTime.UtcNow;
+        metadata.IsSuccess = false;
+        await _db.SaveChangesAsync(ct);
 
         try
         {
@@ -78,6 +89,7 @@ public sealed class WikiSyncService : IWikiSyncService
                 do
                 {
                     ct.ThrowIfCancellationRequested();
+                    // ... (keep page loop logic)
 
                     var json = await client.GetStringAsync(
                         $"blueprints?page%5Bnumber%5D={page}&page%5Bsize%5D=50",
@@ -154,18 +166,27 @@ public sealed class WikiSyncService : IWikiSyncService
                     result.Created,
                     result.Updated,
                     result.Failed);
+
+                metadata.IsSuccess = true;
+                metadata.ItemsProcessed = processed;
+                metadata.LastCompletedAt = DateTime.UtcNow;
+                metadata.LastErrorMessage = null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Wiki blueprint sync encountered a fatal error");
                 result.ErrorMessage = ex.Message;
+                metadata.IsSuccess = false;
+                metadata.LastErrorMessage = ex.Message;
+                metadata.LastCompletedAt = DateTime.UtcNow;
             }
 
+            await _db.SaveChangesAsync(ct);
             return result;
         }
         finally
         {
-            SyncLock.Release();
+            await _lockService.ReleaseLockAsync(taskName, _instanceId, ct);
         }
     }
 
@@ -174,13 +195,22 @@ public sealed class WikiSyncService : IWikiSyncService
     /// </summary>
     public async Task<WikiSyncResult> SyncItemsAsync(CancellationToken ct = default)
     {
-        if (!await SyncLock.WaitAsync(0, ct))
+        const string taskName = "WikiItems";
+        if (!await _lockService.AcquireLockAsync(taskName, _instanceId, TimeSpan.FromMinutes(20), ct))
         {
-            return new WikiSyncResult
-            {
-                ErrorMessage = "A wiki sync is already in progress."
-            };
+            return new WikiSyncResult { ErrorMessage = "A wiki item sync is already in progress on another instance." };
         }
+
+        var metadata = await _db.SyncMetadatas.FirstOrDefaultAsync(m => m.TaskName == taskName, ct);
+        if (metadata == null)
+        {
+            metadata = new SyncMetadata { TaskName = taskName };
+            _db.SyncMetadatas.Add(metadata);
+        }
+
+        metadata.LastStartedAt = DateTime.UtcNow;
+        metadata.IsSuccess = false;
+        await _db.SaveChangesAsync(ct);
 
         try
         {
@@ -207,18 +237,27 @@ public sealed class WikiSyncService : IWikiSyncService
                     result.Created,
                     result.Updated,
                     result.Failed);
+
+                metadata.IsSuccess = true;
+                metadata.ItemsProcessed = result.Created + result.Updated;
+                metadata.LastCompletedAt = DateTime.UtcNow;
+                metadata.LastErrorMessage = null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Wiki items sync encountered a fatal error");
                 result.ErrorMessage = ex.Message;
+                metadata.IsSuccess = false;
+                metadata.LastErrorMessage = ex.Message;
+                metadata.LastCompletedAt = DateTime.UtcNow;
             }
 
+            await _db.SaveChangesAsync(ct);
             return result;
         }
         finally
         {
-            SyncLock.Release();
+            await _lockService.ReleaseLockAsync(taskName, _instanceId, ct);
         }
     }
 
@@ -312,110 +351,121 @@ public sealed class WikiSyncService : IWikiSyncService
     /// </summary>
     private async Task<bool> UpsertBlueprintAsync(WikiBlueprintDetailDto detail, CancellationToken ct)
     {
-        var outputName = detail.Output?.Name ?? detail.OutputName ?? detail.Uuid;
-        var category = MapCategory(detail.Output?.Type ?? detail.Output?.Class);
-        var sourceVersion = detail.GameVersion ?? "star-citizen-wiki";
-        var syncedAt = DateTime.UtcNow.ToString("O");
-        var description = BuildDescription(detail.Output);
-
-        var existing = await _db.Blueprints
-            .FirstOrDefaultAsync(x => x.WikiUuid == detail.Uuid, ct);
-
-        Blueprint blueprint;
-        bool isNew;
-
-        if (existing != null)
+        using var transaction = await _db.Database.BeginTransactionAsync(ct);
+        try
         {
-            blueprint = existing;
-            blueprint.CraftedItemName = outputName;
-            blueprint.BlueprintName = $"{outputName} Blueprint";
-            blueprint.Category = category;
-            blueprint.Description = description;
-            blueprint.IsInGameAvailable = true;
-            blueprint.SourceVersion = sourceVersion;
-            blueprint.WikiLastSyncedAt = syncedAt;
-            blueprint.UpdatedAt = DateTime.UtcNow;
+            var outputName = detail.Output?.Name ?? detail.OutputName ?? detail.Uuid;
+            var category = MapCategory(detail.Output?.Type ?? detail.Output?.Class);
+            var sourceVersion = detail.GameVersion ?? "star-citizen-wiki";
+            var syncedAt = DateTime.UtcNow.ToString("O");
+            var description = BuildDescription(detail.Output);
 
-            _db.Blueprints.Update(blueprint);
-            isNew = false;
-        }
-        else
-        {
-            blueprint = new Blueprint
+            var existing = await _db.Blueprints
+                .FirstOrDefaultAsync(x => x.WikiUuid == detail.Uuid, ct);
+
+            Blueprint blueprint;
+            bool isNew;
+
+            if (existing != null)
             {
-                WikiUuid = detail.Uuid,
-                Slug = Slugify(outputName),
-                BlueprintName = $"{outputName} Blueprint",
-                CraftedItemName = outputName,
-                Category = category,
-                Description = description,
-                IsInGameAvailable = true,
-                DataConfidence = "WikiSync",
-                SourceVersion = sourceVersion,
-                WikiLastSyncedAt = syncedAt
-            };
+                blueprint = existing;
+                blueprint.CraftedItemName = outputName;
+                blueprint.BlueprintName = $"{outputName} Blueprint";
+                blueprint.Category = category;
+                blueprint.Description = description;
+                blueprint.IsInGameAvailable = true;
+                blueprint.SourceVersion = sourceVersion;
+                blueprint.WikiLastSyncedAt = syncedAt;
+                blueprint.UpdatedAt = DateTime.UtcNow;
 
-            if (await _db.Blueprints.AnyAsync(x => x.Slug == blueprint.Slug, ct))
-                blueprint.Slug = $"{blueprint.Slug}-{detail.Uuid[..8]}";
-
-            _db.Blueprints.Add(blueprint);
-            isNew = true;
-        }
-
-        await _db.SaveChangesAsync(ct);
-
-        var recipe = await _db.BlueprintRecipes
-            .FirstOrDefaultAsync(x => x.BlueprintId == blueprint.Id, ct);
-
-        if (recipe == null)
-        {
-            recipe = new BlueprintRecipe
+                _db.Blueprints.Update(blueprint);
+                isNew = false;
+            }
+            else
             {
-                BlueprintId = blueprint.Id,
-                OutputQuantity = 1,
-                CraftingStationType = "Crafting",
-                TimeToCraftSeconds = detail.CraftTimeSeconds > 0 ? detail.CraftTimeSeconds : null,
-                Notes = "Imported from Star Citizen Wiki"
-            };
+                blueprint = new Blueprint
+                {
+                    WikiUuid = detail.Uuid,
+                    Slug = Slugify(outputName),
+                    BlueprintName = $"{outputName} Blueprint",
+                    CraftedItemName = outputName,
+                    Category = category,
+                    Description = description,
+                    IsInGameAvailable = true,
+                    DataConfidence = "WikiSync",
+                    SourceVersion = sourceVersion,
+                    WikiLastSyncedAt = syncedAt
+                };
 
-            _db.BlueprintRecipes.Add(recipe);
-            await _db.SaveChangesAsync(ct);
-        }
-        else
-        {
-            recipe.TimeToCraftSeconds = detail.CraftTimeSeconds > 0 ? detail.CraftTimeSeconds : null;
-            _db.BlueprintRecipes.Update(recipe);
-            await _db.SaveChangesAsync(ct);
-        }
+                if (await _db.Blueprints.AnyAsync(x => x.Slug == blueprint.Slug, ct))
+                    blueprint.Slug = $"{blueprint.Slug}-{detail.Uuid[..8]}";
 
-        var existingRecipeMaterials = await _db.BlueprintRecipeMaterials
-            .Where(x => x.BlueprintRecipeId == recipe.Id)
-            .ToListAsync(ct);
+                _db.Blueprints.Add(blueprint);
+                isNew = true;
+            }
 
-        _db.BlueprintRecipeMaterials.RemoveRange(existingRecipeMaterials);
-        await _db.SaveChangesAsync(ct);
-
-        var resourceTotals = ExtractResourceTotals(detail);
-
-        foreach (var (_, resource) in resourceTotals)
-        {
-            var material = await UpsertMaterialAsync(resource.Name, resource.Uuid, ct);
-
-            _db.BlueprintRecipeMaterials.Add(new BlueprintRecipeMaterial
-            {
-                BlueprintRecipeId = recipe.Id,
-                MaterialId = material.Id,
-                QuantityRequired = resource.Quantity,
-                Unit = resource.Unit,
-                IsOptional = false,
-                IsIntermediateCraftable = false
-            });
-        }
-
-        if (resourceTotals.Count > 0)
             await _db.SaveChangesAsync(ct);
 
-        return isNew;
+            var recipe = await _db.BlueprintRecipes
+                .FirstOrDefaultAsync(x => x.BlueprintId == blueprint.Id, ct);
+
+            if (recipe == null)
+            {
+                recipe = new BlueprintRecipe
+                {
+                    BlueprintId = blueprint.Id,
+                    OutputQuantity = 1,
+                    CraftingStationType = "Crafting",
+                    TimeToCraftSeconds = detail.CraftTimeSeconds > 0 ? detail.CraftTimeSeconds : null,
+                    Notes = "Imported from Star Citizen Wiki"
+                };
+
+                _db.BlueprintRecipes.Add(recipe);
+                await _db.SaveChangesAsync(ct);
+            }
+            else
+            {
+                recipe.TimeToCraftSeconds = detail.CraftTimeSeconds > 0 ? detail.CraftTimeSeconds : null;
+                _db.BlueprintRecipes.Update(recipe);
+                await _db.SaveChangesAsync(ct);
+            }
+
+            var existingRecipeMaterials = await _db.BlueprintRecipeMaterials
+                .Where(x => x.BlueprintRecipeId == recipe.Id)
+                .ToListAsync(ct);
+
+            _db.BlueprintRecipeMaterials.RemoveRange(existingRecipeMaterials);
+            await _db.SaveChangesAsync(ct);
+
+            var resourceTotals = ExtractResourceTotals(detail);
+
+            foreach (var (_, resource) in resourceTotals)
+            {
+                var material = await UpsertMaterialAsync(resource.Name, resource.Uuid, ct);
+
+                _db.BlueprintRecipeMaterials.Add(new BlueprintRecipeMaterial
+                {
+                    BlueprintRecipeId = recipe.Id,
+                    MaterialId = material.Id,
+                    QuantityRequired = resource.Quantity,
+                    Unit = resource.Unit,
+                    IsOptional = false,
+                    IsIntermediateCraftable = false
+                });
+            }
+
+            if (resourceTotals.Count > 0)
+                await _db.SaveChangesAsync(ct);
+
+            await transaction.CommitAsync(ct);
+            return isNew;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogError(ex, "Failed to upsert blueprint {Uuid} within transaction.", detail.Uuid);
+            throw;
+        }
     }
 
     /// <summary>

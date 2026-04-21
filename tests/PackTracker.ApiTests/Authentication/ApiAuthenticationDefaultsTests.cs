@@ -30,10 +30,21 @@ public class ApiAuthenticationDefaultsTests
     }
 
     [Fact]
-    public void SelectScheme_ReturnsCookies_WhenNoBearerHintsExist()
+    public void SelectScheme_ReturnsJwt_WhenApiRouteHasNoBearerHints()
     {
         var context = new DefaultHttpContext();
         context.Request.Path = "/api/v1/dashboard/summary";
+
+        var scheme = ApiAuthenticationDefaults.SelectScheme(context);
+
+        Assert.Equal(JwtBearerDefaults.AuthenticationScheme, scheme);
+    }
+
+    [Fact]
+    public void SelectScheme_ReturnsCookies_WhenNonApiRouteHasNoBearerHints()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/signin-discord";
 
         var scheme = ApiAuthenticationDefaults.SelectScheme(context);
 
