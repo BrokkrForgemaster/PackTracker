@@ -76,7 +76,9 @@
             <Border Grid.Column="0" Style="{StaticResource OpPanelBorderStyle}">
                 <DockPanel Margin="12">
                     <TextBlock Text="ACTIVE DISPATCHES" DockPanel.Dock="Top" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,10"/>
-                    <ListBox ItemsSource="{Binding Requests}" Style="{StaticResource OpListBoxStyle}">
+                    <ListBox ItemsSource="{Binding Requests}"
+                             SelectedItem="{Binding SelectedRequest, Mode=TwoWay}"
+                             Style="{StaticResource OpListBoxStyle}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Style="{StaticResource OpItemBorderStyle}" Padding="14">
@@ -206,11 +208,25 @@
 
                             <StackPanel Margin="0,16,0,0">
                                 <TextBlock Text="WORKFLOW ACTIONS" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
-                                <Button Content="CLAIM REQUEST"
+                                <Button Content="{Binding ClaimActionLabel}"
                                         Command="{Binding ClaimCommand}"
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#2B4E2E" Foreground="#EEF6EE"
-                                        BorderBrush="#5C8B5E" BorderThickness="1"/>
+                                        BorderBrush="#5C8B5E" BorderThickness="1">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CanClaim}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding CanUnclaim}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                                 <Button Content="MARK COMPLETE"
                                         Command="{Binding CompleteCommand}"
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
@@ -231,6 +247,7 @@
                                         Margin="0,0,0,8"/>
                                 <Button Content="DELETE REQUEST"
                                         Command="{Binding DeleteCommand}"
+                                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibilityConverter}}"
                                         Padding="12,8" FontWeight="Bold"
                                         Background="#8B1A0F" Foreground="#F4EBDD"
                                         BorderBrush="#B15B34" BorderThickness="1"/>

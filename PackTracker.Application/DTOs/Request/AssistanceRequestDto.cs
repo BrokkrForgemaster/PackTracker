@@ -58,6 +58,11 @@ public class AssistanceRequestDto
     public string? AssignedToUsername { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the current user has claimed this request.
+    /// </summary>
+    public bool IsClaimedByCurrentUser { get; set; }
+
+    /// <summary>
     /// Gets or sets the material name, if the request is material-related.
     /// </summary>
     public string? MaterialName { get; set; }

@@ -8,6 +8,7 @@ using PackTracker.Application.Requests.Assistance.ClaimAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.CompleteAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.CreateAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.PinAssistanceRequest;
+using PackTracker.Application.Requests.Assistance.UnclaimAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.UpdateAssistanceRequest;
 using PackTracker.Application.Requests.Assistance.QueryAssistanceRequests;
 using PackTracker.Domain.Enums;
@@ -74,6 +75,20 @@ public class AssistanceRequestsController : ControllerBase
         return ToMutationResult(result, "Request claimed.");
     }
 
+    [HttpPost("{id}/unclaim")]
+    [HttpPatch("{id:guid}/unclaim")]
+    [HttpPatch("{id}/unclaim")]
+    public async Task<IActionResult> UnclaimRequest(string id, CancellationToken ct)
+    {
+        if (!Guid.TryParse(id, out var requestId))
+        {
+            return BadRequest(new { error = "Invalid assistance request id." });
+        }
+
+        var result = await _sender.Send(new UnclaimAssistanceRequestCommand(requestId), ct);
+        return ToMutationResult(result, "Request unclaimed.");
+    }
+
     [HttpPatch("{id:guid}/complete")]
     public async Task<IActionResult> CompleteRequest(Guid id, CancellationToken ct)
     {
@@ -137,7 +152,7 @@ public class AssistanceRequestsController : ControllerBase
             });
         }
 
-        if (string.Equals(result.Message, "Only Captains and above may manage pins.", StringComparison.Ordinal))
+        if (string.Equals(result.Message, "Only Rally Masters and above may manage pins.", StringComparison.Ordinal))
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { error = result.Message });
         }
@@ -157,7 +172,7 @@ public class AssistanceRequestsController : ControllerBase
             return NotFound(new { error = result.Message });
         }
 
-        if (string.Equals(result.Message, "Only the creator may cancel this request.", StringComparison.Ordinal))
+        if (string.Equals(result.Message, "Only the creator or a moderator may cancel this request.", StringComparison.Ordinal))
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { error = result.Message });
         }

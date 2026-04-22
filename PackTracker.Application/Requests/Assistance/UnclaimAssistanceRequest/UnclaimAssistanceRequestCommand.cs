@@ -3,28 +3,27 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Common;
 using PackTracker.Application.Interfaces;
-using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
 
-namespace PackTracker.Application.Requests.Assistance.CancelAssistanceRequest;
+namespace PackTracker.Application.Requests.Assistance.UnclaimAssistanceRequest;
 
-public sealed record CancelAssistanceRequestCommand(Guid Id) : IRequest<OperationResult<Guid>>;
+public sealed record UnclaimAssistanceRequestCommand(Guid Id) : IRequest<OperationResult<Guid>>;
 
-public sealed class CancelAssistanceRequestCommandValidator : AbstractValidator<CancelAssistanceRequestCommand>
+public sealed class UnclaimAssistanceRequestCommandValidator : AbstractValidator<UnclaimAssistanceRequestCommand>
 {
-    public CancelAssistanceRequestCommandValidator()
+    public UnclaimAssistanceRequestCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
     }
 }
 
-public sealed class CancelAssistanceRequestCommandHandler : IRequestHandler<CancelAssistanceRequestCommand, OperationResult<Guid>>
+public sealed class UnclaimAssistanceRequestCommandHandler : IRequestHandler<UnclaimAssistanceRequestCommand, OperationResult<Guid>>
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
     private readonly IAssistanceRequestNotifier _notifier;
 
-    public CancelAssistanceRequestCommandHandler(
+    public UnclaimAssistanceRequestCommandHandler(
         IApplicationDbContext dbContext,
         ICurrentUserService currentUser,
         IAssistanceRequestNotifier notifier)
@@ -34,7 +33,7 @@ public sealed class CancelAssistanceRequestCommandHandler : IRequestHandler<Canc
         _notifier = notifier;
     }
 
-    public async Task<OperationResult<Guid>> Handle(CancelAssistanceRequestCommand request, CancellationToken cancellationToken)
+    public async Task<OperationResult<Guid>> Handle(UnclaimAssistanceRequestCommand request, CancellationToken cancellationToken)
     {
         var profile = await _dbContext.Profiles
             .FirstOrDefaultAsync(x => x.DiscordId == _currentUser.UserId, cancellationToken)
@@ -54,17 +53,26 @@ public sealed class CancelAssistanceRequestCommandHandler : IRequestHandler<Canc
             return OperationResult<Guid>.Fail("Assistance request not found.");
         }
 
-        if (!CanManage(profile, assistanceRequest))
+        var claim = await _dbContext.RequestClaims
+            .FirstOrDefaultAsync(
+                c => c.RequestId == assistanceRequest.Id
+                  && c.RequestType == "Assistance"
+                  && c.ProfileId == profile.Id,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (claim is null)
         {
-            return OperationResult<Guid>.Fail("Only the creator or a moderator may cancel this request.");
+            return OperationResult<Guid>.Fail("You have not claimed this request.");
         }
 
-        if (assistanceRequest.Status == RequestStatus.Cancelled)
-        {
-            return OperationResult<Guid>.Fail("Request is already cancelled.");
-        }
+        _dbContext.RequestClaims.Remove(claim);
 
-        assistanceRequest.Status = RequestStatus.Cancelled;
+        var remainingClaims = await _dbContext.RequestClaims
+            .CountAsync(c => c.RequestId == assistanceRequest.Id && c.RequestType == "Assistance" && c.Id != claim.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        assistanceRequest.Status = remainingClaims > 0 ? RequestStatus.Accepted : RequestStatus.Open;
         assistanceRequest.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -72,7 +80,4 @@ public sealed class CancelAssistanceRequestCommandHandler : IRequestHandler<Canc
 
         return OperationResult<Guid>.Ok(assistanceRequest.Id);
     }
-
-    private bool CanManage(Profile profile, Domain.Entities.AssistanceRequest assistanceRequest) =>
-        _currentUser.CanManage(profile, assistanceRequest);
 }

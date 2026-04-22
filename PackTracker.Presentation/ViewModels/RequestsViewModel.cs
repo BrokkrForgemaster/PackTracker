@@ -110,8 +110,14 @@ public partial class RequestsViewModel : ObservableObject
     /// True when the current user can claim the selected request.
     /// </summary>
     public bool CanClaim => SelectedRequest is not null
+                         && !IsSelectedRequestClaimedByCurrentUser()
                          && SelectedRequest.Status == DomainRequestStatus.Open.ToString()
                          && SelectedRequest.ClaimCount < SelectedRequest.MaxClaims;
+
+    public bool CanUnclaim => SelectedRequest is not null
+                           && IsSelectedRequestClaimedByCurrentUser()
+                           && SelectedRequest.Status != DomainRequestStatus.Completed.ToString()
+                           && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString();
 
     /// <summary>
     /// True when the selected request can be marked complete.
@@ -122,11 +128,12 @@ public partial class RequestsViewModel : ObservableObject
 
     /// <summary>
     /// True when the selected request can be deleted (cancelled) by the current user.
-    /// Always shown; the server enforces creator-only restriction.
     /// </summary>
     public bool CanDelete => SelectedRequest is not null
                           && SelectedRequest.Status != DomainRequestStatus.Completed.ToString()
-                          && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString();
+                          && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString()
+                          && (string.Equals(SelectedRequest.CreatedByUsername, _currentUsername, StringComparison.OrdinalIgnoreCase)
+                              || SecurityConstants.IsElevatedRequestRole(_currentRole));
 
     /// <summary>
     /// True when the current user may edit the selected request (creator only, not terminal status).
@@ -137,7 +144,11 @@ public partial class RequestsViewModel : ObservableObject
                         && string.Equals(SelectedRequest.CreatedByUsername, _currentUsername, StringComparison.OrdinalIgnoreCase);
 
     public bool CanPin => SelectedRequest is not null
-                       && SecurityConstants.IsElevatedRequestRole(_currentRole);
+                       && SecurityConstants.IsRallyMasterOrAbove(_currentRole);
+
+    public string ClaimActionLabel => IsSelectedRequestClaimedByCurrentUser()
+        ? "UNCLAIM REQUEST"
+        : "CLAIM REQUEST";
 
     public string PinActionLabel => SelectedRequest?.IsPinned == true
         ? "UNPIN REQUEST"
@@ -150,10 +161,12 @@ public partial class RequestsViewModel : ObservableObject
     partial void OnSelectedRequestChanged(AssistanceRequestDto? value)
     {
         OnPropertyChanged(nameof(CanClaim));
+        OnPropertyChanged(nameof(CanUnclaim));
         OnPropertyChanged(nameof(CanComplete));
         OnPropertyChanged(nameof(CanDelete));
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanPin));
+        OnPropertyChanged(nameof(ClaimActionLabel));
         OnPropertyChanged(nameof(PinActionLabel));
     }
 
@@ -173,6 +186,11 @@ public partial class RequestsViewModel : ObservableObject
 
     [RelayCommand]
     public async Task RefreshAsync()
+    {
+        await RefreshAsync(SelectedRequest?.Id);
+    }
+
+    private async Task RefreshAsync(Guid? requestIdToPreserve)
     {
         try
         {
@@ -196,6 +214,10 @@ public partial class RequestsViewModel : ObservableObject
                 Requests.Clear();
                 foreach (var item in items)
                     Requests.Add(item);
+
+                SelectedRequest = requestIdToPreserve.HasValue
+                    ? Requests.FirstOrDefault(x => x.Id == requestIdToPreserve.Value)
+                    : null;
             });
 
             StatusMessage = Requests.Count == 0
@@ -270,7 +292,13 @@ public partial class RequestsViewModel : ObservableObject
     {
         if (SelectedRequest is null) return;
 
-        await PatchAsync($"api/v1/requests/{SelectedRequest.Id}/claim", "Request claimed.");
+        var isClaimedByCurrentUser = IsSelectedRequestClaimedByCurrentUser();
+
+        var url = isClaimedByCurrentUser
+            ? $"api/v1/requests/{SelectedRequest.Id}/unclaim"
+            : $"api/v1/requests/{SelectedRequest.Id}/claim";
+
+        await PatchAsync(url, isClaimedByCurrentUser ? "Request unclaimed." : "Request claimed.");
     }
 
     [RelayCommand]
@@ -294,7 +322,6 @@ public partial class RequestsViewModel : ObservableObject
 
             if (response.IsSuccessStatusCode)
             {
-                SelectedRequest = null;
                 StatusMessage = "Request cancelled.";
                 await RefreshAsync();
             }
@@ -340,14 +367,14 @@ public partial class RequestsViewModel : ObservableObject
         try
         {
             IsLoading = true;
+            var selectedRequestId = SelectedRequest?.Id;
             using var client = _apiClientProvider.CreateClient();
             using var response = await client.PatchAsync(url, null);
 
             if (response.IsSuccessStatusCode)
             {
                 StatusMessage = successMessage;
-                SelectedRequest = null;
-                await RefreshAsync();
+                await RefreshAsync(selectedRequestId);
             }
             else
             {
@@ -389,6 +416,10 @@ public partial class RequestsViewModel : ObservableObject
             _currentUsername = profile?.Username;
             OnPropertyChanged(nameof(CanPin));
             OnPropertyChanged(nameof(CanEdit));
+            OnPropertyChanged(nameof(CanDelete));
+            OnPropertyChanged(nameof(CanClaim));
+            OnPropertyChanged(nameof(CanUnclaim));
+            OnPropertyChanged(nameof(ClaimActionLabel));
             OnPropertyChanged(nameof(PinActionLabel));
         }
         catch (Exception ex)
@@ -432,6 +463,18 @@ public partial class RequestsViewModel : ObservableObject
         var builder = new StringBuilder("api/v1/requests?");
         builder.Append(string.Join("&", queryParts));
         return builder.ToString();
+    }
+
+    private bool IsSelectedRequestClaimedByCurrentUser()
+    {
+        if (SelectedRequest is null)
+            return false;
+
+        if (SelectedRequest.IsClaimedByCurrentUser)
+            return true;
+
+        return !string.IsNullOrWhiteSpace(_currentUsername)
+            && string.Equals(SelectedRequest.AssignedToUsername, _currentUsername, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed record CurrentUserDto(string Username, string? DiscordRank);

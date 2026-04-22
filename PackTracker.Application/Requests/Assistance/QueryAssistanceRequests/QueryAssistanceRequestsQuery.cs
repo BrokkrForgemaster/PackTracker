@@ -60,6 +60,8 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
                 CreatedByDisplayName = x.CreatedByProfile != null
                     ? (x.CreatedByProfile.DiscordDisplayName ?? x.CreatedByProfile.Username)
                     : "Unknown",
+                IsClaimedByCurrentUser = currentProfileId.HasValue
+                    && _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Assistance" && c.ProfileId == currentProfileId.Value),
                 AssignedToUsername = _dbContext.RequestClaims
                     .Where(c => c.RequestId == x.Id && c.RequestType == "Assistance")
                     .Join(_dbContext.Profiles, c => c.ProfileId, p => p.Id, (c, p) => p.Username)

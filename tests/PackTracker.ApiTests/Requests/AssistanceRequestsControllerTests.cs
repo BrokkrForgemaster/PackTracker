@@ -174,6 +174,33 @@ public class AssistanceRequestsControllerTests
     }
 
     [Fact]
+    public async Task CancelRequest_ReturnsOk_WhenModerator()
+    {
+        var db = CreateDb();
+        var creatorDiscordId = "111222333444555";
+        var creatorProfile = await SeedProfileAsync(db, creatorDiscordId);
+        await SeedProfileAsync(db, TestDiscordId, role: "Captain");
+
+        var request = new AssistanceRequest
+        {
+            Title = "Moderator can cancel",
+            Status = RequestStatus.Open,
+            CreatedByProfileId = creatorProfile.Id
+        };
+        db.AssistanceRequests.Add(request);
+        await db.SaveChangesAsync();
+
+        var controller = BuildController(db, TestDiscordId, role: "Captain");
+
+        var result = await controller.CancelRequest(request.Id, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+
+        var updated = await db.AssistanceRequests.FindAsync(request.Id);
+        Assert.Equal(RequestStatus.Cancelled, updated!.Status);
+    }
+
+    [Fact]
     public async Task CancelRequest_ReturnsOk_WhenCreator()
     {
         var db = CreateDb();
@@ -198,11 +225,11 @@ public class AssistanceRequestsControllerTests
     }
 
     [Fact]
-    public async Task PinRequest_ReturnsForbidden_WhenUserIsBelowCaptain()
+    public async Task PinRequest_ReturnsForbidden_WhenUserIsBelowRallyMaster()
     {
         var db = CreateDb();
-        var profile = await SeedProfileAsync(db, role: "Lieutenant");
-        var controller = BuildController(db, role: "Lieutenant");
+        var profile = await SeedProfileAsync(db, role: "Wolf Dragoon");
+        var controller = BuildController(db, role: "Wolf Dragoon");
 
         var request = new AssistanceRequest
         {
@@ -220,11 +247,11 @@ public class AssistanceRequestsControllerTests
     }
 
     [Fact]
-    public async Task PinRequest_ReturnsOk_WhenUserIsCaptainOrAbove()
+    public async Task PinRequest_ReturnsOk_WhenUserIsRallyMasterOrAbove()
     {
         var db = CreateDb();
-        var profile = await SeedProfileAsync(db, role: "Captain");
-        var controller = BuildController(db, role: "Captain");
+        var profile = await SeedProfileAsync(db, role: "Rally Master");
+        var controller = BuildController(db, role: "Rally Master");
 
         var request = new AssistanceRequest
         {
@@ -240,6 +267,39 @@ public class AssistanceRequestsControllerTests
         Assert.IsType<OkObjectResult>(result);
         var updated = await db.AssistanceRequests.FindAsync(request.Id);
         Assert.True(updated!.IsPinned);
+    }
+
+    [Fact]
+    public async Task UnclaimRequest_ReturnsOk_WhenCurrentUserHasClaimedRequest()
+    {
+        var db = CreateDb();
+        var profile = await SeedProfileAsync(db);
+        var controller = BuildController(db);
+
+        var request = new AssistanceRequest
+        {
+            Title = "Claimed request",
+            Status = RequestStatus.Accepted,
+            CreatedByProfileId = profile.Id
+        };
+        db.AssistanceRequests.Add(request);
+        await db.SaveChangesAsync();
+
+        db.RequestClaims.Add(new RequestClaim
+        {
+            RequestId = request.Id,
+            RequestType = "Assistance",
+            ProfileId = profile.Id
+        });
+        await db.SaveChangesAsync();
+
+        var result = await controller.UnclaimRequest(request.Id.ToString(), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Empty(db.RequestClaims);
+
+        var updated = await db.AssistanceRequests.FindAsync(request.Id);
+        Assert.Equal(RequestStatus.Open, updated!.Status);
     }
 
     [Fact]

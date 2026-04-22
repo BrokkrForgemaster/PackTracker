@@ -43,9 +43,9 @@ public sealed class PinAssistanceRequestCommandHandler : IRequestHandler<PinAssi
             return OperationResult<Guid>.Fail("Unauthorized");
         }
 
-        if (!_currentUser.CanUseElevatedRequestActions(profile))
+        if (!_currentUser.CanManagePins(profile))
         {
-            return OperationResult<Guid>.Fail("Only Captains and above may manage pins.");
+            return OperationResult<Guid>.Fail("Only Rally Masters and above may manage pins.");
         }
 
         var assistanceRequest = await _dbContext.AssistanceRequests

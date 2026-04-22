@@ -64,6 +64,9 @@ public static class SecurityConstants
         !string.IsNullOrWhiteSpace(role)
         && ElevatedRequestRoles.Contains(role, StringComparer.OrdinalIgnoreCase);
 
+    public static bool IsRallyMasterOrAbove(string? role) =>
+        GetRolePosition(role) >= GetRolePosition(Roles.RallyMaster);
+
     /// <summary>
     /// Returns the hierarchy position of a role (higher = more senior), or -1 if not recognized.
     /// </summary>
