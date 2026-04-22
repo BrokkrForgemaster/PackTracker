@@ -1,5 +1,3 @@
-using System;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using PackTracker.Infrastructure.Persistence;
@@ -15,73 +13,53 @@ namespace PackTracker.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "LoginStates",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClientState = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    AccessToken = table.Column<string>(type: "text", nullable: false),
-                    RefreshToken = table.Column<string>(type: "text", nullable: false),
-                    ExpiresIn = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_LoginStates", x => x.Id);
-                });
+            // Use IF NOT EXISTS so this migration is idempotent even when the
+            // defensive startup SQL (or a previous run) already created these tables.
+            migrationBuilder.Sql(@"
+                CREATE TABLE IF NOT EXISTS ""LoginStates"" (
+                    ""Id"" uuid NOT NULL,
+                    ""ClientState"" character varying(256) NOT NULL,
+                    ""AccessToken"" text NOT NULL DEFAULT '',
+                    ""RefreshToken"" text NOT NULL DEFAULT '',
+                    ""ExpiresIn"" integer NOT NULL DEFAULT 0,
+                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""ExpiresAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    CONSTRAINT ""PK_LoginStates"" PRIMARY KEY (""Id"")
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_LoginStates_ClientState""
+                    ON ""LoginStates""(""ClientState"");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_LoginStates_ClientState",
-                table: "LoginStates",
-                column: "ClientState",
-                unique: true);
+                CREATE TABLE IF NOT EXISTS ""SyncMetadatas"" (
+                    ""Id"" uuid NOT NULL,
+                    ""TaskName"" character varying(128) NOT NULL,
+                    ""LastStartedAt"" timestamp with time zone,
+                    ""LastCompletedAt"" timestamp with time zone,
+                    ""IsSuccess"" boolean NOT NULL DEFAULT false,
+                    ""LastErrorMessage"" text,
+                    ""ItemsProcessed"" integer NOT NULL DEFAULT 0,
+                    CONSTRAINT ""PK_SyncMetadatas"" PRIMARY KEY (""Id"")
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SyncMetadatas_TaskName""
+                    ON ""SyncMetadatas""(""TaskName"");
 
-            migrationBuilder.CreateTable(
-                name: "SyncMetadatas",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    TaskName = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    LastStartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    LastCompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsSuccess = table.Column<bool>(type: "boolean", nullable: false),
-                    LastErrorMessage = table.Column<string>(type: "text", nullable: true),
-                    ItemsProcessed = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SyncMetadatas", x => x.Id);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SyncMetadatas_TaskName",
-                table: "SyncMetadatas",
-                column: "TaskName",
-                unique: true);
-
-            migrationBuilder.CreateTable(
-                name: "DistributedLocks",
-                columns: table => new
-                {
-                    LockKey = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    LockedBy = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    LockedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DistributedLocks", x => x.LockKey);
-                });
+                CREATE TABLE IF NOT EXISTS ""DistributedLocks"" (
+                    ""LockKey"" character varying(128) NOT NULL,
+                    ""LockedBy"" character varying(128) NOT NULL,
+                    ""LockedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""ExpiresAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                    CONSTRAINT ""PK_DistributedLocks"" PRIMARY KEY (""LockKey"")
+                );
+            ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "LoginStates");
-            migrationBuilder.DropTable(name: "SyncMetadatas");
-            migrationBuilder.DropTable(name: "DistributedLocks");
+            migrationBuilder.Sql(@"
+                DROP TABLE IF EXISTS ""LoginStates"";
+                DROP TABLE IF EXISTS ""SyncMetadatas"";
+                DROP TABLE IF EXISTS ""DistributedLocks"";
+            ");
         }
     }
 }
