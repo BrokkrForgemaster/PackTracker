@@ -150,6 +150,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private bool isLoading;
     [ObservableProperty] private string statusMessage = "Loading blueprints...";
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
+    [ObservableProperty] private OwnedBlueprintCardViewModel? selectedOwnedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
     [ObservableProperty] private bool isSelectedBlueprintOwned;
 
@@ -312,6 +313,12 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSelectedBlueprintDetail));
         OnPropertyChanged(nameof(HasRewardPools));
         RefreshOwnedFlag();
+    }
+
+    partial void OnSelectedOwnedBlueprintChanged(OwnedBlueprintCardViewModel? value)
+    {
+        if (value is not null)
+            _ = SelectOwnedBlueprintAsync(value);
     }
 
     private async Task LoadBlueprintDetailAsync(Guid blueprintId)

@@ -425,13 +425,12 @@
                     </TextBlock.Style>
                 </TextBlock>
 
-                <ListBox Grid.Row="5"
-                         ItemsSource="{Binding OwnedBlueprints}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListBox.Style>
-                        <Style TargetType="ListBox">
+                <ComboBox Grid.Row="5"
+                          ItemsSource="{Binding OwnedBlueprints}"
+                          SelectedItem="{Binding SelectedOwnedBlueprint}"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ComboBox.Style>
+                        <Style TargetType="ComboBox" BasedOn="{StaticResource OpComboBoxStyle}">
                             <Setter Property="Visibility" Value="Visible" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasOwnedBlueprints}" Value="False">
@@ -439,88 +438,27 @@
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </ListBox.Style>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="0,0,0,10" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Focusable" Value="False" />
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
+                    </ComboBox.Style>
+                    <ComboBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:OwnedBlueprintCardViewModel}">
-                            <Button Command="{Binding DataContext.SelectOwnedBlueprintCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Padding="0"
-                                    HorizontalContentAlignment="Stretch">
-                                <Border Background="#19110D"
-                                        BorderBrush="#7D5A22"
-                                        BorderThickness="1"
-                                        CornerRadius="12"
-                                        Padding="12">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="8" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0"
-                                                Background="#D6A44B"
-                                                CornerRadius="8,0,0,8"
-                                                Margin="0,-12,10,-12" />
-
-                                        <StackPanel Grid.Column="1">
-                                            <WrapPanel Margin="0,0,0,6">
-                                                <Border Background="#5A3E16"
-                                                        BorderBrush="#D6A44B"
-                                                        BorderThickness="1"
-                                                        CornerRadius="999"
-                                                        Padding="10,4"
-                                                        Margin="0,0,8,6">
-                                                    <TextBlock Text="OWNED"
-                                                               Foreground="#FFF0C6"
-                                                               FontSize="10"
-                                                               FontWeight="Bold" />
-                                                </Border>
-                                                <Border Background="#223028"
-                                                        BorderBrush="#4D7A65"
-                                                        BorderThickness="1"
-                                                        CornerRadius="999"
-                                                        Padding="10,4"
-                                                        Margin="0,0,0,6">
-                                                    <TextBlock Text="{Binding MaterialCount, StringFormat='{}{0} materials'}"
-                                                               Foreground="#D7F5E5"
-                                                               FontSize="10"
-                                                               FontWeight="Bold" />
-                                                </Border>
-                                            </WrapPanel>
-
-                                            <TextBlock Text="{Binding CraftedItemName}"
-                                                       Foreground="{StaticResource OpTextTitleBrush}"
-                                                       FontSize="13"
-                                                       FontWeight="Bold"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding BlueprintName}"
-                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
-                                                       FontSize="11"
-                                                       Margin="0,2,0,0"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding MaterialPreview}"
-                                                       Foreground="#D9C6A4"
-                                                       FontSize="10"
-                                                       Margin="0,8,0,0"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </Button>
+                            <StackPanel Margin="0,3">
+                                <TextBlock Text="{Binding CraftedItemName}"
+                                           Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontWeight="SemiBold"
+                                           FontSize="12"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="10"
+                                           TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding BlueprintName}" />
+                                    <Run Text=" • " />
+                                    <Run Text="{Binding MaterialCount}" />
+                                    <Run Text=" materials" />
+                                </TextBlock>
+                            </StackPanel>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </Grid>
         </Border>
 
