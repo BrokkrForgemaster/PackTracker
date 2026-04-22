@@ -304,7 +304,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
@@ -376,7 +376,7 @@
                                    Foreground="#E7C77A"
                                    FontSize="11"
                                    FontWeight="Bold" />
-                        <TextBlock Text="Your marked collection with saved material recipes."
+                        <TextBlock Text="Your marked collection."
                                    Foreground="{StaticResource OpTextMutedBrush}"
                                    FontSize="10"
                                    Margin="0,2,0,0" />
@@ -391,7 +391,8 @@
                             BorderBrush="#5C8B5E"
                             BorderThickness="1"
                             Padding="10,6"
-                            VerticalAlignment="Center" />
+                            Margin="0,-2,0,0"
+                            VerticalAlignment="Top" />
                 </Grid>
 
                 <Border Grid.Row="3"
@@ -428,7 +429,9 @@
                 <ComboBox Grid.Row="5"
                           ItemsSource="{Binding OwnedBlueprints}"
                           SelectedItem="{Binding SelectedOwnedBlueprint}"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          Margin="0,0,0,0"
+                          VerticalAlignment="Top">
                     <ComboBox.Style>
                         <Style TargetType="ComboBox" BasedOn="{StaticResource OpComboBoxStyle}">
                             <Setter Property="Visibility" Value="Visible" />
