@@ -9,6 +9,47 @@
         <converters:RequestPriorityToColorConverter x:Key="RequestPriorityToColorConverter" />
         <converters:RequestKindToIconConverter x:Key="RequestKindToIconConverter" />
         <converters:EnumToDisplayNameConverter x:Key="EnumToDisplayNameConverter" NullLabel="All" />
+
+        <!-- Action button style for request workflow buttons -->
+        <Style x:Key="RequestActionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="180"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#E8F0F8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.92"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.55"/>
+                                <Setter Property="Foreground" Value="#B8C2CC"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -19,33 +60,58 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- ── Header ── -->
+        <!-- Header -->
         <Border Grid.Row="0" Style="{StaticResource OpHeaderBorderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+
                 <StackPanel>
-                    <TextBlock Text="ASSISTANCE HUB" Foreground="{StaticResource OpTextTitleBrush}" FontSize="22" FontWeight="Bold"/>
+                    <TextBlock Text="ASSISTANCE HUB"
+                               Foreground="{StaticResource OpTextTitleBrush}"
+                               FontSize="22"
+                               FontWeight="Bold"/>
                     <TextBlock Text="Coordinate materials, escorts, missions, and ad-hoc support across House Wolf. Select a request to inspect details, claim responsibility, or close out completed work."
-                               Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                               Foreground="{StaticResource OpTextSecondaryBrush}"
+                               FontSize="12"
+                               Margin="0,4,0,0"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
                     <Button Content="REFRESH"
                             Command="{Binding RefreshCommand}"
-                            Padding="16,8" FontWeight="Bold"
-                            Background="#24374A" Foreground="#E8F0F8"
-                            BorderBrush="#4F6A84" BorderThickness="1"/>
+                            Padding="16,8"
+                            FontWeight="Bold"
+                            Background="#24374A"
+                            Foreground="#E8F0F8"
+                            BorderBrush="#4F6A84"
+                            BorderThickness="1"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- ── Filters ── -->
-        <Border Grid.Row="1" Style="{StaticResource OpPanelBorderStyle}" Margin="0,0,0,16" Padding="12">
+        <!-- Filters -->
+        <Border Grid.Row="1"
+                Style="{StaticResource OpPanelBorderStyle}"
+                Margin="0,0,0,16"
+                Padding="12">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <TextBlock Text="KIND" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <ComboBox Width="180" ItemsSource="{Binding KindOptions}" SelectedItem="{Binding SelectedKind}" Style="{StaticResource OpComboBoxStyle}" Margin="0,0,24,0">
+                <TextBlock Text="KIND"
+                           Foreground="{StaticResource OpTextMutedBrush}"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0"/>
+                <ComboBox Width="180"
+                          ItemsSource="{Binding KindOptions}"
+                          SelectedItem="{Binding SelectedKind}"
+                          Style="{StaticResource OpComboBoxStyle}"
+                          Margin="0,0,24,0">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayNameConverter}}" />
@@ -53,18 +119,30 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
 
-                <TextBlock Text="STATUS" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <ComboBox Width="160" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus}" Style="{StaticResource OpComboBoxStyle}" Margin="0,0,24,0"/>
+                <TextBlock Text="STATUS"
+                           Foreground="{StaticResource OpTextMutedBrush}"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0"/>
+                <ComboBox Width="160"
+                          ItemsSource="{Binding StatusOptions}"
+                          SelectedItem="{Binding SelectedStatus}"
+                          Style="{StaticResource OpComboBoxStyle}"
+                          Margin="0,0,24,0"/>
 
                 <Button Content="NEW REQUEST"
                         Command="{Binding NewRequestCommand}"
-                        Padding="16,8" FontWeight="Bold"
-                        Background="#8B1A0F" Foreground="#F4EBDD"
-                        BorderBrush="#B15B34" BorderThickness="1"/>
+                        Padding="16,8"
+                        FontWeight="Bold"
+                        Background="#8B1A0F"
+                        Foreground="#F4EBDD"
+                        BorderBrush="#B15B34"
+                        BorderThickness="1"/>
             </StackPanel>
         </Border>
 
-        <!-- ── Main Content ── -->
+        <!-- Main Content -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.2*"/>
@@ -75,7 +153,12 @@
             <!-- List -->
             <Border Grid.Column="0" Style="{StaticResource OpPanelBorderStyle}">
                 <DockPanel Margin="12">
-                    <TextBlock Text="ACTIVE DISPATCHES" DockPanel.Dock="Top" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <TextBlock Text="ACTIVE DISPATCHES"
+                               DockPanel.Dock="Top"
+                               Foreground="{StaticResource OpTextMutedBrush}"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
                     <ListBox ItemsSource="{Binding Requests}"
                              SelectedItem="{Binding SelectedRequest, Mode=TwoWay}"
                              Style="{StaticResource OpListBoxStyle}">
@@ -94,15 +177,32 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Kind, Converter={StaticResource RequestKindToIconConverter}}" FontSize="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Kind, Converter={StaticResource RequestKindToIconConverter}}"
+                                                   FontSize="20"
+                                                   Margin="0,0,12,0"
+                                                   VerticalAlignment="Center"/>
+
                                         <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Title}"
+                                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                                       FontSize="14"
+                                                       FontWeight="Bold"
+                                                       TextWrapping="Wrap"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                <TextBlock Text="{Binding CreatedByDisplayName}" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="11"/>
-                                                <TextBlock Text=" · " Foreground="{StaticResource OpTextMutedBrush}" FontSize="11"/>
-                                                <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:g}'}" Foreground="{StaticResource OpTextMutedBrush}" FontSize="11"/>
+                                                <TextBlock Text="{Binding CreatedByDisplayName}"
+                                                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                           FontSize="11"/>
+                                                <TextBlock Text=" · "
+                                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                                           FontSize="11"/>
+                                                <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:g}'}"
+                                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                                           FontSize="11"/>
                                             </StackPanel>
                                         </StackPanel>
+
                                         <TextBlock Grid.Column="2"
                                                    Text="PINNED"
                                                    Foreground="{StaticResource OpTextAccentBrush}"
@@ -111,8 +211,16 @@
                                                    Margin="0,0,10,0"
                                                    VerticalAlignment="Top"
                                                    Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                        <Border Grid.Column="3" Background="{Binding Priority, Converter={StaticResource RequestPriorityToColorConverter}}" CornerRadius="4" Padding="6,2" VerticalAlignment="Top">
-                                            <TextBlock Text="{Binding Priority}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+
+                                        <Border Grid.Column="3"
+                                                Background="{Binding Priority, Converter={StaticResource RequestPriorityToColorConverter}}"
+                                                CornerRadius="4"
+                                                Padding="6,2"
+                                                VerticalAlignment="Top">
+                                            <TextBlock Text="{Binding Priority}"
+                                                       Foreground="White"
+                                                       FontSize="10"
+                                                       FontWeight="Bold"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -125,143 +233,258 @@
             <!-- Detail -->
             <Border Grid.Column="2" Style="{StaticResource OpPanelBorderStyle}">
                 <Grid>
-                <!-- Empty state -->
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Visible"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedRequest, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-                    <TextBlock Text="SELECT A DISPATCH" Foreground="#B9A07D" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Choose a request from the hub to view details and coordinate support."
-                               Foreground="{StaticResource OpTextMutedBrush}" FontSize="12" Margin="0,8,0,0"
-                               TextAlignment="Center" TextWrapping="Wrap" Width="300"/>
-                </StackPanel>
+                    <!-- Empty state -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedRequest, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
 
-                <Grid Margin="18">
-                    <Grid.Style>
-                        <Style TargetType="Grid">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedRequest, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Grid.Style>
+                        <TextBlock Text="SELECT A DISPATCH"
+                                   Foreground="#B9A07D"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Choose a request from the hub to view details and coordinate support."
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="12"
+                                   Margin="0,8,0,0"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Width="300"/>
+                    </StackPanel>
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="{Binding SelectedRequest.Title}" Foreground="{StaticResource OpTextTitleBrush}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding SelectedRequest.Kind}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="14" Margin="0,4,0,16"/>
+                    <Grid Margin="18">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedRequest, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
 
-                            <TextBlock Text="DESCRIPTION" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding SelectedRequest.Description}" Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="{Binding SelectedRequest.Title}"
+                                           Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontSize="20"
+                                           FontWeight="Bold"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding SelectedRequest.Kind}"
+                                           Foreground="{StaticResource OpTextAccentBrush}"
+                                           FontSize="14"
+                                           Margin="0,4,0,16"/>
 
-                            <!-- Dynamic fields -->
-                            <Border Style="{StaticResource OpItemBorderStyle}" Padding="16" Background="{StaticResource OpBackgroundPillBrush}">
-                                <StackPanel>
-                                    <TextBlock Text="REQUEST DATA" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
-                                    
-                                    <Grid Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Priority:" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding SelectedRequest.Priority}" Foreground="{Binding SelectedRequest.Priority, Converter={StaticResource RequestPriorityToColorConverter}}" FontWeight="Bold" FontSize="12"/>
-                                    </Grid>
+                                <TextBlock Text="DESCRIPTION"
+                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="10"
+                                           FontWeight="Bold"
+                                           Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding SelectedRequest.Description}"
+                                           Foreground="{StaticResource OpTextPrimaryBrush}"
+                                           FontSize="13"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,16"/>
 
-                                    <Grid Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Status:" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding SelectedRequest.Status}" Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                                    </Grid>
+                                <!-- Dynamic fields -->
+                                <Border Style="{StaticResource OpItemBorderStyle}"
+                                        Padding="16"
+                                        Background="{StaticResource OpBackgroundPillBrush}">
+                                    <StackPanel>
+                                        <TextBlock Text="REQUEST DATA"
+                                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   Margin="0,0,0,12"/>
 
-                                    <Grid Margin="0,0,0,6" Visibility="{Binding SelectedRequest.MaterialName, Converter={StaticResource NullToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Material:" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding SelectedRequest.MaterialName}" Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                                    </Grid>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Priority:"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="12"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedRequest.Priority}"
+                                                       Foreground="{Binding SelectedRequest.Priority, Converter={StaticResource RequestPriorityToColorConverter}}"
+                                                       FontWeight="Bold"
+                                                       FontSize="12"/>
+                                        </Grid>
 
-                                    <Grid Margin="0,0,0,6" Visibility="{Binding SelectedRequest.QuantityNeeded, Converter={StaticResource NullToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Quantity:" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding SelectedRequest.QuantityNeeded}" Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                                    </Grid>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Status:"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="12"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedRequest.Status}"
+                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"/>
+                                        </Grid>
 
-                                    <Grid Margin="0,0,0,6" Visibility="{Binding SelectedRequest.MeetingLocation, Converter={StaticResource NullToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Location:" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding SelectedRequest.MeetingLocation}" Foreground="{StaticResource OpTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                                    </Grid>
+                                        <Grid Margin="0,0,0,6"
+                                              Visibility="{Binding SelectedRequest.MaterialName, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Material:"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="12"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedRequest.MaterialName}"
+                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"/>
+                                        </Grid>
 
-                                    <Grid Margin="0,0,0,0" Visibility="{Binding SelectedRequest.RewardOffered, Converter={StaticResource NullToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Reward:" Foreground="{StaticResource OpTextSecondaryBrush}" FontSize="12"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding SelectedRequest.RewardOffered}" Foreground="#E8A020" FontWeight="Bold" FontSize="12"/>
-                                    </Grid>
+                                        <Grid Margin="0,0,0,6"
+                                              Visibility="{Binding SelectedRequest.QuantityNeeded, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Quantity:"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="12"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedRequest.QuantityNeeded}"
+                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"/>
+                                        </Grid>
+
+                                        <Grid Margin="0,0,0,6"
+                                              Visibility="{Binding SelectedRequest.MeetingLocation, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Location:"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="12"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedRequest.MeetingLocation}"
+                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"/>
+                                        </Grid>
+
+                                        <Grid Margin="0,0,0,0"
+                                              Visibility="{Binding SelectedRequest.RewardOffered, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Reward:"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="12"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedRequest.RewardOffered}"
+                                                       Foreground="#E8A020"
+                                                       FontWeight="Bold"
+                                                       FontSize="12"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Workflow Actions -->
+                                <StackPanel Margin="0,16,0,0" HorizontalAlignment="Left">
+                                    <TextBlock Text="WORKFLOW ACTIONS"
+                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Margin="0,0,0,12"/>
+
+                                    <Button Content="{Binding ClaimActionLabel}"
+                                            Command="{Binding ClaimCommand}"
+                                            Margin="0,0,0,8"
+                                            Background="#2B4E2E"
+                                            Foreground="#EEF6EE"
+                                            BorderBrush="#5C8B5E">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource RequestActionButtonStyle}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Setter Property="Background" Value="#2B4E2E"/>
+                                                <Setter Property="Foreground" Value="#EEF6EE"/>
+                                                <Setter Property="BorderBrush" Value="#5C8B5E"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CanClaim}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding CanUnclaim}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+
+                                    <Button Content="MARK COMPLETE"
+                                            Command="{Binding CompleteCommand}"
+                                            Style="{StaticResource RequestActionButtonStyle}"
+                                            Margin="0,0,0,8"
+                                            Background="#24374A"
+                                            Foreground="#E8F0F8"
+                                            BorderBrush="#4F6A84"/>
+
+                                    <Button Content="{Binding PinActionLabel}"
+                                            Command="{Binding TogglePinCommand}"
+                                            Style="{StaticResource RequestActionButtonStyle}"
+                                            Visibility="{Binding CanPin, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            Margin="0,0,0,8"
+                                            Background="#5A4A14"
+                                            Foreground="#F8E9D4"
+                                            BorderBrush="#A38A2F"/>
+
+                                    <Button Content="EDIT REQUEST"
+                                            Command="{Binding EditCommand}"
+                                            Style="{StaticResource RequestActionButtonStyle}"
+                                            Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            Margin="0,0,0,8"
+                                            Background="#1A3A2A"
+                                            Foreground="#A8D8A8"
+                                            BorderBrush="#2E6A4A"/>
+
+                                    <Button Content="DELETE REQUEST"
+                                            Command="{Binding DeleteCommand}"
+                                            Style="{StaticResource RequestActionButtonStyle}"
+                                            Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            Margin="0,0,0,8"
+                                            Background="#8B1A0F"
+                                            Foreground="#F4EBDD"
+                                            BorderBrush="#B15B34"/>
                                 </StackPanel>
-                            </Border>
-
-                            <StackPanel Margin="0,16,0,0">
-                                <TextBlock Text="WORKFLOW ACTIONS" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
-                                <Button Content="{Binding ClaimActionLabel}"
-                                        Command="{Binding ClaimCommand}"
-                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
-                                        Background="#2B4E2E" Foreground="#EEF6EE"
-                                        BorderBrush="#5C8B5E" BorderThickness="1">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding CanClaim}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding CanUnclaim}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                                <Button Content="MARK COMPLETE"
-                                        Command="{Binding CompleteCommand}"
-                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
-                                        Background="#24374A" Foreground="#E8F0F8"
-                                        BorderBrush="#4F6A84" BorderThickness="1"/>
-                                <Button Content="{Binding PinActionLabel}"
-                                        Command="{Binding TogglePinCommand}"
-                                        Visibility="{Binding CanPin, Converter={StaticResource BoolToVisibilityConverter}}"
-                                        Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
-                                        Background="#5A4A14" Foreground="#F8E9D4"
-                                        BorderBrush="#A38A2F" BorderThickness="1"/>
-                                <Button Content="EDIT REQUEST"
-                                        Command="{Binding EditCommand}"
-                                        Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibilityConverter}}"
-                                        Padding="14,8" FontWeight="Bold"
-                                        Background="#1A3A2A" Foreground="#A8D8A8"
-                                        BorderBrush="#2E6A4A" BorderThickness="1"
-                                        Margin="0,0,0,8"/>
-                                <Button Content="DELETE REQUEST"
-                                        Command="{Binding DeleteCommand}"
-                                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibilityConverter}}"
-                                        Padding="12,8" FontWeight="Bold"
-                                        Background="#8B1A0F" Foreground="#F4EBDD"
-                                        BorderBrush="#B15B34" BorderThickness="1"/>
                             </StackPanel>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Grid>
+                        </ScrollViewer>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
 
-        <!-- ── Footer ── -->
-        <Border Grid.Row="3" Style="{StaticResource OpHeaderBorderStyle}" Margin="0,16,0,0" Padding="12,10">
-            <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource OpTextAccentBrush}" FontSize="12" TextWrapping="Wrap"/>
+        <!-- Footer -->
+        <Border Grid.Row="3"
+                Style="{StaticResource OpHeaderBorderStyle}"
+                Margin="0,16,0,0"
+                Padding="12,10">
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="{StaticResource OpTextAccentBrush}"
+                       FontSize="12"
+                       TextWrapping="Wrap"/>
         </Border>
     </Grid>
 </UserControl>
