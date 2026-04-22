@@ -30,8 +30,6 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
 
         return await _db.MaterialProcurementRequests
             .AsNoTracking()
-            .Include(x => x.Material)
-            .Include(x => x.RequesterProfile)
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
             .Select(x => new MaterialProcurementRequestListItemDto
             {
@@ -45,8 +43,7 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
                     : "Unknown",
                 AssignedToUsername = _db.RequestClaims
                     .Where(c => c.RequestId == x.Id && c.RequestType == "Procurement")
-                    .Include(c => c.Profile)
-                    .Select(c => c.Profile != null ? (c.Profile.DiscordDisplayName ?? c.Profile.Username) : "User")
+                    .Join(_db.Profiles, c => c.ProfileId, p => p.Id, (c, p) => p.DiscordDisplayName ?? p.Username)
                     .FirstOrDefault(),
                 QuantityRequested = x.QuantityRequested,
                 QuantityDelivered = x.QuantityDelivered,
