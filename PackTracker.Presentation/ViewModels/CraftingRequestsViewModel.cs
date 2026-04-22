@@ -32,6 +32,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
 
     private string? _currentRequestRoomId;
     private string _currentUsername = string.Empty;
+    private bool _isCurrentUserModerator;
     private CancellationTokenSource? _switchRoomCts;
 
     public ObservableCollection<CraftingRequestListItemDto> Requests { get; } = new();
@@ -138,6 +139,10 @@ public partial class CraftingRequestsViewModel : ObservableObject
                 vm.IsEditing = false;
             });
             vm.CancelEditCommand = new PackTracker.Presentation.Commands.RelayCommand(() => vm.IsEditing = false);
+            vm.DeleteCommand = new PackTracker.Presentation.Commands.RelayCommand(() => _ = _signalR.DeleteMessageAsync(channel, vm.Id));
+        }
+        else if (_isCurrentUserModerator)
+        {
             vm.DeleteCommand = new PackTracker.Presentation.Commands.RelayCommand(() => _ = _signalR.DeleteMessageAsync(channel, vm.Id));
         }
 
@@ -374,6 +379,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
             {
                 var profile = await profileResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
                 _currentUsername = profile?.Username ?? string.Empty;
+                _isCurrentUserModerator = PackTracker.Domain.Security.SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
             }
 
             using var onlineResponse = await client.GetAsync("api/v1/profiles/online");
@@ -588,6 +594,6 @@ public partial class CraftingRequestsViewModel : ObservableObject
         return request.RequesterUsername;
     }
 
-    private sealed record CurrentUserDto(string Username);
+    private sealed record CurrentUserDto(string Username, string? DiscordRank);
     private sealed record OnlineProfileDto(string Username);
 }

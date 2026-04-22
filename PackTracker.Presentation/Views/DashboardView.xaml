@@ -1098,7 +1098,7 @@
                                                                         VerticalAlignment="Top"
                                                                         HorizontalAlignment="Right"
                                                                         Style="{StaticResource ChatMessageMenuButtonStyle}"
-                                                                        Visibility="{Binding IsOwnMessage, Converter={StaticResource BoolToVisibility}}">
+                                                                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}">
                                                                     <Button.ContextMenu>
                                                                         <ContextMenu
                                                                             Style="{StaticResource ChatMessageContextMenuStyle}">

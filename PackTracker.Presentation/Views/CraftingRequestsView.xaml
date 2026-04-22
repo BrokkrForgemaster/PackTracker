@@ -621,6 +621,19 @@
                                                                             </Setter.Value>
                                                                         </Setter>
                                                                     </DataTrigger>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding CanDelete}" Value="True"/>
+                                                                            <Condition Binding="{Binding IsOwnMessage}" Value="False"/>
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter Property="ContextMenu">
+                                                                            <Setter.Value>
+                                                                                <ContextMenu>
+                                                                                    <MenuItem Header="Delete" Command="{Binding DeleteCommand}"/>
+                                                                                </ContextMenu>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </MultiDataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </Grid.Style>

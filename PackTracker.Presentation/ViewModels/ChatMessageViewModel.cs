@@ -38,6 +38,9 @@ public class ChatMessageViewModel : ViewModelBase
     public bool IsOwnMessage { get; set; }
     public string? AvatarUrl { get; set; }
 
+    // True when this user owns the message OR is a moderator — controls whether the ⋯ menu is shown.
+    public bool CanDelete => DeleteCommand != null;
+
     public bool IsEditing
     {
         get => _isEditing;

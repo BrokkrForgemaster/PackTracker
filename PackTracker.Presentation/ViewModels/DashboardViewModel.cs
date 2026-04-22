@@ -135,10 +135,12 @@ public class DashboardViewModel : ViewModelBase
                     ? profile.DiscordRank
                     : "Foundling";
 
+                var isModerator = PackTracker.Domain.Security.SecurityConstants.IsElevatedRequestRole(profile.DiscordRank);
                 foreach (var window in OpenChatWindows)
                 {
                     window.CurrentUsername = _currentUsername;
                     window.CurrentUserDisplayName = CurrentUserDisplayName;
+                    window.IsCurrentUserModerator = isModerator;
                 }
 
                 LoadChatChannelsForRole(profile.DiscordDivision);
@@ -520,6 +522,7 @@ public class DashboardViewModel : ViewModelBase
             AccentBrush = channel.AccentBrush,
             CurrentUserDisplayName = CurrentUserDisplayName,
             CurrentUsername = _currentUsername,
+            IsCurrentUserModerator = PackTracker.Domain.Security.SecurityConstants.IsElevatedRequestRole(_currentUserRole),
         };
 
         window.Messages.CollectionChanged += (_, _) => SyncUnreadState(window, channel);
@@ -719,6 +722,7 @@ public class DashboardViewModel : ViewModelBase
             CurrentUserDisplayName = CurrentUserDisplayName,
             CurrentUsername = _currentUsername,
             AccentBrush = BrushFromHex("#6A4F8B"),
+            IsCurrentUserModerator = PackTracker.Domain.Security.SecurityConstants.IsElevatedRequestRole(_currentUserRole),
         };
 
         window.Messages.CollectionChanged += (_, _) => SyncUnreadState(window, sidebarEntry);

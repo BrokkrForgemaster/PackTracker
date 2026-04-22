@@ -36,6 +36,7 @@ public class ChatWindowViewModel : ViewModelBase
     private string _draftMessage = string.Empty;
     private string? _currentUserDisplayName;
     private string? _currentUsername;
+    private bool _isCurrentUserModerator;
 
     public ChatWindowViewModel(
         Action<ChatWindowViewModel> closeAction,
@@ -74,6 +75,12 @@ public class ChatWindowViewModel : ViewModelBase
     {
         get => _currentUsername;
         set => SetProperty(ref _currentUsername, value);
+    }
+
+    public bool IsCurrentUserModerator
+    {
+        get => _isCurrentUserModerator;
+        set => SetProperty(ref _isCurrentUserModerator, value);
     }
 
     public ObservableCollection<ChatMessageViewModel> Messages { get; }
@@ -275,6 +282,11 @@ public class ChatWindowViewModel : ViewModelBase
                 vm.IsEditing = false;
             });
             vm.CancelEditCommand = new RelayCommand(() => vm.IsEditing = false);
+            vm.DeleteCommand = new RelayCommand(() => DeleteRequested?.Invoke(ChannelKey, vm.Id));
+        }
+        else if (_isCurrentUserModerator)
+        {
+            // Moderators can delete (but not edit) other users' messages.
             vm.DeleteCommand = new RelayCommand(() => DeleteRequested?.Invoke(ChannelKey, vm.Id));
         }
 
