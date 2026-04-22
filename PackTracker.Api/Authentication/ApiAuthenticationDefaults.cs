@@ -7,10 +7,13 @@ namespace PackTracker.Api.Authentication;
 /// </summary>
 public static class ApiAuthenticationDefaults
 {
+    #region Properties
     public const string SmartScheme = "Smart";
     public const string CookieScheme = "Cookies";
     public const string DiscordScheme = "Discord";
-
+    #endregion
+    
+    #region Methods
     public static string SelectScheme(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -42,4 +45,5 @@ public static class ApiAuthenticationDefaults
         var token = request.Query["access_token"].ToString();
         return string.IsNullOrWhiteSpace(token) ? null : token;
     }
+    #endregion
 }

@@ -164,27 +164,76 @@
                              Style="{StaticResource OpListBoxStyle}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource OpItemBorderStyle}" Padding="14">
+                                <Border Padding="14"
+                                        Margin="0,0,0,12"
+                                        BorderThickness="1"
+                                        CornerRadius="14"
+                                        SnapsToDevicePixels="True">
                                     <Border.InputBindings>
                                         <MouseBinding MouseAction="LeftClick"
                                                       Command="{Binding DataContext.SelectRequestCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                       CommandParameter="{Binding}"/>
                                     </Border.InputBindings>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#18110D"/>
+                                            <Setter Property="BorderBrush" Value="#38271D"/>
+                                            <Setter Property="Effect">
+                                                <Setter.Value>
+                                                    <DropShadowEffect BlurRadius="10"
+                                                                      ShadowDepth="0"
+                                                                      Color="#22000000"
+                                                                      Opacity="0.28"/>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                    <Setter Property="Background" Value="#2E1D11"/>
+                                                    <Setter Property="BorderBrush" Value="#D6A44B"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                    <Setter Property="Effect">
+                                                        <Setter.Value>
+                                                            <DropShadowEffect BlurRadius="24"
+                                                                              ShadowDepth="0"
+                                                                              Color="#C8922B"
+                                                                              Opacity="0.40"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="6"/>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock Grid.Column="0"
+                                        <Border Grid.Column="0"
+                                                Margin="-14,-14,10,-14"
+                                                CornerRadius="14,0,0,14">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#261B15"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                            <Setter Property="Background" Value="#D6A44B"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+
+                                        <TextBlock Grid.Column="1"
                                                    Text="{Binding Kind, Converter={StaticResource RequestKindToIconConverter}}"
                                                    FontSize="20"
                                                    Margin="0,0,12,0"
                                                    VerticalAlignment="Center"/>
 
-                                        <StackPanel Grid.Column="1">
+                                        <StackPanel Grid.Column="2">
                                             <TextBlock Text="{Binding Title}"
                                                        Foreground="{StaticResource OpTextTitleBrush}"
                                                        FontSize="14"
@@ -203,16 +252,29 @@
                                             </StackPanel>
                                         </StackPanel>
 
-                                        <TextBlock Grid.Column="2"
-                                                   Text="PINNED"
-                                                   Foreground="{StaticResource OpTextAccentBrush}"
-                                                   FontSize="10"
-                                                   FontWeight="Bold"
-                                                   Margin="0,0,10,0"
-                                                   VerticalAlignment="Top"
-                                                   Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
                                         <Border Grid.Column="3"
+                                                Margin="0,0,12,0"
+                                                Padding="12,6"
+                                                Background="#6A491B"
+                                                BorderBrush="#E0B35C"
+                                                BorderThickness="1"
+                                                CornerRadius="999"
+                                                VerticalAlignment="Top"
+                                                Visibility="{Binding IsPinned, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="★"
+                                                           Foreground="#FFF1C5"
+                                                           FontSize="11"
+                                                           FontWeight="Bold"
+                                                           Margin="0,0,6,0"/>
+                                                <TextBlock Text="PINNED REQUEST"
+                                                           Foreground="#FFF1C5"
+                                                           FontSize="10"
+                                                           FontWeight="Bold"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="4"
                                                 Background="{Binding Priority, Converter={StaticResource RequestPriorityToColorConverter}}"
                                                 CornerRadius="4"
                                                 Padding="6,2"

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PackTracker.Application.Blueprints.Queries.GetBlueprintById;
 using PackTracker.Application.Blueprints.Queries.GetBlueprintCategories;
+using PackTracker.Application.Blueprints.Queries.GetOwnedBlueprints;
 using PackTracker.Application.Blueprints.Queries.PingBlueprints;
 using PackTracker.Application.Blueprints.Queries.SearchBlueprints;
 using PackTracker.Application.DTOs.Crafting;
@@ -113,6 +114,21 @@ public class BlueprintsController : ControllerBase
         {
             _logger.LogError(ex, "Failed to load blueprint categories.");
             return StatusCode(500, new { message = "Failed to load categories.", detail = ex.Message });
+        }
+    }
+
+    [HttpGet("owned")]
+    public async Task<ActionResult<IReadOnlyList<OwnedBlueprintSummaryDto>>> GetOwned(CancellationToken ct)
+    {
+        try
+        {
+            var items = await _mediator.Send(new GetOwnedBlueprintsQuery(), ct);
+            return Ok(items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load current user's owned blueprints.");
+            return StatusCode(500, new { message = "Failed to load owned blueprints.", detail = ex.Message });
         }
     }
 

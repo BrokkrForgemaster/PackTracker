@@ -1,9 +1,12 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Domain.Enums;
 using PackTracker.Presentation.Services;
@@ -73,6 +76,46 @@ public partial class MaterialSelectionViewModel : ObservableObject
     }
 }
 
+public sealed class OwnedBlueprintCardViewModel
+{
+    public Guid BlueprintId { get; init; }
+    public Guid WikiUuid { get; init; }
+    public string BlueprintName { get; init; } = string.Empty;
+    public string CraftedItemName { get; init; } = string.Empty;
+    public string Category { get; init; } = string.Empty;
+    public string AvailabilityStatus { get; init; } = string.Empty;
+    public string OwnershipStatus { get; init; } = string.Empty;
+    public DateTime? VerifiedAt { get; init; }
+    public string? Notes { get; init; }
+    public int MaterialCount { get; init; }
+    public string MaterialPreview { get; init; } = string.Empty;
+
+    public static OwnedBlueprintCardViewModel FromDto(OwnedBlueprintSummaryDto dto)
+    {
+        var preview = dto.Materials.Count == 0
+            ? "No material recipe saved yet."
+            : string.Join(", ", dto.Materials.Take(3).Select(x => x.MaterialName));
+
+        if (dto.Materials.Count > 3)
+            preview += $" +{dto.Materials.Count - 3} more";
+
+        return new OwnedBlueprintCardViewModel
+        {
+            BlueprintId = dto.BlueprintId,
+            WikiUuid = dto.WikiUuid,
+            BlueprintName = dto.BlueprintName,
+            CraftedItemName = dto.CraftedItemName,
+            Category = dto.Category,
+            AvailabilityStatus = dto.AvailabilityStatus,
+            OwnershipStatus = dto.OwnershipStatus,
+            VerifiedAt = dto.VerifiedAt,
+            Notes = dto.Notes,
+            MaterialCount = dto.Materials.Count,
+            MaterialPreview = preview
+        };
+    }
+}
+
 public partial class BlueprintExplorerViewModel : ObservableObject
 {
     #region Fields
@@ -81,6 +124,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     private readonly WikiBlueprintService _wikiBlueprints;
     private readonly ILogger<BlueprintExplorerViewModel> _logger;
     private CancellationTokenSource? _searchDebounce;
+    private List<OwnedBlueprintSummaryDto> _ownedBlueprints = new();
 
     private const string AllCategoriesLabel = "All Categories";
 
@@ -89,6 +133,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     #region Collections
 
     public ObservableCollection<BlueprintSearchItemDto> Results { get; } = new();
+    public ObservableCollection<OwnedBlueprintCardViewModel> OwnedBlueprints { get; } = new();
     public ObservableCollection<MaterialSelectionViewModel> Materials { get; } = new();
     public ObservableCollection<ComponentViewModel> Components { get; } = new();
     public ObservableCollection<BlueprintComponentModifierPreview> CombinedModifiers { get; } = new();
@@ -106,11 +151,13 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private string statusMessage = "Loading blueprints...";
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
+    [ObservableProperty] private bool isSelectedBlueprintOwned;
 
     [ObservableProperty] private int baseRpm = 650;
     [ObservableProperty] private int finalRpm;
 
     public bool HasSelectedBlueprintDetail => SelectedBlueprintDetail is not null;
+    public bool HasOwnedBlueprints => OwnedBlueprints.Count > 0;
     public bool HasRewardPools => SelectedBlueprintDetail?.RewardPools.GetType().GetProperty("pools") != null;
     public bool HasComponents => Components.Count > 0;
     public bool HasMaterials => Materials.Count > 0;
@@ -143,6 +190,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     {
         LoadCategoriesFromWiki();
         await LoadWikiCacheAsync();
+        await LoadOwnedBlueprintsAsync();
         await SearchAsync();
     }
 
@@ -263,6 +311,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasSelectedBlueprintDetail));
         OnPropertyChanged(nameof(HasRewardPools));
+        RefreshOwnedFlag();
     }
 
     private async Task LoadBlueprintDetailAsync(Guid blueprintId)
@@ -349,6 +398,8 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         OnPropertyChanged(nameof(HasMaterials));
         OnPropertyChanged(nameof(HasCombinedModifiers));
         OnPropertyChanged(nameof(HasRewardPools));
+        OnPropertyChanged(nameof(HasOwnedBlueprints));
+        RefreshOwnedFlag();
     }
 
     #endregion
@@ -391,6 +442,90 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     private async Task MarkOwnedAsync()
     {
         await PostOwnershipAsync(MemberBlueprintInterestType.Owns, "Marked as Owned.");
+    }
+
+    [RelayCommand]
+    private async Task SelectOwnedBlueprintAsync(OwnedBlueprintCardViewModel? blueprint)
+    {
+        if (blueprint is null)
+            return;
+
+        SelectedBlueprint = Results.FirstOrDefault(x => x.Id == blueprint.WikiUuid || x.Id == blueprint.BlueprintId);
+        await LoadBlueprintDetailAsync(blueprint.WikiUuid != Guid.Empty ? blueprint.WikiUuid : blueprint.BlueprintId);
+    }
+
+    [RelayCommand]
+    private async Task ExportOwnedBlueprintsAsync()
+    {
+        if (_ownedBlueprints.Count == 0)
+        {
+            StatusMessage = "No owned blueprints to export.";
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export Owned Blueprints",
+            Filter = "CSV files (*.csv)|*.csv",
+            DefaultExt = ".csv",
+            AddExtension = true,
+            OverwritePrompt = true,
+            FileName = $"owned-blueprints-{DateTime.Now:yyyyMMdd}.csv"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("Blueprint Name,Crafted Item,Category,Availability,Ownership Status,Verified At,Notes,Material Name,Quantity Required,Unit,Source Type");
+
+            foreach (var blueprint in _ownedBlueprints.OrderBy(x => x.BlueprintName))
+            {
+                if (blueprint.Materials.Count == 0)
+                {
+                    builder.AppendLine(string.Join(",",
+                        Csv(blueprint.BlueprintName),
+                        Csv(blueprint.CraftedItemName),
+                        Csv(blueprint.Category),
+                        Csv(blueprint.AvailabilityStatus),
+                        Csv(blueprint.OwnershipStatus),
+                        Csv(blueprint.VerifiedAt?.ToLocalTime().ToString("g") ?? string.Empty),
+                        Csv(blueprint.Notes ?? string.Empty),
+                        Csv(string.Empty),
+                        Csv(string.Empty),
+                        Csv(string.Empty),
+                        Csv(string.Empty)));
+
+                    continue;
+                }
+
+                foreach (var material in blueprint.Materials.OrderBy(x => x.MaterialName))
+                {
+                    builder.AppendLine(string.Join(",",
+                        Csv(blueprint.BlueprintName),
+                        Csv(blueprint.CraftedItemName),
+                        Csv(blueprint.Category),
+                        Csv(blueprint.AvailabilityStatus),
+                        Csv(blueprint.OwnershipStatus),
+                        Csv(blueprint.VerifiedAt?.ToLocalTime().ToString("g") ?? string.Empty),
+                        Csv(blueprint.Notes ?? string.Empty),
+                        Csv(material.MaterialName),
+                        Csv(material.QuantityRequired.ToString("0.##")),
+                        Csv(material.Unit),
+                        Csv(material.SourceType)));
+                }
+            }
+
+            File.WriteAllText(dialog.FileName, builder.ToString(), Encoding.UTF8);
+            StatusMessage = $"Exported {_ownedBlueprints.Count} owned blueprints to {Path.GetFileName(dialog.FileName)}.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Owned blueprint export failed.");
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
     }
 
     [RelayCommand]
@@ -550,6 +685,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             System.Diagnostics.Debug.WriteLine($"Ownership post succeeded for blueprint {blueprintId}");
 
             await LoadBlueprintDetailAsync(GetLookupBlueprintId());
+            await LoadOwnedBlueprintsAsync();
 
             System.Diagnostics.Debug.WriteLine(
                 $"After refresh, OwnerCount={SelectedBlueprintDetail?.OwnerCount}");
@@ -618,6 +754,48 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             ? SelectedBlueprintDetail.WikiUuid
             : SelectedBlueprintDetail.Id;
     }
+
+    private async Task LoadOwnedBlueprintsAsync()
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            var items = await client.GetFromJsonAsync<List<OwnedBlueprintSummaryDto>>("api/v1/blueprints/owned")
+                ?? new List<OwnedBlueprintSummaryDto>();
+
+            _ownedBlueprints = items;
+
+            OwnedBlueprints.Clear();
+            foreach (var item in items)
+                OwnedBlueprints.Add(OwnedBlueprintCardViewModel.FromDto(item));
+
+            OnPropertyChanged(nameof(HasOwnedBlueprints));
+            RefreshOwnedFlag();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Owned blueprint list failed to load.");
+        }
+    }
+
+    private void RefreshOwnedFlag()
+    {
+        if (SelectedBlueprintDetail is null)
+        {
+            IsSelectedBlueprintOwned = false;
+            return;
+        }
+
+        var selectedId = SelectedBlueprintDetail.Id;
+        var selectedWikiUuid = SelectedBlueprintDetail.WikiUuid;
+
+        IsSelectedBlueprintOwned = _ownedBlueprints.Any(x =>
+            x.BlueprintId == selectedId ||
+            (selectedWikiUuid != Guid.Empty && x.WikiUuid == selectedWikiUuid));
+    }
+
+    private static string Csv(string value) =>
+        "\"" + value.Replace("\"", "\"\"") + "\"";
 
     #endregion
 }

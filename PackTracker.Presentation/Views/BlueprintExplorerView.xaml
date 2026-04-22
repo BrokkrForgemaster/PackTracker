@@ -297,45 +297,58 @@
 
         <!-- Left search pane -->
         <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource OpPanelBorderStyle}">
-            <StackPanel Margin="12">
-                <TextBlock Text="SEARCH"
-                           Foreground="{StaticResource OpTextMutedBrush}"
-                           FontSize="10"
-                           FontWeight="Bold" />
-                <TextBox Margin="0,5,0,10"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource OpTextBoxStyle}" />
+            <Grid Margin="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                <TextBlock Text="CATEGORY"
-                           Foreground="{StaticResource OpTextMutedBrush}"
-                           FontSize="10"
-                           FontWeight="Bold" />
-                <ComboBox Margin="0,5,0,10"
-                          ItemsSource="{Binding Categories}"
-                          SelectedItem="{Binding SelectedCategory}"
-                          Style="{StaticResource OpComboBoxStyle}" />
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="SEARCH"
+                               Foreground="{StaticResource OpTextMutedBrush}"
+                               FontSize="10"
+                               FontWeight="Bold" />
+                    <TextBox Margin="0,5,0,10"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource OpTextBoxStyle}" />
 
-                <CheckBox Content="Default-unlock blueprints only"
-                          IsChecked="{Binding InGameOnly}"
-                          Foreground="{StaticResource OpTextPrimaryBrush}"
-                          Margin="0,0,0,10" />
+                    <TextBlock Text="CATEGORY"
+                               Foreground="{StaticResource OpTextMutedBrush}"
+                               FontSize="10"
+                               FontWeight="Bold" />
+                    <ComboBox Margin="0,5,0,10"
+                              ItemsSource="{Binding Categories}"
+                              SelectedItem="{Binding SelectedCategory}"
+                              Style="{StaticResource OpComboBoxStyle}" />
 
-                <Button Content="SEARCH BLUEPRINTS"
-                        Command="{Binding SearchCommand}"
-                        Style="{StaticResource BpActionButtonStyle}"
-                        Background="#8B1A0F"
-                        Foreground="#F4EBDD"
-                        BorderBrush="#B15B34"
-                        BorderThickness="1"
-                        Margin="0,0,0,25" />
+                    <CheckBox Content="Default-unlock blueprints only"
+                              IsChecked="{Binding InGameOnly}"
+                              Foreground="{StaticResource OpTextPrimaryBrush}"
+                              Margin="0,0,0,10" />
 
-                <ComboBox ItemsSource="{Binding Results}"
+                    <Button Content="SEARCH BLUEPRINTS"
+                            Command="{Binding SearchCommand}"
+                            Style="{StaticResource BpActionButtonStyle}"
+                            Background="#8B1A0F"
+                            Foreground="#F4EBDD"
+                            BorderBrush="#B15B34"
+                            BorderThickness="1"
+                            Margin="0,0,0,20" />
+                </StackPanel>
+
+                <ComboBox Grid.Row="1"
+                          ItemsSource="{Binding Results}"
                           SelectedItem="{Binding SelectedBlueprint}"
                           IsDropDownOpen="{Binding IsResultsDropDownOpen, Mode=TwoWay}"
                           Style="{StaticResource OpComboBoxStyle}"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          Margin="0,0,0,16">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Margin="0,3">
@@ -351,7 +364,164 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-            </StackPanel>
+
+                <Grid Grid.Row="2" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="OWNED BLUEPRINTS"
+                                   Foreground="#E7C77A"
+                                   FontSize="11"
+                                   FontWeight="Bold" />
+                        <TextBlock Text="Your marked collection with saved material recipes."
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="10"
+                                   Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Content="EXPORT CSV"
+                            Command="{Binding ExportOwnedBlueprintsCommand}"
+                            Style="{StaticResource BpActionButtonStyle}"
+                            Background="#2B4E2E"
+                            Foreground="#EEF6EE"
+                            BorderBrush="#5C8B5E"
+                            BorderThickness="1"
+                            Padding="10,6"
+                            VerticalAlignment="Center" />
+                </Grid>
+
+                <Border Grid.Row="3"
+                        Background="#23160D"
+                        BorderBrush="#A67B2F"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="10"
+                        Margin="0,0,0,10">
+                    <TextBlock Text="Owned blueprints are grouped here so you can jump back into any recipe and export a print-ready material sheet."
+                               Foreground="#E9D6AF"
+                               FontSize="10"
+                               TextWrapping="Wrap" />
+                </Border>
+
+                <TextBlock Grid.Row="4"
+                           Text="No owned blueprints marked yet. Use MARK OWNED on any blueprint to build your export list."
+                           Foreground="{StaticResource OpTextMutedBrush}"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,8">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasOwnedBlueprints}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <ListBox Grid.Row="5"
+                         ItemsSource="{Binding OwnedBlueprints}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.Style>
+                        <Style TargetType="ListBox">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasOwnedBlueprints}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.Style>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,0,0,10" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Focusable" Value="False" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:OwnedBlueprintCardViewModel}">
+                            <Button Command="{Binding DataContext.SelectOwnedBlueprintCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="0"
+                                    HorizontalContentAlignment="Stretch">
+                                <Border Background="#19110D"
+                                        BorderBrush="#7D5A22"
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        Padding="12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0"
+                                                Background="#D6A44B"
+                                                CornerRadius="8,0,0,8"
+                                                Margin="0,-12,10,-12" />
+
+                                        <StackPanel Grid.Column="1">
+                                            <WrapPanel Margin="0,0,0,6">
+                                                <Border Background="#5A3E16"
+                                                        BorderBrush="#D6A44B"
+                                                        BorderThickness="1"
+                                                        CornerRadius="999"
+                                                        Padding="10,4"
+                                                        Margin="0,0,8,6">
+                                                    <TextBlock Text="OWNED"
+                                                               Foreground="#FFF0C6"
+                                                               FontSize="10"
+                                                               FontWeight="Bold" />
+                                                </Border>
+                                                <Border Background="#223028"
+                                                        BorderBrush="#4D7A65"
+                                                        BorderThickness="1"
+                                                        CornerRadius="999"
+                                                        Padding="10,4"
+                                                        Margin="0,0,0,6">
+                                                    <TextBlock Text="{Binding MaterialCount, StringFormat='{}{0} materials'}"
+                                                               Foreground="#D7F5E5"
+                                                               FontSize="10"
+                                                               FontWeight="Bold" />
+                                                </Border>
+                                            </WrapPanel>
+
+                                            <TextBlock Text="{Binding CraftedItemName}"
+                                                       Foreground="{StaticResource OpTextTitleBrush}"
+                                                       FontSize="13"
+                                                       FontWeight="Bold"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding BlueprintName}"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                                       FontSize="11"
+                                                       Margin="0,2,0,0"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding MaterialPreview}"
+                                                       Foreground="#D9C6A4"
+                                                       FontSize="10"
+                                                       Margin="0,8,0,0"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
         </Border>
 
         <!-- Right main workspace -->
@@ -421,6 +591,28 @@
                                                      FontWeight="Bold" />
                                                 <Run Text=" s" Foreground="#B89B4A" />
                                             </TextBlock>
+                                        </Border>
+
+                                        <Border Background="#5A3E16"
+                                                BorderBrush="#D6A44B"
+                                                BorderThickness="1"
+                                                CornerRadius="5"
+                                                Padding="10,5"
+                                                Margin="0,0,8,5">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelectedBlueprintOwned}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="OWNED BY YOU"
+                                                       Foreground="#FFF0C6"
+                                                       FontSize="11"
+                                                       FontWeight="Bold" />
                                         </Border>
                                     </WrapPanel>
 

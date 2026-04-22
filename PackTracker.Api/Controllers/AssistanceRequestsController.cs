@@ -23,9 +23,12 @@ namespace PackTracker.Api.Controllers;
 [Authorize]
 public class AssistanceRequestsController : ControllerBase
 {
+    #region Fields
     private readonly ISender _sender;
     private readonly ILogger<AssistanceRequestsController> _logger;
-
+    #endregion
+    
+    #region Constructors
     public AssistanceRequestsController(
         ISender sender,
         ILogger<AssistanceRequestsController> logger)
@@ -33,7 +36,9 @@ public class AssistanceRequestsController : ControllerBase
         _sender = sender;
         _logger = logger;
     }
-
+    #endregion
+    
+    #region Endpoints
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AssistanceRequestDto>>> GetRequests(
         [FromQuery] RequestKind? kind,
@@ -130,7 +135,9 @@ public class AssistanceRequestsController : ControllerBase
         var result = await _sender.Send(new CancelAssistanceRequestCommand(id), ct);
         return ToMutationResult(result, "Request cancelled.");
     }
-
+    #endregion
+    
+    #region Helpers
     private IActionResult ToMutationResult(OperationResult<Guid> result, string successMessage)
     {
         if (result.Success)
@@ -184,4 +191,5 @@ public class AssistanceRequestsController : ControllerBase
 
         return BadRequest(new { error = result.Message ?? fallbackMessage });
     }
+    #endregion
 }
