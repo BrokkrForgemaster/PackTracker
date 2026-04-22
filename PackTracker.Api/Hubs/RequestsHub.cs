@@ -329,16 +329,7 @@ public class RequestsHub : Hub
         var dbMsg = await _db.LobbyChatMessages.FindAsync(messageId)
             ?? throw new HubException("Message not found.");
 
-        var isModerator = false;
-        try
-        {
-            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
-            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
-        }
-        catch { /* ignore */ }
-
-        if (dbMsg.SenderDiscordId != discordId && !isModerator)
-            throw new HubException("You do not have permission to edit this message.");
+        await AuthorizeModerationByDiscordIdAsync(discordId, dbMsg.SenderDiscordId, "edit");
 
         dbMsg.Content = trimmedContent;
         dbMsg.EditedAt = editedAt;
@@ -381,16 +372,7 @@ public class RequestsHub : Hub
         var dbMsg = await _db.LobbyChatMessages.FindAsync(messageId)
             ?? throw new HubException("Message not found.");
 
-        var isModerator = false;
-        try
-        {
-            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
-            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
-        }
-        catch { /* ignore */ }
-
-        if (dbMsg.SenderDiscordId != discordId && !isModerator)
-            throw new HubException("You do not have permission to delete this message.");
+        await AuthorizeModerationByDiscordIdAsync(discordId, dbMsg.SenderDiscordId, "delete");
 
         dbMsg.IsDeleted = true;
         await _db.SaveChangesAsync(CancellationToken.None);
@@ -545,18 +527,7 @@ public class RequestsHub : Hub
         var dbMsg = await _db.RequestComments.FindAsync(commentId)
             ?? throw new HubException("Message not found.");
 
-        var isModerator = false;
-        try
-        {
-            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
-            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
-            
-            // Allow if original author or moderator
-            if (profile != null && dbMsg.AuthorProfileId != profile.Id && !isModerator)
-                throw new HubException("You do not have permission to edit this message.");
-        }
-        catch (HubException) { throw; }
-        catch { throw new HubException("Authorization failed."); }
+        await AuthorizeModerationByProfileIdAsync(discordId, dbMsg.AuthorProfileId, "edit");
 
         dbMsg.Content = trimmedContent;
         dbMsg.EditedAt = editedAt;
@@ -590,18 +561,7 @@ public class RequestsHub : Hub
         var dbMsg = await _db.RequestComments.FindAsync(commentId)
             ?? throw new HubException("Message not found.");
 
-        var isModerator = false;
-        try
-        {
-            var profile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
-            isModerator = SecurityConstants.IsElevatedRequestRole(profile?.DiscordRank);
-            
-            // Allow if original author or moderator
-            if (profile != null && dbMsg.AuthorProfileId != profile.Id && !isModerator)
-                throw new HubException("You do not have permission to delete this message.");
-        }
-        catch (HubException) { throw; }
-        catch { throw new HubException("Authorization failed."); }
+        await AuthorizeModerationByProfileIdAsync(discordId, dbMsg.AuthorProfileId, "delete");
 
         dbMsg.IsDeleted = true;
         await _db.SaveChangesAsync(CancellationToken.None);
@@ -765,6 +725,49 @@ public class RequestsHub : Hub
             return;
 
         await _profiles.TouchLastSeenAsync(discordId, CancellationToken.None);
+    }
+
+    #endregion
+
+    #region Moderation Authorization
+
+    /// <summary>
+    /// Verifies the actor may edit or delete a lobby message owned by <paramref name="ownerDiscordId"/>.
+    /// Throws <see cref="HubException"/> if the action is denied.
+    /// Rules: own content is always allowed; moderators may act on content from
+    /// equal-or-lower-ranked members only.
+    /// </summary>
+    private async Task AuthorizeModerationByDiscordIdAsync(
+        string actorDiscordId, string ownerDiscordId, string action)
+    {
+        if (actorDiscordId == ownerDiscordId)
+            return;
+
+        var actor = await _profiles.GetByDiscordIdAsync(actorDiscordId, CancellationToken.None);
+        if (!SecurityConstants.IsElevatedRequestRole(actor?.DiscordRank))
+            throw new HubException($"You do not have permission to {action} this message.");
+
+        var owner = await _profiles.GetByDiscordIdAsync(ownerDiscordId, CancellationToken.None);
+        if (SecurityConstants.GetRolePosition(owner?.DiscordRank) > SecurityConstants.GetRolePosition(actor?.DiscordRank))
+            throw new HubException("You cannot moderate content from higher-ranked members.");
+    }
+
+    /// <summary>
+    /// Verifies the actor may edit or delete a request-room comment owned by <paramref name="ownerProfileId"/>.
+    /// </summary>
+    private async Task AuthorizeModerationByProfileIdAsync(
+        string actorDiscordId, Guid ownerProfileId, string action)
+    {
+        var actor = await _profiles.GetByDiscordIdAsync(actorDiscordId, CancellationToken.None);
+        if (actor?.Id == ownerProfileId)
+            return;
+
+        if (!SecurityConstants.IsElevatedRequestRole(actor?.DiscordRank))
+            throw new HubException($"You do not have permission to {action} this message.");
+
+        var owner = await _profiles.GetByIdAsync(ownerProfileId, CancellationToken.None);
+        if (SecurityConstants.GetRolePosition(owner?.DiscordRank) > SecurityConstants.GetRolePosition(actor?.DiscordRank))
+            throw new HubException("You cannot moderate content from higher-ranked members.");
     }
 
     #endregion
