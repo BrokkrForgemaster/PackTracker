@@ -107,11 +107,11 @@ public partial class RequestsViewModel : ObservableObject
     #region Derived State
 
     /// <summary>
-    /// True when the current user can claim the selected request (it is Open with no assignee).
+    /// True when the current user can claim the selected request.
     /// </summary>
     public bool CanClaim => SelectedRequest is not null
                          && SelectedRequest.Status == DomainRequestStatus.Open.ToString()
-                         && string.IsNullOrEmpty(SelectedRequest.AssignedToUsername);
+                         && SelectedRequest.ClaimCount < SelectedRequest.MaxClaims;
 
     /// <summary>
     /// True when the selected request can be marked complete.

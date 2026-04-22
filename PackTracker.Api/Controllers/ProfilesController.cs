@@ -57,10 +57,17 @@ public class ProfilesController : ControllerBase
             return NotFound();
         }
 
-        // If DiscordDivision wasn't populated in the DB yet (e.g. migration just ran),
-        // fall back to the division claim embedded in the current JWT.
+        // Fall back to JWT claims if the DB profile hasn't been synced yet.
         var effectiveDivision = profile.DiscordDivision
             ?? User.FindFirstValue("urn:discord:division");
+
+        var effectiveRank = !string.IsNullOrWhiteSpace(profile.DiscordRank)
+            ? profile.DiscordRank
+            : User.Claims
+                .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role
+                         && c.Value != PackTracker.Domain.Security.SecurityConstants.Roles.HouseWolfMember)
+                .Select(c => c.Value)
+                .FirstOrDefault();
 
         return Ok(new
         {
@@ -69,7 +76,7 @@ public class ProfilesController : ControllerBase
             profile.Username,
             profile.Discriminator,
             profile.DiscordDisplayName,
-            profile.DiscordRank,
+            DiscordRank = effectiveRank,
             DiscordDivision = effectiveDivision,
             profile.DiscordAvatarUrl,
             profile.IsOnline,

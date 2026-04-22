@@ -83,6 +83,11 @@ public class AssistanceRequestDto
     public int MaxClaims { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of members who have currently claimed this request.
+    /// </summary>
+    public int ClaimCount { get; set; }
+
+    /// <summary>
     /// Gets or sets when the request was created.
     /// </summary>
     public DateTime CreatedAt { get; set; }

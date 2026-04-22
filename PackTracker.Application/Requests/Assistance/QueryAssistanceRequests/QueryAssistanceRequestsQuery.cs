@@ -32,32 +32,47 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
 
         var query = _dbContext.AssistanceRequests
             .AsNoTracking()
-            .Include(x => x.CreatedByProfile)
-            .Include(x => x.AssignedToProfile)
             .Where(x => x.Status == RequestStatus.Open
                      || x.CreatedByProfileId == currentProfileId
-                     || x.AssignedToProfileId == currentProfileId);
+                     || _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Assistance" && c.ProfileId == currentProfileId));
 
         if (request.Kind.HasValue)
-        {
             query = query.Where(x => x.Kind == request.Kind.Value);
-        }
 
         if (request.Status.HasValue)
-        {
             query = query.Where(x => x.Status == request.Status.Value);
-        }
         else
-        {
             query = query.Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed);
-        }
 
-        var items = await query
+        return await query
             .OrderByDescending(x => x.IsPinned)
             .ThenByDescending(x => x.CreatedAt)
+            .Select(x => new AssistanceRequestDto
+            {
+                Id = x.Id,
+                Kind = x.Kind,
+                Title = x.Title,
+                Description = x.Description,
+                Priority = x.Priority,
+                Status = x.Status.ToString(),
+                IsPinned = x.IsPinned,
+                CreatedByUsername = x.CreatedByProfile != null ? x.CreatedByProfile.Username : "Unknown",
+                CreatedByDisplayName = x.CreatedByProfile != null
+                    ? (x.CreatedByProfile.DiscordDisplayName ?? x.CreatedByProfile.Username)
+                    : "Unknown",
+                AssignedToUsername = _dbContext.RequestClaims
+                    .Where(c => c.RequestId == x.Id && c.RequestType == "Assistance")
+                    .Join(_dbContext.Profiles, c => c.ProfileId, p => p.Id, (c, p) => p.Username)
+                    .FirstOrDefault(),
+                MaterialName = x.MaterialName,
+                QuantityNeeded = x.QuantityNeeded,
+                MeetingLocation = x.MeetingLocation,
+                RewardOffered = x.RewardOffered,
+                MaxClaims = x.MaxClaims,
+                ClaimCount = _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Assistance"),
+                CreatedAt = x.CreatedAt
+            })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-
-        return items.Select(x => x.ToDto()).ToList();
     }
 }
