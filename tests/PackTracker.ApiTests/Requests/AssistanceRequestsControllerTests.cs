@@ -348,5 +348,7 @@ public class AssistanceRequestsControllerTests
         public Task NotifyCreatedAsync(Guid requestId, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task NotifyUpdatedAsync(Guid requestId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task NotifyClaimedAsync(string requesterDiscordId, string claimerDiscordId, string claimerDisplayName, string requesterDisplayName, Guid requestId, string requestTitle, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

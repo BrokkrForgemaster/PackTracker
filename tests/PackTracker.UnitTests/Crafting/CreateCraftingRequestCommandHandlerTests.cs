@@ -83,5 +83,7 @@ public sealed class CreateCraftingRequestCommandHandlerTests
     {
         public Task NotifyAsync(string eventName, Guid requestId, CancellationToken cancellationToken) =>
             Task.CompletedTask;
+
+        public Task NotifyClaimedAsync(string requesterDiscordId, string claimerDiscordId, string claimerDisplayName, string requesterDisplayName, Guid requestId, string requestType, string requestLabel, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

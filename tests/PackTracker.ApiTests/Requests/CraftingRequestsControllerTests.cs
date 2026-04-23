@@ -432,5 +432,7 @@ public class CraftingRequestsControllerTests
 
         public Task NotifyAsync(string eventName, Guid requestId, CancellationToken cancellationToken) =>
             _hub.Clients.All.SendAsync(eventName, requestId, cancellationToken);
+
+        public Task NotifyClaimedAsync(string requesterDiscordId, string claimerDiscordId, string claimerDisplayName, string requesterDisplayName, Guid requestId, string requestType, string requestLabel, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

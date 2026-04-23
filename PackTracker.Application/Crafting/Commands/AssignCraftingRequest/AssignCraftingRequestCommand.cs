@@ -72,7 +72,20 @@ public sealed class AssignCraftingRequestCommandHandler : IRequestHandler<Assign
         request.Status = RequestStatus.Accepted;
         request.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
+
+        var requesterProfile = await _db.Profiles
+            .FirstOrDefaultAsync(x => x.Id == request.RequesterProfileId, cancellationToken);
+
         await _notifier.NotifyAsync("CraftingRequestUpdated", command.RequestId, cancellationToken);
+        await _notifier.NotifyClaimedAsync(
+            requesterDiscordId: requesterProfile?.DiscordId ?? string.Empty,
+            claimerDiscordId: profile.DiscordId,
+            claimerDisplayName: profile.DiscordDisplayName ?? profile.Username,
+            requesterDisplayName: requesterProfile?.DiscordDisplayName ?? requesterProfile?.Username ?? string.Empty,
+            requestId: command.RequestId,
+            requestType: "Crafting",
+            requestLabel: request.ItemName ?? "Crafting Request",
+            cancellationToken: cancellationToken);
 
         return OperationResult<Guid>.Ok(command.RequestId);
     }

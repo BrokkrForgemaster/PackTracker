@@ -64,6 +64,7 @@ namespace PackTracker.Presentation.Views
 
         private UpdateInfo? _pendingUpdate;
         private bool _isAuthenticated;
+        private DispatcherTimer? _toastTimer;
         private ImageSource? _currentUserAvatar;
         private string _discordDisplayName = "Not Logged In";
         private string _discordRank = "No Rank";
@@ -146,6 +147,7 @@ namespace PackTracker.Presentation.Views
             {
                 await RefreshSidebarProfileAsync();
                 await CheckForUpdateAsync();
+                SubscribeToClaimNotifications();
             };
         }
 
@@ -767,6 +769,43 @@ namespace PackTracker.Presentation.Views
                     return null;
                 }
             }
+        }
+
+        #endregion
+
+        #region Claim Notifications
+
+        private void SubscribeToClaimNotifications()
+        {
+            var signalR = _serviceProvider.GetService<SignalRChatService>();
+            if (signalR is null) return;
+
+            signalR.RequestClaimed += dto => ShowClaimToast(
+                "Request Claimed",
+                $"{dto.ClaimerDisplayName} claimed your {dto.RequestType} request: {dto.RequestLabel}");
+
+            signalR.ClaimConfirmed += dto => ShowClaimToast(
+                "Claim Confirmed",
+                $"You claimed {dto.RequestType} request: {dto.RequestLabel}");
+        }
+
+        private void ShowClaimToast(string title, string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                ClaimToastTitle.Text = title;
+                ClaimToastMessage.Text = message;
+                ClaimToastPanel.Visibility = Visibility.Visible;
+
+                _toastTimer?.Stop();
+                _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+                _toastTimer.Tick += (_, _) =>
+                {
+                    _toastTimer!.Stop();
+                    ClaimToastPanel.Visibility = Visibility.Collapsed;
+                };
+                _toastTimer.Start();
+            });
         }
 
         #endregion

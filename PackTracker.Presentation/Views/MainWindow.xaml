@@ -337,6 +337,33 @@
             </Border>
         </Grid>
 
+        <Border x:Name="ClaimToastPanel"
+                Grid.ColumnSpan="2"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,32,32"
+                Padding="16,12"
+                CornerRadius="10"
+                Background="#F0252525"
+                BorderBrush="#50C8A040"
+                BorderThickness="1"
+                Visibility="Collapsed"
+                Panel.ZIndex="999"
+                MaxWidth="380">
+            <StackPanel>
+                <TextBlock x:Name="ClaimToastTitle"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="#C8A040"
+                           Margin="0,0,0,4"
+                           TextWrapping="Wrap"/>
+                <TextBlock x:Name="ClaimToastMessage"
+                           FontSize="12"
+                           Foreground="#D0D0D0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
         <Grid x:Name="HelpOverlay"
               Grid.ColumnSpan="2"
               Visibility="Collapsed"

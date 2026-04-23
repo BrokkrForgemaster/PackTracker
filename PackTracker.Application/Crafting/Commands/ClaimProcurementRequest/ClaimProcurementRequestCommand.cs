@@ -36,6 +36,7 @@ public sealed class ClaimProcurementRequestCommandHandler : IRequestHandler<Clai
             return OperationResult<Guid>.Fail("Unauthorized");
 
         var request = await _db.MaterialProcurementRequests
+            .Include(r => r.Material)
             .FirstOrDefaultAsync(x => x.Id == command.RequestId, cancellationToken);
         if (request is null)
             return OperationResult<Guid>.Fail("Procurement request not found.");
@@ -72,7 +73,21 @@ public sealed class ClaimProcurementRequestCommandHandler : IRequestHandler<Clai
         request.Status = RequestStatus.Accepted;
         request.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
+
+        var requesterProfile = request.RequesterProfileId.HasValue
+            ? await _db.Profiles.FirstOrDefaultAsync(x => x.Id == request.RequesterProfileId.Value, cancellationToken)
+            : null;
+
         await _notifier.NotifyAsync("ProcurementUpdated", command.RequestId, cancellationToken);
+        await _notifier.NotifyClaimedAsync(
+            requesterDiscordId: requesterProfile?.DiscordId ?? string.Empty,
+            claimerDiscordId: profile.DiscordId,
+            claimerDisplayName: profile.DiscordDisplayName ?? profile.Username,
+            requesterDisplayName: requesterProfile?.DiscordDisplayName ?? requesterProfile?.Username ?? string.Empty,
+            requestId: command.RequestId,
+            requestType: "Procurement",
+            requestLabel: request.Material?.Name ?? "Procurement Request",
+            cancellationToken: cancellationToken);
 
         return OperationResult<Guid>.Ok(command.RequestId);
     }

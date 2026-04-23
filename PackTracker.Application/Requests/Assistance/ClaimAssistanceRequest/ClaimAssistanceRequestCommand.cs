@@ -86,12 +86,25 @@ public sealed class ClaimAssistanceRequestCommandHandler : IRequestHandler<Claim
         };
 
         _dbContext.RequestClaims.Add(claim);
-        
+
         assistanceRequest.Status = RequestStatus.Accepted;
         assistanceRequest.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var requesterProfile = await _dbContext.Profiles
+            .FirstOrDefaultAsync(x => x.Id == assistanceRequest.CreatedByProfileId, cancellationToken)
+            .ConfigureAwait(false);
+
         await _notifier.NotifyUpdatedAsync(assistanceRequest.Id, cancellationToken).ConfigureAwait(false);
+        await _notifier.NotifyClaimedAsync(
+            requesterDiscordId: requesterProfile?.DiscordId ?? string.Empty,
+            claimerDiscordId: profile.DiscordId,
+            claimerDisplayName: profile.DiscordDisplayName ?? profile.Username,
+            requesterDisplayName: requesterProfile?.DiscordDisplayName ?? requesterProfile?.Username ?? string.Empty,
+            requestId: assistanceRequest.Id,
+            requestTitle: assistanceRequest.Title,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return OperationResult<Guid>.Ok(assistanceRequest.Id);
     }

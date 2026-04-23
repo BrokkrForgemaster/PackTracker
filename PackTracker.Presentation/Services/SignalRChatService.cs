@@ -40,6 +40,8 @@ public class SignalRChatService : IAsyncDisposable
     public event Action<Guid>? ProcurementRequestUpdated;
     public event Action<Guid>? AssistanceRequestCreated;
     public event Action<Guid>? AssistanceRequestUpdated;
+    public event Action<ClaimNotificationDto>? RequestClaimed;
+    public event Action<ClaimNotificationDto>? ClaimConfirmed;
 
     public bool IsConnected => _connection?.State == HubConnectionState.Connected;
 
@@ -200,6 +202,32 @@ public class SignalRChatService : IAsyncDisposable
         _connection.On<Guid>("AssistanceRequestUpdated", id =>
         {
             AssistanceRequestUpdated?.Invoke(id);
+        });
+
+        _connection.On<JsonElement>("RequestClaimed", json =>
+        {
+            try
+            {
+                var dto = ParseClaimNotification(json);
+                if (dto != null) RequestClaimed?.Invoke(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse RequestClaimed payload.");
+            }
+        });
+
+        _connection.On<JsonElement>("ClaimConfirmed", json =>
+        {
+            try
+            {
+                var dto = ParseClaimNotification(json);
+                if (dto != null) ClaimConfirmed?.Invoke(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse ClaimConfirmed payload.");
+            }
         });
 
         _connection.On<JsonElement>("PresenceUpdated", json =>
@@ -550,6 +578,20 @@ public class SignalRChatService : IAsyncDisposable
             return val.GetString();
         return null;
     }
+
+    private static ClaimNotificationDto? ParseClaimNotification(JsonElement json)
+    {
+        var requestIdStr = GetString(json, "requestId", "RequestId");
+        if (!Guid.TryParse(requestIdStr, out var requestId))
+            return null;
+
+        var requestType = GetString(json, "requestType", "RequestType") ?? string.Empty;
+        var requestLabel = GetString(json, "requestLabel", "RequestLabel") ?? string.Empty;
+        var claimerDisplayName = GetString(json, "claimerDisplayName", "ClaimerDisplayName") ?? string.Empty;
+        var requesterDisplayName = GetString(json, "requesterDisplayName", "RequesterDisplayName") ?? string.Empty;
+
+        return new ClaimNotificationDto(requestId, requestType, requestLabel, claimerDisplayName, requesterDisplayName);
+    }
 }
 
 /// <summary>
@@ -567,6 +609,13 @@ public record ChatMessageDto(
 
 public record ChatMessageEditedDto(string MessageId, string Channel, string NewContent, DateTime EditedAt);
 public record ChatMessageDeletedDto(string MessageId, string Channel);
+
+public record ClaimNotificationDto(
+    Guid RequestId,
+    string RequestType,
+    string RequestLabel,
+    string ClaimerDisplayName,
+    string RequesterDisplayName);
 
 /// <summary>
 /// Represents an online user entry received from the SignalR presence system.
