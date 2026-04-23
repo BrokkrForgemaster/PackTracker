@@ -55,7 +55,7 @@ public class DashboardViewModel : ViewModelBase
         FloatingChatWindows = new ObservableCollection<ChatWindowViewModel>();
         MinimizedChatWindows = new ObservableCollection<ChatWindowViewModel>();
         CollapsedWindowsWithUnread = new ObservableCollection<ChatWindowViewModel>();
-        OnlineUsers = new ObservableCollection<OnlineUserViewModel>();
+        AllMembers = new ObservableCollection<OnlineUserViewModel>();
         ActiveRequests = new ObservableCollection<ActiveRequestDto>();
         PinnedRequests = new ObservableCollection<ActiveRequestDto>();
         RegularRequests = new ObservableCollection<ActiveRequestDto>();
@@ -93,12 +93,14 @@ public class DashboardViewModel : ViewModelBase
             _signalR.MessageEdited += OnMessageEdited;
             _signalR.MessageDeleted += OnMessageDeleted;
             _signalR.PresenceUpdated += OnPresenceUpdated;
+            _signalR.PendingDirectMessages += OnPendingDirectMessages;
 
             // Join any channels whose windows were already opened in the constructor
             foreach (var window in OpenChatWindows)
                 await _signalR.JoinChannelAsync(window.ChannelKey);
 
             await RefreshDataAsync();
+            _ = LoadAllMembersAsync();
 
             _signalR.AssistanceRequestCreated += id => _ = RefreshDataAsync();
             _signalR.AssistanceRequestUpdated += id => _ = RefreshDataAsync();
@@ -157,10 +159,17 @@ public class DashboardViewModel : ViewModelBase
         System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
         {
             var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == msg.Channel);
-            if (window == null && msg.Channel.StartsWith("direct:", StringComparison.OrdinalIgnoreCase))
+            if (window == null && msg.Channel.StartsWith("dm:", StringComparison.OrdinalIgnoreCase))
             {
-                var username = msg.Channel["direct:".Length..];
-                window = EnsureDirectMessageWindow(username, msg.SenderDisplayName);
+                var parts = msg.Channel.Split(':');
+                if (parts.Length == 3)
+                {
+                    var selfLower = _currentUsername?.Trim().ToLowerInvariant() ?? string.Empty;
+                    var counterpart = parts[1].Equals(selfLower, StringComparison.OrdinalIgnoreCase)
+                        ? parts[2]
+                        : parts[1];
+                    window = EnsureDirectMessageWindow(counterpart, msg.SenderDisplayName);
+                }
             }
 
             if (window != null)
@@ -223,45 +232,39 @@ public class DashboardViewModel : ViewModelBase
     {
         _ = Task.Run(async () =>
         {
-            var vms = new List<(OnlineUserViewModel vm, byte[]? avatarBytes)>();
+            var onlineSet = new HashSet<string>(
+                users.Select(u => u.Username ?? string.Empty),
+                StringComparer.OrdinalIgnoreCase);
 
+            // Download avatars only for online users
+            var avatarMap = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
             foreach (var u in users)
             {
-                byte[]? avatarBytes = null;
                 if (!string.IsNullOrWhiteSpace(u.AvatarUrl) && Uri.TryCreate(u.AvatarUrl, UriKind.Absolute, out _))
                 {
                     try
                     {
                         using var http = new System.Net.Http.HttpClient();
                         http.Timeout = TimeSpan.FromSeconds(10);
-                        avatarBytes = await http.GetByteArrayAsync(u.AvatarUrl);
+                        avatarMap[u.Username] = await http.GetByteArrayAsync(u.AvatarUrl);
                     }
                     catch { }
                 }
-
-                var vm = new OnlineUserViewModel
-                {
-                    Username = u.Username,
-                    ContactLabel = u.DisplayName ?? u.Username,
-                    DiscordDisplayName = u.DisplayName,
-                    Role = u.Role,
-                    RoleColorBrush = OnlineUserViewModel.GetRoleColor(u.Role)
-                };
-                vms.Add((vm, avatarBytes));
             }
 
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                OnlineUsers.Clear();
-                foreach (var (vm, avatarBytes) in vms)
+                foreach (var vm in AllMembers)
                 {
-                    if (avatarBytes != null)
+                    vm.IsOnline = onlineSet.Contains(vm.Username ?? string.Empty);
+
+                    if (vm.IsOnline && avatarMap.TryGetValue(vm.Username ?? string.Empty, out var bytes))
                     {
                         try
                         {
                             var bmp = new BitmapImage();
                             bmp.BeginInit();
-                            bmp.StreamSource = new System.IO.MemoryStream(avatarBytes);
+                            bmp.StreamSource = new System.IO.MemoryStream(bytes);
                             bmp.CacheOption = BitmapCacheOption.OnLoad;
                             bmp.EndInit();
                             bmp.Freeze();
@@ -269,7 +272,10 @@ public class DashboardViewModel : ViewModelBase
                         }
                         catch { }
                     }
-                    OnlineUsers.Add(vm);
+                    else if (!vm.IsOnline)
+                    {
+                        vm.AvatarImage = null;
+                    }
                 }
             });
         });
@@ -406,7 +412,7 @@ public class DashboardViewModel : ViewModelBase
     public ObservableCollection<AvailableChannelViewModel> AvailableChatChannels { get; }
     public ObservableCollection<ChatWindowViewModel> OpenChatWindows { get; }
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
-    public ObservableCollection<OnlineUserViewModel> OnlineUsers { get; }
+    public ObservableCollection<OnlineUserViewModel> AllMembers { get; }
     public ObservableCollection<ActiveRequestDto> ActiveRequests { get; }
     public ObservableCollection<ActiveRequestDto> PinnedRequests { get; }
     public ObservableCollection<ActiveRequestDto> RegularRequests { get; }
@@ -687,6 +693,49 @@ public class DashboardViewModel : ViewModelBase
         ActiveChatWindow = window;
     }
 
+    private void OnPendingDirectMessages(IReadOnlyList<PendingDmDto> dms)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            foreach (var dm in dms)
+            {
+                if (string.IsNullOrWhiteSpace(dm.LastSenderUsername)) continue;
+                var window = EnsureDirectMessageWindow(dm.LastSenderUsername, dm.LastSenderDisplayName);
+                window.UnreadCount += dm.UnreadCount;
+            }
+        });
+    }
+
+    private async Task LoadAllMembersAsync()
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+            var profiles = await client.GetFromJsonAsync<List<MemberSummaryDto>>("api/v1/profiles") ?? new();
+
+            var vms = profiles
+                .Select(p => new OnlineUserViewModel
+                {
+                    Username = p.Username,
+                    DiscordDisplayName = p.DiscordDisplayName,
+                    ContactLabel = p.DiscordDisplayName ?? p.Username,
+                    Role = p.DiscordRank,
+                    RoleColorBrush = OnlineUserViewModel.GetRoleColor(p.DiscordRank),
+                    IsOnline = _signalR.IsUserOnline(p.Username)
+                })
+                .OrderBy(v => v.ContactLabel, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                AllMembers.Clear();
+                foreach (var vm in vms)
+                    AllMembers.Add(vm);
+            });
+        }
+        catch { }
+    }
+
     private ChatWindowViewModel EnsureDirectMessageWindow(string username, string? displayName)
     {
         var channelKey = BuildDirectChannelKey(username);
@@ -732,13 +781,19 @@ public class DashboardViewModel : ViewModelBase
         OpenChatWindows.Add(window);
 
         if (_signalR.IsConnected)
-            _ = _signalR.JoinChannelAsync(channelKey);
+            _ = _signalR.GetDirectMessageHistoryAsync(username);
 
         return window;
     }
 
-    private static string BuildDirectChannelKey(string username) =>
-        $"direct:{username.Trim().ToLowerInvariant()}";
+    private string BuildDirectChannelKey(string username)
+    {
+        var self = _currentUsername?.Trim().ToLowerInvariant() ?? string.Empty;
+        var other = username.Trim().ToLowerInvariant();
+        var parts = new[] { self, other };
+        Array.Sort(parts);
+        return $"dm:{parts[0]}:{parts[1]}";
+    }
 
     private static Brush BrushFromHex(string hex)
     {
@@ -815,4 +870,9 @@ public class DashboardViewModel : ViewModelBase
         string? DiscordDisplayName,
         string? DiscordRank,
         string? DiscordDivision);
+
+    private record MemberSummaryDto(
+        string Username,
+        string? DiscordDisplayName,
+        string? DiscordRank);
 }

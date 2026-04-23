@@ -42,6 +42,7 @@ public class SignalRChatService : IAsyncDisposable
     public event Action<Guid>? AssistanceRequestUpdated;
     public event Action<ClaimNotificationDto>? RequestClaimed;
     public event Action<ClaimNotificationDto>? ClaimConfirmed;
+    public event Action<IReadOnlyList<PendingDmDto>>? PendingDirectMessages;
 
     public bool IsConnected => _connection?.State == HubConnectionState.Connected;
 
@@ -230,6 +231,31 @@ public class SignalRChatService : IAsyncDisposable
             }
         });
 
+        _connection.On<JsonElement>("PendingDirectMessages", json =>
+        {
+            try
+            {
+                var dms = new List<PendingDmDto>();
+                foreach (var item in json.EnumerateArray())
+                {
+                    var channel = GetString(item, "channel", "Channel") ?? string.Empty;
+                    var lastSenderUsername = GetString(item, "lastSenderUsername", "LastSenderUsername") ?? string.Empty;
+                    var lastSenderDisplayName = GetString(item, "lastSenderDisplayName", "LastSenderDisplayName") ?? string.Empty;
+                    int unreadCount = 0;
+                    if (item.TryGetProperty("unreadCount", out var uc) || item.TryGetProperty("UnreadCount", out uc))
+                        unreadCount = uc.GetInt32();
+                    if (!string.IsNullOrWhiteSpace(channel))
+                        dms.Add(new PendingDmDto(channel, unreadCount, lastSenderUsername, lastSenderDisplayName));
+                }
+                if (dms.Count > 0)
+                    PendingDirectMessages?.Invoke(dms.AsReadOnly());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse PendingDirectMessages payload.");
+            }
+        });
+
         _connection.On<JsonElement>("PresenceUpdated", json =>
         {
             try
@@ -373,6 +399,19 @@ public class SignalRChatService : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to send direct message to '{Username}'.", username);
+        }
+    }
+
+    public async Task GetDirectMessageHistoryAsync(string targetUsername)
+    {
+        if (!IsConnected) return;
+        try
+        {
+            await _connection!.InvokeAsync("GetDirectMessageHistory", targetUsername);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get DM history for '{Username}'.", targetUsername);
         }
     }
 
@@ -616,6 +655,12 @@ public record ClaimNotificationDto(
     string RequestLabel,
     string ClaimerDisplayName,
     string RequesterDisplayName);
+
+public record PendingDmDto(
+    string Channel,
+    int UnreadCount,
+    string LastSenderUsername,
+    string LastSenderDisplayName);
 
 /// <summary>
 /// Represents an online user entry received from the SignalR presence system.

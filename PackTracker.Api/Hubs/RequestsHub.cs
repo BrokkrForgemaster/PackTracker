@@ -103,9 +103,15 @@ public class RequestsHub : Hub
 
         if (!string.IsNullOrWhiteSpace(discordId))
         {
+            // Capture LastSeenAt before MarkOnlineAsync resets it — used to find unread DMs
+            var previousProfile = await _profiles.GetByDiscordIdAsync(discordId, CancellationToken.None);
+            var lastSeenBefore = previousProfile?.LastSeenAt ?? DateTime.UtcNow.AddDays(-1);
+
             _connectionRegistry[connectionId] = discordId;
             await _profiles.MarkOnlineAsync(discordId, CancellationToken.None);
             await BroadcastPresenceAsync();
+
+            await NotifyPendingDirectMessagesAsync(username, lastSeenBefore);
         }
 
         await Clients.Caller.SendAsync("Connected", new
@@ -574,6 +580,52 @@ public class RequestsHub : Hub
         });
     }
 
+    public async Task GetDirectMessageHistory(string targetUsername)
+    {
+        if (string.IsNullOrWhiteSpace(targetUsername))
+            throw new HubException("Target username is required.");
+
+        var currentUsername = Context.User?.Identity?.Name ?? string.Empty;
+        var dmChannel = BuildPrivateChannelName(currentUsername, targetUsername.Trim());
+
+        var dbMessages = await _db.LobbyChatMessages
+            .Where(m => m.Channel == dmChannel && !m.IsDeleted)
+            .OrderByDescending(m => m.SentAt)
+            .Take(100)
+            .OrderBy(m => m.SentAt)
+            .ToListAsync();
+
+        if (dbMessages.Count > 0)
+        {
+            var q = _messageHistory.GetOrAdd(dmChannel, _ => new Queue<ChatMessage>());
+            lock (q)
+            {
+                q.Clear();
+                foreach (var row in dbMessages)
+                    q.Enqueue(new ChatMessage(row.Id, row.Sender, row.SenderDisplayName,
+                        row.Content, row.SentAt, row.SenderDiscordId, row.AvatarUrl, row.SenderRole));
+            }
+        }
+
+        var messages = dbMessages.Select(m => (object)new
+        {
+            m.Id,
+            Channel = dmChannel,
+            m.Sender,
+            m.SenderDisplayName,
+            m.Content,
+            m.SentAt,
+            m.AvatarUrl,
+            m.SenderRole
+        });
+
+        await Clients.Caller.SendAsync("LobbyHistory", new
+        {
+            Channel = dmChannel,
+            Messages = messages
+        });
+    }
+
     public async Task SendDirectMessage(string targetUsername, string content)
     {
         if (string.IsNullOrWhiteSpace(targetUsername))
@@ -773,6 +825,51 @@ public class RequestsHub : Hub
     #endregion
 
     #region Private Helpers
+
+    /// <summary>
+    /// Finds DM messages sent to the current user since they were last seen and notifies them.
+    /// </summary>
+    private async Task NotifyPendingDirectMessagesAsync(string username, DateTime since)
+    {
+        try
+        {
+            var usernameNorm = username.Trim().ToLowerInvariant();
+
+            // Load DMs sent since the user was last online
+            var recentDms = await _db.LobbyChatMessages
+                .Where(m => m.Channel.StartsWith("dm:") && !m.IsDeleted && m.SentAt > since)
+                .ToListAsync();
+
+            var pending = recentDms
+                .Where(m =>
+                {
+                    var parts = m.Channel.Split(':');
+                    return parts.Length == 3
+                        && (parts[1] == usernameNorm || parts[2] == usernameNorm)
+                        && m.Sender.Trim().ToLowerInvariant() != usernameNorm;
+                })
+                .GroupBy(m => m.Channel)
+                .Select(g =>
+                {
+                    var latest = g.OrderByDescending(m => m.SentAt).First();
+                    return new
+                    {
+                        Channel = g.Key,
+                        UnreadCount = g.Count(),
+                        LastSenderUsername = latest.Sender,
+                        LastSenderDisplayName = latest.SenderDisplayName
+                    };
+                })
+                .ToList();
+
+            if (pending.Count > 0)
+                await Clients.Caller.SendAsync("PendingDirectMessages", pending);
+        }
+        catch
+        {
+            // Non-fatal — unread DM check must not interrupt connection flow
+        }
+    }
 
     /// <summary>
     /// Fetches all currently-online profiles and broadcasts the presence list to all connected clients.

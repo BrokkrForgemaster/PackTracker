@@ -1210,13 +1210,53 @@
                     Padding="12">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <!-- Member search box -->
+                        <Grid Margin="0,0,0,8">
+                            <TextBox Text="{Binding MemberSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource OpTextBoxStyle}"
+                                     Padding="8,5"
+                                     FontSize="11" />
+                            <TextBlock Text="Search members..."
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="11"
+                                       Margin="11,6"
+                                       IsHitTestVisible="False"
+                                       VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding MemberSearchText}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+
+                        <!-- ONLINE header (when not searching) -->
                         <TextBlock Text="ONLINE"
                                    Foreground="{StaticResource OpTextTitleBrush}"
                                    FontSize="12"
-                                   FontWeight="Bold" />
+                                   FontWeight="Bold"
+                                   Visibility="{Binding IsSearchingMembers, Converter={StaticResource InverseBoolToVisibility}}" />
                         <TextBlock Text="{Binding OnlineUsers.Count, StringFormat={}{0} active}"
                                    Foreground="{StaticResource OpTextMutedBrush}"
-                                   FontSize="10" />
+                                   FontSize="10"
+                                   Visibility="{Binding IsSearchingMembers, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                        <!-- MEMBERS header (when searching) -->
+                        <TextBlock Text="MEMBERS"
+                                   Foreground="{StaticResource OpTextTitleBrush}"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Visibility="{Binding IsSearchingMembers, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding MemberSearchResults.Count, StringFormat={}{0} found}"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="10"
+                                   Visibility="{Binding IsSearchingMembers, Converter={StaticResource BoolToVisibility}}" />
+
                         <Separator Margin="0,6"
                                    Background="{StaticResource OpBorderPanelBrush}" />
                     </StackPanel>
@@ -1224,102 +1264,203 @@
                     <ScrollViewer DockPanel.Dock="Top"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding OnlineUsers}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:OnlineUserViewModel}">
-                                    <Border x:Name="UserCard"
-                                            Style="{StaticResource OnlineUserCardStyle}">
-                                        <Border.ContextMenu>
-                                            <ContextMenu Style="{StaticResource OnlineUserContextMenuStyle}"
-                                                         DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                                <MenuItem Header="Message"
-                                                          Style="{StaticResource OnlineUserContextMenuItemStyle}"
-                                                          Command="{Binding DataContext.OpenDirectMessageCommand, Source={x:Reference RootDashboard}}"
-                                                          CommandParameter="{Binding}" />
-                                            </ContextMenu>
-                                        </Border.ContextMenu>
+                        <StackPanel>
+                            <!-- Online users list (shown when not searching) -->
+                            <ItemsControl ItemsSource="{Binding OnlineUsers}"
+                                          Visibility="{Binding IsSearchingMembers, Converter={StaticResource InverseBoolToVisibility}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:OnlineUserViewModel}">
+                                        <Border x:Name="UserCard"
+                                                Style="{StaticResource OnlineUserCardStyle}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu Style="{StaticResource OnlineUserContextMenuStyle}"
+                                                             DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <MenuItem Header="Message"
+                                                              Style="{StaticResource OnlineUserContextMenuItemStyle}"
+                                                              Command="{Binding DataContext.OpenDirectMessageCommand, Source={x:Reference RootDashboard}}"
+                                                              CommandParameter="{Binding}" />
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
 
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="42" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
 
-                                            <!-- Avatar -->
-                                            <Border Grid.Column="0"
-                                                    Width="34"
-                                                    Height="34"
-                                                    CornerRadius="17"
-                                                    VerticalAlignment="Center"
-                                                    Background="{Binding RoleColorBrush}"
-                                                    ClipToBounds="True">
-                                                <Grid>
-                                                    <Image Source="{Binding AvatarImage}"
-                                                           Stretch="UniformToFill"
-                                                           Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVisibility}}" />
+                                                <Border Grid.Column="0"
+                                                        Width="34"
+                                                        Height="34"
+                                                        CornerRadius="17"
+                                                        VerticalAlignment="Center"
+                                                        Background="{Binding RoleColorBrush}"
+                                                        ClipToBounds="True">
+                                                    <Grid>
+                                                        <Image Source="{Binding AvatarImage}"
+                                                               Stretch="UniformToFill"
+                                                               Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVisibility}}" />
+                                                        <TextBlock Text="{Binding InitialLetter}"
+                                                                   Foreground="#15120F"
+                                                                   FontSize="13"
+                                                                   FontWeight="Bold"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}" />
+                                                    </Grid>
+                                                </Border>
 
-                                                    <TextBlock Text="{Binding InitialLetter}"
-                                                               Foreground="#15120F"
-                                                               FontSize="13"
-                                                               FontWeight="Bold"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"
-                                                               Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}" />
+                                                <StackPanel Grid.Column="1"
+                                                            Margin="8,0,8,0"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ContactLabel}"
+                                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock FontSize="10"
+                                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                                               TextTrimming="CharacterEllipsis">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Role}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Role}" Value="{x:Null}">
+                                                                        <Setter Property="Text" Value="Member" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Role}" Value="">
+                                                                        <Setter Property="Text" Value="Member" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <Button x:Name="MessageButton"
+                                                        Grid.Column="2"
+                                                        Content="MESSAGE"
+                                                        Style="{StaticResource OnlineUserActionButtonStyle}"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.OpenDirectMessageCommand, Source={x:Reference RootDashboard}}"
+                                                        CommandParameter="{Binding}" />
+                                            </Grid>
+                                        </Border>
+
+                                        <DataTemplate.Triggers>
+                                            <Trigger SourceName="UserCard" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="MessageButton" Property="Visibility" Value="Visible" />
+                                                <Setter TargetName="UserCard" Property="BorderBrush"
+                                                        Value="{StaticResource OpBorderPillBrush}" />
+                                                <Setter TargetName="UserCard" Property="Background" Value="#18120E" />
+                                            </Trigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Member search results (shown when searching) -->
+                            <ItemsControl ItemsSource="{Binding MemberSearchResults}"
+                                          Visibility="{Binding IsSearchingMembers, Converter={StaticResource BoolToVisibility}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:OnlineUserViewModel}">
+                                        <Border x:Name="SearchCard"
+                                                Style="{StaticResource OnlineUserCardStyle}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="42" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Avatar with online dot -->
+                                                <Grid Grid.Column="0" VerticalAlignment="Center">
+                                                    <Border Width="34"
+                                                            Height="34"
+                                                            CornerRadius="17"
+                                                            Background="{Binding RoleColorBrush}"
+                                                            ClipToBounds="True">
+                                                        <Grid>
+                                                            <Image Source="{Binding AvatarImage}"
+                                                                   Stretch="UniformToFill"
+                                                                   Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVisibility}}" />
+                                                            <TextBlock Text="{Binding InitialLetter}"
+                                                                       Foreground="#15120F"
+                                                                       FontSize="13"
+                                                                       FontWeight="Bold"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVisibility}}" />
+                                                        </Grid>
+                                                    </Border>
+                                                    <!-- Online status dot -->
+                                                    <Ellipse Width="10"
+                                                             Height="10"
+                                                             HorizontalAlignment="Right"
+                                                             VerticalAlignment="Bottom"
+                                                             Margin="0,0,1,1">
+                                                        <Ellipse.Style>
+                                                            <Style TargetType="Ellipse">
+                                                                <Setter Property="Fill" Value="#505050" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                                                        <Setter Property="Fill" Value="#43B581" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Ellipse.Style>
+                                                    </Ellipse>
                                                 </Grid>
-                                            </Border>
 
-                                            <!-- Name and role -->
-                                            <StackPanel Grid.Column="1"
-                                                        Margin="8,0,8,0"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding ContactLabel}"
-                                                           Foreground="{StaticResource OpTextTitleBrush}"
-                                                           FontSize="11"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Grid.Column="1"
+                                                            Margin="8,0,8,0"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ContactLabel}"
+                                                               Foreground="{StaticResource OpTextTitleBrush}"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock FontSize="10"
+                                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                                               TextTrimming="CharacterEllipsis">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Role}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Role}" Value="{x:Null}">
+                                                                        <Setter Property="Text" Value="Member" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Role}" Value="">
+                                                                        <Setter Property="Text" Value="Member" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </StackPanel>
 
-                                                <TextBlock FontSize="10"
-                                                           Foreground="{StaticResource OpTextMutedBrush}"
-                                                           TextTrimming="CharacterEllipsis">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="{Binding Role}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Role}" Value="{x:Null}">
-                                                                    <Setter Property="Text" Value="Member" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Role}" Value="">
-                                                                    <Setter Property="Text" Value="Member" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </StackPanel>
+                                                <Button x:Name="SearchMessageButton"
+                                                        Grid.Column="2"
+                                                        Content="MESSAGE"
+                                                        Style="{StaticResource OnlineUserActionButtonStyle}"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.OpenDirectMessageCommand, Source={x:Reference RootDashboard}}"
+                                                        CommandParameter="{Binding}" />
+                                            </Grid>
+                                        </Border>
 
-                                            <!-- Hover action -->
-                                            <Button x:Name="MessageButton"
-                                                    Grid.Column="2"
-                                                    Content="MESSAGE"
-                                                    Style="{StaticResource OnlineUserActionButtonStyle}"
-                                                    VerticalAlignment="Center"
-                                                    Command="{Binding DataContext.OpenDirectMessageCommand, Source={x:Reference RootDashboard}}"
-                                                    CommandParameter="{Binding}" />
-                                        </Grid>
-                                    </Border>
-
-                                    <DataTemplate.Triggers>
-                                        <Trigger SourceName="UserCard" Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="MessageButton" Property="Visibility" Value="Visible" />
-                                            <Setter TargetName="UserCard" Property="BorderBrush"
-                                                    Value="{StaticResource OpBorderPillBrush}" />
-                                            <Setter TargetName="UserCard" Property="Background" Value="#18120E" />
-                                        </Trigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                        <DataTemplate.Triggers>
+                                            <Trigger SourceName="SearchCard" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="SearchMessageButton" Property="Visibility" Value="Visible" />
+                                                <Setter TargetName="SearchCard" Property="BorderBrush"
+                                                        Value="{StaticResource OpBorderPillBrush}" />
+                                                <Setter TargetName="SearchCard" Property="Background" Value="#18120E" />
+                                            </Trigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
             </Border>

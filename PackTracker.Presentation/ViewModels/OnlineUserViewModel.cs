@@ -17,6 +17,20 @@ public sealed class OnlineUserViewModel : INotifyPropertyChanged
 
     public string? DiscordDisplayName { get; set; }
 
+    private bool _isOnline = true;
+    public bool IsOnline
+    {
+        get => _isOnline;
+        set
+        {
+            if (_isOnline != value)
+            {
+                _isOnline = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public static Brush GetRoleColor(string? role)
     {
         return role switch
