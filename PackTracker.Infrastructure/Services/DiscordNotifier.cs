@@ -127,6 +127,31 @@ public sealed class DiscordNotifier : IDiscordNotifier
 
     #endregion
 
+    #region Claims
+
+    /// <inheritdoc />
+    public async Task NotifyRequestClaimedAsync(
+        string requestType,
+        string requestLabel,
+        string requesterDisplayName,
+        string claimerDisplayName,
+        Guid requestId)
+    {
+        var payload = new
+        {
+            content =
+                $"🤝 **Request Accepted:** {requestLabel}\n" +
+                $"**Type:** {requestType}\n" +
+                $"**Requested by:** {requesterDisplayName}\n" +
+                $"**Accepted by:** {claimerDisplayName}\n" +
+                $"**Request ID:** {requestId}"
+        };
+
+        await SendWebhookAsync(payload, "RequestClaimed", requestId);
+    }
+
+    #endregion
+
     #region Procurement
 
     /// <inheritdoc />

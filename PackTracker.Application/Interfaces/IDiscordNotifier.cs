@@ -46,6 +46,21 @@ public interface IDiscordNotifier
 
     #endregion
 
+    #region Claims
+
+    /// <summary>
+    /// Sends a Discord notification when a request is claimed by a member.
+    /// Used as an offline-persistent fallback alongside the SignalR real-time push.
+    /// </summary>
+    Task NotifyRequestClaimedAsync(
+        string requestType,
+        string requestLabel,
+        string requesterDisplayName,
+        string claimerDisplayName,
+        Guid requestId);
+
+    #endregion
+
     #region Procurement
 
     /// <summary>

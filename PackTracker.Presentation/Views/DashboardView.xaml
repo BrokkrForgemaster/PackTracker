@@ -396,6 +396,17 @@
                                            FontWeight="Bold" />
                             </Border>
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,3,0,0"
+                                    Visibility="{Binding AssigneeDisplayName, Converter={StaticResource NullToVisibilityConverter}}">
+                            <TextBlock Text="Accepted by "
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="9" />
+                            <TextBlock Text="{Binding AssigneeDisplayName}"
+                                       Foreground="#B7A7F5"
+                                       FontSize="9"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
                     </StackPanel>
                 </DockPanel>
             </Border>

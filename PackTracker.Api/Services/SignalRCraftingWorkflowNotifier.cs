@@ -7,10 +7,12 @@ namespace PackTracker.Api.Services;
 public sealed class SignalRCraftingWorkflowNotifier : ICraftingWorkflowNotifier
 {
     private readonly IHubContext<RequestsHub> _hubContext;
+    private readonly IDiscordNotifier _discord;
 
-    public SignalRCraftingWorkflowNotifier(IHubContext<RequestsHub> hubContext)
+    public SignalRCraftingWorkflowNotifier(IHubContext<RequestsHub> hubContext, IDiscordNotifier discord)
     {
         _hubContext = hubContext;
+        _discord = discord;
     }
 
     public Task NotifyAsync(string eventName, Guid requestId, CancellationToken cancellationToken) =>
@@ -42,5 +44,12 @@ public sealed class SignalRCraftingWorkflowNotifier : ICraftingWorkflowNotifier
         if (!string.IsNullOrWhiteSpace(claimerDiscordId))
             await _hubContext.Clients.User(claimerDiscordId)
                 .SendAsync("ClaimConfirmed", payload, cancellationToken);
+
+        await _discord.NotifyRequestClaimedAsync(
+            requestType: requestType,
+            requestLabel: requestLabel,
+            requesterDisplayName: requesterDisplayName,
+            claimerDisplayName: claimerDisplayName,
+            requestId: requestId);
     }
 }
