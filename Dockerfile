@@ -3,6 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copy project files (excludes Windows-only Presentation and test projects)
+COPY Directory.Build.props Directory.Build.targets ./
 COPY PackTracker.Domain/PackTracker.Domain.csproj             PackTracker.Domain/
 COPY PackTracker.Application/PackTracker.Application.csproj   PackTracker.Application/
 COPY PackTracker.Infrastructure/PackTracker.Infrastructure.csproj PackTracker.Infrastructure/
