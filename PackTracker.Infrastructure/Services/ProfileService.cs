@@ -372,9 +372,13 @@ public class ProfileService : IProfileService
         if (string.IsNullOrWhiteSpace(name))
             return Task.FromResult<Profile?>(null);
 
+        var normalized = name.Trim().ToUpperInvariant();
+
+#pragma warning disable CA1304, CA1311
         return _db.Profiles.FirstOrDefaultAsync(
-            p => p.Username.ToUpperInvariant() == name.ToUpperInvariant(),
+            p => p.Username.ToUpper() == normalized,
             ct);
+#pragma warning restore CA1304, CA1311
     }
 
     /// <summary>

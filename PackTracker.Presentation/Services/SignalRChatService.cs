@@ -45,6 +45,7 @@ public class SignalRChatService : IAsyncDisposable
     public event Action<IReadOnlyList<PendingDmDto>>? PendingDirectMessages;
 
     public bool IsConnected => _connection?.State == HubConnectionState.Connected;
+    public string? CurrentUsername { get; set; }
 
     public SignalRChatService(
         ISettingsService settingsService,
@@ -101,7 +102,7 @@ public class SignalRChatService : IAsyncDisposable
             {
                 var counterpart = GetString(json, "counterpartUsername", "CounterpartUsername");
                 var fallbackChannel = !string.IsNullOrWhiteSpace(counterpart)
-                    ? $"direct:{counterpart.Trim().ToLowerInvariant()}"
+                    ? DirectMessageChannel.BuildFallback(CurrentUsername, counterpart)
                     : GetString(json, "channel", "Channel");
 
                 var msg = ParseChatMessage(json, fallbackChannel);

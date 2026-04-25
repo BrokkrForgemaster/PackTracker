@@ -348,7 +348,9 @@ public sealed class SettingsService : ISettingsService, IDisposable
                 DiscordAccessToken = SecretStorage.Protect(normalizedSettings.DiscordAccessToken),
                 DiscordRefreshToken = SecretStorage.Protect(normalizedSettings.DiscordRefreshToken),
                 JwtToken = SecretStorage.Protect(normalizedSettings.JwtToken),
-                JwtRefreshToken = SecretStorage.Protect(normalizedSettings.JwtRefreshToken)
+                JwtRefreshToken = SecretStorage.Protect(normalizedSettings.JwtRefreshToken),
+                AcknowledgedClaimCounts = normalizedSettings.AcknowledgedClaimCounts
+                    .ToDictionary(static pair => pair.Key, static pair => pair.Value)
             };
 
             JsonObject root;
@@ -415,7 +417,9 @@ public sealed class SettingsService : ISettingsService, IDisposable
             DiscordAccessToken = source.DiscordAccessToken,
             DiscordRefreshToken = source.DiscordRefreshToken,
             JwtToken = source.JwtToken,
-            JwtRefreshToken = source.JwtRefreshToken
+            JwtRefreshToken = source.JwtRefreshToken,
+            AcknowledgedClaimCounts = source.AcknowledgedClaimCounts
+                .ToDictionary(static pair => pair.Key, static pair => pair.Value)
         };
 
     private const string DefaultApiBaseUrl = "https://packtracker-yke3.onrender.com";
@@ -443,6 +447,8 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
         if (settings.JwtExpiresInMinutes <= 0)
             settings.JwtExpiresInMinutes = 60;
+
+        settings.AcknowledgedClaimCounts ??= new();
 
         return settings;
     }
@@ -472,5 +478,8 @@ public sealed class SettingsService : ISettingsService, IDisposable
         && left.DiscordAccessToken == right.DiscordAccessToken
         && left.DiscordRefreshToken == right.DiscordRefreshToken
         && left.JwtToken == right.JwtToken
-        && left.JwtRefreshToken == right.JwtRefreshToken;
+        && left.JwtRefreshToken == right.JwtRefreshToken
+        && left.AcknowledgedClaimCounts.Count == right.AcknowledgedClaimCounts.Count
+        && left.AcknowledgedClaimCounts.OrderBy(static pair => pair.Key)
+            .SequenceEqual(right.AcknowledgedClaimCounts.OrderBy(static pair => pair.Key));
 }

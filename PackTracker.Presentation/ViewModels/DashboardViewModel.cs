@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PackTracker.Application.DTOs.Dashboard;
+using PackTracker.Application.Interfaces;
 using PackTracker.Presentation.Commands;
 using PackTracker.Presentation.Services;
 
@@ -20,6 +21,7 @@ namespace PackTracker.Presentation.ViewModels;
 public class DashboardViewModel : ViewModelBase
 {
     private readonly IApiClientProvider _apiClientProvider;
+    private readonly ISettingsService _settingsService;
     private readonly SignalRChatService _signalR;
     private readonly AvatarCacheService _avatarCache;
     private static readonly Regex DirectMentionPattern = new(
@@ -45,12 +47,14 @@ public class DashboardViewModel : ViewModelBase
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
+        ISettingsService settingsService,
         SignalRChatService signalR,
         GuideDashboardViewModel guideViewModel,
         AvatarCacheService avatarCache,
         DiscordEventsViewModel discordEvents)
     {
         _apiClientProvider = apiClientProvider;
+        _settingsService = settingsService;
         _signalR = signalR;
         _avatarCache = avatarCache;
         Guide = guideViewModel;
@@ -77,6 +81,7 @@ public class DashboardViewModel : ViewModelBase
         ToggleMuteCommand = new RelayCommand(() => ChatSoundMuted = !ChatSoundMuted);
         DismissAllNewClaimsCommand = new RelayCommand(DismissAllNewClaims);
 
+        LoadAcknowledgedClaimCounts();
         LoadChatChannelsForRole(null);
         OpenDefaultWindows();
 
@@ -151,6 +156,7 @@ public class DashboardViewModel : ViewModelBase
             if (profile != null)
             {
                 _currentUsername = profile.Username;
+                _signalR.CurrentUsername = _currentUsername;
                 CurrentUserDisplayName = !string.IsNullOrWhiteSpace(profile.DiscordDisplayName)
                     ? profile.DiscordDisplayName
                     : profile.Username;
@@ -180,17 +186,13 @@ public class DashboardViewModel : ViewModelBase
         System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
         {
             var window = OpenChatWindows.FirstOrDefault(x => x.ChannelKey == msg.Channel);
-            if (window == null && msg.Channel.StartsWith("dm:", StringComparison.OrdinalIgnoreCase))
+            if (window == null
+                && DirectMessageChannel.TryGetCounterpart(msg.Channel, _currentUsername, out var counterpart))
             {
-                var parts = msg.Channel.Split(':');
-                if (parts.Length == 3)
-                {
-                    var selfLower = _currentUsername?.Trim().ToLowerInvariant() ?? string.Empty;
-                    var counterpart = parts[1].Equals(selfLower, StringComparison.OrdinalIgnoreCase)
-                        ? parts[2]
-                        : parts[1];
-                    window = EnsureDirectMessageWindow(counterpart, msg.SenderDisplayName);
-                }
+                window = OpenChatWindows.FirstOrDefault(x =>
+                    x.IsDirectMessage
+                    && string.Equals(x.TargetUsername, counterpart, StringComparison.OrdinalIgnoreCase))
+                    ?? EnsureDirectMessageWindow(counterpart, msg.SenderDisplayName);
             }
 
             if (window != null)
@@ -353,26 +355,23 @@ public class DashboardViewModel : ViewModelBase
 
                         if (req.IsRequestedByCurrentUser)
                         {
-                            if (_lastKnownClaimCounts.TryGetValue(req.Id, out var lastKnown))
+                            _lastKnownClaimCounts.TryGetValue(req.Id, out var lastKnown);
+                            _newClaimCounts.TryGetValue(req.Id, out var existing);
+
+                            var result = ClaimAlertReconciler.Reconcile(
+                                req.ClaimCount,
+                                _lastKnownClaimCounts.ContainsKey(req.Id) ? lastKnown : null,
+                                _newClaimCounts.ContainsKey(req.Id) ? existing : null);
+
+                            _lastKnownClaimCounts[req.Id] = result.lastKnownClaimCount;
+
+                            if (result.newClaimCount is int newCount && newCount > 0)
                             {
-                                var delta = req.ClaimCount - lastKnown;
-                                if (delta > 0)
-                                {
-                                    _newClaimCounts.TryGetValue(req.Id, out var existing);
-                                    _newClaimCounts[req.Id] = Math.Max(existing, delta);
-                                    _lastKnownClaimCounts[req.Id] = req.ClaimCount;
-                                }
+                                _newClaimCounts[req.Id] = newCount;
                             }
                             else
                             {
-                                // First time seeing this request this session.
-                                // If it already has claims, badge it — the user hasn't seen this yet.
-                                if (req.ClaimCount > 0)
-                                {
-                                    _newClaimCounts.TryGetValue(req.Id, out var existing);
-                                    _newClaimCounts[req.Id] = Math.Max(existing, req.ClaimCount);
-                                }
-                                _lastKnownClaimCounts[req.Id] = req.ClaimCount;
+                                _newClaimCounts.Remove(req.Id);
                             }
                         }
 
@@ -523,6 +522,7 @@ public class DashboardViewModel : ViewModelBase
         foreach (var item in AllRequestItems().Where(x => x.Id == dismissed.Id && x != dismissed))
             item.ClearNewClaims();
 
+        PersistAcknowledgedClaimCounts();
         RecalcNewClaimsTotal();
     }
 
@@ -534,6 +534,7 @@ public class DashboardViewModel : ViewModelBase
             _lastKnownClaimCounts[item.Id] = item.ClaimCount;
             item.ClearNewClaims();
         }
+        PersistAcknowledgedClaimCounts();
         RecalcNewClaimsTotal();
     }
 
@@ -544,6 +545,27 @@ public class DashboardViewModel : ViewModelBase
 
     private IEnumerable<ActiveRequestItemViewModel> AllRequestItems()
         => ActiveRequests.Concat(MyActiveTasks).Concat(MyOpenRequests);
+
+    private void LoadAcknowledgedClaimCounts()
+    {
+        foreach (var (key, value) in _settingsService.GetSettings().AcknowledgedClaimCounts)
+        {
+            if (Guid.TryParse(key, out var requestId) && value >= 0)
+                _lastKnownClaimCounts[requestId] = value;
+        }
+    }
+
+    private void PersistAcknowledgedClaimCounts()
+    {
+        var snapshot = _lastKnownClaimCounts.ToDictionary(
+            static pair => pair.Key.ToString(),
+            static pair => pair.Value);
+
+        _ = _settingsService.UpdateSettingsAsync(settings =>
+        {
+            settings.AcknowledgedClaimCounts = snapshot;
+        });
+    }
 
     private void LoadChatChannelsForRole(string? division)
     {
@@ -931,11 +953,7 @@ public class DashboardViewModel : ViewModelBase
 
     private string BuildDirectChannelKey(string username)
     {
-        var self = _currentUsername?.Trim().ToLowerInvariant() ?? string.Empty;
-        var other = username.Trim().ToLowerInvariant();
-        var parts = new[] { self, other };
-        Array.Sort(parts);
-        return $"dm:{parts[0]}:{parts[1]}";
+        return DirectMessageChannel.BuildCanonical(_currentUsername, username);
     }
 
     private static Brush BrushFromHex(string hex)
