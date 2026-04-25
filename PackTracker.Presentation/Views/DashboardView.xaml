@@ -370,16 +370,10 @@
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding NewClaimCount}"
-                                       Foreground="White"
-                                       FontSize="9"
-                                       FontWeight="Bold" />
-                            <TextBlock Text=" NEW"
-                                       Foreground="White"
-                                       FontSize="9"
-                                       FontWeight="Bold" />
-                        </StackPanel>
+                        <TextBlock Text="{Binding NewClaimCount}"
+                                   Foreground="White"
+                                   FontSize="9"
+                                   FontWeight="Bold" />
                     </Button>
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
@@ -799,17 +793,8 @@
                                             CornerRadius="8"
                                             Padding="8,2"
                                             Margin="0,0,6,0"
-                                            VerticalAlignment="Center">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasAnyNewClaims}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding HasAnyNewClaims, Converter={StaticResource BoolToVisibility}}">
                                         <TextBlock Text="NEW"
                                                    Foreground="White"
                                                    FontSize="9"
@@ -874,17 +859,8 @@
                                             CornerRadius="8"
                                             Padding="8,2"
                                             Margin="0,0,6,0"
-                                            VerticalAlignment="Center">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasAnyNewClaims}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding HasAnyNewClaims, Converter={StaticResource BoolToVisibility}}">
                                         <TextBlock Text="NEW"
                                                    Foreground="White"
                                                    FontSize="9"
@@ -899,17 +875,8 @@
                                         BorderThickness="1"
                                         CornerRadius="4"
                                         Padding="8,5"
-                                        Margin="0,0,0,8">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasAnyNewClaims}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
+                                        Margin="0,0,0,8"
+                                        Visibility="{Binding HasAnyNewClaims, Converter={StaticResource BoolToVisibility}}">
                                     <DockPanel>
                                         <Button DockPanel.Dock="Right"
                                                 Command="{Binding DismissAllNewClaimsCommand}"

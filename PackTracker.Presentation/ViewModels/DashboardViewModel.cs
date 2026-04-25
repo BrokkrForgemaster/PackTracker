@@ -40,8 +40,8 @@ public class DashboardViewModel : ViewModelBase
     private string? _requestLoadError;
     private int _totalNewClaimsCount;
     private readonly Dictionary<Guid, int> _newClaimCounts = new();
-    // Tracks the claim count at last acknowledgement so refresh can detect new claims
     private readonly Dictionary<Guid, int> _lastKnownClaimCounts = new();
+    private System.Windows.Threading.DispatcherTimer? _periodicRefreshTimer;
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
@@ -106,10 +106,8 @@ public class DashboardViewModel : ViewModelBase
             foreach (var window in OpenChatWindows)
                 await _signalR.JoinChannelAsync(window.ChannelKey);
 
-            await RefreshDataAsync();
-            _ = LoadAllMembersAsync();
-            _ = DiscordEvents.InitializeAsync();
-
+            // Wire up request-change and claim handlers BEFORE the initial refresh so any
+            // SignalR event that arrives during the HTTP call is captured rather than dropped.
             _signalR.AssistanceRequestCreated += id => _ = RefreshDataAsync();
             _signalR.AssistanceRequestUpdated += id => _ = RefreshDataAsync();
             _signalR.CraftingRequestCreated += id => _ = RefreshDataAsync();
@@ -123,6 +121,20 @@ public class DashboardViewModel : ViewModelBase
                 IsConnected = state;
                 if (state) _ = RefreshDataAsync();
             };
+
+            await RefreshDataAsync();
+            _ = LoadAllMembersAsync();
+            _ = DiscordEvents.InitializeAsync();
+
+            // Periodic fallback: catches any SignalR events missed during the startup window
+            _periodicRefreshTimer = new System.Windows.Threading.DispatcherTimer(
+                System.Windows.Threading.DispatcherPriority.Background,
+                System.Windows.Application.Current.Dispatcher)
+            {
+                Interval = TimeSpan.FromSeconds(30)
+            };
+            _periodicRefreshTimer.Tick += (_, _) => _ = RefreshDataAsync();
+            _periodicRefreshTimer.Start();
         }
         catch (Exception)
         {
@@ -353,7 +365,13 @@ public class DashboardViewModel : ViewModelBase
                             }
                             else
                             {
-                                // First time seeing this request — initialise without badge
+                                // First time seeing this request this session.
+                                // If it already has claims, badge it — the user hasn't seen this yet.
+                                if (req.ClaimCount > 0)
+                                {
+                                    _newClaimCounts.TryGetValue(req.Id, out var existing);
+                                    _newClaimCounts[req.Id] = Math.Max(existing, req.ClaimCount);
+                                }
                                 _lastKnownClaimCounts[req.Id] = req.ClaimCount;
                             }
                         }
