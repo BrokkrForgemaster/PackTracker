@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Presentation.Services;
 
@@ -15,25 +15,27 @@ public sealed class DiscordEventsService
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
     private readonly HttpClient _httpClient;
-    private readonly string? _guildId;
-    private readonly string? _botToken;
+    private readonly ISettingsService _settingsService;
 
-    public DiscordEventsService(HttpClient httpClient, IConfiguration configuration)
+    public DiscordEventsService(HttpClient httpClient, ISettingsService settingsService)
     {
         _httpClient = httpClient;
-        _guildId = configuration["Authentication:Discord:RequiredGuildId"];
-        _botToken = configuration["Authentication:Discord:BotToken"];
+        _settingsService = settingsService;
     }
 
     public async Task<IReadOnlyList<DiscordEventItem>> GetUpcomingEventsAsync(CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_guildId) || string.IsNullOrWhiteSpace(_botToken))
+        var settings = _settingsService.GetSettings();
+        var guildId = settings.DiscordRequiredGuildId;
+        var botToken = settings.DiscordBotToken;
+
+        if (string.IsNullOrWhiteSpace(guildId) || string.IsNullOrWhiteSpace(botToken))
             return [];
 
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://discord.com/api/v10/guilds/{_guildId}/scheduled-events?with_user_count=true");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", _botToken);
+            $"https://discord.com/api/v10/guilds/{guildId}/scheduled-events?with_user_count=true");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", botToken);
 
         using var response = await _httpClient.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
