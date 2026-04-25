@@ -124,6 +124,12 @@ public sealed class RegisterBlueprintOwnershipCommandHandler
             .Where(x => x.BlueprintId == blueprint.Id && x.InterestType == MemberBlueprintInterestType.Owns)
             .CountAsync(cancellationToken);
 
+        // Update denormalized count on the blueprint entity
+        blueprint.OwnerCount = ownerCount;
+        blueprint.UpdatedAt = DateTime.UtcNow;
+        
+        await _db.SaveChangesAsync(cancellationToken);
+
         return new BlueprintOwnershipRegistrationResult(
             BlueprintOwnershipRegistrationStatus.Success,
             existing.Id,

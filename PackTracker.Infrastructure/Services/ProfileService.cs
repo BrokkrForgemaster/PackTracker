@@ -165,7 +165,6 @@ public class ProfileService : IProfileService
             profile.DiscordDivision = division;
 
             profile.LastLogin = DateTime.UtcNow;
-            profile.LastSeenAt = DateTime.UtcNow;
 
             _logger.LogInformation(
                 "Updated existing profile from Discord login. ProfileId={ProfileId} DiscordId={DiscordId} Username={Username} Rank={Rank} Division={Division}",

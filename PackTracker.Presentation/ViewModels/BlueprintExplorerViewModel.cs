@@ -1,3 +1,4 @@
+
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -160,6 +161,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
     public bool HasSelectedBlueprintDetail => SelectedBlueprintDetail is not null;
     public bool HasOwnedBlueprints => OwnedBlueprints.Count > 0;
+    public bool HasOwners => SelectedBlueprintDetail?.Owners?.Count > 0;
     public bool HasRewardPools => SelectedBlueprintDetail?.RewardPools?.GetType().GetProperty("pools") != null;
     public bool HasComponents => Components.Count > 0;
     public bool HasMaterials => Materials.Count > 0;
@@ -692,7 +694,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
             System.Diagnostics.Debug.WriteLine($"Ownership post succeeded for blueprint {blueprintId}");
 
-            await LoadBlueprintDetailAsync(GetLookupBlueprintId());
+            // Refresh the detail from the wiki service to get updated owner lists
+            var updatedDetail = await _wikiBlueprints.GetDetailAsync(GetLookupBlueprintId());
+            SelectedBlueprintDetail = updatedDetail;
+
             await LoadOwnedBlueprintsAsync();
 
             System.Diagnostics.Debug.WriteLine(

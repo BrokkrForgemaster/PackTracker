@@ -805,6 +805,13 @@ public class DashboardViewModel : ViewModelBase
                 if (string.IsNullOrWhiteSpace(dm.LastSenderUsername)) continue;
                 var window = EnsureDirectMessageWindow(dm.LastSenderUsername, dm.LastSenderDisplayName);
                 window.UnreadCount += dm.UnreadCount;
+
+                // Ensure sidebar entry reflects the new unread count immediately
+                var sidebarEntry = AvailableChatChannels.FirstOrDefault(c => c.Key == window.ChannelKey);
+                if (sidebarEntry != null)
+                {
+                    SyncUnreadState(window, sidebarEntry);
+                }
             }
         });
     }

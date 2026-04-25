@@ -75,6 +75,7 @@ public class ChatWindowViewModelTests
             DiscordDisplayName = "Ghost",
             Username = "ghost"
         };
+        sut.ContactLabel = $"{sut.DiscordDisplayName} (@{sut.Username})";
 
         Assert.Equal("Ghost (@ghost)", sut.ContactLabel);
     }

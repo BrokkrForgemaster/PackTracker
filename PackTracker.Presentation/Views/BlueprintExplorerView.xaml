@@ -573,92 +573,56 @@
                                         CornerRadius="8"
                                         Padding="12,10"
                                         Margin="8,0,8,0"
-                                        VerticalAlignment="Center"
+                                        VerticalAlignment="Top"
                                         HorizontalAlignment="Left"
-                                        Width="170">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock HorizontalAlignment="Center"
-                                                   FontSize="12"
-                                                   FontWeight="SemiBold"
+                                        Width="190">
+                                    <StackPanel>
+                                        <TextBlock HorizontalAlignment="Left"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
                                                    Foreground="#AFA79A"
-                                                   Text="Org Owners:" />
+                                                   Text="ORG OWNERS"
+                                                   Margin="0,0,0,8" />
 
-                                        <TextBlock
-                                            Text="{Binding SelectedBlueprintDetail.OwnerCount, TargetNullValue=0, FallbackValue=0}"
-                                            FontSize="18"
-                                            FontWeight="Bold"
-                                            Margin="0,4,0,0"
-                                            HorizontalAlignment="Center">
+                                        <ItemsControl ItemsSource="{Binding SelectedBlueprintDetail.Owners}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#1C2129" 
+                                                            BorderBrush="#2D3540" 
+                                                            BorderThickness="1" 
+                                                            CornerRadius="4" 
+                                                            Padding="8,5"
+                                                            Margin="0,0,0,4">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="👤" Foreground="#6A7A8A" Margin="0,0,6,0" VerticalAlignment="Center" FontSize="10"/>
+                                                            <TextBlock Text="{Binding Username}" 
+                                                                       Foreground="#E8D7B0" 
+                                                                       FontSize="11" 
+                                                                       FontWeight="SemiBold"
+                                                                       VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="No owners recorded for this blueprint."
+                                                   Foreground="#7C838C"
+                                                   FontSize="10"
+                                                   FontStyle="Italic"
+                                                   Margin="0,4,0,0"
+                                                   TextWrapping="Wrap">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#FF6B6B" />
+                                                    <Setter Property="Visibility" Value="Collapsed" />
                                                     <Style.Triggers>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="0">
-                                                            <Setter Property="Foreground" Value="#FF6B6B" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="{x:Null}">
-                                                            <Setter Property="Foreground" Value="#FF6B6B" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="1">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="2">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="3">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="4">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="5">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="6">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="7">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="8">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
-                                                        </DataTrigger>
-                                                        <DataTrigger
-                                                            Binding="{Binding SelectedBlueprintDetail.OwnerCount}"
-                                                            Value="9">
-                                                            <Setter Property="Foreground" Value="#5CB85C" />
+                                                        <DataTrigger Binding="{Binding HasOwners}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-
-                                        <TextBlock Text="Self-reported ownership only."
-                                                   Foreground="#7C838C"
-                                                   FontSize="10"
-                                                   Margin="0,4,0,0"
-                                                   TextAlignment="Center"
-                                                   HorizontalAlignment="Center" />
                                     </StackPanel>
                                 </Border>
 
