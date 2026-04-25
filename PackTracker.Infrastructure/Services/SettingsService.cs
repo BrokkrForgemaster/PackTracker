@@ -13,6 +13,8 @@ namespace PackTracker.Infrastructure.Services;
 /// </summary>
 public sealed class SettingsService : ISettingsService, IDisposable
 {
+    private static readonly JsonSerializerOptions IndentedOptions = new() { WriteIndented = true };
+
     private readonly ILogger<SettingsService> _logger;
     private readonly object _settingsSync = new();
     private readonly string _userFolder;
@@ -74,11 +76,11 @@ public sealed class SettingsService : ISettingsService, IDisposable
                 {
                     ["AppSettings"] = JsonSerializer.SerializeToNode(
                         new AppSettings(),
-                        new JsonSerializerOptions { WriteIndented = true })
+                        IndentedOptions)
                 };
                 File.WriteAllText(
                     _userConfigPath,
-                    root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                    root.ToJsonString(IndentedOptions));
                 _logger.LogInformation("Created blank user settings at {Path}", _userConfigPath);
             }
         }
@@ -362,13 +364,13 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
             root["AppSettings"] = JsonSerializer.SerializeToNode(
                 safeCopy,
-                new JsonSerializerOptions { WriteIndented = true });
+                IndentedOptions);
 
             var tempFile = _userConfigPath + ".tmp";
             _suspendWatcherReload = true;
             try
             {
-                File.WriteAllText(tempFile, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                File.WriteAllText(tempFile, root.ToJsonString(IndentedOptions));
                 File.Move(tempFile, _userConfigPath, overwrite: true);
                 _settings = normalizedSettings;
             }

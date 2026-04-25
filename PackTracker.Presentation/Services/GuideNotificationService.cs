@@ -18,7 +18,7 @@ public class GuideNotificationService
 
     public async Task NotifyGuidesAsync(SocketThreadChannel thread, IUser requester)
     {
-        if (_client.GetChannel(_options.StaffNotifyChannelId) is not IMessageChannel channel)
+        if (await _client.GetChannelAsync(_options.StaffNotifyChannelId) is not IMessageChannel channel)
             return;
 
         var roleMention = $"<@&{_options.GuideRoleId}>";

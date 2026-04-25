@@ -12,6 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Globalization;
 using System.Windows.Threading;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
@@ -47,10 +48,10 @@ namespace PackTracker.Presentation.Views
             var hwnd = new WindowInteropHelper(this).Handle;
 
             int dark = 1;
-            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
+            _ = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
 
             int captionColor = 0x00252525;
-            DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref captionColor, sizeof(int));
+            _ = DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref captionColor, sizeof(int));
         }
 
         #endregion
@@ -136,8 +137,8 @@ namespace PackTracker.Presentation.Views
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (_, _) =>
             {
-                TxtLocalTime.Text = DateTime.Now.ToString("MMMM d, yyyy") + "\n" +
-                                    DateTime.Now.ToString("HH:mm:ss");
+                TxtLocalTime.Text = DateTime.Now.ToString("MMMM d, yyyy", CultureInfo.CurrentCulture) + "\n" +
+                                    DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
             };
             _timer.Start();
 

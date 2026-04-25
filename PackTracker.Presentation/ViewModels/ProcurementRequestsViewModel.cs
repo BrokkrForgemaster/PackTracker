@@ -138,7 +138,7 @@ public partial class ProcurementRequestsViewModel : ObservableObject
             using var client = _apiClientProvider.CreateClient();
             using var response = await client.GetAsync($"api/v1/crafting/procurement-requests/{requestId}/comments", ct);
             if (!response.IsSuccessStatusCode) return;
-            var comments = await response.Content.ReadFromJsonAsync<List<RequestCommentDto>>();
+            var comments = await response.Content.ReadFromJsonAsync<List<RequestCommentDto>>(cancellationToken: ct);
 
             if (ct.IsCancellationRequested) return;
 

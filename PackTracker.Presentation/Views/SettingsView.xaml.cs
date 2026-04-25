@@ -7,10 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace PackTracker.Presentation.Views;
 
-/// <summary name="SettingsView">
-/// The SettingsView allows users to view and update application settings
-/// such as theme and API credentials, with secure storage handled by ISettingsService.
-/// </summary>
 public partial class SettingsView : UserControl
 {
     #region Fields & Constructor
@@ -34,8 +30,6 @@ public partial class SettingsView : UserControl
         _current = _settingsService.GetSettings();
         _serviceProvider = serviceProvider;
 
-
-        // Bind only the fields your app uses
         CmbThemes.ItemsSource = _themeManager.AvailableThemes;
         CmbThemes.SelectedItem = _current.Theme ?? _themeManager.CurrentTheme;
         TxtUexcorpApiKey.Text = _current.UexCorpApiKey ?? string.Empty;
@@ -50,7 +44,6 @@ public partial class SettingsView : UserControl
     {
         if (CmbThemes.SelectedItem is string theme)
             _themeManager.ApplyTheme(theme);
-
     }
 
     #endregion
@@ -73,14 +66,12 @@ public partial class SettingsView : UserControl
                 _current = settings;
             });
 
-            // Persist and immediately apply the new theme
             if (!string.IsNullOrWhiteSpace(selectedTheme))
                 _themeManager.ApplyTheme(selectedTheme);
 
             MessageBox.Show("Settings saved successfully.", "Success",
                 MessageBoxButton.OK, MessageBoxImage.Information);
 
-            // Navigate to dashboard and refresh sidebar patch/profile
             if (Window.GetWindow(this) is MainWindow mainWindow)
             {
                 mainWindow.ContentFrame.Navigate(_serviceProvider.GetRequiredService<DashboardView>());
@@ -97,10 +88,9 @@ public partial class SettingsView : UserControl
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
-            _logger.LogInformation("Settings cancelled by user.");
-
-            _current = _settingsService.GetSettings();
-            CmbThemes.SelectedItem = _current.Theme ?? _themeManager.CurrentTheme;
+        _logger.LogInformation("Settings cancelled by user.");
+        _current = _settingsService.GetSettings();
+        CmbThemes.SelectedItem = _current.Theme ?? _themeManager.CurrentTheme;
         TxtUexcorpApiKey.Text = _current.UexCorpApiKey ?? string.Empty;
         TxtGameLogFilePath.Text = _current.GameLogFilePath ?? string.Empty;
     }

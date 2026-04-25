@@ -20,9 +20,9 @@ public class GuideAssignmentHandler
     {
         try
         {
-            if (!component.Data.CustomId.StartsWith("claim_") &&
-                !component.Data.CustomId.StartsWith("complete_") &&
-                !component.Data.CustomId.StartsWith("cancel_"))
+            if (!component.Data.CustomId.StartsWith("claim_", StringComparison.Ordinal) &&
+                !component.Data.CustomId.StartsWith("complete_", StringComparison.Ordinal) &&
+                !component.Data.CustomId.StartsWith("cancel_", StringComparison.Ordinal))
                 return;
 
             await component.DeferAsync(ephemeral: true);
@@ -31,7 +31,7 @@ public class GuideAssignmentHandler
             if (!ulong.TryParse(threadIdStr, out var threadId))
                 return;
 
-            var thread = _client.GetChannel(threadId) as SocketThreadChannel;
+            var thread = await _client.GetChannelAsync(threadId) as SocketThreadChannel;
             if (thread == null)
             {
                 await component.FollowupAsync("❌ Could not locate the thread.", ephemeral: true);

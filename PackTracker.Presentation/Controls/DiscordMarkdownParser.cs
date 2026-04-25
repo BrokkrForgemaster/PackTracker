@@ -64,7 +64,7 @@ public static class DiscordMarkdownParser
                 }
                 // Unordered list: "- item" or "* item" (not "**bold**")
                 else if (line.StartsWith("- ", StringComparison.Ordinal) ||
-                         (line.StartsWith("* ", StringComparison.Ordinal) && !line.StartsWith("**")))
+                         (line.StartsWith("* ", StringComparison.Ordinal) && !line.StartsWith("**", StringComparison.Ordinal)))
                 {
                     yield return BuildListItem(line[2..], bullet: "•");
                 }

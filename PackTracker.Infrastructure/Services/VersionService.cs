@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -59,7 +60,7 @@ public class VersionService : IVersionService
             if (!string.IsNullOrEmpty(baseDirectory))
             {
                 var fileInfo = new FileInfo(baseDirectory);
-                return fileInfo.CreationTime.ToString("yyyy-MM-dd");
+                return fileInfo.CreationTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             }
 
             return string.Empty;

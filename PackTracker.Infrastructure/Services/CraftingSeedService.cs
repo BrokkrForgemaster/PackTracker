@@ -9,6 +9,11 @@ namespace PackTracker.Infrastructure.Services;
 
 public sealed class CraftingSeedService
 {
+    private static readonly JsonSerializerOptions CaseInsensitiveOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly AppDbContext _db;
     private readonly ILogger<CraftingSeedService> _logger;
 
@@ -39,10 +44,7 @@ public sealed class CraftingSeedService
     private async Task SeedFromLegacyPayloadAsync(string seedFilePath, CancellationToken ct)
     {
         var json = await File.ReadAllTextAsync(seedFilePath, ct);
-        var payload = JsonSerializer.Deserialize<CraftingSeedPayload>(json, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var payload = JsonSerializer.Deserialize<CraftingSeedPayload>(json, CaseInsensitiveOptions);
 
         if (payload?.Blueprints is null || payload.Blueprints.Count == 0)
         {
@@ -112,10 +114,7 @@ public sealed class CraftingSeedService
         _logger.LogInformation("Seeding crafting data from Star Citizen local blueprint data at {Path}", blueprintFilePath);
 
         await using var stream = File.OpenRead(blueprintFilePath);
-        var payload = await JsonSerializer.DeserializeAsync<List<ScBlueprintRecord>>(stream, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        }, ct);
+        var payload = await JsonSerializer.DeserializeAsync<List<ScBlueprintRecord>>(stream, CaseInsensitiveOptions, ct);
 
         if (payload is null || payload.Count == 0)
         {

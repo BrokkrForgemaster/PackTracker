@@ -31,7 +31,7 @@ public class UpdateService : IUpdateService
         _versionService = versionService ?? throw new ArgumentNullException(nameof(versionService));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
 
-        if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
+        if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
         {
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(_options.UserAgent);
         }

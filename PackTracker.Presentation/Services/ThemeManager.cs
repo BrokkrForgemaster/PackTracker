@@ -30,7 +30,7 @@ public class ThemeManager : IThemeManager
 
         var toRemove = _app.Resources.MergedDictionaries
             .Where(d => d.Source != null &&
-                        d.Source.OriginalString.IndexOf("/Themes/", StringComparison.OrdinalIgnoreCase) >= 0)
+                        d.Source.OriginalString.Contains("/Themes/", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         foreach (var dic in toRemove)

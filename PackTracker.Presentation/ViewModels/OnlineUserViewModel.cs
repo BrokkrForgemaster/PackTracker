@@ -8,7 +8,6 @@ namespace PackTracker.Presentation.ViewModels;
 public sealed class OnlineUserViewModel : INotifyPropertyChanged
 {
     private ImageSource? _avatarImage;
-    private string? _avatarUrl;
     private string? _contactLabel;
     private string? _role;
     private Brush? _roleColorBrush;

@@ -846,7 +846,7 @@ public class RequestsHub : Hub
                     var parts = m.Channel.Split(':');
                     return parts.Length == 3
                         && (parts[1] == usernameNorm || parts[2] == usernameNorm)
-                        && m.Sender.Trim().ToLowerInvariant() != usernameNorm;
+                        && !string.Equals(m.Sender.Trim(), usernameNorm, StringComparison.OrdinalIgnoreCase);
                 })
                 .GroupBy(m => m.Channel)
                 .Select(g =>

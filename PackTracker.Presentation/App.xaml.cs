@@ -8,7 +8,6 @@ using PackTracker.Application.Options;
 using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Logging;
-using Microsoft.Extensions.Configuration;
 using PackTracker.Presentation.Services;
 using PackTracker.Presentation.ViewModels;
 using PackTracker.Presentation.Views;
@@ -83,7 +82,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<SignalRChatService>();
         services.AddSingleton<AvatarCacheService>();
         services.AddHttpClient();
-        services.AddHttpClient<DiscordEventsService>();
+        services.AddSingleton<DiscordEventsService>();
         services.AddSingleton<IConfiguration>(cfg);
         services.AddTransient<DiscordEventsViewModel>();
 

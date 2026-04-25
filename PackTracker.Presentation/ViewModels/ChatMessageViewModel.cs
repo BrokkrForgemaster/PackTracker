@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows.Input;
 using PackTracker.Presentation.Commands;
 
@@ -65,11 +66,11 @@ public class ChatMessageViewModel : ViewModelBase
 
     public string InitialLetter =>
         !string.IsNullOrEmpty(SenderDisplayName)
-            ? SenderDisplayName[0].ToString().ToUpper()
+            ? SenderDisplayName[0].ToString().ToUpperInvariant()
             : "?";
 
     public string FormattedTime =>
-        SentAt.ToLocalTime().ToString("HH:mm") + (IsEdited ? " (edited)" : "");
+        SentAt.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture) + (IsEdited ? " (edited)" : "");
 
     public string RoleDisplay =>
         !string.IsNullOrWhiteSpace(SenderRole) ? SenderRole : string.Empty;

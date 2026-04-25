@@ -1,3 +1,4 @@
+
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -308,8 +309,8 @@ public class WikiBlueprintService
                 return Array.Empty<BlueprintOwnerDto>();
             }
 
-            var owners = await response.Content.ReadFromJsonAsync<List<BlueprintOwnerDto>>(cancellationToken: ct);
-            return owners;
+            List<BlueprintOwnerDto>? owners = await response.Content.ReadFromJsonAsync<List<BlueprintOwnerDto>>(cancellationToken: ct);
+            return owners ?? (IReadOnlyList<BlueprintOwnerDto>)Array.Empty<BlueprintOwnerDto>();
         }
         catch (Exception ex)
         {

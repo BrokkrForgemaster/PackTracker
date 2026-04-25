@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -55,10 +56,10 @@ public partial class NewRequestViewModel : ObservableObject
         SelectedKind = existing.Kind;
         SelectedPriority = existing.Priority;
         MaterialName = existing.MaterialName;
-        QuantityNeededText = existing.QuantityNeeded?.ToString();
+        QuantityNeededText = existing.QuantityNeeded?.ToString(CultureInfo.InvariantCulture);
         MeetingLocation = existing.MeetingLocation;
         RewardOffered = existing.RewardOffered;
-        MaxClaimsText = existing.MaxClaims > 1 ? existing.MaxClaims.ToString() : null;
+        MaxClaimsText = existing.MaxClaims > 1 ? existing.MaxClaims.ToString(CultureInfo.InvariantCulture) : null;
         OnPropertyChanged(nameof(IsEditMode));
         OnPropertyChanged(nameof(DialogTitle));
         OnPropertyChanged(nameof(SubmitButtonLabel));

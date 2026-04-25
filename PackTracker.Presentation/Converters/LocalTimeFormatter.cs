@@ -9,10 +9,10 @@ namespace PackTracker.Presentation.Converters
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is DateTime dt)
-                return dt.ToLocalTime().ToString("h:mm tt"); // 10:04 PM
+                return dt.ToLocalTime().ToString("h:mm tt", CultureInfo.CurrentCulture); // 10:04 PM
             if (value is string s && DateTime.TryParse(s, null,
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsed))
-                return parsed.ToLocalTime().ToString("h:mm tt");
+                return parsed.ToLocalTime().ToString("h:mm tt", CultureInfo.CurrentCulture);
 
             return "";
         }

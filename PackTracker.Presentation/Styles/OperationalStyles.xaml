@@ -208,6 +208,20 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="OpPasswordBoxStyle" TargetType="PasswordBox">
+        <Setter Property="Background" Value="{StaticResource OpBackgroundInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource OpBorderInputBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="CaretBrush" Value="{StaticResource OpTextPrimaryBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource OpBorderAccentBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ══════════════════════════════════════
          LISTBOX STYLES
     ══════════════════════════════════════ -->

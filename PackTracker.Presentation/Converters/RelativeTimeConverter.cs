@@ -39,7 +39,7 @@ namespace PackTracker.Presentation.Converters
                 return $"Yesterday {local:HH:mm}";
             if (diff.TotalDays < 7)
                 return $"{(int)diff.TotalDays} d ago";
-            return local.ToString("MMM dd HH:mm");
+            return local.ToString("MMM dd HH:mm", CultureInfo.CurrentCulture);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

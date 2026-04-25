@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Net.Http.Json;
 using System.Text;
@@ -159,7 +160,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
     public bool HasSelectedBlueprintDetail => SelectedBlueprintDetail is not null;
     public bool HasOwnedBlueprints => OwnedBlueprints.Count > 0;
-    public bool HasRewardPools => SelectedBlueprintDetail?.RewardPools.GetType().GetProperty("pools") != null;
+    public bool HasRewardPools => SelectedBlueprintDetail?.RewardPools?.GetType().GetProperty("pools") != null;
     public bool HasComponents => Components.Count > 0;
     public bool HasMaterials => Materials.Count > 0;
     public bool HasCombinedModifiers => CombinedModifiers.Count > 0;
@@ -498,7 +499,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                         Csv(blueprint.Category),
                         Csv(blueprint.AvailabilityStatus),
                         Csv(blueprint.OwnershipStatus),
-                        Csv(blueprint.VerifiedAt?.ToLocalTime().ToString("g") ?? string.Empty),
+                        Csv(blueprint.VerifiedAt?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) ?? string.Empty),
                         Csv(blueprint.Notes ?? string.Empty),
                         Csv(string.Empty),
                         Csv(string.Empty),
@@ -516,16 +517,16 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                         Csv(blueprint.Category),
                         Csv(blueprint.AvailabilityStatus),
                         Csv(blueprint.OwnershipStatus),
-                        Csv(blueprint.VerifiedAt?.ToLocalTime().ToString("g") ?? string.Empty),
+                        Csv(blueprint.VerifiedAt?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) ?? string.Empty),
                         Csv(blueprint.Notes ?? string.Empty),
                         Csv(material.MaterialName),
-                        Csv(material.QuantityRequired.ToString("0.##")),
+                        Csv(material.QuantityRequired.ToString("0.##", CultureInfo.InvariantCulture)),
                         Csv(material.Unit),
                         Csv(material.SourceType)));
                 }
             }
 
-            File.WriteAllText(dialog.FileName, builder.ToString(), Encoding.UTF8);
+            await File.WriteAllTextAsync(dialog.FileName, builder.ToString(), Encoding.UTF8);
             StatusMessage = $"Exported {_ownedBlueprints.Count} owned blueprints to {Path.GetFileName(dialog.FileName)}.";
         }
         catch (Exception ex)

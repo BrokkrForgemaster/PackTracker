@@ -374,7 +374,7 @@ public class ProfileService : IProfileService
             return Task.FromResult<Profile?>(null);
 
         return _db.Profiles.FirstOrDefaultAsync(
-            p => p.Username.ToUpper() == name.ToUpper(),
+            p => p.Username.ToUpperInvariant() == name.ToUpperInvariant(),
             ct);
     }
 
