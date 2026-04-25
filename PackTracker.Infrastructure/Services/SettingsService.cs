@@ -122,6 +122,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
             settings.JwtKey = SecretStorage.Unprotect(settings.JwtKey);
             settings.DiscordClientId = SecretStorage.Unprotect(settings.DiscordClientId);
             settings.DiscordClientSecret = SecretStorage.Unprotect(settings.DiscordClientSecret);
+            settings.DiscordBotToken = SecretStorage.Unprotect(settings.DiscordBotToken);
             settings.RegolithApiKey = SecretStorage.Unprotect(settings.RegolithApiKey);
             settings.UexCorpApiKey = SecretStorage.Unprotect(settings.UexCorpApiKey);
             settings.GameLogFilePath = SecretStorage.Unprotect(settings.GameLogFilePath);

@@ -13,7 +13,7 @@
 ; ============================================================
 
 #ifndef AppVersion
-  #define AppVersion "0.4.0
+  #define AppVersion "0.4.0"
 #endif
 
 #define AppName        "PackTracker"
