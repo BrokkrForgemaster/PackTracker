@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Api.Authentication;
 using PackTracker.Api.Controllers;
@@ -24,6 +25,7 @@ public static class PackTrackerApiComposition
     {
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddApplication();
+        builder.Services.AddSingleton<IUserIdProvider, DiscordIdUserIdProvider>();
         builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
         builder.Services.AddScoped<IAssistanceRequestNotifier, SignalRAssistanceRequestNotifier>();
         builder.Services.AddScoped<IAuthWorkflowService, AuthWorkflowService>();

@@ -97,8 +97,12 @@ public class RequestsHub : Hub
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? Context.User?.FindFirstValue("sub");
-        var username = Context.User?.Identity?.Name ?? "Unknown";
+        var discordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? Context.User?.FindFirstValue("nameidentifier")
+            ?? Context.User?.FindFirstValue("sub");
+        var username = Context.User?.Identity?.Name
+            ?? Context.User?.FindFirstValue("unique_name")
+            ?? "Unknown";
         var connectionId = Context.ConnectionId;
 
         if (!string.IsNullOrWhiteSpace(discordId))
@@ -585,7 +589,9 @@ public class RequestsHub : Hub
         if (string.IsNullOrWhiteSpace(targetUsername))
             throw new HubException("Target username is required.");
 
-        var currentUsername = Context.User?.Identity?.Name ?? string.Empty;
+        var currentUsername = Context.User?.Identity?.Name
+            ?? Context.User?.FindFirstValue("unique_name")
+            ?? string.Empty;
         var dmChannel = BuildPrivateChannelName(currentUsername, targetUsername.Trim());
 
         var dbMessages = await _db.LobbyChatMessages
@@ -634,8 +640,13 @@ public class RequestsHub : Hub
         if (string.IsNullOrWhiteSpace(content))
             throw new HubException("Message content cannot be empty.");
 
-        var senderDiscordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? Context.User?.FindFirstValue("sub") ?? string.Empty;
-        var senderUsername = Context.User?.Identity?.Name ?? "Unknown";
+        var senderDiscordId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? Context.User?.FindFirstValue("nameidentifier")
+            ?? Context.User?.FindFirstValue("sub")
+            ?? string.Empty;
+        var senderUsername = Context.User?.Identity?.Name
+            ?? Context.User?.FindFirstValue("unique_name")
+            ?? "Unknown";
 
         var senderProfile = await _profiles.GetByDiscordIdAsync(senderDiscordId, CancellationToken.None);
         var targetProfile = await _profiles.GetByNameAsync(targetUsername.Trim(), CancellationToken.None);
