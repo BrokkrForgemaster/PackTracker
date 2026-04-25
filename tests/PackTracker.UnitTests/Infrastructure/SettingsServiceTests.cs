@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Services;
 
 namespace PackTracker.UnitTests.Infrastructure;
@@ -65,40 +64,6 @@ public class SettingsServiceTests
 
             var reloaded = service.GetSettings();
             Assert.NotEqual("MutatedOutside", reloaded.PlayerName);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("APPDATA", originalAppData);
-
-            DeleteSettingsFolder(tempAppData);
-        }
-    }
-
-    [Fact]
-    public async Task SaveSettings_PersistsAcknowledgedClaimCounts()
-    {
-        var originalAppData = Environment.GetEnvironmentVariable("APPDATA");
-        var tempAppData = Path.Combine(Path.GetTempPath(), "PackTrackerTests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempAppData);
-        Environment.SetEnvironmentVariable("APPDATA", tempAppData);
-
-        try
-        {
-            using var service = new SettingsService(NullLogger<SettingsService>.Instance);
-            var requestId = Guid.NewGuid().ToString();
-
-            await service.SaveSettings(new AppSettings
-            {
-                AcknowledgedClaimCounts = new Dictionary<string, int>
-                {
-                    [requestId] = 3
-                }
-            });
-
-            var reloaded = service.GetSettings();
-
-            Assert.True(reloaded.AcknowledgedClaimCounts.TryGetValue(requestId, out var count));
-            Assert.Equal(3, count);
         }
         finally
         {

@@ -52,7 +52,4 @@ public class AppSettings
     public string? DiscordRefreshToken { get; set; }
     public string? JwtToken { get; set; }
     public string? JwtRefreshToken { get; set; }
-
-    // --- Dashboard alert acknowledgements ---
-    public Dictionary<string, int> AcknowledgedClaimCounts { get; set; } = new();
 }

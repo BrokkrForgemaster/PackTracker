@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
+using System.Text.Json;
 
 namespace PackTracker.Infrastructure.Persistence;
 
@@ -259,6 +261,16 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
 
             entity.Property(p => p.DiscordRank)
                 .HasMaxLength(100);
+
+            entity.Property(p => p.AcknowledgedClaimCounts)
+                .HasConversion(
+                    value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                    value => JsonSerializer.Deserialize<Dictionary<string, int>>(value, (JsonSerializerOptions?)null) ?? new Dictionary<string, int>())
+                .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, int>>(
+                    (left, right) => (left ?? new()).OrderBy(static pair => pair.Key)
+                        .SequenceEqual((right ?? new()).OrderBy(static pair => pair.Key)),
+                    value => value.Aggregate(0, (current, pair) => HashCode.Combine(current, pair.Key.GetHashCode(), pair.Value)),
+                    value => value.ToDictionary(static pair => pair.Key, static pair => pair.Value)));
         });
     }
 

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PackTracker.Application.Dashboard.Commands.AcknowledgeClaimAlerts;
 using PackTracker.Application.Dashboard.Queries.GetDashboardSummary;
 using PackTracker.Application.DTOs.Dashboard;
 
@@ -31,5 +32,17 @@ public class DashboardController : ControllerBase
             summary?.ScheduledGuides.Count ?? 0);
 
         return Ok(summary);
+    }
+
+    [HttpPost("claim-alerts/acknowledge")]
+    public async Task<IActionResult> AcknowledgeClaimAlerts(
+        [FromBody] Dictionary<string, int>? acknowledgedClaimCounts,
+        CancellationToken ct)
+    {
+        var result = await _sender.Send(
+            new AcknowledgeClaimAlertsCommand(acknowledgedClaimCounts ?? new Dictionary<string, int>()),
+            ct);
+
+        return result.Success ? Ok() : BadRequest(new { message = result.Message });
     }
 }

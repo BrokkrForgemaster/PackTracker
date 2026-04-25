@@ -7,6 +7,7 @@ public class DashboardSummaryDto
     public List<ActiveRequestDto> ActiveRequests { get; set; } = new();
     public List<GuideRequestDto> ScheduledGuides { get; set; } = new();
     public PersonalContextDto PersonalContext { get; set; } = new();
+    public Dictionary<string, int> AcknowledgedClaimCounts { get; set; } = new();
 }
 
 public class PersonalContextDto

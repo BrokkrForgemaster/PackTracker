@@ -69,6 +69,11 @@ public class Profile
     /// </summary>
     public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Per-request claim counts this user has already acknowledged in the dashboard.
+    /// </summary>
+    public Dictionary<string, int> AcknowledgedClaimCounts { get; set; } = new();
+
     #endregion
 
     #region Audit

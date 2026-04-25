@@ -12,7 +12,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PackTracker.Application.DTOs.Dashboard;
-using PackTracker.Application.Interfaces;
 using PackTracker.Presentation.Commands;
 using PackTracker.Presentation.Services;
 
@@ -21,7 +20,6 @@ namespace PackTracker.Presentation.ViewModels;
 public class DashboardViewModel : ViewModelBase
 {
     private readonly IApiClientProvider _apiClientProvider;
-    private readonly ISettingsService _settingsService;
     private readonly SignalRChatService _signalR;
     private readonly AvatarCacheService _avatarCache;
     private static readonly Regex DirectMentionPattern = new(
@@ -43,18 +41,17 @@ public class DashboardViewModel : ViewModelBase
     private int _totalNewClaimsCount;
     private readonly Dictionary<Guid, int> _newClaimCounts = new();
     private readonly Dictionary<Guid, int> _lastKnownClaimCounts = new();
+    private bool _claimAcknowledgementsLoaded;
     private System.Windows.Threading.DispatcherTimer? _periodicRefreshTimer;
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
-        ISettingsService settingsService,
         SignalRChatService signalR,
         GuideDashboardViewModel guideViewModel,
         AvatarCacheService avatarCache,
         DiscordEventsViewModel discordEvents)
     {
         _apiClientProvider = apiClientProvider;
-        _settingsService = settingsService;
         _signalR = signalR;
         _avatarCache = avatarCache;
         Guide = guideViewModel;
@@ -81,7 +78,6 @@ public class DashboardViewModel : ViewModelBase
         ToggleMuteCommand = new RelayCommand(() => ChatSoundMuted = !ChatSoundMuted);
         DismissAllNewClaimsCommand = new RelayCommand(DismissAllNewClaims);
 
-        LoadAcknowledgedClaimCounts();
         LoadChatChannelsForRole(null);
         OpenDefaultWindows();
 
@@ -342,6 +338,7 @@ public class DashboardViewModel : ViewModelBase
             if (summary != null)
             {
                 var personalContext = summary.PersonalContext ?? new PersonalContextDto();
+                HydrateAcknowledgedClaimCounts(summary.AcknowledgedClaimCounts);
 
                 System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
@@ -522,7 +519,7 @@ public class DashboardViewModel : ViewModelBase
         foreach (var item in AllRequestItems().Where(x => x.Id == dismissed.Id && x != dismissed))
             item.ClearNewClaims();
 
-        PersistAcknowledgedClaimCounts();
+        _ = PersistAcknowledgedClaimCountsAsync();
         RecalcNewClaimsTotal();
     }
 
@@ -534,7 +531,7 @@ public class DashboardViewModel : ViewModelBase
             _lastKnownClaimCounts[item.Id] = item.ClaimCount;
             item.ClearNewClaims();
         }
-        PersistAcknowledgedClaimCounts();
+        _ = PersistAcknowledgedClaimCountsAsync();
         RecalcNewClaimsTotal();
     }
 
@@ -546,25 +543,38 @@ public class DashboardViewModel : ViewModelBase
     private IEnumerable<ActiveRequestItemViewModel> AllRequestItems()
         => ActiveRequests.Concat(MyActiveTasks).Concat(MyOpenRequests);
 
-    private void LoadAcknowledgedClaimCounts()
+    private void HydrateAcknowledgedClaimCounts(IReadOnlyDictionary<string, int>? acknowledgedClaimCounts)
     {
-        foreach (var (key, value) in _settingsService.GetSettings().AcknowledgedClaimCounts)
+        if (_claimAcknowledgementsLoaded || acknowledgedClaimCounts is null)
+            return;
+
+        foreach (var (key, value) in acknowledgedClaimCounts)
         {
             if (Guid.TryParse(key, out var requestId) && value >= 0)
                 _lastKnownClaimCounts[requestId] = value;
         }
+
+        _claimAcknowledgementsLoaded = true;
     }
 
-    private void PersistAcknowledgedClaimCounts()
+    private async Task PersistAcknowledgedClaimCountsAsync()
     {
         var snapshot = _lastKnownClaimCounts.ToDictionary(
             static pair => pair.Key.ToString(),
             static pair => pair.Value);
 
-        _ = _settingsService.UpdateSettingsAsync(settings =>
+        try
         {
-            settings.AcknowledgedClaimCounts = snapshot;
-        });
+            using var client = _apiClientProvider.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/dashboard/claim-alerts/acknowledge",
+                snapshot);
+            response.EnsureSuccessStatusCode();
+        }
+        catch
+        {
+            // Non-fatal — local badge state still works for the current session.
+        }
     }
 
     private void LoadChatChannelsForRole(string? division)

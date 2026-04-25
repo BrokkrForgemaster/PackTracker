@@ -27,12 +27,18 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
 
     public async Task<DashboardSummaryDto?> Handle(GetDashboardSummaryQuery request, CancellationToken cancellationToken)
     {
-        var currentProfileId = await _dbContext.Profiles
+        var currentProfile = await _dbContext.Profiles
             .AsNoTracking()
             .Where(x => x.DiscordId == _currentUser.UserId)
-            .Select(x => (Guid?)x.Id)
+            .Select(x => new
+            {
+                Id = (Guid?)x.Id,
+                x.AcknowledgedClaimCounts
+            })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        var currentProfileId = currentProfile?.Id;
 
         var assistance = await _dbContext.AssistanceRequests
             .AsNoTracking()
@@ -133,6 +139,9 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
         {
             ActiveRequests = OrderDashboardRequests(allActiveRequests),
             ScheduledGuides = guides,
+            AcknowledgedClaimCounts = currentProfile?.AcknowledgedClaimCounts
+                ?.ToDictionary(static pair => pair.Key, static pair => pair.Value)
+                ?? new Dictionary<string, int>(),
             PersonalContext = new PersonalContextDto
             {
                 MyActiveTasks = OrderPersonalTasks(allActiveRequests
