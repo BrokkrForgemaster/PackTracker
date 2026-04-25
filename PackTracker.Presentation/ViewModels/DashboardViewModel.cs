@@ -38,17 +38,23 @@ public class DashboardViewModel : ViewModelBase
     private string? _currentUsername;
     private ChatWindowViewModel? _activeChatWindow;
     private string? _requestLoadError;
+    private int _totalNewClaimsCount;
+    private readonly Dictionary<Guid, int> _newClaimCounts = new();
+    // Tracks the claim count at last acknowledgement so refresh can detect new claims
+    private readonly Dictionary<Guid, int> _lastKnownClaimCounts = new();
 
     public DashboardViewModel(
         IApiClientProvider apiClientProvider,
         SignalRChatService signalR,
         GuideDashboardViewModel guideViewModel,
-        AvatarCacheService avatarCache)
+        AvatarCacheService avatarCache,
+        DiscordEventsViewModel discordEvents)
     {
         _apiClientProvider = apiClientProvider;
         _signalR = signalR;
         _avatarCache = avatarCache;
         Guide = guideViewModel;
+        DiscordEvents = discordEvents;
 
         AvailableChatChannels = new ObservableCollection<AvailableChannelViewModel>();
         OpenChatWindows = new ObservableCollection<ChatWindowViewModel>();
@@ -56,11 +62,11 @@ public class DashboardViewModel : ViewModelBase
         MinimizedChatWindows = new ObservableCollection<ChatWindowViewModel>();
         CollapsedWindowsWithUnread = new ObservableCollection<ChatWindowViewModel>();
         AllMembers = new ObservableCollection<OnlineUserViewModel>();
-        ActiveRequests = new ObservableCollection<ActiveRequestDto>();
-        PinnedRequests = new ObservableCollection<ActiveRequestDto>();
-        RegularRequests = new ObservableCollection<ActiveRequestDto>();
-        MyActiveTasks = new ObservableCollection<ActiveRequestDto>();
-        MyOpenRequests = new ObservableCollection<ActiveRequestDto>();
+        ActiveRequests = new ObservableCollection<ActiveRequestItemViewModel>();
+        PinnedRequests = new ObservableCollection<ActiveRequestItemViewModel>();
+        RegularRequests = new ObservableCollection<ActiveRequestItemViewModel>();
+        MyActiveTasks = new ObservableCollection<ActiveRequestItemViewModel>();
+        MyOpenRequests = new ObservableCollection<ActiveRequestItemViewModel>();
 
         OpenChatWindowCommand = new RelayCommand<AvailableChannelViewModel>(SelectChannel);
         SelectChannelCommand = new RelayCommand<AvailableChannelViewModel>(SelectChannel);
@@ -69,6 +75,7 @@ public class DashboardViewModel : ViewModelBase
         CollapseAllChatWindowsCommand = new RelayCommand(CollapseAllWindows);
         ExpandAllChatWindowsCommand = new RelayCommand(ExpandAllWindows);
         ToggleMuteCommand = new RelayCommand(() => ChatSoundMuted = !ChatSoundMuted);
+        DismissAllNewClaimsCommand = new RelayCommand(DismissAllNewClaims);
 
         LoadChatChannelsForRole(null);
         OpenDefaultWindows();
@@ -101,6 +108,7 @@ public class DashboardViewModel : ViewModelBase
 
             await RefreshDataAsync();
             _ = LoadAllMembersAsync();
+            _ = DiscordEvents.InitializeAsync();
 
             _signalR.AssistanceRequestCreated += id => _ = RefreshDataAsync();
             _signalR.AssistanceRequestUpdated += id => _ = RefreshDataAsync();
@@ -108,6 +116,7 @@ public class DashboardViewModel : ViewModelBase
             _signalR.CraftingRequestUpdated += id => _ = RefreshDataAsync();
             _signalR.ProcurementRequestCreated += id => _ = RefreshDataAsync();
             _signalR.ProcurementRequestUpdated += id => _ = RefreshDataAsync();
+            _signalR.RequestClaimed += OnClaimConfirmed;
 
             _signalR.ConnectionStateChanged += state =>
             {
@@ -236,19 +245,15 @@ public class DashboardViewModel : ViewModelBase
                 users.Select(u => u.Username ?? string.Empty),
                 StringComparer.OrdinalIgnoreCase);
 
-            // Download avatars only for online users
-            var avatarMap = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            // Refresh avatars for online users via the cache service
+            var avatarMap = new Dictionary<string, BitmapImage>(StringComparer.OrdinalIgnoreCase);
             foreach (var u in users)
             {
-                if (!string.IsNullOrWhiteSpace(u.AvatarUrl) && Uri.TryCreate(u.AvatarUrl, UriKind.Absolute, out _))
+                if (!string.IsNullOrWhiteSpace(u.AvatarUrl))
                 {
-                    try
-                    {
-                        using var http = new System.Net.Http.HttpClient();
-                        http.Timeout = TimeSpan.FromSeconds(10);
-                        avatarMap[u.Username] = await http.GetByteArrayAsync(u.AvatarUrl);
-                    }
-                    catch { }
+                    var bmp = await _avatarCache.GetAvatarAsync(u.AvatarUrl);
+                    if (bmp != null)
+                        avatarMap[u.Username ?? string.Empty] = bmp;
                 }
             }
 
@@ -258,24 +263,9 @@ public class DashboardViewModel : ViewModelBase
                 {
                     vm.IsOnline = onlineSet.Contains(vm.Username ?? string.Empty);
 
-                    if (vm.IsOnline && avatarMap.TryGetValue(vm.Username ?? string.Empty, out var bytes))
-                    {
-                        try
-                        {
-                            var bmp = new BitmapImage();
-                            bmp.BeginInit();
-                            bmp.StreamSource = new System.IO.MemoryStream(bytes);
-                            bmp.CacheOption = BitmapCacheOption.OnLoad;
-                            bmp.EndInit();
-                            bmp.Freeze();
-                            vm.AvatarImage = bmp;
-                        }
-                        catch { }
-                    }
-                    else if (!vm.IsOnline)
-                    {
-                        vm.AvatarImage = null;
-                    }
+                    // Apply fresher avatar for online users; offline users keep their cached image.
+                    if (vm.IsOnline && avatarMap.TryGetValue(vm.Username ?? string.Empty, out var bmp))
+                        vm.AvatarImage = bmp;
                 }
             });
         });
@@ -347,23 +337,58 @@ public class DashboardViewModel : ViewModelBase
 
                     foreach (var req in summary.ActiveRequests)
                     {
-                        ActiveRequests.Add(req);
+                        var item = new ActiveRequestItemViewModel(req, DismissItem);
+
+                        if (req.IsRequestedByCurrentUser)
+                        {
+                            if (_lastKnownClaimCounts.TryGetValue(req.Id, out var lastKnown))
+                            {
+                                var delta = req.ClaimCount - lastKnown;
+                                if (delta > 0)
+                                {
+                                    _newClaimCounts.TryGetValue(req.Id, out var existing);
+                                    _newClaimCounts[req.Id] = Math.Max(existing, delta);
+                                    _lastKnownClaimCounts[req.Id] = req.ClaimCount;
+                                }
+                            }
+                            else
+                            {
+                                // First time seeing this request — initialise without badge
+                                _lastKnownClaimCounts[req.Id] = req.ClaimCount;
+                            }
+                        }
+
+                        if (_newClaimCounts.TryGetValue(req.Id, out var count) && count > 0)
+                            item.SetNewClaimCount(count);
+
+                        ActiveRequests.Add(item);
                         if (req.IsPinned)
-                            PinnedRequests.Add(req);
+                            PinnedRequests.Add(item);
                         else
-                            RegularRequests.Add(req);
+                            RegularRequests.Add(item);
                     }
 
                     MyActiveTasks.Clear();
                     foreach (var req in personalContext.MyActiveTasks)
-                        MyActiveTasks.Add(req);
+                    {
+                        var item = new ActiveRequestItemViewModel(req, DismissItem);
+                        if (_newClaimCounts.TryGetValue(req.Id, out var count) && count > 0)
+                            item.SetNewClaimCount(count);
+                        MyActiveTasks.Add(item);
+                    }
 
                     MyOpenRequests.Clear();
                     foreach (var req in personalContext.MyPendingRequests)
-                        MyOpenRequests.Add(req);
-                    
+                    {
+                        var item = new ActiveRequestItemViewModel(req, DismissItem);
+                        if (_newClaimCounts.TryGetValue(req.Id, out var count) && count > 0)
+                            item.SetNewClaimCount(count);
+                        MyOpenRequests.Add(item);
+                    }
+
                     OnPropertyChanged(nameof(PinnedRequests));
                     OnPropertyChanged(nameof(RegularRequests));
+                    RecalcNewClaimsTotal();
                 }));
 
                 await Guide.RefreshAsync();
@@ -413,11 +438,11 @@ public class DashboardViewModel : ViewModelBase
     public ObservableCollection<ChatWindowViewModel> OpenChatWindows { get; }
     public ObservableCollection<ChatWindowViewModel> CollapsedWindowsWithUnread { get; }
     public ObservableCollection<OnlineUserViewModel> AllMembers { get; }
-    public ObservableCollection<ActiveRequestDto> ActiveRequests { get; }
-    public ObservableCollection<ActiveRequestDto> PinnedRequests { get; }
-    public ObservableCollection<ActiveRequestDto> RegularRequests { get; }
-    public ObservableCollection<ActiveRequestDto> MyActiveTasks { get; }
-    public ObservableCollection<ActiveRequestDto> MyOpenRequests { get; }
+    public ObservableCollection<ActiveRequestItemViewModel> ActiveRequests { get; }
+    public ObservableCollection<ActiveRequestItemViewModel> PinnedRequests { get; }
+    public ObservableCollection<ActiveRequestItemViewModel> RegularRequests { get; }
+    public ObservableCollection<ActiveRequestItemViewModel> MyActiveTasks { get; }
+    public ObservableCollection<ActiveRequestItemViewModel> MyOpenRequests { get; }
 
     public string? RequestLoadError
     {
@@ -425,7 +450,22 @@ public class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _requestLoadError, value);
     }
 
+    public int TotalNewClaimsCount
+    {
+        get => _totalNewClaimsCount;
+        private set
+        {
+            if (SetProperty(ref _totalNewClaimsCount, value))
+                OnPropertyChanged(nameof(HasAnyNewClaims));
+        }
+    }
+
+    public bool HasAnyNewClaims => _totalNewClaimsCount > 0;
+
+    public ICommand DismissAllNewClaimsCommand { get; }
+
     public GuideDashboardViewModel Guide { get; }
+    public DiscordEventsViewModel DiscordEvents { get; }
     public IEnumerable<PackTracker.Domain.Entities.GuideRequest> TopGuideRequests => Guide.Requests.Take(2);
 
     public ChatWindowViewModel? ActiveChatWindow
@@ -441,6 +481,51 @@ public class DashboardViewModel : ViewModelBase
     public ICommand CollapseAllChatWindowsCommand { get; }
     public ICommand ExpandAllChatWindowsCommand { get; }
     public ICommand ToggleMuteCommand { get; }
+
+    private void OnClaimConfirmed(ClaimNotificationDto dto)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            _newClaimCounts.TryGetValue(dto.RequestId, out var current);
+            _newClaimCounts[dto.RequestId] = current + 1;
+
+            foreach (var item in AllRequestItems().Where(x => x.Id == dto.RequestId))
+                item.IncrementNewClaim();
+
+            RecalcNewClaimsTotal();
+        });
+    }
+
+    private void DismissItem(ActiveRequestItemViewModel dismissed)
+    {
+        _newClaimCounts.Remove(dismissed.Id);
+        // Acknowledge the current claim count so the next refresh won't re-badge
+        _lastKnownClaimCounts[dismissed.Id] = dismissed.ClaimCount;
+
+        foreach (var item in AllRequestItems().Where(x => x.Id == dismissed.Id && x != dismissed))
+            item.ClearNewClaims();
+
+        RecalcNewClaimsTotal();
+    }
+
+    private void DismissAllNewClaims()
+    {
+        _newClaimCounts.Clear();
+        foreach (var item in AllRequestItems())
+        {
+            _lastKnownClaimCounts[item.Id] = item.ClaimCount;
+            item.ClearNewClaims();
+        }
+        RecalcNewClaimsTotal();
+    }
+
+    private void RecalcNewClaimsTotal()
+    {
+        TotalNewClaimsCount = _newClaimCounts.Values.Sum();
+    }
+
+    private IEnumerable<ActiveRequestItemViewModel> AllRequestItems()
+        => ActiveRequests.Concat(MyActiveTasks).Concat(MyOpenRequests);
 
     private void LoadChatChannelsForRole(string? division)
     {
@@ -711,7 +796,8 @@ public class DashboardViewModel : ViewModelBase
         try
         {
             using var client = _apiClientProvider.CreateClient();
-            var profiles = await client.GetFromJsonAsync<List<MemberSummaryDto>>("api/v1/profiles") ?? new();
+            var profiles = await client.GetFromJsonAsync<List<MemberSummaryDto>>(
+                "api/v1/profiles", DashboardJsonOptions) ?? new();
 
             var vms = profiles
                 .Select(p => new OnlineUserViewModel
@@ -732,8 +818,40 @@ public class DashboardViewModel : ViewModelBase
                 foreach (var vm in vms)
                     AllMembers.Add(vm);
             });
+
+            // Download Discord avatars for all members (solves race with OnPresenceUpdated)
+            var urlMap = profiles
+                .Where(p => !string.IsNullOrWhiteSpace(p.DiscordAvatarUrl))
+                .ToDictionary(p => p.Username, p => p.DiscordAvatarUrl!, StringComparer.OrdinalIgnoreCase);
+
+            if (urlMap.Count > 0)
+                await DownloadAndApplyAvatarsAsync(urlMap);
         }
         catch { }
+    }
+
+    private async Task DownloadAndApplyAvatarsAsync(Dictionary<string, string> urlMap)
+    {
+        var bitmapMap = new Dictionary<string, BitmapImage>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (username, url) in urlMap)
+        {
+            var bmp = await _avatarCache.GetAvatarAsync(url);
+            if (bmp != null)
+                bitmapMap[username] = bmp;
+        }
+
+        if (bitmapMap.Count == 0)
+            return;
+
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            foreach (var vm in AllMembers)
+            {
+                if (bitmapMap.TryGetValue(vm.Username ?? string.Empty, out var bmp))
+                    vm.AvatarImage = bmp;
+            }
+        });
     }
 
     private ChatWindowViewModel EnsureDirectMessageWindow(string username, string? displayName)
@@ -874,5 +992,6 @@ public class DashboardViewModel : ViewModelBase
     private record MemberSummaryDto(
         string Username,
         string? DiscordDisplayName,
-        string? DiscordRank);
+        string? DiscordRank,
+        string? DiscordAvatarUrl);
 }

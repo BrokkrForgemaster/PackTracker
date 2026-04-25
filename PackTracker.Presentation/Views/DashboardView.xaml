@@ -315,7 +315,7 @@
             </Setter>
         </Style>
 
-        <DataTemplate x:Key="ActiveRequestCardTemplate" DataType="{x:Type dto:ActiveRequestDto}">
+        <DataTemplate x:Key="ActiveRequestCardTemplate" DataType="{x:Type vm:ActiveRequestItemViewModel}">
             <Border Style="{StaticResource OpItemBorderStyle}"
                     Padding="10,9"
                     Margin="0,0,0,6"
@@ -333,6 +333,54 @@
                                    FontSize="9"
                                    FontWeight="Bold" />
                     </Border>
+                    <!-- Clickable "N NEW" badge — visible only when there are unseen claim notifications -->
+                    <Button DockPanel.Dock="Right"
+                            Command="{Binding DismissCommand}"
+                            ToolTip="New activity on this request — click to dismiss"
+                            VerticalAlignment="Center"
+                            Margin="4,0,0,0">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Bd"
+                                                    Background="#8B1A1A"
+                                                    BorderBrush="#C23A3A"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="6,2"
+                                                    Cursor="Hand">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#A02020" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasNewClaims}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding NewClaimCount}"
+                                       Foreground="White"
+                                       FontSize="9"
+                                       FontWeight="Bold" />
+                            <TextBlock Text=" NEW"
+                                       Foreground="White"
+                                       FontSize="9"
+                                       FontWeight="Bold" />
+                        </StackPanel>
+                    </Button>
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="PINNED"
@@ -411,6 +459,90 @@
                 </DockPanel>
             </Border>
         </DataTemplate>
+
+        <DataTemplate x:Key="DiscordEventCardTemplate" DataType="{x:Type vm:DiscordEventViewModel}">
+            <Border Margin="0,0,0,6"
+                    Background="#0E0A07"
+                    CornerRadius="5"
+                    ClipToBounds="True">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Animated accent strip -->
+                    <Border Grid.Column="0"
+                            Background="{Binding AccentBrush}"
+                            CornerRadius="5,0,0,5" />
+
+                    <!-- Card content -->
+                    <StackPanel Grid.Column="1" Margin="8,7,8,7">
+
+                        <!-- LIVE badge -->
+                        <Border Background="#0D2E1A"
+                                BorderBrush="#43B581"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="5,1"
+                                HorizontalAlignment="Left"
+                                Margin="0,0,0,4"
+                                Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="● LIVE"
+                                       Foreground="#43B581"
+                                       FontSize="8"
+                                       FontWeight="Bold" />
+                        </Border>
+
+                        <!-- Event name -->
+                        <TextBlock Text="{Binding Name}"
+                                   Foreground="#E8E0D5"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap" />
+
+                        <!-- Location -->
+                        <DockPanel Margin="0,2,0,0"
+                                   Visibility="{Binding HasLocation, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="⎋ "
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="8"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Location}"
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="9"
+                                       TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+
+                        <!-- Countdown row -->
+                        <DockPanel Margin="0,5,0,0">
+                            <!-- Interested count (right) -->
+                            <StackPanel DockPanel.Dock="Right"
+                                        Orientation="Horizontal"
+                                        Visibility="{Binding HasInterested, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="⬩ "
+                                           Foreground="#3A4A5A"
+                                           FontSize="8"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding InterestedText}"
+                                           Foreground="#3A4A5A"
+                                           FontSize="9"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                            <!-- Countdown (left) -->
+                            <TextBlock Text="{Binding CountdownText}"
+                                       Foreground="{Binding CountdownBrush}"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -612,7 +744,7 @@
                                 </DockPanel>
                             </Expander.Header>
                             <StackPanel Margin="12,10,12,12">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer VerticalScrollBarVisibility="Hidden"
                                               HorizontalScrollBarVisibility="Disabled"
                                               MaxHeight="160">
                                     <ItemsControl ItemsSource="{Binding MyActiveTasks}"
@@ -660,10 +792,33 @@
                                                    FontSize="9"
                                                    FontWeight="Bold" />
                                     </Border>
+                                    <Border DockPanel.Dock="Right"
+                                            Background="#8B1A1A"
+                                            BorderBrush="#C23A3A"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="8,2"
+                                            Margin="0,0,6,0"
+                                            VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasAnyNewClaims}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="NEW"
+                                                   Foreground="White"
+                                                   FontSize="9"
+                                                   FontWeight="Bold" />
+                                    </Border>
                                 </DockPanel>
                             </Expander.Header>
                             <StackPanel Margin="12,10,12,12">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer VerticalScrollBarVisibility="Hidden"
                                               HorizontalScrollBarVisibility="Disabled"
                                               MaxHeight="160">
                                     <ItemsControl ItemsSource="{Binding MyOpenRequests}"
@@ -691,7 +846,7 @@
 
                     <!-- ACTIVE REQUESTS -->
                     <Border Style="{StaticResource OpPanelBorderStyle}">
-                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="False">
                             <Expander.Header>
                                 <DockPanel LastChildFill="False" HorizontalAlignment="Stretch">
                                     <TextBlock Text="ACTIVE REQUESTS"
@@ -711,10 +866,78 @@
                                                    FontSize="9"
                                                    FontWeight="Bold" />
                                     </Border>
+                                    <!-- "NEW" indicator badge — shown when unseen claim notifications exist -->
+                                    <Border DockPanel.Dock="Right"
+                                            Background="#8B1A1A"
+                                            BorderBrush="#C23A3A"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="8,2"
+                                            Margin="0,0,6,0"
+                                            VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasAnyNewClaims}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="NEW"
+                                                   Foreground="White"
+                                                   FontSize="9"
+                                                   FontWeight="Bold" />
+                                    </Border>
                                 </DockPanel>
                             </Expander.Header>
                             <StackPanel Margin="12,10,12,12">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                <!-- Dismiss-all bar — visible when there are unseen claim notifications -->
+                                <Border Background="#1A0D0D"
+                                        BorderBrush="#5C1A1A"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="8,5"
+                                        Margin="0,0,0,8">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasAnyNewClaims}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right"
+                                                Command="{Binding DismissAllNewClaimsCommand}"
+                                                Cursor="Hand"
+                                                Padding="0"
+                                                VerticalAlignment="Center">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <TextBlock x:Name="Lbl"
+                                                               Text="DISMISS ALL"
+                                                               Foreground="#FF8888"
+                                                               FontSize="9"
+                                                               FontWeight="Bold" />
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Lbl" Property="Foreground" Value="White" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                        <TextBlock Text="New activity on your requests"
+                                                   Foreground="#C06060"
+                                                   FontSize="9"
+                                                   VerticalAlignment="Center" />
+                                    </DockPanel>
+                                </Border>
+                                <ScrollViewer VerticalScrollBarVisibility="Hidden"
                                               HorizontalScrollBarVisibility="Disabled"
                                               MaxHeight="400">
                                     <StackPanel>
@@ -1219,8 +1442,15 @@
             <Border Grid.Column="4"
                     Style="{StaticResource OpPanelBorderStyle}"
                     Padding="12">
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Members header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,8">
                         <TextBlock Text="MEMBERS"
                                    Foreground="{StaticResource OpTextTitleBrush}"
                                    FontSize="12"
@@ -1232,7 +1462,8 @@
                                    Background="{StaticResource OpBorderPanelBrush}" />
                     </StackPanel>
 
-                    <ScrollViewer DockPanel.Dock="Top"
+                    <!-- Members list -->
+                    <ScrollViewer Grid.Row="1"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl ItemsSource="{Binding AllMembers}">
@@ -1348,7 +1579,109 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
-                </DockPanel>
+
+                    <!-- UPCOMING EVENTS PANEL -->
+                    <Border Grid.Row="2" Margin="0,10,0,0">
+                        <StackPanel>
+                            <Separator Background="{StaticResource OpBorderPanelBrush}"
+                                       Margin="0,0,0,8" />
+
+                            <!-- Section header -->
+                            <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="UPCOMING EVENTS"
+                                           Foreground="{StaticResource OpTextTitleBrush}"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           VerticalAlignment="Center" />
+                                <!-- Event count badge -->
+                                <Border DockPanel.Dock="Right"
+                                        Background="{StaticResource OpBackgroundPillBrush}"
+                                        BorderBrush="{StaticResource OpBorderPillBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="6,1"
+                                        VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DiscordEvents.HasEvents}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding DiscordEvents.Events.Count}"
+                                               Foreground="{StaticResource OpTextAccentBrush}"
+                                               FontSize="9"
+                                               FontWeight="Bold" />
+                                </Border>
+                            </DockPanel>
+
+                            <!-- Events list -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          MaxHeight="230">
+                                <ScrollViewer.Style>
+                                    <Style TargetType="ScrollViewer">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding DiscordEvents.HasEvents}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ScrollViewer.Style>
+                                <ItemsControl ItemsSource="{Binding DiscordEvents.Events}"
+                                              ItemTemplate="{StaticResource DiscordEventCardTemplate}" />
+                            </ScrollViewer>
+
+                            <!-- Loading state -->
+                            <TextBlock Text="Fetching events..."
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="9"
+                                       FontStyle="Italic"
+                                       Margin="0,2">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding DiscordEvents.IsLoading}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <!-- Empty state (not loading, no events, no error) -->
+                            <TextBlock Text="No upcoming events"
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="9"
+                                       FontStyle="Italic"
+                                       Margin="0,2">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding DiscordEvents.HasEvents}" Value="False" />
+                                                    <Condition Binding="{Binding DiscordEvents.IsLoading}" Value="False" />
+                                                    <Condition Binding="{Binding DiscordEvents.HasError}" Value="False" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                        </StackPanel>
+                    </Border>
+
+                </Grid>
             </Border>
         </Grid>
     </Grid>

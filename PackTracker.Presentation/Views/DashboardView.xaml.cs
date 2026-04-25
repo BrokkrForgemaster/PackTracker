@@ -1,8 +1,9 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using PackTracker.Application.DTOs.Dashboard;
+using System.Windows.Media;
 using PackTracker.Presentation.ViewModels;
 
 namespace PackTracker.Presentation.Views;
@@ -35,11 +36,27 @@ public partial class DashboardView : UserControl
 
     private async void ActiveRequest_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not FrameworkElement fe || fe.DataContext is not ActiveRequestDto request)
+        // Dismiss buttons inside cards must not trigger navigation
+        if (e.OriginalSource is DependencyObject src && IsInsideButtonBase(src))
+            return;
+
+        if (sender is not FrameworkElement fe || fe.DataContext is not ActiveRequestItemViewModel itemVm)
             return;
 
         if (Window.GetWindow(this) is MainWindow mw)
-            await mw.NavigateToActiveRequestAsync(request);
+            await mw.NavigateToActiveRequestAsync(itemVm.Dto);
+    }
+
+    private static bool IsInsideButtonBase(DependencyObject element)
+    {
+        var current = element;
+        while (current != null)
+        {
+            if (current is ButtonBase)
+                return true;
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return false;
     }
 
     private void ChatInput_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)

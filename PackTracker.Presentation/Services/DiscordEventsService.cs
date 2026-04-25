@@ -1,0 +1,109 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+
+namespace PackTracker.Presentation.Services;
+
+public sealed class DiscordEventsService
+{
+    private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
+
+    private readonly HttpClient _httpClient;
+    private readonly string? _guildId;
+    private readonly string? _botToken;
+
+    public DiscordEventsService(HttpClient httpClient, IConfiguration configuration)
+    {
+        _httpClient = httpClient;
+        _guildId = configuration["Authentication:Discord:RequiredGuildId"];
+        _botToken = configuration["Authentication:Discord:BotToken"];
+    }
+
+    public async Task<IReadOnlyList<DiscordEventItem>> GetUpcomingEventsAsync(CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_guildId) || string.IsNullOrWhiteSpace(_botToken))
+            return [];
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://discord.com/api/v10/guilds/{_guildId}/scheduled-events?with_user_count=true");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", _botToken);
+
+        using var response = await _httpClient.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+            return [];
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        var raw = JsonSerializer.Deserialize<List<DiscordScheduledEventDto>>(json, JsonOpts)
+                  ?? new List<DiscordScheduledEventDto>();
+
+        var result = new List<DiscordEventItem>();
+        foreach (var e in raw)
+        {
+            if (e.Status != 1 && e.Status != 2)
+                continue;
+
+            var startsAt = ParseUtc(e.ScheduledStartTime);
+            // Skip events that ended more than 5 minutes ago (still SCHEDULED in Discord's eyes sometimes)
+            if (e.Status == 1 && startsAt < DateTime.UtcNow.AddMinutes(-5))
+                continue;
+
+            result.Add(new DiscordEventItem(
+                e.Id ?? string.Empty,
+                e.Name ?? "(Unnamed Event)",
+                e.Description,
+                startsAt,
+                e.ScheduledEndTime is null ? null : ParseUtc(e.ScheduledEndTime),
+                e.Status,
+                e.EntityMetadata?.Location,
+                e.UserCount));
+        }
+
+        result.Sort((a, b) => a.StartsAt.CompareTo(b.StartsAt));
+        return result;
+    }
+
+    private static DateTime ParseUtc(string? iso)
+        => DateTime.TryParse(iso, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt)
+            ? dt.ToUniversalTime()
+            : DateTime.UtcNow;
+}
+
+public record DiscordEventItem(
+    string Id,
+    string Name,
+    string? Description,
+    DateTime StartsAt,
+    DateTime? EndsAt,
+    int Status,
+    string? Location,
+    int? InterestedCount);
+
+internal sealed class DiscordScheduledEventDto
+{
+    public string? Id { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    [JsonPropertyName("scheduled_start_time")]
+    public string? ScheduledStartTime { get; set; }
+    [JsonPropertyName("scheduled_end_time")]
+    public string? ScheduledEndTime { get; set; }
+    public int Status { get; set; }
+    [JsonPropertyName("entity_type")]
+    public int EntityType { get; set; }
+    [JsonPropertyName("entity_metadata")]
+    public DiscordEventMetadataDto? EntityMetadata { get; set; }
+    [JsonPropertyName("user_count")]
+    public int? UserCount { get; set; }
+}
+
+internal sealed class DiscordEventMetadataDto
+{
+    public string? Location { get; set; }
+}
