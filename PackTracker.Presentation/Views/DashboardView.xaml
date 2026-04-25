@@ -1622,6 +1622,24 @@
                                 </TextBlock.Style>
                             </TextBlock>
 
+                            <!-- Error state -->
+                            <TextBlock Text="{Binding DiscordEvents.ErrorMessage}"
+                                       Foreground="#CC4444"
+                                       FontSize="9"
+                                       TextWrapping="Wrap"
+                                       Margin="0,2">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding DiscordEvents.HasError}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
                             <!-- Empty state (not loading, no events, no error) -->
                             <TextBlock Text="No upcoming events"
                                        Foreground="{StaticResource OpTextMutedBrush}"

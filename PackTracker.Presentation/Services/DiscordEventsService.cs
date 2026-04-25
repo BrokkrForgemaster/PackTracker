@@ -37,7 +37,7 @@ public sealed class DiscordEventsService
 
         using var response = await _httpClient.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
-            return [];
+            throw new HttpRequestException($"Discord API returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync(ct)}");
 
         var json = await response.Content.ReadAsStringAsync(ct);
         var raw = JsonSerializer.Deserialize<List<DiscordScheduledEventDto>>(json, JsonOpts)

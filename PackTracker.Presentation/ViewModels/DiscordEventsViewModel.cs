@@ -13,6 +13,7 @@ public sealed class DiscordEventsViewModel : ViewModelBase
     private readonly DispatcherTimer _refreshTimer;
     private bool _isLoading;
     private bool _hasError;
+    private string? _errorMessage;
 
     public DiscordEventsViewModel(DiscordEventsService service)
     {
@@ -52,6 +53,12 @@ public sealed class DiscordEventsViewModel : ViewModelBase
         private set => SetProperty(ref _hasError, value);
     }
 
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        private set => SetProperty(ref _errorMessage, value);
+    }
+
     public async Task InitializeAsync()
     {
         await RefreshAsync();
@@ -63,6 +70,7 @@ public sealed class DiscordEventsViewModel : ViewModelBase
     {
         IsLoading = true;
         HasError = false;
+        ErrorMessage = null;
         try
         {
             var items = await _service.GetUpcomingEventsAsync();
@@ -79,9 +87,10 @@ public sealed class DiscordEventsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasEvents));
             });
         }
-        catch
+        catch (Exception ex)
         {
             HasError = true;
+            ErrorMessage = ex.Message;
         }
         finally
         {
