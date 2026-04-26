@@ -448,6 +448,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
                 MaterialId = material.MaterialId,
                 LinkedCraftingRequestId = SelectedRequest.Id,
                 QuantityRequested = (decimal)material.QuantityRequired,
+                MaxClaims = SelectedRequest.MaxClaims,
                 Priority = RequestPriority.Normal,
                 Notes = $"Auto-spawned for: {SelectedRequest.CraftedItemName}"
             };

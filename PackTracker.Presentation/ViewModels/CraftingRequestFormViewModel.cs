@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PackTracker.Domain.Enums;
@@ -22,6 +23,7 @@ public partial class CraftingRequestFormViewModel : ObservableObject
     [ObservableProperty] private string? rewardOffered;
     [ObservableProperty] private string? deliveryLocation;
     [ObservableProperty] private string? notes;
+    [ObservableProperty] private string? maxClaimsText;
 
     public RequestPriority Priority => SelectedPriority.Value;
     public MaterialSupplyMode MaterialSupplyMode => SelectedMaterialSupplyMode.Value;
@@ -37,7 +39,17 @@ public partial class CraftingRequestFormViewModel : ObservableObject
         !string.IsNullOrWhiteSpace(RewardOffered) &&
         !string.IsNullOrWhiteSpace(DeliveryLocation) &&
         QuantityRequested >= 1 &&
-        MinimumQuality >= 1;
+        MinimumQuality >= 1 &&
+        HasValidMaxClaims;
+
+    public int? MaxClaims =>
+        int.TryParse(MaxClaimsText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value >= 1
+            ? value
+            : null;
+
+    private bool HasValidMaxClaims =>
+        string.IsNullOrWhiteSpace(MaxClaimsText)
+        || (int.TryParse(MaxClaimsText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value >= 1);
 
     public List<EnumOption<RequestPriority>> PriorityOptions { get; } =
     [
@@ -71,6 +83,7 @@ public partial class CraftingRequestFormViewModel : ObservableObject
     partial void OnDeliveryLocationChanged(string? value) => OnPropertyChanged(nameof(CanSubmit));
     partial void OnQuantityRequestedChanged(int value) => OnPropertyChanged(nameof(CanSubmit));
     partial void OnMinimumQualityChanged(int value) => OnPropertyChanged(nameof(CanSubmit));
+    partial void OnMaxClaimsTextChanged(string? value) => OnPropertyChanged(nameof(CanSubmit));
 
     [RelayCommand]
     private void Submit()

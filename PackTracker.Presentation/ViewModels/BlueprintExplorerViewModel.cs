@@ -155,6 +155,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private OwnedBlueprintCardViewModel? selectedOwnedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
     [ObservableProperty] private bool isSelectedBlueprintOwned;
+    [ObservableProperty] private string? procurementMaxClaimsText;
 
     [ObservableProperty] private int baseRpm = 650;
     [ObservableProperty] private int finalRpm;
@@ -582,6 +583,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 CraftedItemName = SelectedBlueprintDetail.CraftedItemName,
                 QuantityRequested = formVm.QuantityRequested,
                 MinimumQuality = formVm.MinimumQuality,
+                MaxClaims = formVm.MaxClaims,
                 Priority = formVm.Priority,
                 MaterialSupplyMode = formVm.MaterialSupplyMode,
                 RewardOffered = formVm.RewardOffered,
@@ -622,6 +624,19 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         {
             IsLoading = true;
 
+            int? maxClaims = null;
+            if (!string.IsNullOrWhiteSpace(ProcurementMaxClaimsText))
+            {
+                if (!int.TryParse(ProcurementMaxClaimsText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedMaxClaims)
+                    || parsedMaxClaims < 1)
+                {
+                    StatusMessage = "Procurement max claims must be a whole number greater than 0.";
+                    return;
+                }
+
+                maxClaims = parsedMaxClaims;
+            }
+
             using var client = _apiClientProvider.CreateClient();
             int success = 0;
 
@@ -637,6 +652,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                     MinimumQuality = material.RequestedQuality,
                     Priority = RequestPriority.Normal,
                     PreferredForm = MaterialFormPreference.Any,
+                    MaxClaims = maxClaims,
                     RewardOffered = string.IsNullOrWhiteSpace(material.RewardOffered)
                         ? "Negotiable"
                         : material.RewardOffered

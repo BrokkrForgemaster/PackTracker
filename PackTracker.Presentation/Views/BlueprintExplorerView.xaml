@@ -972,6 +972,19 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
 
+                                        <TextBlock Text="MAX CLAIMS FOR NEW PROCUREMENT REQUESTS"
+                                                   Foreground="#8F7A5A"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   Margin="0,4,0,4" />
+
+                                        <TextBox Text="{Binding ProcurementMaxClaimsText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource OpTextBoxStyle}"
+                                                 FontSize="12"
+                                                 Width="160"
+                                                 HorizontalAlignment="Left"
+                                                 ToolTip="Leave blank for default of 1" />
+
                                         <Button Content="Request Materials"
                                                 Command="{Binding CreateProcurementRequestCommand}"
                                                 Style="{StaticResource BpActionButtonStyle}"
