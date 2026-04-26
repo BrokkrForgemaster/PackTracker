@@ -267,8 +267,8 @@ public sealed class GetBlueprintByIdQueryHandler : IRequestHandler<GetBlueprintB
     {
         return string.Join(
             ' ',
-            value.Replace('_', ' ', StringComparison.Ordinal)
-                .Replace('-', ' ', StringComparison.Ordinal)
+            value.Replace('_', ' ')
+                .Replace('-', ' ')
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Select(static part => char.ToUpperInvariant(part[0]) + part[1..]));
     }
