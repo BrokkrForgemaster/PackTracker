@@ -146,6 +146,8 @@ public sealed class CraftingRequestListItemDto
     /// </summary>
     public IReadOnlyList<BlueprintRecipeMaterialDto> Materials { get; set; } = Array.Empty<BlueprintRecipeMaterialDto>();
 
+    public int? MaxClaims { get; set; }
+
     #endregion
 
     private static DateTime NormalizeUtc(DateTime value) =>
