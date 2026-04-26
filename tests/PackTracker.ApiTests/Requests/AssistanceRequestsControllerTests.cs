@@ -323,6 +323,31 @@ public class AssistanceRequestsControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    [Fact]
+    public async Task CompleteRequest_ReturnsForbidden_WhenNotCreator()
+    {
+        var db = CreateDb();
+        var creatorDiscordId = "111222333444555";
+        var creatorProfile = await SeedProfileAsync(db, creatorDiscordId);
+        await SeedProfileAsync(db, TestDiscordId);
+
+        var request = new AssistanceRequest
+        {
+            Title = "Only creator may complete",
+            Status = RequestStatus.Accepted,
+            CreatedByProfileId = creatorProfile.Id
+        };
+        db.AssistanceRequests.Add(request);
+        await db.SaveChangesAsync();
+
+        var controller = BuildController(db, TestDiscordId);
+
+        var result = await controller.CompleteRequest(request.Id, CancellationToken.None);
+
+        var statusResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, statusResult.StatusCode);
+    }
+
     private sealed class TestCurrentUserService : ICurrentUserService
     {
         private readonly string? _role;

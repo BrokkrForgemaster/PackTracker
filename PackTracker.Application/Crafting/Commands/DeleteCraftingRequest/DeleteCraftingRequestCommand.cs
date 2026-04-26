@@ -35,15 +35,7 @@ public sealed class DeleteCraftingRequestCommandHandler : IRequestHandler<Delete
             return OperationResult<Guid>.Fail("Unauthorized");
 
         var request = await _db.CraftingRequests
-            .AsNoTracking()
-            .Where(x => x.Id == command.RequestId)
-            .Select(x => new
-            {
-                x.Id,
-                x.RequesterProfileId,
-                x.Status
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == command.RequestId, cancellationToken);
         if (request is null)
             return OperationResult<Guid>.Fail("Crafting request not found.");
 
@@ -54,16 +46,27 @@ public sealed class DeleteCraftingRequestCommandHandler : IRequestHandler<Delete
             return OperationResult<Guid>.Fail("Request is already cancelled.");
 
         var now = DateTime.UtcNow;
-        await _db.ExecuteSqlInterpolatedAsync(
-            $"""
-            UPDATE "CraftingRequests"
-            SET "Status" = {(int)RequestStatus.Cancelled},
-                "UpdatedAt" = {now}
-            WHERE "Id" = {command.RequestId}
-            """,
-            cancellationToken);
+        request.Status = RequestStatus.Cancelled;
+        request.UpdatedAt = now;
+
+        var linkedProcurementRequests = await _db.MaterialProcurementRequests
+            .Where(x => x.LinkedCraftingRequestId == command.RequestId
+                     && x.Status != RequestStatus.Cancelled)
+            .ToListAsync(cancellationToken);
+
+        foreach (var linkedProcurementRequest in linkedProcurementRequests)
+        {
+            linkedProcurementRequest.Status = RequestStatus.Cancelled;
+            linkedProcurementRequest.UpdatedAt = now;
+            linkedProcurementRequest.CompletedAt = null;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
 
         await _notifier.NotifyAsync("CraftingRequestUpdated", command.RequestId, cancellationToken);
+
+        foreach (var linkedProcurementRequest in linkedProcurementRequests)
+            await _notifier.NotifyAsync("ProcurementUpdated", linkedProcurementRequest.Id, cancellationToken);
 
         return OperationResult<Guid>.Ok(command.RequestId);
     }

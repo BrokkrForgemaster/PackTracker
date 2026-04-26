@@ -197,6 +197,20 @@ public sealed class GetBlueprintByIdQueryHandler : IRequestHandler<GetBlueprintB
                     ? materialNameElement.GetString() ?? materialName
                     : materialName;
 
+                if (string.Equals(materialName, "Unknown Material", StringComparison.Ordinal))
+                {
+                    if (firstResource.TryGetProperty("key", out var materialKeyElement)
+                        && !string.IsNullOrWhiteSpace(materialKeyElement.GetString()))
+                    {
+                        materialName = HumanizeMaterialIdentifier(materialKeyElement.GetString()!);
+                    }
+                    else if (firstResource.TryGetProperty("uuid", out var materialUuidElement)
+                             && !string.IsNullOrWhiteSpace(materialUuidElement.GetString()))
+                    {
+                        materialName = materialUuidElement.GetString()!;
+                    }
+                }
+
                 if (firstResource.TryGetProperty("quantity_scu", out var quantityScuElement)
                     && quantityScuElement.TryGetDouble(out var scuValue))
                     quantity = scuValue;
@@ -247,5 +261,15 @@ public sealed class GetBlueprintByIdQueryHandler : IRequestHandler<GetBlueprintB
             DefaultQuality = 500,
             Modifiers = modifiers
         };
+    }
+
+    private static string HumanizeMaterialIdentifier(string value)
+    {
+        return string.Join(
+            ' ',
+            value.Replace('_', ' ', StringComparison.Ordinal)
+                .Replace('-', ' ', StringComparison.Ordinal)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(static part => char.ToUpperInvariant(part[0]) + part[1..]));
     }
 }

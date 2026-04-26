@@ -254,7 +254,8 @@ public class CraftingRequestsController : ControllerBase
             return NotFound(new { error = message });
 
         if (string.Equals(message, "Only the creator or authorized leadership may cancel this request.", StringComparison.Ordinal)
-            || string.Equals(message, "Only the creator or authorized leadership may remove this request.", StringComparison.Ordinal))
+            || string.Equals(message, "Only the creator or authorized leadership may remove this request.", StringComparison.Ordinal)
+            || string.Equals(message, "Only the creator may complete this request.", StringComparison.Ordinal))
             return StatusCode(403, new { error = message });
 
         return BadRequest(new { error = message });

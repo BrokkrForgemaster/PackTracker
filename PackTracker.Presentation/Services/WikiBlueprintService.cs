@@ -390,7 +390,10 @@ public class WikiBlueprintService
                 return new BlueprintComponentDto
                 {
                     PartName = group.Name ?? group.Key ?? "Component",
-                    MaterialName = firstResource?.Name ?? "Unknown",
+                    MaterialName = firstResource?.Name
+                        ?? (firstResource?.Key is { Length: > 0 } key ? HumanizeMaterialIdentifier(key) : null)
+                        ?? firstResource?.Uuid
+                        ?? "Unknown",
                     Scu = firstResource?.QuantityScu ?? firstResource?.Quantity ?? 0,
                     Quantity = group.RequiredCount ?? 1,
                     DefaultQuality = 500,
@@ -431,6 +434,16 @@ public class WikiBlueprintService
             InterestedUsers = Array.Empty<BlueprintOwnerDto>(),
             OwnerCount = 0
         };
+    }
+
+    private static string HumanizeMaterialIdentifier(string value)
+    {
+        return string.Join(
+            ' ',
+            value.Replace('_', ' ', StringComparison.Ordinal)
+                .Replace('-', ' ', StringComparison.Ordinal)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(static part => char.ToUpperInvariant(part[0]) + part[1..]));
     }
 
     private static BlueprintSearchItemDto ToSearchItem(WikiBlueprintListItemDto x)

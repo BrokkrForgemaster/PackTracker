@@ -47,6 +47,19 @@ public sealed class UpdateProcurementStatusCommandHandler : IRequestHandler<Upda
             if (!_currentUser.CanManage(profile, entity.RequesterProfileId))
                 return new StatusUpdateResult(false, "Only the creator or authorized leadership may cancel this request.");
         }
+        else if (parsedStatus == RequestStatus.Completed)
+        {
+            if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))
+                return new StatusUpdateResult(false, "Unauthorized");
+
+            var profile = await _db.Profiles
+                .FirstOrDefaultAsync(x => x.DiscordId == _currentUser.UserId, cancellationToken);
+            if (profile is null)
+                return new StatusUpdateResult(false, "Unauthorized");
+
+            if (profile.Id != entity.RequesterProfileId)
+                return new StatusUpdateResult(false, "Only the creator may complete this request.");
+        }
 
         var previousStatus = entity.Status;
         entity.Status = parsedStatus;

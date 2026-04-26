@@ -39,7 +39,8 @@ public partial class ProcurementRequestsViewModel : ObservableObject
 
     public bool CanMarkCompleted => SelectedRequest is not null &&
                                    (SelectedRequest.Status == RequestStatus.Open ||
-                                    SelectedRequest.Status == RequestStatus.InProgress);
+                                    SelectedRequest.Status == RequestStatus.InProgress) &&
+                                   string.Equals(SelectedRequest.RequesterUsername, _currentUsername, StringComparison.OrdinalIgnoreCase);
 
     // Only the original requester may cancel
     public bool CanCancel => SelectedRequest is not null &&

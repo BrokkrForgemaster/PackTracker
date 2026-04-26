@@ -58,6 +58,11 @@ public sealed class CompleteAssistanceRequestCommandHandler : IRequestHandler<Co
             return OperationResult<Guid>.Fail("Request is already in a terminal state.");
         }
 
+        if (profile.Id != assistanceRequest.CreatedByProfileId)
+        {
+            return OperationResult<Guid>.Fail("Only the creator may complete this request.");
+        }
+
         assistanceRequest.Status = RequestStatus.Completed;
         assistanceRequest.CompletedAt = DateTime.UtcNow;
         assistanceRequest.UpdatedAt = DateTime.UtcNow;

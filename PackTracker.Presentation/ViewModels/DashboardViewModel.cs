@@ -123,9 +123,9 @@ public class DashboardViewModel : ViewModelBase
                 if (state) _ = RefreshDataAsync();
             };
 
-            await RefreshDataAsync();
             _ = LoadAllMembersAsync();
             _ = DiscordEvents.InitializeAsync();
+            await RefreshDataAsync();
 
             // Periodic fallback: catches any SignalR events missed during the startup window
             _periodicRefreshTimer = new System.Windows.Threading.DispatcherTimer(
@@ -503,6 +503,9 @@ public class DashboardViewModel : ViewModelBase
             _newClaimCounts.TryGetValue(dto.RequestId, out var current);
             _newClaimCounts[dto.RequestId] = current + 1;
 
+            _lastKnownClaimCounts.TryGetValue(dto.RequestId, out var lastKnown);
+            _lastKnownClaimCounts[dto.RequestId] = lastKnown + 1;
+
             foreach (var item in AllRequestItems().Where(x => x.Id == dto.RequestId))
                 item.IncrementNewClaim();
 
@@ -855,6 +858,12 @@ public class DashboardViewModel : ViewModelBase
             using var client = _apiClientProvider.CreateClient();
             var profiles = await client.GetFromJsonAsync<List<MemberSummaryDto>>(
                 "api/v1/profiles", DashboardJsonOptions) ?? new();
+            var onlineProfiles = await client.GetFromJsonAsync<List<MemberSummaryDto>>(
+                "api/v1/profiles/online", DashboardJsonOptions) ?? new();
+            var onlineUsernames = onlineProfiles
+                .Where(p => !string.IsNullOrWhiteSpace(p.Username))
+                .Select(p => p.Username)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var vms = profiles
                 .Select(p => new OnlineUserViewModel
@@ -864,7 +873,7 @@ public class DashboardViewModel : ViewModelBase
                     ContactLabel = p.DiscordDisplayName ?? p.Username,
                     Role = p.DiscordRank,
                     RoleColorBrush = OnlineUserViewModel.GetRoleColor(p.DiscordRank),
-                    IsOnline = _signalR.IsUserOnline(p.Username)
+                    IsOnline = _signalR.IsUserOnline(p.Username) || onlineUsernames.Contains(p.Username)
                 })
                 .OrderBy(v => v.ContactLabel, StringComparer.OrdinalIgnoreCase)
                 .ToList();

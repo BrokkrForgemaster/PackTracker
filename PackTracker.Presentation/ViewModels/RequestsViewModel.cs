@@ -124,7 +124,8 @@ public partial class RequestsViewModel : ObservableObject
     /// </summary>
     public bool CanComplete => SelectedRequest is not null
                             && SelectedRequest.Status != DomainRequestStatus.Completed.ToString()
-                            && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString();
+                            && SelectedRequest.Status != DomainRequestStatus.Cancelled.ToString()
+                            && string.Equals(SelectedRequest.CreatedByUsername, _currentUsername, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// True when the selected request can be deleted (cancelled) by the current user.

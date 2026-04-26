@@ -48,15 +48,55 @@ public sealed class UpdateCraftingRequestStatusCommandHandler : IRequestHandler<
             if (!_currentUser.CanManage(profile, request.RequesterProfileId))
                 return new StatusUpdateResult(false, "Only the creator or authorized leadership may cancel this request.");
         }
+        else if (parsedStatus == RequestStatus.Completed)
+        {
+            if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))
+                return new StatusUpdateResult(false, "Unauthorized");
+
+            var profile = await _db.Profiles
+                .FirstOrDefaultAsync(x => x.DiscordId == _currentUser.UserId, cancellationToken);
+            if (profile is null)
+                return new StatusUpdateResult(false, "Unauthorized");
+
+            if (profile.Id != request.RequesterProfileId)
+                return new StatusUpdateResult(false, "Only the creator may complete this request.");
+        }
 
         var previous = request.Status;
+        var now = DateTime.UtcNow;
         request.Status = parsedStatus;
-        request.UpdatedAt = DateTime.UtcNow;
+        request.UpdatedAt = now;
         if (parsedStatus == RequestStatus.Completed)
-            request.CompletedAt = DateTime.UtcNow;
+        {
+            request.CompletedAt = now;
+
+            var linkedProcurementRequests = await _db.MaterialProcurementRequests
+                .Where(x => x.LinkedCraftingRequestId == request.Id
+                         && x.Status != RequestStatus.Completed
+                         && x.Status != RequestStatus.Cancelled)
+                .ToListAsync(cancellationToken);
+
+            foreach (var linkedProcurementRequest in linkedProcurementRequests)
+            {
+                linkedProcurementRequest.Status = RequestStatus.Completed;
+                linkedProcurementRequest.UpdatedAt = now;
+                linkedProcurementRequest.CompletedAt = now;
+            }
+        }
 
         await _db.SaveChangesAsync(cancellationToken);
         await _notifier.NotifyAsync("CraftingRequestUpdated", command.RequestId, cancellationToken);
+
+        if (parsedStatus == RequestStatus.Completed)
+        {
+            var linkedProcurementIds = await _db.MaterialProcurementRequests
+                .Where(x => x.LinkedCraftingRequestId == request.Id)
+                .Select(x => x.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var linkedProcurementId in linkedProcurementIds)
+                await _notifier.NotifyAsync("ProcurementUpdated", linkedProcurementId, cancellationToken);
+        }
 
         return new StatusUpdateResult(true, "Status updated.", command.RequestId, previous.ToString(), parsedStatus.ToString());
     }

@@ -51,7 +51,9 @@ public partial class CraftingRequestsViewModel : ObservableObject
     // Logic updated to use Status Constants
     public bool CanAssign => SelectedRequest?.Status == RequestStatus.Open;
     public bool CanMarkInProgress => SelectedRequest?.Status == RequestStatus.Accepted;
-    public bool CanMarkCompleted => SelectedRequest is not null && (SelectedRequest.Status == RequestStatus.Accepted || SelectedRequest.Status == RequestStatus.InProgress);
+    public bool CanMarkCompleted => SelectedRequest is not null
+        && (SelectedRequest.Status == RequestStatus.Accepted || SelectedRequest.Status == RequestStatus.InProgress)
+        && string.Equals(SelectedRequest.RequesterUsername, _currentUsername, StringComparison.OrdinalIgnoreCase);
     public bool CanCancel => SelectedRequest is not null && SelectedRequest.Status != RequestStatus.Completed && SelectedRequest.Status != RequestStatus.Cancelled;
 
     public CraftingRequestsViewModel(

@@ -39,4 +39,16 @@ public class ClaimAlertReconcilerTests
         Assert.Equal(0, result.lastKnownClaimCount);
         Assert.Null(result.newClaimCount);
     }
+
+    [Fact]
+    public void Reconcile_ClearsAlert_AfterClaimNotificationThenUnclaimRefresh()
+    {
+        var result = ClaimAlertReconciler.Reconcile(
+            currentClaimCount: 0,
+            lastKnownClaimCount: 1,
+            existingNewClaimCount: 1);
+
+        Assert.Equal(0, result.lastKnownClaimCount);
+        Assert.Null(result.newClaimCount);
+    }
 }

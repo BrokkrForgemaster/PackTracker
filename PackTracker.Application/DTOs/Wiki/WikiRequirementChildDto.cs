@@ -22,6 +22,11 @@ public class WikiRequirementChildDto
     public string? Name { get; set; }
 
     /// <summary>
+    /// Source key/slug for the child resource when a friendly name is absent.
+    /// </summary>
+    public string? Key { get; set; }
+
+    /// <summary>
     /// Generic quantity value when SCU is not provided.
     /// </summary>
     public double? Quantity { get; set; }

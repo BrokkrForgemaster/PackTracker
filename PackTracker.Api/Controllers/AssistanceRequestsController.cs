@@ -189,6 +189,11 @@ public class AssistanceRequestsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { error = result.Message });
         }
 
+        if (string.Equals(result.Message, "Only the creator may complete this request.", StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { error = result.Message });
+        }
+
         return BadRequest(new { error = result.Message ?? fallbackMessage });
     }
     #endregion
