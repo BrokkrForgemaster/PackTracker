@@ -483,7 +483,7 @@ public sealed class WikiSyncService : IWikiSyncService
             foreach (var child in group.Children
                          .Where(c => string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase)))
             {
-                var key = child.Uuid ?? child.Name ?? "unknown";
+                var key = child.Uuid ?? child.Name ?? child.Key ?? "unknown";
                 var qty = child.QuantityScu ?? child.Quantity ?? 0;
                 var unit = child.QuantityScu.HasValue ? "SCU" : "Units";
 
@@ -498,8 +498,13 @@ public sealed class WikiSyncService : IWikiSyncService
                 }
                 else
                 {
+                    var resolvedName = child.Name
+                        ?? (child.Key is { Length: > 0 } materialKey ? HumanizeMaterialIdentifier(materialKey) : null)
+                        ?? child.Uuid
+                        ?? "Unknown";
+
                     resourceTotals[key] = (
-                        child.Name ?? "Unknown",
+                        resolvedName,
                         child.Uuid,
                         qty,
                         unit
@@ -509,6 +514,16 @@ public sealed class WikiSyncService : IWikiSyncService
         }
 
         return resourceTotals;
+    }
+
+    private static string HumanizeMaterialIdentifier(string value)
+    {
+        return string.Join(
+            ' ',
+            value.Replace('_', ' ')
+                .Replace('-', ' ')
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(static part => char.ToUpperInvariant(part[0]) + part[1..]));
     }
 
     #endregion

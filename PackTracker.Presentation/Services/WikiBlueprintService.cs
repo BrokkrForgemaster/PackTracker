@@ -338,7 +338,7 @@ public class WikiBlueprintService
                          string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase))
                      ?? Enumerable.Empty<WikiRequirementChildDto>())
             {
-                var key = child.Uuid ?? child.Name ?? "unknown";
+                var key = child.Uuid ?? child.Name ?? child.Key ?? "unknown";
                 var qty = child.QuantityScu ?? child.Quantity ?? 0;
                 var unit = child.QuantityScu.HasValue ? "SCU" : "Units";
 
