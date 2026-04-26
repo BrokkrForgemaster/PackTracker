@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Application.DTOs.Wiki;
 using PackTracker.Domain.Enums;
 using PackTracker.Presentation.Services;
 
@@ -673,6 +674,43 @@ public partial class BlueprintExplorerViewModel : ObservableObject
         {
             _logger.LogError(ex, "CreateProcurementRequest failed.");
             StatusMessage = $"Failed to create procurement requests: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SyncWikiAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Syncing blueprints from Star Citizen wiki — this may take a few minutes...";
+
+            using var client = _apiClientProvider.CreateClient();
+            var response = await client.PostAsync("api/v1/wiki/sync/blueprints", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<WikiSyncResult>();
+                StatusMessage = result is not null
+                    ? $"Wiki sync complete: {result.Created} created, {result.Updated} updated, {result.Failed} failed."
+                    : "Wiki sync complete.";
+
+                await LoadWikiCacheAsync();
+                await SearchAsync();
+            }
+            else
+            {
+                StatusMessage = $"Wiki sync failed: {TrimForDisplay(await response.Content.ReadAsStringAsync())}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Wiki sync failed.");
+            StatusMessage = $"Wiki sync error: {ex.Message}";
         }
         finally
         {

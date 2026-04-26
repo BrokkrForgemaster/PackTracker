@@ -259,6 +259,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
@@ -292,6 +293,18 @@
                                    TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
+
+                <Button Grid.Column="2"
+                        Content="SYNC WIKI"
+                        Command="{Binding SyncWikiCommand}"
+                        Style="{StaticResource BpActionButtonStyle}"
+                        Background="#1A2E3A"
+                        Foreground="#7EC8E3"
+                        BorderBrush="#2E6A84"
+                        BorderThickness="1"
+                        Padding="12,7"
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center" />
             </Grid>
         </Border>
 
