@@ -357,8 +357,13 @@ public class WikiBlueprintService
                 }
                 else
                 {
+                    var resolvedName = child.Name
+                        ?? (child.Key is { Length: > 0 } materialKey ? HumanizeMaterialIdentifier(materialKey) : null)
+                        ?? child.Uuid
+                        ?? "Unknown";
+
                     resourceTotals[key] = (
-                        child.Name ?? "Unknown",
+                        resolvedName,
                         uuid,
                         qty,
                         unit

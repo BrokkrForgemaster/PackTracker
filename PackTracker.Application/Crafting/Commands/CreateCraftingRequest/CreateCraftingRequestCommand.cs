@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,25 @@ using PackTracker.Domain.Enums;
 namespace PackTracker.Application.Crafting.Commands.CreateCraftingRequest;
 
 public sealed record CreateCraftingRequestCommand(CreateCraftingRequestDto Request) : IRequest<OperationResult<Guid>>;
+
+public sealed class CreateCraftingRequestCommandValidator : AbstractValidator<CreateCraftingRequestCommand>
+{
+    public CreateCraftingRequestCommandValidator()
+    {
+        RuleFor(x => x.Request).NotNull();
+        RuleFor(x => x.Request.BlueprintId).NotEmpty();
+        RuleFor(x => x.Request.CraftedItemName).MaximumLength(300);
+        RuleFor(x => x.Request.QuantityRequested).InclusiveBetween(1, 1000);
+        RuleFor(x => x.Request.MinimumQuality).InclusiveBetween(1, 1000);
+        RuleFor(x => x.Request.DeliveryLocation).MaximumLength(200);
+        RuleFor(x => x.Request.RewardOffered).MaximumLength(100);
+        RuleFor(x => x.Request.Notes).MaximumLength(1000);
+        RuleFor(x => x.Request.RequesterTimeZoneDisplayName).MaximumLength(200);
+        RuleFor(x => x.Request.MaxClaims)
+            .InclusiveBetween(1, 1000)
+            .When(x => x.Request.MaxClaims.HasValue);
+    }
+}
 
 public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<CreateCraftingRequestCommand, OperationResult<Guid>>
 {
@@ -70,10 +90,10 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
             MinimumQuality = command.Request.MinimumQuality <= 0 ? 1 : command.Request.MinimumQuality,
             Priority = command.Request.Priority,
             MaterialSupplyMode = command.Request.MaterialSupplyMode,
-            DeliveryLocation = command.Request.DeliveryLocation,
-            RewardOffered = command.Request.RewardOffered,
+            DeliveryLocation = command.Request.DeliveryLocation?.Trim(),
+            RewardOffered = command.Request.RewardOffered?.Trim(),
             RequiredBy = command.Request.RequiredBy,
-            Notes = command.Request.Notes,
+            Notes = command.Request.Notes?.Trim(),
             RequesterTimeZoneDisplayName = string.IsNullOrWhiteSpace(command.Request.RequesterTimeZoneDisplayName)
                 ? null
                 : command.Request.RequesterTimeZoneDisplayName.Trim(),

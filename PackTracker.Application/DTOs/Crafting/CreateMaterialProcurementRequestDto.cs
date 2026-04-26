@@ -74,7 +74,7 @@ public sealed class CreateMaterialProcurementRequestDto
     /// <summary>
     /// Gets or sets the reward offered for fulfilling the request.
     /// </summary>
-    [MaxLength(200)]
+    [MaxLength(100)]
     public string? RewardOffered { get; set; }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Common;
@@ -9,6 +10,24 @@ using PackTracker.Domain.Enums;
 namespace PackTracker.Application.Crafting.Commands.CreateProcurementRequest;
 
 public sealed record CreateProcurementRequestCommand(CreateMaterialProcurementRequestDto Request) : IRequest<OperationResult<Guid>>;
+
+public sealed class CreateProcurementRequestCommandValidator : AbstractValidator<CreateProcurementRequestCommand>
+{
+    public CreateProcurementRequestCommandValidator()
+    {
+        RuleFor(x => x.Request).NotNull();
+        RuleFor(x => x.Request.MaterialId).NotEmpty();
+        RuleFor(x => x.Request.MaterialName).MaximumLength(300);
+        RuleFor(x => x.Request.QuantityRequested).GreaterThan(0);
+        RuleFor(x => x.Request.MinimumQuality).InclusiveBetween(1, 1000);
+        RuleFor(x => x.Request.DeliveryLocation).MaximumLength(200);
+        RuleFor(x => x.Request.RewardOffered).MaximumLength(100);
+        RuleFor(x => x.Request.Notes).MaximumLength(1000);
+        RuleFor(x => x.Request.MaxClaims)
+            .InclusiveBetween(1, 1000)
+            .When(x => x.Request.MaxClaims.HasValue);
+    }
+}
 
 public sealed class CreateProcurementRequestCommandHandler : IRequestHandler<CreateProcurementRequestCommand, OperationResult<Guid>>
 {
@@ -68,9 +87,9 @@ public sealed class CreateProcurementRequestCommandHandler : IRequestHandler<Cre
             Status = RequestStatus.Open,
             IsPinned = command.Request.IsPinned,
             MaxClaims = command.Request.MaxClaims ?? 1,
-            DeliveryLocation = command.Request.DeliveryLocation,
-            RewardOffered = command.Request.RewardOffered,
-            Notes = command.Request.Notes,
+            DeliveryLocation = command.Request.DeliveryLocation?.Trim(),
+            RewardOffered = command.Request.RewardOffered?.Trim(),
+            Notes = command.Request.Notes?.Trim(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

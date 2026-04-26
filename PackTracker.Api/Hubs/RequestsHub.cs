@@ -294,18 +294,19 @@ public class RequestsHub : Hub
 
         if (normalizedLobby == "lobby:general")
         {
+            var generalWelcomeMessage = BuildGeneralWelcomeMessage();
             messages = new object[]
             {
                 new
                 {
-                    _generalWelcomeMessage.Id,
+                    generalWelcomeMessage.Id,
                     Channel = lobbyName,
-                    _generalWelcomeMessage.Sender,
-                    _generalWelcomeMessage.SenderDisplayName,
-                    _generalWelcomeMessage.Content,
-                    _generalWelcomeMessage.SentAt,
-                    _generalWelcomeMessage.AvatarUrl,
-                    _generalWelcomeMessage.SenderRole
+                    generalWelcomeMessage.Sender,
+                    generalWelcomeMessage.SenderDisplayName,
+                    generalWelcomeMessage.Content,
+                    generalWelcomeMessage.SentAt,
+                    generalWelcomeMessage.AvatarUrl,
+                    generalWelcomeMessage.SenderRole
                 }
             }.Concat(messages);
         }
@@ -938,6 +939,52 @@ public class RequestsHub : Hub
             while (queue.Count > MaxHistoryPerChannel)
                 queue.Dequeue();
         }
+    }
+
+    private static ChatMessage BuildGeneralWelcomeMessage()
+    {
+        return new ChatMessage(
+            Id: "system-welcome-001",
+            Sender: "PackTracker",
+            SenderDisplayName: "PackTracker",
+            Content:
+                "# **__PACKTRACKER // HOUSE WOLF OPERATIONS HUB__**\n\n" +
+                "> ***Welcome to the command floor.***\n" +
+                "> Real-time requests, division comms, blueprint intelligence, logistics flow, and org coordination all run through this channel.\n\n" +
+                "---\n\n" +
+                "## **__Core Systems__**\n" +
+                "- **Active Requests Dashboard**\n" +
+                "  Track live **Assistance**, **Crafting**, and **Procurement** work across the org.\n" +
+                "- **Crafting Center**\n" +
+                "  Submit jobs, coordinate with crafters, and move requests from open to complete.\n" +
+                "- **Procurement Queue**\n" +
+                "  Source materials, assign logistics, and track delivery progress in real time.\n" +
+                "- **Assistance Requests**\n" +
+                "  Need backup, transport, security, or rapid support in the verse? Post it and coordinate immediately.\n\n" +
+                "## **__Operations Toolkit__**\n" +
+                "- **Blueprint Explorer**\n" +
+                "  Search the House Wolf blueprint library, inspect materials, and verify requirements before posting work.\n" +
+                "- **Trading Hub (UEX)**\n" +
+                "  Review commodity pricing, route opportunities, and cargo economics before you launch.\n" +
+                "- **Guide Scheduling**\n" +
+                "  Leadership can organize tours, training runs, and operational events directly from the dashboard.\n\n" +
+                "## **__Comms & Presence__**\n" +
+                "- **General + Division Channels**\n" +
+                "  Division rooms unlock automatically from your Discord role mapping.\n" +
+                "- **Presence + Direct Messages**\n" +
+                "  See who is online, open DMs instantly, and keep coordination inside one operational surface.\n\n" +
+                "---\n\n" +
+                "**__Startup Checklist__**\n" +
+                "1. Review the dashboard.\n" +
+                "2. Check active requests.\n" +
+                "3. Join the right division channel.\n" +
+                "4. Claim, coordinate, and execute.\n\n" +
+                "||House Wolf runs best when updates are fast, clear, and visible to the pack.||\n\n" +
+                "***Log in with Discord and move.***",
+            SentAt: new DateTime(2026, 4, 19, 0, 0, 0, DateTimeKind.Utc),
+            SenderDiscordId: "system",
+            AvatarUrl: null,
+            SenderRole: "System");
     }
 
     #endregion
