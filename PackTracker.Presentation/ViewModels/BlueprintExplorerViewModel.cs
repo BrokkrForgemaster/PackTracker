@@ -128,6 +128,10 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     private readonly ILogger<BlueprintExplorerViewModel> _logger;
     private CancellationTokenSource? _searchDebounce;
     private List<OwnedBlueprintSummaryDto> _ownedBlueprints = new();
+    private static readonly JsonSerializerOptions ResponseJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private const string AllCategoriesLabel = "All Categories";
 
@@ -570,8 +574,21 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             Owner = System.Windows.Application.Current.MainWindow
         };
 
-        if (dialog.ShowDialog() != true)
+        var dialogResult = dialog.ShowDialog();
+        _logger.LogInformation(
+            "Crafting request dialog closed. Result={DialogResult}, Confirmed={Confirmed}, BlueprintId={BlueprintId}, BlueprintName={BlueprintName}",
+            dialogResult,
+            formVm.Confirmed,
+            blueprintId,
+            SelectedBlueprintDetail.BlueprintName);
+
+        if (dialogResult != true)
+        {
+            if (!string.IsNullOrWhiteSpace(formVm.ValidationMessage))
+                StatusMessage = $"Crafting request not submitted: {formVm.ValidationMessage}";
+
             return;
+        }
 
         try
         {
@@ -594,12 +611,32 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 RequesterUtcOffsetMinutes = formVm.RequesterUtcOffsetMinutes
             };
 
+            _logger.LogInformation(
+                "Submitting crafting request. BlueprintId={BlueprintId}, CraftedItemName={CraftedItemName}, Quantity={Quantity}, MinQuality={MinimumQuality}, Priority={Priority}, MaterialSupplyMode={MaterialSupplyMode}, DeliveryLocation={DeliveryLocation}, MaxClaims={MaxClaims}",
+                dto.BlueprintId,
+                dto.CraftedItemName,
+                dto.QuantityRequested,
+                dto.MinimumQuality,
+                dto.Priority,
+                dto.MaterialSupplyMode,
+                dto.DeliveryLocation,
+                dto.MaxClaims);
+
             var response = await client.PostAsJsonAsync("api/v1/crafting/requests", dto);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            _logger.LogInformation(
+                "Crafting request submit completed. StatusCode={StatusCode}, ReasonPhrase={ReasonPhrase}, Body={Body}",
+                (int)response.StatusCode,
+                response.ReasonPhrase,
+                responseBody);
 
             if (response.IsSuccessStatusCode)
             {
-                var payload = await response.Content.ReadFromJsonAsync<CreateCraftingRequestResponse>();
-                StatusMessage = $"Crafting request submitted for {SelectedBlueprintDetail.BlueprintName}.";
+                var payload = DeserializeResponse<CreateCraftingRequestResponse>(responseBody);
+                StatusMessage = payload?.RequestId is Guid requestId && requestId != Guid.Empty
+                    ? $"Crafting request submitted for {SelectedBlueprintDetail.BlueprintName}. RequestId={requestId}"
+                    : $"Crafting request submitted for {SelectedBlueprintDetail.BlueprintName}.";
 
                 if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
                 {
@@ -608,13 +645,24 @@ public partial class BlueprintExplorerViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = $"Error {(int)response.StatusCode}: {TrimForDisplay(await response.Content.ReadAsStringAsync())}";
+                var trimmed = TrimForDisplay(responseBody);
+                StatusMessage = $"Crafting request submit failed ({(int)response.StatusCode}): {trimmed}";
+                System.Windows.MessageBox.Show(
+                    $"Crafting request submit failed.\n\nStatus: {(int)response.StatusCode} {response.ReasonPhrase}\n\nResponse:\n{trimmed}",
+                    "Crafting Request Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "CreateCraftingRequest failed.");
             StatusMessage = $"Failed to create crafting request: {ex.Message}";
+            System.Windows.MessageBox.Show(
+                $"Crafting request submit threw an exception.\n\n{ex.Message}",
+                "Crafting Request Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
         }
         finally
         {
@@ -811,6 +859,21 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
         var compact = value.Replace("\r", " ").Replace("\n", " ").Trim();
         return compact.Length <= 300 ? compact : compact[..300] + "...";
+    }
+
+    private static T? DeserializeResponse<T>(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return default;
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(value, ResponseJsonOptions);
+        }
+        catch (JsonException)
+        {
+            return default;
+        }
     }
 
     private Guid GetOperationBlueprintId()

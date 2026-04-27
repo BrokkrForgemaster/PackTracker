@@ -24,6 +24,7 @@ public partial class CraftingRequestFormViewModel : ObservableObject
     [ObservableProperty] private string? deliveryLocation;
     [ObservableProperty] private string? notes;
     [ObservableProperty] private string? maxClaimsText;
+    [ObservableProperty] private string? validationMessage;
 
     public RequestPriority Priority => SelectedPriority.Value;
     public MaterialSupplyMode MaterialSupplyMode => SelectedMaterialSupplyMode.Value;
@@ -79,16 +80,46 @@ public partial class CraftingRequestFormViewModel : ObservableObject
         selectedMaterialSupplyMode = MaterialSupplyModeOptions[2]; // Negotiable
     }
 
-    partial void OnRewardOfferedChanged(string? value) => OnPropertyChanged(nameof(CanSubmit));
-    partial void OnDeliveryLocationChanged(string? value) => OnPropertyChanged(nameof(CanSubmit));
-    partial void OnQuantityRequestedChanged(int value) => OnPropertyChanged(nameof(CanSubmit));
-    partial void OnMinimumQualityChanged(int value) => OnPropertyChanged(nameof(CanSubmit));
-    partial void OnMaxClaimsTextChanged(string? value) => OnPropertyChanged(nameof(CanSubmit));
+    partial void OnRewardOfferedChanged(string? oldValue, string? newValue)
+    {
+        OnPropertyChanged(nameof(CanSubmit));
+        ValidationMessage = null;
+    }
+
+    partial void OnDeliveryLocationChanged(string? oldValue, string? newValue)
+    {
+        OnPropertyChanged(nameof(CanSubmit));
+        ValidationMessage = null;
+    }
+
+    partial void OnQuantityRequestedChanged(int oldValue, int newValue)
+    {
+        OnPropertyChanged(nameof(CanSubmit));
+        ValidationMessage = null;
+    }
+
+    partial void OnMinimumQualityChanged(int oldValue, int newValue)
+    {
+        OnPropertyChanged(nameof(CanSubmit));
+        ValidationMessage = null;
+    }
+
+    partial void OnMaxClaimsTextChanged(string? oldValue, string? newValue)
+    {
+        OnPropertyChanged(nameof(CanSubmit));
+        ValidationMessage = null;
+    }
 
     [RelayCommand]
     private void Submit()
     {
-        if (!CanSubmit) return;
+        if (!CanSubmit)
+        {
+            ValidationMessage = BuildValidationMessage();
+            return;
+        }
+
+        ValidationMessage = null;
         Confirmed = true;
         Submitted?.Invoke(this, EventArgs.Empty);
     }
@@ -98,5 +129,25 @@ public partial class CraftingRequestFormViewModel : ObservableObject
     {
         Confirmed = false;
         Cancelled?.Invoke(this, EventArgs.Empty);
+    }
+
+    private string BuildValidationMessage()
+    {
+        if (string.IsNullOrWhiteSpace(RewardOffered))
+            return "Reward offered is required.";
+
+        if (string.IsNullOrWhiteSpace(DeliveryLocation))
+            return "Delivery location is required.";
+
+        if (QuantityRequested < 1)
+            return "Quantity must be at least 1.";
+
+        if (MinimumQuality < 1)
+            return "Minimum quality must be at least 1.";
+
+        if (!HasValidMaxClaims)
+            return "Max claims must be blank or a whole number greater than 0.";
+
+        return "Review the request form and try again.";
     }
 }

@@ -1,6 +1,7 @@
 <Window x:Class="PackTracker.Presentation.Views.CraftingRequestFormDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
         Title="New Crafting Request"
         Width="620" Height="720"
         Background="Transparent" WindowStyle="None"
@@ -9,6 +10,7 @@
         AllowsTransparency="True">
 
     <Window.Resources>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}"/>
             <Setter Property="FontSize" Value="12"/>
@@ -117,8 +119,15 @@
             </ScrollViewer>
 
             <Grid Grid.Row="2" Margin="0,18,0,0">
-                <TextBlock Text="* Required fields" Foreground="#E84040" FontSize="11"
-                           VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
+                    <TextBlock Text="* Required fields" Foreground="#E84040" FontSize="11"/>
+                    <TextBlock Text="{Binding ValidationMessage}"
+                               Foreground="#FFB36B"
+                               FontSize="11"
+                               Margin="0,6,0,0"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding ValidationMessage, Converter={StaticResource NullToVisibilityConverter}}"/>
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="CANCEL"
                             Command="{Binding CancelCommand}"
@@ -132,6 +141,7 @@
                             Margin="0,0,10,0"/>
                     <Button Content="SUBMIT REQUEST"
                             Command="{Binding SubmitCommand}"
+                            IsEnabled="{Binding CanSubmit}"
                             Padding="18,10"
                             FontWeight="Bold"
                             FontSize="13"
