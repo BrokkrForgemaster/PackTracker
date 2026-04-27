@@ -5,6 +5,7 @@ using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Enums;
 using PackTracker.Infrastructure.Persistence;
+using System.Reflection;
 
 namespace PackTracker.UnitTests.Crafting;
 
@@ -157,6 +158,19 @@ public sealed class LinkedProcurementCascadeTests
         Assert.Contains(("CraftingRequestUpdated", request.Id), notifier.Events);
         Assert.Contains(("ProcurementUpdated", linkedOpen.Id), notifier.Events);
         Assert.Contains(("ProcurementUpdated", linkedCompleted.Id), notifier.Events);
+    }
+
+    [Fact]
+    public void DeleteCraftingRequest_LegacySchemaDetector_MatchesAliasedMissingItemNameColumn()
+    {
+        var exception = new InvalidOperationException("42703: column c.ItemName does not exist");
+        var method = typeof(DeleteCraftingRequestCommandHandler)
+            .GetMethod("IsLegacyCraftingMetadataFailure", BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+        var result = (bool)method!.Invoke(null, [exception])!;
+
+        Assert.True(result);
     }
 
     private static AppDbContext CreateDb() =>

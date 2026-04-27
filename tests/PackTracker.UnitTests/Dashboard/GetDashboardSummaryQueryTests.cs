@@ -76,6 +76,13 @@ public sealed class GetDashboardSummaryQueryTests
             CreatedAt = DateTime.UtcNow.AddMinutes(-15)
         };
 
+        var craftingClaim = new RequestClaim
+        {
+            RequestType = "Crafting",
+            RequestId = assignedCrafting.Id,
+            ProfileId = currentUser.Id
+        };
+
         var openProcurement = new MaterialProcurementRequest
         {
             MaterialId = material.Id,
@@ -105,6 +112,7 @@ public sealed class GetDashboardSummaryQueryTests
             pinnedAssistance,
             myAssistance,
             assignedCrafting,
+            craftingClaim,
             openProcurement,
             hiddenOtherAcceptedProcurement);
 

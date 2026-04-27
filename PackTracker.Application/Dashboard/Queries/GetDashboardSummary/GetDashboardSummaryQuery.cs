@@ -222,17 +222,17 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                 RequestType = "Crafting",
                 Status = x.Status.ToString(),
                 Priority = x.Priority.ToString(),
-                IsPinned = x.IsPinned,
+                IsPinned = false,
                 IsRequestedByCurrentUser = x.RequesterProfileId == currentProfileId,
                 IsAssignedToCurrentUser = _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Crafting" && c.ProfileId == currentProfileId),
-                IsAvailableToClaim = x.Status == RequestStatus.Open && _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Crafting") < x.MaxClaims,
+                IsAvailableToClaim = x.Status == RequestStatus.Open && !_dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Crafting"),
                 RequesterDisplayName = x.RequesterProfile != null ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username) : "Unknown",
                 AssigneeDisplayName = _dbContext.RequestClaims
                     .Where(c => c.RequestId == x.Id && c.RequestType == "Crafting")
                     .Join(_dbContext.Profiles, c => c.ProfileId, p => p.Id, (c, p) => p.DiscordDisplayName ?? p.Username)
                     .FirstOrDefault(),
                 CreatedAt = x.CreatedAt,
-                MaxClaims = x.MaxClaims,
+                MaxClaims = 1,
                 ClaimCount = _dbContext.RequestClaims.Count(c => c.RequestId == x.Id && c.RequestType == "Crafting")
             });
 
@@ -243,7 +243,15 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
                || message.Contains("MaterialSupplyMode", StringComparison.OrdinalIgnoreCase)
                || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
                || message.Contains("RequesterUtcOffsetMinutes", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("IsPinned", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("MaxClaims", StringComparison.OrdinalIgnoreCase)
                || message.Contains("column", StringComparison.OrdinalIgnoreCase)
-                  && message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase);
+                  && (message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase)
+                      || message.Contains("ItemName", StringComparison.OrdinalIgnoreCase)
+                      || message.Contains("MaterialSupplyMode", StringComparison.OrdinalIgnoreCase)
+                      || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
+                      || message.Contains("RequesterUtcOffsetMinutes", StringComparison.OrdinalIgnoreCase)
+                      || message.Contains("IsPinned", StringComparison.OrdinalIgnoreCase)
+                      || message.Contains("MaxClaims", StringComparison.OrdinalIgnoreCase));
     }
 }

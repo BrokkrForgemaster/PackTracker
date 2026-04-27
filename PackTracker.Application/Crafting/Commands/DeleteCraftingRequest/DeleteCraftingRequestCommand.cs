@@ -216,8 +216,6 @@ WHERE "LinkedCraftingRequestId" = @requestId
     {
         var message = ex.ToString();
         return message.Contains("column", StringComparison.OrdinalIgnoreCase)
-               && (message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase)
-                   || message.Contains("MaterialProcurementRequests", StringComparison.OrdinalIgnoreCase))
                && (message.Contains("ItemName", StringComparison.OrdinalIgnoreCase)
                    || message.Contains("MaterialSupplyMode", StringComparison.OrdinalIgnoreCase)
                    || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
