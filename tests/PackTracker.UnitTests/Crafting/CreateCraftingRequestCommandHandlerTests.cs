@@ -60,6 +60,48 @@ public sealed class CreateCraftingRequestCommandHandlerTests
         Assert.Equal(profile.Id, request.RequesterProfileId);
     }
 
+    [Fact]
+    public async Task Handle_CrafterMustSupply_HandlesMissingRecipeGracefully()
+    {
+        await using var db = CreateDb();
+
+        var profile = new Profile
+        {
+            DiscordId = "discord-123",
+            Username = "sentinel"
+        };
+
+        var blueprint = new Blueprint
+        {
+            BlueprintName = "FS-9 LMG Blueprint",
+            CraftedItemName = "FS-9 LMG",
+            Category = "Weapon",
+            Slug = "fs9-lmg-blueprint"
+        };
+
+        db.AddRange(profile, blueprint);
+        await db.SaveChangesAsync();
+
+        var handler = new CreateCraftingRequestCommandHandler(
+            db,
+            new TestCurrentUserService(profile.DiscordId, profile.Username),
+            new TestCraftingWorkflowNotifier(),
+            NullLogger<CreateCraftingRequestCommandHandler>.Instance);
+
+        var command = new CreateCraftingRequestCommand(new CreateCraftingRequestDto
+        {
+            BlueprintId = blueprint.Id,
+            QuantityRequested = 1,
+            MaterialSupplyMode = MaterialSupplyMode.CrafterMustSupply
+        });
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, await db.CraftingRequests.CountAsync());
+        Assert.Equal(0, await db.MaterialProcurementRequests.CountAsync());
+    }
+
     private static AppDbContext CreateDb() =>
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

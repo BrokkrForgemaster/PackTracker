@@ -155,7 +155,9 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private OwnedBlueprintCardViewModel? selectedOwnedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
-    [ObservableProperty] private bool isSelectedBlueprintOwned;
+    [ObservableProperty] 
+    [NotifyCanExecuteChangedFor(nameof(RemoveOwnershipCommand))]
+    private bool isSelectedBlueprintOwned;
     [ObservableProperty] private string? procurementMaxClaimsText;
 
     [ObservableProperty] private int baseRpm = 650;

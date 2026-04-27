@@ -111,7 +111,14 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
         // --- ENHANCEMENT: Automated Procurement Chain ---
         if (craftingRequest.MaterialSupplyMode == MaterialSupplyMode.CrafterMustSupply)
         {
-            await SpawnProcurementRequestsAsync(craftingRequest, cancellationToken);
+            try
+            {
+                await SpawnProcurementRequestsAsync(craftingRequest, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to spawn automated procurement requests for crafting request {RequestId}. The crafting request was still created.", craftingRequest.Id);
+            }
         }
 
         await _notifier.NotifyAsync("CraftingRequestCreated", craftingRequest.Id, cancellationToken);
@@ -162,6 +169,7 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
                     QuantityRequested = missing,
                     Priority = craftingRequest.Priority,
                     Status = RequestStatus.Open,
+                    MaxClaims = craftingRequest.MaxClaims,
                     DeliveryLocation = craftingRequest.DeliveryLocation,
                     Notes = $"Automated procurement for Crafting Request {craftingRequest.Id} ({craftingRequest.ItemName ?? recipe.Blueprint?.CraftedItemName}).",
                     CreatedAt = DateTime.UtcNow,
@@ -169,9 +177,9 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
                 };
 
                 _db.MaterialProcurementRequests.Add(procurementRequest);
-                
+
                 _logger.LogInformation(
-                    "Auto-procurement: Created request for {Quantity} units of {MaterialName} (Required={Required}, Available={Available})",
+                    "Spawned procurement request for {Missing} {MaterialName} (Required={Required}, Available={Available})",
                     missing, recipeMaterial.Material?.Name ?? "Unknown Material", totalRequired, available);
             }
         }
@@ -179,3 +187,4 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
         await _db.SaveChangesAsync(ct);
     }
 }
+
