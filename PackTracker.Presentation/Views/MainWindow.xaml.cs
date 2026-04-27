@@ -305,7 +305,7 @@ namespace PackTracker.Presentation.Views
                         NavigateToBlueprintExplorer();
                         break;
                     case "CraftingQueue":
-                        NavigateToCraftingQueue();
+                        _ = NavigateToCraftingQueueAsync();
                         break;
                     case "ProcurementQueue":
                         NavigateToProcurementQueue();
@@ -376,10 +376,23 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToCraftingQueue()
         {
+            _ = NavigateToCraftingQueueAsync();
+        }
+
+        public async Task NavigateToCraftingQueueAsync(Guid? requestId = null)
+        {
             try
             {
                 var craftingView = _serviceProvider.GetRequiredService<CraftingRequestsView>();
                 ContentFrame.Navigate(craftingView);
+
+                if (craftingView.DataContext is CraftingRequestsViewModel vm)
+                {
+                    await vm.RefreshDataAsync();
+
+                    if (requestId.HasValue)
+                        vm.SelectedRequest = vm.Requests.FirstOrDefault(x => x.Id == requestId.Value);
+                }
             }
             catch (Exception ex)
             {
@@ -422,13 +435,7 @@ namespace PackTracker.Presentation.Views
             {
                 case "Crafting":
                     {
-                        var view = _serviceProvider.GetRequiredService<CraftingRequestsView>();
-                        ContentFrame.Navigate(view);
-                        if (view.DataContext is CraftingRequestsViewModel vm)
-                        {
-                            await vm.RefreshDataAsync();
-                            vm.SelectedRequest = vm.Requests.FirstOrDefault(x => x.Id == request.Id);
-                        }
+                        await NavigateToCraftingQueueAsync(request.Id);
                         break;
                     }
                 case "Procurement":

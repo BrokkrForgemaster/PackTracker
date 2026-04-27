@@ -13,8 +13,9 @@ public sealed class HttpContextCurrentUserService : ICurrentUserService
     }
 
     public string UserId =>
-        _httpContextAccessor.HttpContext?.User.FindFirstValue("sub")
-        ?? _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+        _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? _httpContextAccessor.HttpContext?.User.FindFirstValue("nameidentifier")
+        ?? _httpContextAccessor.HttpContext?.User.FindFirstValue("sub")
         ?? "unknown";
 
     public string DisplayName =>

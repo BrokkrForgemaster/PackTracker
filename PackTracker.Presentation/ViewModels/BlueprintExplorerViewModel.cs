@@ -9,7 +9,6 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using PackTracker.Application.DTOs.Crafting;
-using PackTracker.Application.DTOs.Dashboard;
 using PackTracker.Application.DTOs.Wiki;
 using PackTracker.Domain.Enums;
 using PackTracker.Presentation.Services;
@@ -19,8 +18,8 @@ namespace PackTracker.Presentation.ViewModels;
 
 public class BlueprintComponentModifierPreview
 {
-    private static readonly System.Globalization.TextInfo TextInfo =
-        System.Globalization.CultureInfo.CurrentCulture.TextInfo;
+    private static readonly TextInfo TextInfo =
+        CultureInfo.CurrentCulture.TextInfo;
 
     public string PropertyKey { get; set; } = string.Empty;
     public double CalculatedValue { get; set; }
@@ -602,14 +601,9 @@ public partial class BlueprintExplorerViewModel : ObservableObject
                 var payload = await response.Content.ReadFromJsonAsync<CreateCraftingRequestResponse>();
                 StatusMessage = $"Crafting request submitted for {SelectedBlueprintDetail.BlueprintName}.";
 
-                if (payload?.RequestId is Guid requestId
-                    && System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
+                if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
                 {
-                    await mainWindow.NavigateToActiveRequestAsync(new ActiveRequestDto
-                    {
-                        Id = requestId,
-                        RequestType = "Crafting"
-                    });
+                    await mainWindow.NavigateToCraftingQueueAsync(payload?.RequestId);
                 }
             }
             else
