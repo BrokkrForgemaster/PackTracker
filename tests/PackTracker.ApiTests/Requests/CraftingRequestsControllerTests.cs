@@ -366,6 +366,55 @@ public class CraftingRequestsControllerTests
     }
 
     [Fact]
+    public async Task CreateCraftingRequest_FromBlueprintExplorer_IsReturnedByCraftingCenterQuery()
+    {
+        var db = CreateDb();
+        var requester = await SeedProfileAsync(db, TestDiscordId, TestUsername, "Requester");
+
+        var wikiUuid = Guid.NewGuid();
+        var blueprint = new Blueprint
+        {
+            BlueprintName = "S71 Rifle Blueprint",
+            CraftedItemName = "S71 Rifle",
+            Category = "Weapon",
+            Slug = "s71-rifle-blueprint",
+            WikiUuid = wikiUuid.ToString()
+        };
+
+        db.Blueprints.Add(blueprint);
+        await db.SaveChangesAsync();
+
+        var controller = BuildController(db);
+
+        var createResult = await controller.CreateCraftingRequest(
+            new CreateCraftingRequestDto
+            {
+                BlueprintId = wikiUuid,
+                CraftedItemName = blueprint.CraftedItemName,
+                QuantityRequested = 2,
+                MinimumQuality = 700,
+                Priority = RequestPriority.High,
+                MaterialSupplyMode = MaterialSupplyMode.Negotiable,
+                DeliveryLocation = "Area18",
+                RewardOffered = "Negotiable"
+            },
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(createResult);
+
+        var queueResult = await controller.GetCraftingRequests(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(queueResult.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<CraftingRequestListItemDto>>(ok.Value);
+
+        var request = Assert.Single(list);
+        Assert.Equal(blueprint.Id, request.BlueprintId);
+        Assert.Equal("S71 Rifle", request.BlueprintName);
+        Assert.Equal(2, request.QuantityRequested);
+        Assert.Equal("Open", request.Status);
+    }
+
+    [Fact]
     public async Task DeleteCraftingRequest_AsCreator_SoftCancelsRequest()
     {
         var (db, connection) = CreateSqliteDb();

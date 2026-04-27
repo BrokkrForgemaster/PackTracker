@@ -1,4 +1,3 @@
-
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -10,9 +9,11 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using PackTracker.Application.DTOs.Crafting;
+using PackTracker.Application.DTOs.Dashboard;
 using PackTracker.Application.DTOs.Wiki;
 using PackTracker.Domain.Enums;
 using PackTracker.Presentation.Services;
+using PackTracker.Presentation.Views;
 
 namespace PackTracker.Presentation.ViewModels;
 
@@ -155,9 +156,7 @@ public partial class BlueprintExplorerViewModel : ObservableObject
     [ObservableProperty] private BlueprintSearchItemDto? selectedBlueprint;
     [ObservableProperty] private OwnedBlueprintCardViewModel? selectedOwnedBlueprint;
     [ObservableProperty] private BlueprintDetailDto? selectedBlueprintDetail;
-    [ObservableProperty] 
-    [NotifyCanExecuteChangedFor(nameof(RemoveOwnershipCommand))]
-    private bool isSelectedBlueprintOwned;
+    [ObservableProperty] private bool _isSelectedBlueprintOwned;
     [ObservableProperty] private string? procurementMaxClaimsText;
 
     [ObservableProperty] private int baseRpm = 650;
@@ -598,9 +597,25 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
             var response = await client.PostAsJsonAsync("api/v1/crafting/requests", dto);
 
-            StatusMessage = response.IsSuccessStatusCode
-                ? $"Crafting request submitted for {SelectedBlueprintDetail.BlueprintName}."
-                : $"Error {(int)response.StatusCode}: {TrimForDisplay(await response.Content.ReadAsStringAsync())}";
+            if (response.IsSuccessStatusCode)
+            {
+                var payload = await response.Content.ReadFromJsonAsync<CreateCraftingRequestResponse>();
+                StatusMessage = $"Crafting request submitted for {SelectedBlueprintDetail.BlueprintName}.";
+
+                if (payload?.RequestId is Guid requestId
+                    && System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    await mainWindow.NavigateToActiveRequestAsync(new ActiveRequestDto
+                    {
+                        Id = requestId,
+                        RequestType = "Crafting"
+                    });
+                }
+            }
+            else
+            {
+                StatusMessage = $"Error {(int)response.StatusCode}: {TrimForDisplay(await response.Content.ReadAsStringAsync())}";
+            }
         }
         catch (Exception ex)
         {
@@ -865,6 +880,11 @@ public partial class BlueprintExplorerViewModel : ObservableObject
 
     private static string Csv(string value) =>
         "\"" + value.Replace("\"", "\"\"") + "\"";
+
+    private sealed class CreateCraftingRequestResponse
+    {
+        public Guid RequestId { get; set; }
+    }
 
     #endregion
 }
