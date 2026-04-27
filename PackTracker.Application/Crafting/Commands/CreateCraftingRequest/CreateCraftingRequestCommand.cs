@@ -106,7 +106,20 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
         };
 
         _db.CraftingRequests.Add(craftingRequest);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsLegacyCraftingMetadataFailure(ex))
+        {
+            _logger.LogWarning(
+                ex,
+                "Crafting request insert failed against newer CraftingRequests metadata. Retrying with legacy-safe column set for RequestId={RequestId}.",
+                craftingRequest.Id);
+
+            await InsertLegacyCraftingRequestAsync(craftingRequest, cancellationToken);
+            ClearTrackedChanges();
+        }
 
         // --- ENHANCEMENT: Automated Procurement Chain ---
         if (craftingRequest.MaterialSupplyMode == MaterialSupplyMode.CrafterMustSupply)
@@ -123,6 +136,34 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
 
         await _notifier.NotifyAsync("CraftingRequestCreated", craftingRequest.Id, cancellationToken);
         return OperationResult<Guid>.Ok(craftingRequest.Id);
+    }
+
+    private async Task InsertLegacyCraftingRequestAsync(CraftingRequest craftingRequest, CancellationToken ct)
+    {
+        await _db.ExecuteSqlInterpolatedAsync($@"
+INSERT INTO ""CraftingRequests""
+(""Id"", ""BlueprintId"", ""RequesterProfileId"", ""AssignedCrafterProfileId"", ""QuantityRequested"", ""MinimumQuality"", ""RefusalReason"", ""Priority"", ""Status"", ""DeliveryLocation"", ""RewardOffered"", ""RequiredBy"", ""Notes"", ""CreatedAt"", ""UpdatedAt"", ""CompletedAt"")
+VALUES
+({craftingRequest.Id}, {craftingRequest.BlueprintId}, {craftingRequest.RequesterProfileId}, {craftingRequest.AssignedCrafterProfileId}, {craftingRequest.QuantityRequested}, {craftingRequest.MinimumQuality}, {craftingRequest.RefusalReason}, {(int)craftingRequest.Priority}, {(int)craftingRequest.Status}, {craftingRequest.DeliveryLocation}, {craftingRequest.RewardOffered}, {craftingRequest.RequiredBy}, {craftingRequest.Notes}, {craftingRequest.CreatedAt}, {craftingRequest.UpdatedAt}, {craftingRequest.CompletedAt})", ct);
+    }
+
+    private void ClearTrackedChanges()
+    {
+        if (_db is DbContext dbContext)
+            dbContext.ChangeTracker.Clear();
+    }
+
+    private static bool IsLegacyCraftingMetadataFailure(Exception ex)
+    {
+        var message = ex.ToString();
+        return message.Contains("CraftingRequests", StringComparison.OrdinalIgnoreCase)
+               && (message.Contains("ItemName", StringComparison.OrdinalIgnoreCase)
+                   || message.Contains("MaterialSupplyMode", StringComparison.OrdinalIgnoreCase)
+                   || message.Contains("RequesterTimeZoneDisplayName", StringComparison.OrdinalIgnoreCase)
+                   || message.Contains("RequesterUtcOffsetMinutes", StringComparison.OrdinalIgnoreCase)
+                   || message.Contains("IsPinned", StringComparison.OrdinalIgnoreCase)
+                   || message.Contains("MaxClaims", StringComparison.OrdinalIgnoreCase)
+                   || message.Contains("column", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task SpawnProcurementRequestsAsync(CraftingRequest craftingRequest, CancellationToken ct)
@@ -187,4 +228,3 @@ public sealed class CreateCraftingRequestCommandHandler : IRequestHandler<Create
         await _db.SaveChangesAsync(ct);
     }
 }
-
