@@ -264,14 +264,21 @@ public class WikiBlueprintService
                             if (localResult.Components == null || localResult.Components.Count == 0)
                                 localResult.Components = wikiDto.Components;
 
-                            if (localResult.Materials == null || localResult.Materials.Count == 0)
+                            // Also replace DB materials when they contain unresolved "Unknown" placeholders
+                            // (left by older sync runs that lacked the key-based name fallback).
+                            var hasUnknownMaterials = localResult.Materials == null
+                                || localResult.Materials.Count == 0
+                                || localResult.Materials.Any(m =>
+                                    string.Equals(m.MaterialName, "Unknown", StringComparison.OrdinalIgnoreCase));
+
+                            if (hasUnknownMaterials)
                                 localResult.Materials = wikiDto.Materials;
 
                             localResult.TimeToCraftSeconds ??= wikiDto.TimeToCraftSeconds;
 
                             _logger.LogDebug(
                                 "Merged wiki data into local blueprint {Uuid}: {ComponentCount} components, {MaterialCount} materials",
-                                wikiUuid, localResult.Components.Count, localResult.Materials.Count);
+                                wikiUuid, localResult.Components?.Count ?? 0, localResult.Materials?.Count ?? 0);
                         }
                     }
                 }
@@ -335,7 +342,7 @@ public class WikiBlueprintService
         foreach (var group in d.RequirementGroups ?? Enumerable.Empty<WikiRequirementGroupDto>())
         {
             foreach (var child in group.Children?.Where(c =>
-                         string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase))
+                         !string.Equals(c.Kind, "group", StringComparison.OrdinalIgnoreCase))
                      ?? Enumerable.Empty<WikiRequirementChildDto>())
             {
                 var key = child.Uuid ?? child.Name ?? child.Key ?? "unknown";
@@ -390,7 +397,7 @@ public class WikiBlueprintService
             .Select(group =>
             {
                 var firstResource = group.Children?.FirstOrDefault(c =>
-                    string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase));
+                    !string.Equals(c.Kind, "group", StringComparison.OrdinalIgnoreCase));
 
                 return new BlueprintComponentDto
                 {

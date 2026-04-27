@@ -69,7 +69,18 @@ public sealed class AssignCraftingRequestCommandHandler : IRequestHandler<Assign
 
         _db.RequestClaims.Add(claim);
 
-        request.Status = RequestStatus.Accepted;
+        // If this is the first claim, or it's a single-claim request, set the legacy assigned field
+        if (request.AssignedCrafterProfileId == null)
+        {
+            request.AssignedCrafterProfileId = profile.Id;
+        }
+
+        // Only transition to Accepted if we've reached the MaxClaims
+        if (request.MaxClaims > 0 && currentClaims + 1 >= request.MaxClaims)
+        {
+            request.Status = RequestStatus.Accepted;
+        }
+        
         request.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 

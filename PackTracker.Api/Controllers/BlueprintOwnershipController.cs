@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PackTracker.Application.Blueprints.Commands.RegisterBlueprintOwnership;
+using PackTracker.Application.Blueprints.Commands.RemoveBlueprintOwnership;
 using PackTracker.Application.Blueprints.Queries.GetBlueprintOwners;
 using PackTracker.Application.DTOs.Crafting;
 
@@ -34,8 +35,7 @@ public class BlueprintOwnershipController : ControllerBase
             "Ownership register. BlueprintId={BlueprintId} InterestType={InterestType}",
             blueprintId, request.InterestType);
 
-        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
-        var result = await _mediator.Send(new RegisterBlueprintOwnershipCommand(blueprintId, discordId, request), ct);
+        var result = await _mediator.Send(new RegisterBlueprintOwnershipCommand(blueprintId, request), ct);
 
         return result.Status switch
         {
@@ -55,6 +55,27 @@ public class BlueprintOwnershipController : ControllerBase
                 message = result.Message
             })
         };
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> Remove(Guid blueprintId, CancellationToken ct)
+    {
+        _logger.LogInformation("Ownership remove. BlueprintId={BlueprintId}", blueprintId);
+
+        var result = await _mediator.Send(new RemoveBlueprintOwnershipCommand(blueprintId), ct);
+
+        if (!result.Success)
+        {
+            if (result.Message == "Unauthorized") return Unauthorized();
+            if (result.Message == "Blueprint ownership not found.") return NotFound(new { message = result.Message });
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(new
+        {
+            message = result.Message,
+            ownerCount = result.OwnerCount
+        });
     }
 
     [HttpGet]

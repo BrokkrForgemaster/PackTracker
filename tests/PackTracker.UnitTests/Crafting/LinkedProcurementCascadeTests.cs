@@ -67,16 +67,16 @@ public sealed class LinkedProcurementCascadeTests
 
         Assert.True(result.Success);
 
-        var procurementRequests = await db.MaterialProcurementRequests
-            .OrderBy(x => x.Id)
-            .ToListAsync();
+        var updatedLinkedOpen = await db.MaterialProcurementRequests.FindAsync(linkedOpen.Id);
+        var updatedLinkedAccepted = await db.MaterialProcurementRequests.FindAsync(linkedAccepted.Id);
+        var updatedUnrelated = await db.MaterialProcurementRequests.FindAsync(unrelated.Id);
 
-        Assert.Equal(RequestStatus.Completed, procurementRequests[0].Status);
-        Assert.NotNull(procurementRequests[0].CompletedAt);
-        Assert.Equal(RequestStatus.Completed, procurementRequests[1].Status);
-        Assert.NotNull(procurementRequests[1].CompletedAt);
-        Assert.Equal(RequestStatus.Open, procurementRequests[2].Status);
-        Assert.Null(procurementRequests[2].CompletedAt);
+        Assert.Equal(RequestStatus.Completed, updatedLinkedOpen!.Status);
+        Assert.NotNull(updatedLinkedOpen.CompletedAt);
+        Assert.Equal(RequestStatus.Completed, updatedLinkedAccepted!.Status);
+        Assert.NotNull(updatedLinkedAccepted.CompletedAt);
+        Assert.Equal(RequestStatus.Open, updatedUnrelated!.Status);
+        Assert.Null(updatedUnrelated.CompletedAt);
 
         Assert.Contains(("CraftingRequestUpdated", request.Id), notifier.Events);
         Assert.Contains(("ProcurementUpdated", linkedOpen.Id), notifier.Events);
@@ -144,15 +144,15 @@ public sealed class LinkedProcurementCascadeTests
         var updatedCraftingRequest = await db.CraftingRequests.SingleAsync();
         Assert.Equal(RequestStatus.Cancelled, updatedCraftingRequest.Status);
 
-        var procurementRequests = await db.MaterialProcurementRequests
-            .OrderBy(x => x.Id)
-            .ToListAsync();
+        var updatedLinkedOpen = await db.MaterialProcurementRequests.FindAsync(linkedOpen.Id);
+        var updatedLinkedCompleted = await db.MaterialProcurementRequests.FindAsync(linkedCompleted.Id);
+        var updatedUnrelated = await db.MaterialProcurementRequests.FindAsync(unrelated.Id);
 
-        Assert.Equal(RequestStatus.Cancelled, procurementRequests[0].Status);
-        Assert.Null(procurementRequests[0].CompletedAt);
-        Assert.Equal(RequestStatus.Cancelled, procurementRequests[1].Status);
-        Assert.Null(procurementRequests[1].CompletedAt);
-        Assert.Equal(RequestStatus.Open, procurementRequests[2].Status);
+        Assert.Equal(RequestStatus.Cancelled, updatedLinkedOpen!.Status);
+        Assert.Null(updatedLinkedOpen.CompletedAt);
+        Assert.Equal(RequestStatus.Cancelled, updatedLinkedCompleted!.Status);
+        Assert.Null(updatedLinkedCompleted.CompletedAt);
+        Assert.Equal(RequestStatus.Open, updatedUnrelated!.Status);
 
         Assert.Contains(("CraftingRequestUpdated", request.Id), notifier.Events);
         Assert.Contains(("ProcurementUpdated", linkedOpen.Id), notifier.Events);

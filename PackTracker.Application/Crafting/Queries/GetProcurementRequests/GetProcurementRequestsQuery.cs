@@ -31,6 +31,10 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
         return await _db.MaterialProcurementRequests
             .AsNoTracking()
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
+            .Where(x => x.Status == RequestStatus.Open
+                     || x.RequesterProfileId == currentProfileId
+                     || x.AssignedToProfileId == currentProfileId
+                     || _db.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Procurement" && c.ProfileId == currentProfileId))
             .Select(x => new MaterialProcurementRequestListItemDto
             {
                 Id = x.Id,
@@ -41,10 +45,12 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
                 RequesterDisplayName = x.RequesterProfile != null
                     ? (x.RequesterProfile.DiscordDisplayName ?? x.RequesterProfile.Username)
                     : "Unknown",
-                AssignedToUsername = _db.RequestClaims
-                    .Where(c => c.RequestId == x.Id && c.RequestType == "Procurement")
-                    .Join(_db.Profiles, c => c.ProfileId, p => p.Id, (c, p) => p.DiscordDisplayName ?? p.Username)
-                    .FirstOrDefault(),
+                AssignedToUsername = x.AssignedToProfile != null
+                    ? (x.AssignedToProfile.DiscordDisplayName ?? x.AssignedToProfile.Username)
+                    : _db.RequestClaims
+                        .Where(c => c.RequestId == x.Id && c.RequestType == "Procurement")
+                        .Join(_db.Profiles, c => c.ProfileId, p => p.Id, (c, p) => p.DiscordDisplayName ?? p.Username)
+                        .FirstOrDefault(),
                 QuantityRequested = x.QuantityRequested,
                 QuantityDelivered = x.QuantityDelivered,
                 MinimumQuality = x.MinimumQuality,

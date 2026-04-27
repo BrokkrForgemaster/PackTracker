@@ -481,7 +481,7 @@ public sealed class WikiSyncService : IWikiSyncService
         foreach (var group in detail.RequirementGroups ?? Enumerable.Empty<WikiRequirementGroupDto>())
         {
             foreach (var child in group.Children
-                         .Where(c => string.Equals(c.Kind, "resource", StringComparison.OrdinalIgnoreCase)))
+                         .Where(c => !string.Equals(c.Kind, "group", StringComparison.OrdinalIgnoreCase)))
             {
                 var key = child.Uuid ?? child.Name ?? child.Key ?? "unknown";
                 var qty = child.QuantityScu ?? child.Quantity ?? 0;

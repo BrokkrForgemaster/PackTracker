@@ -43,12 +43,14 @@ public sealed class RegisterBlueprintOwnershipCommandTests
         db.AddRange(profile, blueprint, existing);
         await db.SaveChangesAsync();
 
-        var handler = new RegisterBlueprintOwnershipCommandHandler(db, new NoOpWikiSyncService());
+        var handler = new RegisterBlueprintOwnershipCommandHandler(
+            db, 
+            new NoOpWikiSyncService(),
+            new TestCurrentUserService(profile.DiscordId, profile.Username));
 
         var result = await handler.Handle(
             new RegisterBlueprintOwnershipCommand(
                 wikiUuid,
-                profile.DiscordId,
                 new RegisterBlueprintOwnershipRequest
                 {
                     InterestType = MemberBlueprintInterestType.Owns,
@@ -97,12 +99,12 @@ public sealed class RegisterBlueprintOwnershipCommandTests
 
                 await db.SaveChangesAsync(ct);
                 return true;
-            }));
+            }),
+            new TestCurrentUserService(profile.DiscordId, profile.Username));
 
         var result = await handler.Handle(
             new RegisterBlueprintOwnershipCommand(
                 wikiUuid,
-                profile.DiscordId,
                 new RegisterBlueprintOwnershipRequest
                 {
                     InterestType = MemberBlueprintInterestType.Owns,
@@ -119,6 +121,20 @@ public sealed class RegisterBlueprintOwnershipCommandTests
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
+
+    private sealed class TestCurrentUserService : ICurrentUserService
+    {
+        public TestCurrentUserService(string userId, string displayName)
+        {
+            UserId = userId;
+            DisplayName = displayName;
+        }
+
+        public string UserId { get; }
+        public string DisplayName { get; }
+        public bool IsAuthenticated => true;
+        public bool IsInRole(string role) => false;
+    }
 
     private sealed class NoOpWikiSyncService : IWikiSyncService
     {

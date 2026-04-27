@@ -150,7 +150,7 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
         Assert.DoesNotContain(result, x => x.QuantityRequested == 4);
         Assert.Contains(result, x => x.Status == RequestStatus.Open.ToString());
         Assert.Contains(result, x => x.Status == RequestStatus.Accepted.ToString() && x.RequesterUsername == currentUser.Username);
-        Assert.Contains(result, x => x.Status == RequestStatus.InProgress.ToString() && x.AssignedToUsername == currentUser.Username);
+        Assert.Contains(result, x => x.Status == RequestStatus.InProgress.ToString() && x.AssignedToUsername == currentUser.DiscordDisplayName);
     }
 
     private static AppDbContext CreateDb() =>

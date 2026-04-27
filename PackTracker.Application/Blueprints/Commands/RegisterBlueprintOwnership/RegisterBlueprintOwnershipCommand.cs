@@ -9,7 +9,6 @@ namespace PackTracker.Application.Blueprints.Commands.RegisterBlueprintOwnership
 
 public sealed record RegisterBlueprintOwnershipCommand(
     Guid BlueprintId,
-    string? DiscordId,
     RegisterBlueprintOwnershipRequest Request) : IRequest<BlueprintOwnershipRegistrationResult>;
 
 public sealed record BlueprintOwnershipRegistrationResult(
@@ -30,24 +29,29 @@ public sealed class RegisterBlueprintOwnershipCommandHandler
 {
     private readonly IApplicationDbContext _db;
     private readonly IWikiSyncService _wikiSync;
+    private readonly ICurrentUserService _currentUser;
 
-    public RegisterBlueprintOwnershipCommandHandler(IApplicationDbContext db, IWikiSyncService wikiSync)
+    public RegisterBlueprintOwnershipCommandHandler(
+        IApplicationDbContext db, 
+        IWikiSyncService wikiSync,
+        ICurrentUserService currentUser)
     {
         _db = db;
         _wikiSync = wikiSync;
+        _currentUser = currentUser;
     }
 
     public async Task<BlueprintOwnershipRegistrationResult> Handle(
         RegisterBlueprintOwnershipCommand command, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(command.DiscordId))
+        if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))
         {
             return new BlueprintOwnershipRegistrationResult(
                 BlueprintOwnershipRegistrationStatus.Unauthorized, null, null, "Unauthorized");
         }
 
         var profile = await _db.Profiles
-            .FirstOrDefaultAsync(x => x.DiscordId == command.DiscordId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.DiscordId == _currentUser.UserId, cancellationToken);
 
         if (profile is null)
         {
