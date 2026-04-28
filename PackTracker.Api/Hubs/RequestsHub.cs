@@ -35,41 +35,6 @@ public class RequestsHub : Hub
     private static readonly ConcurrentDictionary<string, Queue<ChatMessage>> _messageHistory = new();
     private static readonly ConcurrentDictionary<string, string> _connectionRegistry = new(); // connectionId → discordId
 
-    private static readonly ChatMessage _generalWelcomeMessage = new(
-        Id: "system-welcome-001",
-        Sender: "PackTracker",
-        SenderDisplayName: "PackTracker",
-        Content:
-            "?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????\n" +
-            "  WELCOME TO PACKTRACKER — HOUSE WOLF OPERATIONS HUB\n" +
-            "═══════════════════════════════════════\n\n" +
-            "PackTracker is your all-in-one command center for coordinating House Wolf operations in Star Citizen.\n\n" +
-            "[ ACTIVE REQUESTS DASHBOARD ]\n" +
-            "Your landing view shows every open Assistance, Crafting, and Procurement request across the org in real time. Pin high-priority items, claim requests assigned to you, and track status through the pipeline.\n\n" +
-            "[ CRAFTING CENTER ]\n" +
-            "Submit crafting requests for blueprinted items and get matched with org crafters. Crafters can claim, accept, refuse, or complete requests and communicate inside the request's live chat thread.\n\n" +
-            "[ PROCUREMENT QUEUE ]\n" +
-            "Need raw materials sourced? Drop a procurement request and let logistics members pick it up. Full status tracking from open through delivery.\n\n" +
-            "[ ASSISTANCE REQUESTS ]\n" +
-            "Need backup, a ride, or situational help in the verse? Open an assistance request and any available org member can claim it and coordinate through the built-in request chat.\n\n" +
-            "[ BLUEPRINT EXPLORER ]\n" +
-            "Browse the full House Wolf blueprint library — filter by category, search by name, and view full material breakdowns before committing to a crafting request.\n\n" +
-            "[ TRADING HUB (UEX) ]\n" +
-            "Live commodity pricing and trade route optimization powered by UEX data. Find the best buy/sell locations and calculate optimal cargo runs for your ship.\n\n" +
-            "[ GUIDE SCHEDULING ]\n" +
-            "Leadership can schedule and track guided sessions — tours, training runs, and org events — visible directly on the dashboard.\n\n" +
-            "[ LIVE CHAT & DIVISION CHANNELS ]\n" +
-            "Real-time org-wide chat right here in General. Members with division roles (LOCOPS, TACOPS, SPECOPS, ARCOPS, Leadership) get access to their division channels — automatically unlocked based on your Discord roles.\n\n" +
-            "[ PRESENCE & ONLINE STATUS ]\n" +
-            "See who's online in the org at a glance from the sidebar. Direct message any online member without leaving the app.\n\n" +
-            "═══════════════════════════════════════\n" +
-            "  Log in with Discord to get started. Division channels unlock automatically after your first login.\n" +
-            "═══════════════════════════════════════",
-        SentAt: new DateTime(2026, 4, 19, 0, 0, 0, DateTimeKind.Utc),
-        SenderDiscordId: "system",
-        AvatarUrl: null,
-        SenderRole: "System");
-
     #endregion
 
     #region Dependencies
@@ -919,9 +884,6 @@ public class RequestsHub : Hub
     /// </summary>
     private static string NormalizeLobbyName(string lobbyName) =>
         $"lobby:{lobbyName.Trim().ToLowerInvariant()}";
-
-    private static string BuildDirectChannelName(string username) =>
-        $"direct:{username.Trim().ToLowerInvariant()}";
 
     private static string BuildPrivateChannelName(string userA, string userB)
     {

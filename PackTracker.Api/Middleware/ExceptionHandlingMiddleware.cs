@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
+using Microsoft.Extensions.Hosting;
 using PackTracker.Application.Interfaces;
 using PackTracker.Common.DTOs;
 
@@ -15,6 +16,7 @@ public class ExceptionHandlingMiddleware
 
     private readonly RequestDelegate _next;
     private readonly ILoggingService<ExceptionHandlingMiddleware> _logger;
+    private readonly IHostEnvironment _environment;
 
     #endregion
 
@@ -22,10 +24,12 @@ public class ExceptionHandlingMiddleware
 
     public ExceptionHandlingMiddleware(
         RequestDelegate next,
-        ILoggingService<ExceptionHandlingMiddleware> logger)
+        ILoggingService<ExceptionHandlingMiddleware> logger,
+        IHostEnvironment environment)
     {
         _next = next;
         _logger = logger;
+        _environment = environment;
     }
 
     #endregion
@@ -46,15 +50,12 @@ public class ExceptionHandlingMiddleware
                 : (int)HttpStatusCode.InternalServerError;
             var message = ex is ValidationException validationException
                 ? "Validation failed"
-                : ex.Message;
+                : "An unexpected error occurred.";
             var errors = ex is ValidationException fluentValidationException
                 ? fluentValidationException.Errors
                     .GroupBy(x => x.PropertyName)
                     .ToDictionary(g => g.Key, g => g.Select(x => x.ErrorMessage).ToArray())
-                : new Dictionary<string, string[]>
-                {
-                    ["StackTrace"] = new[] { ex.StackTrace ?? "No stack trace available" }
-                };
+                : BuildServerErrorDetails(traceId, ex);
 
             _logger.LogError(
                 ex,
@@ -81,6 +82,23 @@ public class ExceptionHandlingMiddleware
 
             await context.Response.WriteAsync(json);
         }
+    }
+
+    private Dictionary<string, string[]>? BuildServerErrorDetails(string traceId, Exception ex)
+    {
+        if (_environment.IsDevelopment())
+        {
+            return new Dictionary<string, string[]>
+            {
+                ["Exception"] = [ex.Message],
+                ["TraceId"] = [traceId]
+            };
+        }
+
+        return new Dictionary<string, string[]>
+        {
+            ["TraceId"] = [traceId]
+        };
     }
 
     #endregion

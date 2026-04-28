@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -50,6 +51,31 @@ public class EmbeddedApiHostValidationTests
         var response = await client.GetAsync("/health");
 
         Assert.True(response.IsSuccessStatusCode);
+    }
+
+    [Fact]
+    public async Task EmbeddedApiConfiguration_ReadinessProbe_IsUnhealthyBeforeInitializationCompletes()
+    {
+        var settingsService = new TestSettingsService(new AppSettings
+        {
+            ConnectionString = "Host=localhost;Database=packtracker;Username=test;Password=test",
+            JwtKey = "0123456789abcdef0123456789abcdef",
+            JwtIssuer = "PackTracker",
+            JwtAudience = "PackTrackerClient",
+            DiscordClientId = "discord-client",
+            DiscordClientSecret = "discord-secret",
+            DiscordCallbackPath = "/signin-discord",
+            DiscordRequiredGuildId = "guild-id",
+            UexBaseUrl = "https://api.uexcorp.uk/2.0",
+            ApiBaseUrl = "http://localhost:5001"
+        });
+
+        using var host = await BuildEmbeddedStyleHostAsync(settingsService);
+
+        var client = host.GetTestClient();
+        var response = await client.GetAsync("/health/ready");
+
+        Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
     [Fact]
@@ -113,7 +139,14 @@ public class EmbeddedApiHostValidationTests
                     {
                         endpoints.MapControllers();
                         endpoints.MapHub<RequestsHub>(RequestsHub.Route);
-                        endpoints.MapHealthChecks("/health");
+                        endpoints.MapHealthChecks("/health", new HealthCheckOptions
+                        {
+                            Predicate = _ => false
+                        });
+                        endpoints.MapHealthChecks("/health/ready", new HealthCheckOptions
+                        {
+                            Predicate = registration => registration.Tags.Contains("ready")
+                        });
                     });
                 });
             })

@@ -6,10 +6,8 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
-using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
-
 using Microsoft.Extensions.Options;
 using PackTracker.Application.Options;
 using PackTracker.Domain.Security;
@@ -84,13 +82,12 @@ public class JwtTokenService
         );
 
         var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-        _logger.LogInformation("✅ Issued JWT for {User} expiring in {Minutes} min.", user.Username, _accessTokenMinutes);
+        _logger.LogInformation("Issued JWT for {User} expiring in {Minutes} min.", user.Username, _accessTokenMinutes);
         return jwt;
     }
 
     public async Task<string> GenerateRefreshTokenAsync(Guid userId, CancellationToken ct)
     {
-        // 1. Revoke existing tokens for this user (Rotation Policy)
         var activeTokens = await _db.RefreshTokens
             .Where(rt => rt.UserId == userId && !rt.IsRevoked)
             .ToListAsync(ct);
@@ -101,13 +98,11 @@ public class JwtTokenService
             active.RevokedAt = DateTime.UtcNow;
         }
 
-        // 2. Generate new plain-text token
         var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
             .Replace("+", "")
             .Replace("/", "")
             .Replace("=", "");
 
-        // 3. Store the HASHED version
         var refresh = new RefreshToken
         {
             Id = Guid.NewGuid(),
@@ -121,8 +116,8 @@ public class JwtTokenService
         await _db.RefreshTokens.AddAsync(refresh, ct);
         await _db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("✅ Created new refresh token for user {UserId}, expiring in {Days} days.", userId, _refreshTokenDays);
-        return rawToken; // Return the plain text to the user ONCE
+        _logger.LogInformation("Created new refresh token for user {UserId}, expiring in {Days} days.", userId, _refreshTokenDays);
+        return rawToken;
     }
 
     public async Task<Profile?> ValidateRefreshTokenAsync(string token, CancellationToken ct)
@@ -137,18 +132,27 @@ public class JwtTokenService
 
         if (refresh == null)
         {
-            _logger.LogWarning("❌ Invalid or revoked refresh token attempted.");
+            _logger.LogWarning("Invalid or revoked refresh token attempted.");
             return null;
         }
 
         if (refresh.ExpiresAt < DateTime.UtcNow)
         {
-            _logger.LogWarning("⚠️ Expired refresh token used for {UserId}.", refresh.UserId);
+            _logger.LogWarning("Expired refresh token used for {UserId}.", refresh.UserId);
             return null;
         }
 
-        _logger.LogInformation("✅ Valid refresh token for {UserId}.", refresh.UserId);
-        return refresh.Profile;
+        var profile = refresh.Profile
+            ?? await _db.Profiles.FirstOrDefaultAsync(p => p.Id == refresh.UserId, ct);
+
+        if (profile == null)
+        {
+            _logger.LogWarning("Refresh token matched user {UserId}, but no profile record was found.", refresh.UserId);
+            return null;
+        }
+
+        _logger.LogInformation("Valid refresh token for {UserId}.", refresh.UserId);
+        return profile;
     }
 
     public async Task RevokeRefreshTokenAsync(string token, CancellationToken ct)
@@ -164,7 +168,7 @@ public class JwtTokenService
 
         await _db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("🚫 Revoked refresh token for user {UserId}", refresh.UserId);
+        _logger.LogInformation("Revoked refresh token for user {UserId}", refresh.UserId);
     }
 
     public async Task<(string accessToken, string refreshToken, int expiresIn)> IssueTokenPairAsync(Profile user, CancellationToken ct)

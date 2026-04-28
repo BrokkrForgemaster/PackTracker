@@ -3,7 +3,7 @@
 ; House Wolf Operations Shell for Star Citizen
 ;
 ; Build from repo root:
-;   ISCC.exe /DAppVersion=0.1.5 installer\PackTrackerSetup.iss
+;   ISCC.exe /DAppVersion=0.5.1 installer\PackTrackerSetup.iss
 ;
 ; Notes:
 ; - Build your app first so ..\publish\ contains the full publish output
@@ -13,7 +13,7 @@
 ; ============================================================
 
 #ifndef AppVersion
-  #define AppVersion "0.5.0"
+  #define AppVersion "0.5.1"
 #endif
 
 #define AppName        "PackTracker"
@@ -94,14 +94,7 @@ Name: "desktopicon"; \
 ; Primary publish output
 Source: "..\publish\*"; \
   DestDir: "{app}"; \
-  Flags: ignoreversion recursesubdirs createallsubdirs; \
-  Check: DirExists(ExpandConstant('{src}\..\publish'))
-
-; Failsafe for local dev builds
-Source: "..\publish\*"; \
-  DestDir: "{app}"; \
-  Flags: ignoreversion recursesubdirs createallsubdirs; \
-  Check: not DirExists(ExpandConstant('{src}\..\publish'))
+  Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Explicitly ensure appsettings.json is included
 Source: "..\PackTracker.Presentation\appsettings.json"; \

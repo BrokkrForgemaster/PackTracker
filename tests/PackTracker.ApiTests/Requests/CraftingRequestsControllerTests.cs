@@ -456,6 +456,83 @@ public class CraftingRequestsControllerTests
         Assert.Equal(RequestStatus.Cancelled, updated.Status);
     }
 
+    [Fact]
+    public async Task AssignToSelf_LegacySchemaWithoutRequestClaims_FallsBackToAssignedCrafterUpdate()
+    {
+        var (db, connection) = CreateSqliteDb();
+        await using var _ = db;
+        await using var __ = connection;
+
+        var requester = await SeedProfileAsync(db, "111222333444555", "requester", "Requester");
+        var assignee = await SeedProfileAsync(db, TestDiscordId, TestUsername, "Crafter");
+
+        var blueprint = new Blueprint
+        {
+            BlueprintName = "Railgun Blueprint",
+            CraftedItemName = "Railgun",
+            Category = "Weapon",
+            Slug = "railgun-blueprint"
+        };
+
+        db.Blueprints.Add(blueprint);
+        await db.SaveChangesAsync();
+
+        await db.Database.ExecuteSqlRawAsync(@"DROP TABLE ""RequestClaims"";");
+        await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""CraftingRequests"" RENAME TO ""CraftingRequests_Current"";");
+        await db.Database.ExecuteSqlRawAsync(@"
+CREATE TABLE ""CraftingRequests"" (
+    ""Id"" TEXT NOT NULL CONSTRAINT ""PK_CraftingRequests"" PRIMARY KEY,
+    ""BlueprintId"" TEXT NOT NULL,
+    ""RequesterProfileId"" TEXT NOT NULL,
+    ""AssignedCrafterProfileId"" TEXT NULL,
+    ""QuantityRequested"" INTEGER NOT NULL,
+    ""MinimumQuality"" INTEGER NOT NULL,
+    ""RefusalReason"" TEXT NULL,
+    ""Priority"" INTEGER NOT NULL,
+    ""Status"" INTEGER NOT NULL,
+    ""DeliveryLocation"" TEXT NULL,
+    ""RewardOffered"" TEXT NULL,
+    ""RequiredBy"" TEXT NULL,
+    ""Notes"" TEXT NULL,
+    ""CreatedAt"" TEXT NOT NULL,
+    ""UpdatedAt"" TEXT NOT NULL,
+    ""CompletedAt"" TEXT NULL
+);");
+
+        var requestId = Guid.NewGuid();
+        var createdAt = DateTime.UtcNow.AddHours(-2);
+        var updatedAt = createdAt;
+
+        await db.Database.ExecuteSqlInterpolatedAsync($@"
+INSERT INTO ""CraftingRequests""
+(""Id"", ""BlueprintId"", ""RequesterProfileId"", ""AssignedCrafterProfileId"", ""QuantityRequested"", ""MinimumQuality"", ""RefusalReason"", ""Priority"", ""Status"", ""DeliveryLocation"", ""RewardOffered"", ""RequiredBy"", ""Notes"", ""CreatedAt"", ""UpdatedAt"", ""CompletedAt"")
+VALUES
+({requestId}, {blueprint.Id}, {requester.Id}, {null}, {1}, {1}, {null}, {(int)RequestPriority.Normal}, {(int)RequestStatus.Open}, {null}, {null}, {null}, {"Legacy request"}, {createdAt}, {updatedAt}, {null});");
+
+        var controller = BuildController(db, assignee.DiscordId, assignee.Username);
+
+        var result = await controller.AssignToSelf(requestId, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(ok.Value);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+SELECT "AssignedCrafterProfileId", "Status"
+FROM "CraftingRequests"
+WHERE "Id" = $id
+""";
+        var idParameter = command.CreateParameter();
+        idParameter.ParameterName = "$id";
+        idParameter.Value = requestId;
+        command.Parameters.Add(idParameter);
+
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal(assignee.Id, Guid.Parse(reader.GetString(0)));
+        Assert.Equal((int)RequestStatus.Accepted, reader.GetInt32(1));
+    }
+
     private sealed class TestCurrentUserService : ICurrentUserService
     {
         public TestCurrentUserService(string userId, string displayName)

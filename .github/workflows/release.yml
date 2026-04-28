@@ -46,7 +46,15 @@ jobs:
 
       # ── Restore ───────────────────────────────────────────────────
       - name: Restore
-        run: dotnet restore PackTracker.Presentation/PackTracker.Presentation.csproj
+        run: dotnet restore PackTracker.sln
+
+      # ── Test (gate: release is rejected if any test fails) ────────
+      - name: Test
+        run: >
+          dotnet test PackTracker.sln
+          --no-restore
+          --configuration Release
+          --logger "console;verbosity=normal"
 
       # ── Inject production secrets into appsettings.json ───────────
       # These values are stored as GitHub Actions secrets and are never

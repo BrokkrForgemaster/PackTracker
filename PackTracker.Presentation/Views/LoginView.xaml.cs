@@ -41,7 +41,7 @@ public partial class LoginView : UserControl
 
         try
         {
-            var apiReady = await WaitForApiAsync($"{ApiBaseUrl}/health");
+            var apiReady = await WaitForApiAsync(ApiBaseUrl);
             DiscordStatus.Text = apiReady
                 ? "API reachable. Ready for login."
                 : $"API unavailable: {ApiBaseUrl}";
@@ -63,14 +63,13 @@ public partial class LoginView : UserControl
         DiscordCheck.Visibility = Visibility.Collapsed;
         var baseUrl = ApiBaseUrl;
         var loginUrl = $"{baseUrl}/api/v1/auth/login?clientState={_clientState}";
-        var healthUrl = $"{baseUrl}/health";
 
         try
         {
             DiscordLoginButton.IsEnabled = false;
             DiscordStatus.Text = "Checking API availability...";
 
-            var apiReady = await WaitForApiAsync(healthUrl);
+            var apiReady = await WaitForApiAsync(baseUrl);
 
             if (!apiReady)
             {
@@ -169,7 +168,7 @@ public partial class LoginView : UserControl
 
         try
         {
-            var apiReady = await WaitForApiAsync($"{ApiBaseUrl}/health");
+            var apiReady = await WaitForApiAsync(ApiBaseUrl);
             DiscordStatus.Text = apiReady
                 ? "API reachable. Ready for login."
                 : $"API unavailable: {ApiBaseUrl}";
@@ -182,21 +181,31 @@ public partial class LoginView : UserControl
         }
     }
 
-    private static async Task<bool> WaitForApiAsync(string url)
+    private static async Task<bool> WaitForApiAsync(string baseUrl)
     {
         using var client = new HttpClient();
+        var readinessUrl = $"{baseUrl.TrimEnd('/')}/health/ready";
+        var livenessUrl = $"{baseUrl.TrimEnd('/')}/health";
         for (int i = 0; i < 6; i++)
         {
             try
             {
-                var response = await client.GetAsync(url);
-                if (response.IsSuccessStatusCode)
+                var readinessResponse = await client.GetAsync(readinessUrl);
+                if (readinessResponse.IsSuccessStatusCode)
                     return true;
+
+                if (readinessResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    var livenessResponse = await client.GetAsync(livenessUrl);
+                    if (livenessResponse.IsSuccessStatusCode)
+                        return true;
+                }
             }
             catch
             {
-                await Task.Delay(750);
             }
+
+            await Task.Delay(750);
         }
 
         return false;

@@ -116,17 +116,13 @@ public class JwtTokenServiceTests
         var db = CreateDb();
         var sut = CreateSut(db);
 
-        var expiredToken = new RefreshToken
-        {
-            Token = "expired-token",
-            UserId = Guid.NewGuid(),
-            ExpiresAt = DateTime.UtcNow.AddDays(-1),
-            IsRevoked = false
-        };
-        db.RefreshTokens.Add(expiredToken);
+        var userId = Guid.NewGuid();
+        var rawToken = await sut.GenerateRefreshTokenAsync(userId, CancellationToken.None);
+        var expiredToken = await db.RefreshTokens.FirstAsync(r => r.UserId == userId);
+        expiredToken.ExpiresAt = DateTime.UtcNow.AddDays(-1);
         await db.SaveChangesAsync();
 
-        var result = await sut.ValidateRefreshTokenAsync("expired-token", CancellationToken.None);
+        var result = await sut.ValidateRefreshTokenAsync(rawToken, CancellationToken.None);
 
         Assert.Null(result);
     }
@@ -141,18 +137,9 @@ public class JwtTokenServiceTests
         db.Profiles.Add(profile);
         await db.SaveChangesAsync();
 
-        var refreshToken = new RefreshToken
-        {
-            Token = "valid-token",
-            UserId = profile.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
-            IsRevoked = false,
-            Profile = profile
-        };
-        db.RefreshTokens.Add(refreshToken);
-        await db.SaveChangesAsync();
+        var rawToken = await sut.GenerateRefreshTokenAsync(profile.Id, CancellationToken.None);
 
-        var result = await sut.ValidateRefreshTokenAsync("valid-token", CancellationToken.None);
+        var result = await sut.ValidateRefreshTokenAsync(rawToken, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal(profile.DiscordId, result.DiscordId);
@@ -166,21 +153,13 @@ public class JwtTokenServiceTests
             .UseInMemoryDatabase(dbName).Options);
         var sut = CreateSut(db);
 
-        var token = new RefreshToken
-        {
-            Token = "revoke-me",
-            UserId = Guid.NewGuid(),
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
-            IsRevoked = false
-        };
-        db.RefreshTokens.Add(token);
-        await db.SaveChangesAsync();
+        var rawToken = await sut.GenerateRefreshTokenAsync(Guid.NewGuid(), CancellationToken.None);
 
-        await sut.RevokeRefreshTokenAsync("revoke-me", CancellationToken.None);
+        await sut.RevokeRefreshTokenAsync(rawToken, CancellationToken.None);
 
         var verifyDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName).Options);
-        var record = await verifyDb.RefreshTokens.FirstOrDefaultAsync(r => r.Token == "revoke-me");
+        var record = await verifyDb.RefreshTokens.FirstOrDefaultAsync();
         Assert.NotNull(record);
         Assert.True(record.IsRevoked);
         Assert.NotNull(record.RevokedAt);

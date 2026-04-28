@@ -13,6 +13,7 @@ using PackTracker.Application.Options;
 using PackTracker.Infrastructure.ApiHosting;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace PackTracker.Api.Hosting;
 
@@ -48,6 +49,9 @@ public static class PackTrackerApiComposition
                 }
             }
         });
+
+        builder.Services.Configure<StartupOptions>(
+            builder.Configuration.GetSection(StartupOptions.SectionName));
 
         builder.Services.AddCors(cors =>
         {
@@ -115,7 +119,14 @@ public static class PackTrackerApiComposition
 
         app.MapControllers();
         app.MapHub<RequestsHub>(RequestsHub.Route);
-        app.MapHealthChecks("/health");
+        app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            Predicate = _ => false
+        });
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions
+        {
+            Predicate = registration => registration.Tags.Contains("ready")
+        });
     }
 
     public static async Task InitializeDatabaseAsync(
@@ -128,6 +139,10 @@ public static class PackTrackerApiComposition
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
         var maintenance = scope.ServiceProvider.GetRequiredService<IDataMaintenanceService>();
         var seedService = scope.ServiceProvider.GetRequiredService<CraftingSeedService>();
+        var startupState = scope.ServiceProvider.GetRequiredService<IStartupInitializationState>();
+        var startupOptions = scope.ServiceProvider
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<StartupOptions>>()
+            .Value;
 
         // Defensive: ensure critical auth tables exist even if EF migrations fail.
         // These tables have no prior migration and will be absent on an existing DB.
@@ -198,10 +213,22 @@ public static class PackTrackerApiComposition
             logger.LogInformation("Seeding crafting data from {Path}", seedPath);
             await seedService.SeedAsync(seedPath, cancellationToken);
             logger.LogInformation("Data seeding completed");
+            startupState.MarkSucceeded();
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Database initialization encountered issues (non-critical)");
+            startupState.MarkFailed(ex.Message);
+            if (startupOptions.FailOnDatabaseInitializationError)
+            {
+                logger.LogCritical(
+                    ex,
+                    "Database initialization failed and strict startup policy is enabled. Startup will be aborted.");
+                throw;
+            }
+
+            logger.LogWarning(
+                ex,
+                "Database initialization encountered issues. Startup is continuing in degraded mode because strict startup policy is disabled.");
         }
     }
 

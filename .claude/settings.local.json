@@ -49,7 +49,9 @@
       "PowerShell($b64 = [Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\('B:\\\\PackTracker\\\\PackTracker.Presentation\\\\Assets\\\\Pack_Tracker.png'\\)\\); Write-Output $b64.Length)",
       "PowerShell(Out-File *)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); s=d.get\\('AppSettings',{}\\); print\\('JwtToken:', bool\\(s.get\\('JwtToken',''\\)\\), '|', s.get\\('JwtToken',''\\)[:30] if s.get\\('JwtToken'\\) else 'EMPTY'\\); print\\('JwtRefreshToken:', bool\\(s.get\\('JwtRefreshToken',''\\)\\), '|', s.get\\('JwtRefreshToken',''\\)[:30] if s.get\\('JwtRefreshToken'\\) else 'EMPTY'\\)\")",
-      "Bash(dir \"B:\\\\PackTracker\\\\PackTracker.Infrastructure\\\\Persistence\\\\Migrations\")"
+      "Bash(dir \"B:\\\\PackTracker\\\\PackTracker.Infrastructure\\\\Persistence\\\\Migrations\")",
+      "Bash(chmod +x \"B:/PackTracker/.git/hooks/pre-push\")",
+      "Bash(bash .git/hooks/pre-push)"
     ],
     "deny": [],
     "ask": []

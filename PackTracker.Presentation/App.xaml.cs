@@ -77,6 +77,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IThemeManager, ThemeManager>();
         services.AddSingleton<AuthTokenService>();
         services.AddSingleton<IApiClientProvider, ApiClientProvider>();
+        services.AddSingleton<BackendDiagnosticsService>();
         services.AddSingleton<WikiBlueprintService>();
         services.AddSingleton<IVersionService, VersionService>();
         services.AddSingleton<SignalRChatService>();

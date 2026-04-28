@@ -35,24 +35,22 @@ public class BlueprintsController : ControllerBase
             var result = await _mediator.Send(new PingBlueprintsQuery(), ct);
             return Ok(new
             {
-                status = "ok",
+                status = result.DiagnosticsErrorMessage is null ? "ok" : "degraded",
                 canConnect = result.CanConnect,
                 provider = result.Provider,
                 pendingMigrations = result.PendingMigrations,
                 appliedMigrationsCount = result.AppliedMigrationsCount,
+                diagnosticsErrorMessage = result.DiagnosticsErrorMessage,
+                startupInitialized = result.IsStartupInitialized,
+                startupFailureMessage = result.StartupFailureMessage,
+                startupCompletedAtUtc = result.StartupCompletedAtUtc,
                 timestamp = result.Timestamp
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Database connection check failed during blueprint ping.");
-            return StatusCode(500, new
-            {
-                status = "db_error",
-                message = ex.Message,
-                inner = ex.InnerException?.Message,
-                type = ex.GetType().FullName
-            });
+            return ServerError("Database connection check failed.");
         }
     }
 
@@ -75,7 +73,7 @@ public class BlueprintsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Blueprint search query failed.");
-            return StatusCode(500, new { message = "Blueprint search query failed.", detail = ex.Message });
+            return ServerError("Blueprint search query failed.");
         }
     }
 
@@ -98,7 +96,7 @@ public class BlueprintsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Blueprint detail failed for {BlueprintId}", id);
-            return StatusCode(500, new { message = "Blueprint detail query failed.", detail = ex.Message });
+            return ServerError("Blueprint detail query failed.");
         }
     }
 
@@ -113,7 +111,7 @@ public class BlueprintsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load blueprint categories.");
-            return StatusCode(500, new { message = "Failed to load categories.", detail = ex.Message });
+            return ServerError("Failed to load categories.");
         }
     }
 
@@ -128,7 +126,7 @@ public class BlueprintsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load current user's owned blueprints.");
-            return StatusCode(500, new { message = "Failed to load owned blueprints.", detail = ex.Message });
+            return ServerError("Failed to load owned blueprints.");
         }
     }
 
@@ -139,4 +137,11 @@ public class BlueprintsController : ControllerBase
         if (!result.Success) return NotFound(new { message = result.Message });
         return Ok(result.Data);
     }
+
+    private ObjectResult ServerError(string message) =>
+        StatusCode(500, new
+        {
+            message,
+            traceId = HttpContext.TraceIdentifier
+        });
 }

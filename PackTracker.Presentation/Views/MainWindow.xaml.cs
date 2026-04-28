@@ -188,7 +188,7 @@ namespace PackTracker.Presentation.Views
                 {
                     // Wait for the embedded API to be ready before attempting the refresh
                     var apiProvider = _serviceProvider.GetRequiredService<IApiClientProvider>();
-                    var apiReady = await WaitForApiAsync($"{apiProvider.BaseUrl}/health");
+                    var apiReady = await WaitForApiAsync(apiProvider.BaseUrl);
 
                     if (apiReady)
                     {
@@ -223,16 +223,24 @@ namespace PackTracker.Presentation.Views
             NavigateToLogin();
         }
 
-        private static async Task<bool> WaitForApiAsync(string healthUrl)
+        private static async Task<bool> WaitForApiAsync(string baseUrl)
         {
             using var client = new System.Net.Http.HttpClient();
+            var readinessUrl = $"{baseUrl.TrimEnd('/')}/health/ready";
+            var livenessUrl = $"{baseUrl.TrimEnd('/')}/health";
             client.Timeout = TimeSpan.FromSeconds(2);
             for (int i = 0; i < 10; i++)
             {
                 try
                 {
-                    var response = await client.GetAsync(healthUrl);
-                    if (response.IsSuccessStatusCode) return true;
+                    var readinessResponse = await client.GetAsync(readinessUrl);
+                    if (readinessResponse.IsSuccessStatusCode) return true;
+
+                    if (readinessResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        var livenessResponse = await client.GetAsync(livenessUrl);
+                        if (livenessResponse.IsSuccessStatusCode) return true;
+                    }
                 }
                 catch { }
                 await Task.Delay(500);
@@ -465,16 +473,12 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToSettings()
         {
-            var themeManager = _serviceProvider.GetService<IThemeManager>();
-            var loggerFactory = _serviceProvider.GetService<ILoggerFactory>();
-
-            if (themeManager is not null && loggerFactory is not null)
+            try
             {
-                var logger = loggerFactory.CreateLogger<SettingsView>();
-                var settingsView = new SettingsView(_serviceProvider, _settingsService, themeManager, logger);
+                var settingsView = _serviceProvider.GetRequiredService<SettingsView>();
                 ContentFrame.Navigate(settingsView);
             }
-            else
+            catch (Exception)
             {
                 MessageBox.Show(
                     "Unable to resolve all required services for settings.",

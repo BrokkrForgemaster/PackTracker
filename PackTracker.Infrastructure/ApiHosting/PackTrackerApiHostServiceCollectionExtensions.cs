@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
 using PackTracker.Domain.Security;
+using PackTracker.Infrastructure.Health;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
 using System.Text;
@@ -58,8 +59,10 @@ public static class PackTrackerApiHostServiceCollectionExtensions
         });
 
         services.AddInfrastructure(settingsService);
+        services.AddSingleton<IStartupInitializationState, StartupInitializationState>();
         services.AddScoped<CraftingSeedService>();
-        services.AddHealthChecks();
+        services.AddHealthChecks()
+            .AddCheck<DatabaseReadinessHealthCheck>("database_readiness", tags: ["ready"]);
         services.AddSignalR();
         services.AddEndpointsApiExplorer();
 
