@@ -75,6 +75,56 @@ public sealed class AuthTokenService
         }
     }
 
+    public async Task<string?> ForceRefreshAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = _settingsService.GetSettings();
+        if (string.IsNullOrWhiteSpace(settings.JwtRefreshToken))
+        {
+            _logger.LogWarning("Forced JWT refresh skipped because no refresh token is available.");
+            return settings.JwtToken;
+        }
+
+        await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            settings = _settingsService.GetSettings();
+            if (string.IsNullOrWhiteSpace(settings.JwtRefreshToken))
+            {
+                _logger.LogWarning("Forced JWT refresh aborted because the refresh token disappeared.");
+                return settings.JwtToken;
+            }
+
+            var (refreshed, invalidToken) = await RefreshAsync(
+                settings.ApiBaseUrl,
+                settings.JwtRefreshToken,
+                cancellationToken).ConfigureAwait(false);
+
+            if (refreshed is null)
+            {
+                if (invalidToken)
+                {
+                    await _settingsService.UpdateSettingsAsync(s => s.JwtRefreshToken = string.Empty)
+                        .ConfigureAwait(false);
+                }
+
+                return settings.JwtToken;
+            }
+
+            await _settingsService.UpdateSettingsAsync(s =>
+            {
+                s.JwtToken = refreshed.access_token;
+                s.JwtRefreshToken = refreshed.refresh_token;
+            }).ConfigureAwait(false);
+
+            _logger.LogInformation("Forced JWT refresh succeeded against {ApiBaseUrl}.", settings.ApiBaseUrl);
+            return refreshed.access_token;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
     private async Task<(TokenPayload? Payload, bool InvalidToken)> RefreshAsync(
         string apiBaseUrl,
         string refreshToken,

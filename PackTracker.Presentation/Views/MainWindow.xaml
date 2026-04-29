@@ -1,6 +1,7 @@
 <Window x:Class="PackTracker.Presentation.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
         Title="PackTracker"
         MinHeight="720"
         MinWidth="1280"
@@ -9,6 +10,10 @@
         SizeToContent="Manual"
         ResizeMode="CanResize"
         WindowStyle="SingleBorderWindow">
+
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -181,7 +186,7 @@
                                                         Tag="Admin"
                                                         Style="{StaticResource SidebarButtonStyle}"
                                                         Click="Navigate_Click"
-                                                        Visibility="Collapsed"/>
+                                                        Visibility="{Binding CanAccessAdmin, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                             </StackPanel>
 
                                             <Border x:Name="NavBlocker"

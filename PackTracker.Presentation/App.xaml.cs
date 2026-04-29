@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
 using PackTracker.Infrastructure;
+using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Logging;
 using PackTracker.Presentation.Services;
@@ -166,6 +167,7 @@ public partial class App : System.Windows.Application
                         src.OnLoadException = ctx => ctx.Ignore = true;
                     })
                     .AddUserSecrets<App>(optional: true, reloadOnChange: false)
+                    .AddUserSecrets<AppDbContext>(optional: true, reloadOnChange: false)
                     .AddEnvironmentVariables()
                     .Build();
             }
@@ -181,6 +183,7 @@ public partial class App : System.Windows.Application
                         src.ReloadOnChange = false;
                         src.OnLoadException = ctx => ctx.Ignore = true;
                     })
+                    .AddUserSecrets<AppDbContext>(optional: true, reloadOnChange: false)
                     .AddEnvironmentVariables()
                     .Build();
             }

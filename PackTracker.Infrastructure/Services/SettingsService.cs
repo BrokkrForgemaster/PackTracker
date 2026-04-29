@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 
@@ -210,12 +211,19 @@ public sealed class SettingsService : ISettingsService, IDisposable
             }
 
             var connectionString = updatedSettings.ConnectionString;
+            if (!string.IsNullOrWhiteSpace(connectionString) && !IsValidConnectionString(connectionString))
+            {
+                _logger.LogWarning("Saved connection string is invalid. Replacing it from configuration defaults.");
+                connectionString = string.Empty;
+                changed = true;
+            }
             Assign(ref connectionString, configuration.GetConnectionString("DefaultConnection"));
             updatedSettings.ConnectionString = connectionString;
 
             var jwtSection = configuration.GetSection("Authentication:Jwt");
             var jwtKey = updatedSettings.JwtKey;
             Assign(ref jwtKey, jwtSection["Key"]);
+            Assign(ref jwtKey, configuration["Jwt:Key"]);
             updatedSettings.JwtKey = jwtKey;
 
             if (!string.IsNullOrWhiteSpace(jwtSection["Issuer"]) && string.IsNullOrWhiteSpace(updatedSettings.JwtIssuer))
@@ -312,6 +320,19 @@ public sealed class SettingsService : ISettingsService, IDisposable
     public void Dispose()
     {
         _watcher.Dispose();
+    }
+
+    private static bool IsValidConnectionString(string connectionString)
+    {
+        try
+        {
+            var builder = new NpgsqlConnectionStringBuilder(connectionString);
+            return !string.IsNullOrWhiteSpace(builder.Host);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void SaveSettingsCore(AppSettings newSettings)

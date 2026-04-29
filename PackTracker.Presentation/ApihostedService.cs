@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PackTracker.Api.Hosting;
 using PackTracker.Application.Interfaces;
+using PackTracker.Infrastructure.Persistence;
 using PackTracker.Logging;
 
 namespace PackTracker.Presentation;
@@ -63,6 +64,7 @@ public class ApiHostedService : IHostedService
                 .SetBasePath(AppContext.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
                 .AddUserSecrets<ApiHostedService>(optional: true)
+                .AddUserSecrets<AppDbContext>(optional: true)
                 .AddEnvironmentVariables();
 
             var appDataPath = Path.Combine(
@@ -82,6 +84,7 @@ public class ApiHostedService : IHostedService
             ValidateLocalHostSettings(settings);
 
             builder.Services.AddSingleton(_settingsService);
+            builder.Services.AddSingleton(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
             builder.Services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(appDataPath, "apihosted")));
 

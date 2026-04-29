@@ -268,7 +268,7 @@ public static class PackTrackerApiComposition
                 var decoded = Uri.UnescapeDataString(part["redirect_uri=".Length..]);
                 var callbackUri = new UriBuilder(decoded);
 
-                if (callbackUri.Scheme == "http" && callbackUri.Host != "localhost")
+                if (callbackUri.Scheme == "http" && !callbackUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
                 {
                     callbackUri.Scheme = "https";
                 }

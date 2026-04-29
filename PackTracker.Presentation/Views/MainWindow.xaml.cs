@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -67,6 +68,7 @@ namespace PackTracker.Presentation.Views
         private readonly AdminApiClient _adminApiClient;
         private readonly NavigationStateService _navigationState;
         private readonly DispatcherTimer _timer;
+        private readonly ILogger<MainWindow> _logger;
 
         private UpdateInfo? _pendingUpdate;
         private bool _isAuthenticated;
@@ -128,8 +130,13 @@ namespace PackTracker.Presentation.Views
             {
                 if (_canAccessAdmin != value)
                 {
+                    _logger.LogInformation("CanAccessAdmin changed from {PreviousValue} to {NewValue}", _canAccessAdmin, value);
                     _canAccessAdmin = value;
                     OnPropertyChanged();
+                }
+                else
+                {
+                    _logger.LogInformation("CanAccessAdmin remained {Value}", value);
                 }
             }
         }
@@ -148,12 +155,17 @@ namespace PackTracker.Presentation.Views
             _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
             _adminApiClient = serviceProvider.GetRequiredService<AdminApiClient>();
             _navigationState = serviceProvider.GetRequiredService<NavigationStateService>();
+            _logger = serviceProvider.GetRequiredService<ILogger<MainWindow>>();
 
             InitializeComponent();
             InitializeStaticVisualAssets();
 
             DataContext = this;
             WindowState = WindowState.Maximized;
+            _logger.LogInformation(
+                "MainWindow initialized. DataContextType={DataContextType}, AdminVisibilityBindingPresent={BindingPresent}",
+                DataContext?.GetType().FullName ?? "<null>",
+                BindingOperations.GetBindingExpressionBase(AdminNavButton, UIElement.VisibilityProperty) is not null);
 
             TxtTimeZone.Text = TimeZoneInfo.Local.StandardName;
 
@@ -629,8 +641,18 @@ namespace PackTracker.Presentation.Views
                 }
 
                 var apiProvider = scope.ServiceProvider.GetRequiredService<IApiClientProvider>();
+                var authTokenService = scope.ServiceProvider.GetRequiredService<AuthTokenService>();
                 using var client = apiProvider.CreateClient();
                 var response = await client.GetAsync("api/v1/profiles/me");
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    logger?.LogWarning("GET /api/v1/profiles/me returned 401. Attempting forced token refresh.");
+                    await authTokenService.ForceRefreshAsync();
+                    response.Dispose();
+                    using var retryClient = apiProvider.CreateClient();
+                    response = await retryClient.GetAsync("api/v1/profiles/me");
+                }
+
                 if (!response.IsSuccessStatusCode)
                 {
                     logger?.LogWarning("GET /api/v1/profiles/me returned {Status}", response.StatusCode);
@@ -676,6 +698,12 @@ namespace PackTracker.Presentation.Views
                     DiscordRank = !string.IsNullOrWhiteSpace(profile.DiscordRank)
                         ? profile.DiscordRank
                         : "No Rank";
+                    _logger.LogInformation(
+                        "Sidebar profile resolved. ProfileId={ProfileId}, DiscordId={DiscordId}, DiscordRank={DiscordRank}, DisplayName={DisplayName}",
+                        profile.Id,
+                        profile.DiscordId,
+                        DiscordRank,
+                        DiscordDisplayName);
 
                     if (avatarBytes != null)
                     {
@@ -719,34 +747,71 @@ namespace PackTracker.Presentation.Views
             }
             catch (Exception ex)
             {
-                var logger = _serviceProvider.GetService<ILogger<MainWindow>>();
-                logger?.LogWarning(ex, "Failed to refresh sidebar profile.");
+                _logger.LogWarning(ex, "Failed to refresh sidebar profile.");
                 await Dispatcher.InvokeAsync(SetDefaultProfile);
             }
         }
 
         private async Task RefreshAdminAccessAsync()
         {
+            var apiProvider = _serviceProvider.GetRequiredService<IApiClientProvider>();
+            var jwtIdentity = ExtractJwtIdentity(_settingsService.GetSettings().JwtToken);
+            _logger.LogInformation(
+                "Admin access refresh started. DiscordDisplayName={DiscordDisplayName}, DiscordRank={DiscordRank}, JwtDisplayName={JwtDisplayName}, JwtUsername={JwtUsername}, DataContextType={DataContextType}",
+                DiscordDisplayName,
+                DiscordRank,
+                jwtIdentity.DisplayName ?? "<null>",
+                jwtIdentity.Username ?? "<null>",
+                DataContext?.GetType().FullName ?? "<null>");
+
             try
             {
+                var apiReady = await WaitForApiAsync(apiProvider.BaseUrl);
+                _logger.LogInformation("Admin access API readiness: {ApiReady}", apiReady);
+                if (!apiReady)
+                {
+                    CanAccessAdmin = false;
+                    _currentAdminTier = null;
+                    _logger.LogWarning("Admin access refresh stopped because API readiness failed.");
+                    return;
+                }
+
                 var access = await _adminApiClient.GetAccessAsync();
                 CanAccessAdmin = access?.CanAccessAdmin == true;
                 _currentAdminTier = access?.HighestTier;
+                _logger.LogInformation(
+                    "Admin access refresh result. ReturnedCanAccessAdmin={ReturnedCanAccessAdmin}, EffectiveCanAccessAdmin={EffectiveCanAccessAdmin}, HighestTier={HighestTier}",
+                    access?.CanAccessAdmin,
+                    CanAccessAdmin,
+                    _currentAdminTier ?? "<null>");
             }
-            catch
+            catch (Exception ex)
             {
                 CanAccessAdmin = false;
                 _currentAdminTier = null;
+                _logger.LogError(ex, "Admin access refresh threw an exception.");
             }
 
             await Dispatcher.InvokeAsync(() =>
             {
-                AdminNavButton.Visibility = CanAccessAdmin ? Visibility.Visible : Visibility.Collapsed;
+                BindingOperations.GetBindingExpressionBase(
+                    AdminNavButton,
+                    UIElement.VisibilityProperty)?.UpdateTarget();
+                _logger.LogInformation(
+                    "AdminNavButton binding refreshed. Visibility={Visibility}, CanAccessAdmin={CanAccessAdmin}, IsAuthenticated={IsAuthenticated}",
+                    AdminNavButton.Visibility,
+                    CanAccessAdmin,
+                    _isAuthenticated);
             });
         }
 
-        private (string? DisplayName, string? Username) ExtractJwtIdentity(string token)
+        private (string? DisplayName, string? Username) ExtractJwtIdentity(string? token)
         {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return (null, null);
+            }
+
             try
             {
                 var handler = new JwtSecurityTokenHandler();
@@ -778,7 +843,10 @@ namespace PackTracker.Presentation.Views
             SidebarAvatarImage.Source = CurrentUserAvatar;
             CanAccessAdmin = false;
             _currentAdminTier = null;
-            AdminNavButton.Visibility = Visibility.Collapsed;
+            BindingOperations.GetBindingExpressionBase(
+                AdminNavButton,
+                UIElement.VisibilityProperty)?.UpdateTarget();
+            _logger.LogInformation("Sidebar profile reset. AdminNavButton visibility is {Visibility}", AdminNavButton.Visibility);
         }
 
         private ImageSource LoadAvatar(string? url, ILogger? logger = null)
