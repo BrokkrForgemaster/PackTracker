@@ -60,6 +60,16 @@ public static class SecurityConstants
             Roles.ClanWarlord
         ]);
 
+    public static readonly IReadOnlyCollection<string> AdminEligibleRoles =
+        Array.AsReadOnly([
+            Roles.Captain,
+            Roles.FleetCommander,
+            Roles.Armor,
+            Roles.HighCouncilor,
+            Roles.HandOfTheClan,
+            Roles.ClanWarlord
+        ]);
+
     public static bool IsElevatedRequestRole(string? role) =>
         !string.IsNullOrWhiteSpace(role)
         && ElevatedRequestRoles.Contains(role, StringComparer.OrdinalIgnoreCase);

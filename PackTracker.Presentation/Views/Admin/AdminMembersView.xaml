@@ -1,0 +1,51 @@
+<UserControl x:Class="PackTracker.Presentation.Views.Admin.AdminMembersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="Members"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="White"/>
+            <TextBlock Text="Assign or revoke PackTracker admin roles."
+                       Margin="0,6,0,18"
+                       Foreground="#D0D0D0"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+            <ComboBox Width="220"
+                      ItemsSource="{Binding Roles}"
+                      SelectedItem="{Binding SelectedRole}"
+                      DisplayMemberPath="Name"/>
+            <Button Content="Assign Role" Width="120" Margin="12,0,0,0" Click="AssignRole_Click"/>
+            <Button Content="Revoke Role" Width="120" Margin="12,0,0,0" Click="RevokeRole_Click"/>
+            <TextBlock Text="{Binding StatusMessage}" Margin="16,6,0,0" Foreground="#D0D0D0"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding Members}"
+                  SelectedItem="{Binding SelectedMember}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  Background="#221E1E1E"
+                  Foreground="White"
+                  BorderThickness="0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="160"/>
+                <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="180"/>
+                <DataGridTextColumn Header="Discord Rank" Binding="{Binding DiscordRank}" Width="140"/>
+                <DataGridTextColumn Header="Join Date" Binding="{Binding JoinDate}" Width="160"/>
+                <DataGridTextColumn Header="Last Login" Binding="{Binding LastLogin}" Width="160"/>
+                <DataGridTextColumn Header="Admin Roles" Binding="{Binding ActiveAdminRoles}" Width="240"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PackTracker.Application.Admin.Abstractions;
 using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.BackgroundServices;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
+using PackTracker.Infrastructure.Services.Admin;
 
 namespace PackTracker.Infrastructure;
 
@@ -87,6 +89,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IAdminDbContext>(sp => sp.GetRequiredService<AppDbContext>());
     }
 
     /// <summary>
@@ -103,6 +106,10 @@ public static class DependencyInjection
         services.AddScoped<IDistributedLockService, DatabaseDistributedLockService>();
         services.AddScoped<IDataMaintenanceService, DataMaintenanceService>();
         services.AddScoped<IDatabaseDiagnostics, AppDbContextDiagnostics>();
+        services.AddScoped<IRbacService, RbacService>();
+        services.AddScoped<IAuthorizationService, AuthorizationService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<AdminSeedService>();
 
         services.AddScoped<JwtTokenService>();
         services.AddSingleton<IRequestsService, RequestsService>();

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using FluentValidation;
 using Microsoft.Extensions.Hosting;
+using PackTracker.Application.Admin.Common;
 using PackTracker.Application.Interfaces;
 using PackTracker.Common.DTOs;
 
@@ -47,9 +48,13 @@ public class ExceptionHandlingMiddleware
             var traceId = context.TraceIdentifier;
             var statusCode = ex is ValidationException
                 ? (int)HttpStatusCode.BadRequest
+                : ex is AdminAuthorizationException
+                    ? (int)HttpStatusCode.Forbidden
                 : (int)HttpStatusCode.InternalServerError;
             var message = ex is ValidationException validationException
                 ? "Validation failed"
+                : ex is AdminAuthorizationException adminAuthorizationException
+                    ? adminAuthorizationException.Message
                 : "An unexpected error occurred.";
             var errors = ex is ValidationException fluentValidationException
                 ? fluentValidationException.Errors

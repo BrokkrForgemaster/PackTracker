@@ -23,7 +23,10 @@ using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Presentation.Services;
+using PackTracker.Presentation.Services.Admin;
+using PackTracker.Presentation.Services.Navigation;
 using PackTracker.Presentation.ViewModels;
+using PackTracker.Presentation.Views.Admin;
 
 namespace PackTracker.Presentation.Views
 {
@@ -61,6 +64,8 @@ namespace PackTracker.Presentation.Views
         private readonly IServiceProvider _serviceProvider;
         private readonly ISettingsService _settingsService;
         private readonly IUpdateService _updateService;
+        private readonly AdminApiClient _adminApiClient;
+        private readonly NavigationStateService _navigationState;
         private readonly DispatcherTimer _timer;
 
         private UpdateInfo? _pendingUpdate;
@@ -69,6 +74,9 @@ namespace PackTracker.Presentation.Views
         private ImageSource? _currentUserAvatar;
         private string _discordDisplayName = "Not Logged In";
         private string _discordRank = "No Rank";
+        private bool _canAccessAdmin;
+        private string? _currentMainViewKey;
+        private string? _currentAdminTier;
 
         #endregion
 
@@ -113,6 +121,19 @@ namespace PackTracker.Presentation.Views
             }
         }
 
+        public bool CanAccessAdmin
+        {
+            get => _canAccessAdmin;
+            set
+            {
+                if (_canAccessAdmin != value)
+                {
+                    _canAccessAdmin = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         #endregion
 
         #region Constructor
@@ -125,6 +146,8 @@ namespace PackTracker.Presentation.Views
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
+            _adminApiClient = serviceProvider.GetRequiredService<AdminApiClient>();
+            _navigationState = serviceProvider.GetRequiredService<NavigationStateService>();
 
             InitializeComponent();
             InitializeStaticVisualAssets();
@@ -321,12 +344,16 @@ namespace PackTracker.Presentation.Views
                     case "Settings":
                         NavigateToSettings();
                         break;
+                    case "Admin":
+                        NavigateToAdmin();
+                        break;
                 }
             }
         }
 
         internal void NavigateToDashboard()
         {
+            _currentMainViewKey = "Dashboard";
             SetNavigationEnabled(true);
             var dashboardView = _serviceProvider.GetRequiredService<DashboardView>();
             ContentFrame.Navigate(dashboardView);
@@ -337,6 +364,7 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToUex()
         {
+            _currentMainViewKey = "TradingHub";
             var uexView = _serviceProvider.GetRequiredService<UexView>();
             ContentFrame.Navigate(uexView);
             _ = RefreshSidebarProfileAsync();
@@ -344,6 +372,7 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToRequestsHub()
         {
+            _currentMainViewKey = "RequestHub";
             try
             {
                 var requestView = _serviceProvider.GetRequiredService<RequestsView>();
@@ -364,6 +393,7 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToBlueprintExplorer()
         {
+            _currentMainViewKey = "Blueprints";
             try
             {
                 var blueprintView = _serviceProvider.GetRequiredService<BlueprintExplorerView>();
@@ -389,6 +419,7 @@ namespace PackTracker.Presentation.Views
 
         public async Task NavigateToCraftingQueueAsync(Guid? requestId = null)
         {
+            _currentMainViewKey = "CraftingQueue";
             try
             {
                 var craftingView = _serviceProvider.GetRequiredService<CraftingRequestsView>();
@@ -417,6 +448,7 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToProcurementQueue()
         {
+            _currentMainViewKey = "ProcurementQueue";
             try
             {
                 var procurementView = _serviceProvider.GetRequiredService<ProcurementRequestsView>();
@@ -473,6 +505,7 @@ namespace PackTracker.Presentation.Views
 
         private void NavigateToSettings()
         {
+            _currentMainViewKey = "Settings";
             try
             {
                 var settingsView = _serviceProvider.GetRequiredService<SettingsView>();
@@ -485,6 +518,48 @@ namespace PackTracker.Presentation.Views
                     "Dependency Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+        }
+
+        private void NavigateToAdmin()
+        {
+            if (!CanAccessAdmin)
+            {
+                return;
+            }
+
+            _navigationState.CaptureMainView(_currentMainViewKey ?? "Dashboard");
+            var adminShell = _serviceProvider.GetRequiredService<AdminShellView>();
+            adminShell.SetTierLabel(_currentAdminTier);
+            ContentFrame.Navigate(adminShell);
+        }
+
+        internal void ReturnFromAdmin()
+        {
+            switch (_navigationState.LastMainViewKey)
+            {
+                case "TradingHub":
+                    NavigateToUex();
+                    break;
+                case "RequestHub":
+                    NavigateToRequestsHub();
+                    break;
+                case "Blueprints":
+                    NavigateToBlueprintExplorer();
+                    break;
+                case "CraftingQueue":
+                    _ = NavigateToCraftingQueueAsync();
+                    break;
+                case "ProcurementQueue":
+                    NavigateToProcurementQueue();
+                    break;
+                case "Settings":
+                    NavigateToSettings();
+                    break;
+                case "Dashboard":
+                default:
+                    NavigateToDashboard();
+                    break;
             }
         }
 
@@ -639,6 +714,8 @@ namespace PackTracker.Presentation.Views
                         _ => "Assets/HWiconnew.png"
                     };
                 });
+
+                await RefreshAdminAccessAsync();
             }
             catch (Exception ex)
             {
@@ -646,6 +723,26 @@ namespace PackTracker.Presentation.Views
                 logger?.LogWarning(ex, "Failed to refresh sidebar profile.");
                 await Dispatcher.InvokeAsync(SetDefaultProfile);
             }
+        }
+
+        private async Task RefreshAdminAccessAsync()
+        {
+            try
+            {
+                var access = await _adminApiClient.GetAccessAsync();
+                CanAccessAdmin = access?.CanAccessAdmin == true;
+                _currentAdminTier = access?.HighestTier;
+            }
+            catch
+            {
+                CanAccessAdmin = false;
+                _currentAdminTier = null;
+            }
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                AdminNavButton.Visibility = CanAccessAdmin ? Visibility.Visible : Visibility.Collapsed;
+            });
         }
 
         private (string? DisplayName, string? Username) ExtractJwtIdentity(string token)
@@ -679,6 +776,9 @@ namespace PackTracker.Presentation.Views
             DiscordRank = "No Rank";
             CurrentUserAvatar = LoadFallbackAvatar();
             SidebarAvatarImage.Source = CurrentUserAvatar;
+            CanAccessAdmin = false;
+            _currentAdminTier = null;
+            AdminNavButton.Visibility = Visibility.Collapsed;
         }
 
         private ImageSource LoadAvatar(string? url, ILogger? logger = null)

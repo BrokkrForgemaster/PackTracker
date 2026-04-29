@@ -176,6 +176,12 @@
                                                         Tag="Settings"
                                                         Style="{StaticResource SidebarButtonStyle}"
                                                         Click="Navigate_Click"/>
+                                                <Button x:Name="AdminNavButton"
+                                                        Content="Admin"
+                                                        Tag="Admin"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"
+                                                        Visibility="Collapsed"/>
                                             </StackPanel>
 
                                             <Border x:Name="NavBlocker"

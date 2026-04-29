@@ -208,9 +208,6 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Property<Guid>("BlueprintId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BlueprintId1")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("CraftingStationType")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -226,9 +223,7 @@ namespace PackTracker.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BlueprintId");
-
-                    b.HasIndex("BlueprintId1")
+                    b.HasIndex("BlueprintId")
                         .IsUnique();
 
                     b.ToTable("BlueprintRecipes");
@@ -714,6 +709,193 @@ namespace PackTracker.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("LoginStates");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.AdminAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("ActorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AfterJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("ActorProfileId", "OccurredAt");
+
+                    b.HasIndex("TargetType", "TargetId");
+
+                    b.ToTable("AdminAuditLogs");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.AdminRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsSystemRole")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("AdminRoles");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.AdminPermissionAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdminRoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PermissionKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminRoleId", "PermissionKey")
+                        .IsUnique();
+
+                    b.ToTable("AdminPermissionAssignments");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.MemberRoleAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdminRoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AssignedByProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminRoleId");
+
+                    b.HasIndex("AssignedByProfileId");
+
+                    b.HasIndex("ProfileId");
+
+                    b.ToTable("MemberRoleAssignments");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.DiscordIntegrationSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("MedalAnnouncementsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MedalAnnouncementsChannelId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("OperationsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OperationsChannelId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("RecruitingPostsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("RecruitingPostsChannelId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByProfileId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UpdatedByProfileId");
+
+                    b.ToTable("DiscordIntegrationSettings");
                 });
 
             modelBuilder.Entity("PackTracker.Domain.Entities.Material", b =>
@@ -1352,14 +1534,10 @@ namespace PackTracker.Infrastructure.Migrations
             modelBuilder.Entity("PackTracker.Domain.Entities.BlueprintRecipe", b =>
                 {
                     b.HasOne("PackTracker.Domain.Entities.Blueprint", "Blueprint")
-                        .WithMany()
-                        .HasForeignKey("BlueprintId")
+                        .WithOne("Recipe")
+                        .HasForeignKey("PackTracker.Domain.Entities.BlueprintRecipe", "BlueprintId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("PackTracker.Domain.Entities.Blueprint", null)
-                        .WithOne("Recipe")
-                        .HasForeignKey("PackTracker.Domain.Entities.BlueprintRecipe", "BlueprintId1");
 
                     b.Navigation("Blueprint");
                 });
@@ -1381,6 +1559,65 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Navigation("BlueprintRecipe");
 
                     b.Navigation("Material");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.AdminAuditLog", b =>
+                {
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "ActorProfile")
+                        .WithMany()
+                        .HasForeignKey("ActorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ActorProfile");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.AdminPermissionAssignment", b =>
+                {
+                    b.HasOne("PackTracker.Domain.Entities.Admin.AdminRole", "AdminRole")
+                        .WithMany("PermissionAssignments")
+                        .HasForeignKey("AdminRoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AdminRole");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.MemberRoleAssignment", b =>
+                {
+                    b.HasOne("PackTracker.Domain.Entities.Admin.AdminRole", "AdminRole")
+                        .WithMany("MemberAssignments")
+                        .HasForeignKey("AdminRoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "AssignedByProfile")
+                        .WithMany()
+                        .HasForeignKey("AssignedByProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "Profile")
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AdminRole");
+
+                    b.Navigation("AssignedByProfile");
+
+                    b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.DiscordIntegrationSetting", b =>
+                {
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "UpdatedByProfile")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByProfileId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("UpdatedByProfile");
                 });
 
             modelBuilder.Entity("PackTracker.Domain.Entities.CommodityPrice", b =>
@@ -1534,6 +1771,13 @@ namespace PackTracker.Infrastructure.Migrations
             modelBuilder.Entity("PackTracker.Domain.Entities.Blueprint", b =>
                 {
                     b.Navigation("Recipe");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.Admin.AdminRole", b =>
+                {
+                    b.Navigation("MemberAssignments");
+
+                    b.Navigation("PermissionAssignments");
                 });
 
             modelBuilder.Entity("PackTracker.Domain.Entities.Commodity", b =>

@@ -9,8 +9,12 @@ using PackTracker.Infrastructure;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Logging;
 using PackTracker.Presentation.Services;
+using PackTracker.Presentation.Services.Admin;
+using PackTracker.Presentation.Services.Navigation;
 using PackTracker.Presentation.ViewModels;
+using PackTracker.Presentation.ViewModels.Admin;
 using PackTracker.Presentation.Views;
+using PackTracker.Presentation.Views.Admin;
 using Serilog;
 
 namespace PackTracker.Presentation;
@@ -84,6 +88,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<AvatarCacheService>();
         services.AddHttpClient();
         services.AddSingleton<DiscordEventsService>();
+        services.AddSingleton<NavigationStateService>();
+        services.AddSingleton<AdminApiClient>();
         services.AddSingleton<IConfiguration>(cfg);
         services.AddTransient<DiscordEventsViewModel>();
 
@@ -107,6 +113,14 @@ public partial class App : System.Windows.Application
         services.AddTransient<ProcurementRequestsViewModel>();
         services.AddTransient<ProcurementRequestsView>();
         services.AddTransient<ComponentViewModel>();
+        services.AddTransient<AdminShellViewModel>();
+        services.AddTransient<AdminDashboardViewModel>();
+        services.AddTransient<AdminSettingsViewModel>();
+        services.AddTransient<AdminMembersViewModel>();
+        services.AddTransient<AdminDashboardView>();
+        services.AddTransient<AdminSettingsView>();
+        services.AddTransient<AdminMembersView>();
+        services.AddTransient<AdminShellView>();
 
         // Embedded API host — registered as singleton so we can start/stop it manually
         services.AddSingleton<ApiHostedService>();

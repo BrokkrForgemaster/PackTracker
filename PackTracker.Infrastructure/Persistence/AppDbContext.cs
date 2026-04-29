@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
+using PackTracker.Application.Admin.Abstractions;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
+using PackTracker.Domain.Entities.Admin;
 using System.Text.Json;
 
 namespace PackTracker.Infrastructure.Persistence;
@@ -14,7 +16,7 @@ namespace PackTracker.Infrastructure.Persistence;
 /// crafting workflows, procurement workflows, inventory, commodities,
 /// blueprints, and comments.
 /// </summary>
-public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKeyContext
+public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, IDataProtectionKeyContext
 {
     #region Constructor
 
@@ -49,6 +51,11 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
     /// Gets the temporary login states used for desktop polling.
     /// </summary>
     public DbSet<LoginState> LoginStates => Set<LoginState>();
+    public DbSet<AdminRole> AdminRoles => Set<AdminRole>();
+    public DbSet<AdminPermissionAssignment> AdminPermissionAssignments => Set<AdminPermissionAssignment>();
+    public DbSet<MemberRoleAssignment> MemberRoleAssignments => Set<MemberRoleAssignment>();
+    public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
+    public DbSet<DiscordIntegrationSetting> DiscordIntegrationSettings => Set<DiscordIntegrationSetting>();
 
     /// <summary>
     /// Gets the synchronization metadata for various tasks.
@@ -214,6 +221,11 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
         ConfigureAssistanceRequests(modelBuilder);
         ConfigureLobbyChatMessages(modelBuilder);
         ConfigureRequestClaims(modelBuilder);
+        ConfigureAdminRoles(modelBuilder);
+        ConfigureAdminPermissionAssignments(modelBuilder);
+        ConfigureMemberRoleAssignments(modelBuilder);
+        ConfigureAdminAuditLogs(modelBuilder);
+        ConfigureDiscordIntegrationSettings(modelBuilder);
     }
 
     #endregion
@@ -493,8 +505,8 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
             entity.Property(x => x.CraftingStationType).HasMaxLength(100);
 
             entity.HasOne(x => x.Blueprint)
-                .WithMany()
-                .HasForeignKey(x => x.BlueprintId)
+                .WithOne(x => x.Recipe)
+                .HasForeignKey<BlueprintRecipe>(x => x.BlueprintId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -786,6 +798,96 @@ public class AppDbContext : DbContext, IApplicationDbContext, IDataProtectionKey
                 .WithMany()
                 .HasForeignKey(x => x.ProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private static void ConfigureAdminRoles(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<AdminRole>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Name).IsUnique();
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Tier).HasConversion<int>();
+        });
+    }
+
+    private static void ConfigureAdminPermissionAssignments(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<AdminPermissionAssignment>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.AdminRoleId, x.PermissionKey }).IsUnique();
+            entity.Property(x => x.PermissionKey).HasMaxLength(100).IsRequired();
+
+            entity.HasOne(x => x.AdminRole)
+                .WithMany(x => x.PermissionAssignments)
+                .HasForeignKey(x => x.AdminRoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private static void ConfigureMemberRoleAssignments(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<MemberRoleAssignment>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.ProfileId);
+            entity.HasIndex(x => x.AdminRoleId);
+            entity.Property(x => x.Notes).HasMaxLength(500);
+
+            entity.HasOne(x => x.Profile)
+                .WithMany()
+                .HasForeignKey(x => x.ProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.AdminRole)
+                .WithMany(x => x.MemberAssignments)
+                .HasForeignKey(x => x.AdminRoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.AssignedByProfile)
+                .WithMany()
+                .HasForeignKey(x => x.AssignedByProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureAdminAuditLogs(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<AdminAuditLog>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.OccurredAt);
+            entity.HasIndex(x => new { x.ActorProfileId, x.OccurredAt });
+            entity.HasIndex(x => new { x.TargetType, x.TargetId });
+            entity.Property(x => x.Action).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.TargetType).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.TargetId).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Summary).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.Severity).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.CorrelationId).HasMaxLength(100);
+
+            entity.HasOne(x => x.ActorProfile)
+                .WithMany()
+                .HasForeignKey(x => x.ActorProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureDiscordIntegrationSettings(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DiscordIntegrationSetting>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.OperationsChannelId).HasMaxLength(64);
+            entity.Property(x => x.MedalAnnouncementsChannelId).HasMaxLength(64);
+            entity.Property(x => x.RecruitingPostsChannelId).HasMaxLength(64);
+
+            entity.HasOne(x => x.UpdatedByProfile)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

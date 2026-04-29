@@ -23,7 +23,17 @@ public sealed class HttpContextCurrentUserService : ICurrentUserService
         ?? _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Name)
         ?? "Unknown";
 
+    public string? Username => _httpContextAccessor.HttpContext?.User.Identity?.Name;
+
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true;
+
+    public IReadOnlyCollection<string> Roles =>
+        _httpContextAccessor.HttpContext?.User.Claims
+            .Where(c => c.Type == ClaimTypes.Role || c.Type == "role")
+            .Select(c => c.Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+        ?? [];
 
     public bool IsInRole(string role) => _httpContextAccessor.HttpContext?.User.IsInRole(role) == true;
 }

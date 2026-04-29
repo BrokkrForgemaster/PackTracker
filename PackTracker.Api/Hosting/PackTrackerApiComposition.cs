@@ -13,7 +13,9 @@ using PackTracker.Application.Options;
 using PackTracker.Infrastructure.ApiHosting;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
+using PackTracker.Infrastructure.Services.Admin;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using PackTracker.Domain.Security;
 
 namespace PackTracker.Api.Hosting;
 
@@ -86,6 +88,15 @@ public static class PackTrackerApiComposition
             options.ConfigureDiscordEvents = events => ConfigureDiscordEvents(events);
         });
 
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy(AdminPolicyNames.AdminAccess, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(SecurityConstants.AdminEligibleRoles.ToArray());
+            });
+        });
+
         builder.Services.AddSwaggerGen();
     }
 
@@ -140,6 +151,7 @@ public static class PackTrackerApiComposition
         var maintenance = scope.ServiceProvider.GetRequiredService<IDataMaintenanceService>();
         var seedService = scope.ServiceProvider.GetRequiredService<CraftingSeedService>();
         var startupState = scope.ServiceProvider.GetRequiredService<IStartupInitializationState>();
+        var adminSeedService = scope.ServiceProvider.GetRequiredService<AdminSeedService>();
         var startupOptions = scope.ServiceProvider
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<StartupOptions>>()
             .Value;
@@ -212,6 +224,7 @@ public static class PackTrackerApiComposition
 
             logger.LogInformation("Seeding crafting data from {Path}", seedPath);
             await seedService.SeedAsync(seedPath, cancellationToken);
+            await adminSeedService.SeedAsync(cancellationToken);
             logger.LogInformation("Data seeding completed");
             startupState.MarkSucceeded();
         }
