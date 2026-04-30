@@ -208,7 +208,187 @@ flowchart LR
 | `PackTracker.Logging` | Shared logging configuration and Serilog wiring |
 
 </details>
+
+<details>
+<summary><strong>Hosting model</strong></summary>
+
+The desktop app can run against a remote API or spin up the embedded API locally. Both the embedded and standalone paths share the same registration and middleware composition through `PackTracker.Api/Hosting/PackTrackerApiComposition.cs`, which reduces behavioral drift between environments.
+
+</details>
+
 ---
+
+## Repository Layout
+
+```text
+PackTracker/
+|- PackTracker.Api/
+|- PackTracker.Application/
+|- PackTracker.Domain/
+|- PackTracker.Infrastructure/
+|- PackTracker.Logging/
+|- PackTracker.Presentation/
+|- tests/
+|  |- PackTracker.UnitTests/
+|  |- PackTracker.IntegrationTests/
+|  `- PackTracker.ApiTests/
+`- docs/
+```
+
+<details>
+<summary><strong>Additional notes</strong></summary>
+
+- `docs/` contains architecture, deployment, configuration, updater, and refactor notes
+- `tools/` contains small utilities such as `AdminProbe`
+- `installer/` contains the installer definition used for packaging
+- `publish/` and `artifacts/` may contain local build outputs
+
+</details>
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- .NET SDK `9.0.304`
+- Windows for running the WPF desktop application
+- PostgreSQL for local embedded or standalone API scenarios
+
+### Restore and Build
+
+```powershell
+dotnet restore PackTracker.sln
+dotnet build PackTracker.sln
+```
+
+### Run the Standalone API
+
+```powershell
+dotnet run --project PackTracker.Api
+```
+
+### Run the Desktop App
+
+```powershell
+dotnet run --project PackTracker.Presentation
+```
+
+<details>
+<summary><strong>Embedded API behavior</strong></summary>
+
+- if `AppSettings.ApiBaseUrl` points at a remote absolute URL, the desktop client uses that API
+- if `ApiBaseUrl` is empty or loopback, the desktop client starts the embedded API locally
+- the effective local loopback URL is then written back into user settings for use by the client
+
+</details>
+
+---
+
+## Configuration and Secrets
+
+PackTracker reads configuration from:
+
+1. `appsettings.json`
+2. user secrets
+3. environment variables
+4. user-scoped persisted settings managed by the settings service
+
+### Recommended local secret setup
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-connection-string>" --project PackTracker.Api
+dotnet user-secrets set "Authentication:Jwt:Key" "<your-jwt-key>" --project PackTracker.Api
+dotnet user-secrets set "Authentication:Discord:ClientId" "<discord-client-id>" --project PackTracker.Api
+dotnet user-secrets set "Authentication:Discord:ClientSecret" "<discord-client-secret>" --project PackTracker.Api
+dotnet user-secrets set "Authentication:Discord:RequiredGuildId" "<guild-id>" --project PackTracker.Api
+```
+
+<details>
+<summary><strong>Desktop secrets</strong></summary>
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-connection-string>" --project PackTracker.Presentation
+dotnet user-secrets set "Authentication:Jwt:Key" "<your-jwt-key>" --project PackTracker.Presentation
+dotnet user-secrets set "Authentication:Discord:ClientId" "<discord-client-id>" --project PackTracker.Presentation
+dotnet user-secrets set "Authentication:Discord:ClientSecret" "<discord-client-secret>" --project PackTracker.Presentation
+dotnet user-secrets set "Authentication:Discord:RequiredGuildId" "<guild-id>" --project PackTracker.Presentation
+```
+
+</details>
+
+<details>
+<summary><strong>Required local values for embedded or local API hosting</strong></summary>
+
+- `ConnectionStrings:DefaultConnection`
+- `Authentication:Jwt:Key`
+- `Authentication:Discord:ClientId`
+- `Authentication:Discord:ClientSecret`
+- `Authentication:Discord:RequiredGuildId`
+
+</details>
+
+---
+
+## Testing
+
+Run the full solution test suite with coverage:
+
+```powershell
+dotnet test PackTracker.sln --collect:"XPlat Code Coverage"
+```
+
+You can also run the suites individually:
+
+```powershell
+dotnet test tests\PackTracker.UnitTests\PackTracker.UnitTests.csproj
+dotnet test tests\PackTracker.ApiTests\PackTracker.ApiTests.csproj
+dotnet test tests\PackTracker.IntegrationTests\PackTracker.IntegrationTests.csproj
+```
+
+<details>
+<summary><strong>Test intent by suite</strong></summary>
+
+- `UnitTests` isolate domain and presentation-facing logic
+- `ApiTests` validate controller and request behavior
+- `IntegrationTests` cover embedded host validation and cross-layer flows
+
+</details>
+
+---
+
+## Deployment and Publishing
+
+### Desktop Publish
+
+```powershell
+dotnet publish PackTracker.Presentation -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true
+```
+
+Published output:
+
+```text
+PackTracker.Presentation\bin\Release\net9.0-windows\win-x64\publish\
+```
+
+### Standalone API
+
+```powershell
+dotnet run --project PackTracker.Api
+```
+
+<details>
+<summary><strong>Deployment notes</strong></summary>
+
+- `appsettings.json` is kept outside the single-file bundle so local configuration remains editable
+- container or cloud deployments should use environment variables or mounted config instead of committed secrets
+- the updater remains user-triggered from the desktop shell
+- Docker-based local parity is available through `docker-compose.yml`
+
+</details>
+
+---
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
@@ -218,6 +398,31 @@ flowchart LR
 - [Updater Flow](docs/updater-flow.md)
 - [Dependency Rules](docs/dependency-rules.md)
 - [Refactor Report](docs/refactor-report.md)
+
+---
+
+## Screenshot Notes
+
+This README already uses real repository assets so it renders cleanly today, but it is also structured to support richer product screenshots later.
+
+<details>
+<summary><strong>Recommended screenshot convention</strong></summary>
+
+If you want section-specific UI screenshots, add them under a dedicated folder such as `docs/images/` and swap the current image tags section by section. A clean convention would be:
+
+```text
+docs/images/
+|- dashboard.png
+|- trading-hub.png
+|- blueprint-explorer.png
+|- crafting-center.png
+|- procurement-center.png
+`- request-hub.png
+```
+
+That will keep README asset links short and easy to maintain.
+
+</details>
 
 ---
 
