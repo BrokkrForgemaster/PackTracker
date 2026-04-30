@@ -38,11 +38,13 @@ public partial class AdminRecruitmentView : UserControl
                 CoreWebView2HostResourceAccessKind.Allow);
 
             _webViewReady = true;
+            _viewModel.WebViewAvailable = true;
             RefreshPreview();
         }
         catch
         {
-            // WebView2 runtime not installed; preview unavailable.
+            _viewModel.WebViewAvailable = false;
+            _viewModel.StatusMessage = "WebView2 unavailable — install the Edge WebView2 Runtime for the rich preview.";
         }
     }
 

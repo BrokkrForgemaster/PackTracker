@@ -6,6 +6,8 @@
 
     <UserControl.Resources>
 
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
         <Style x:Key="RecruitTabControlStyle" TargetType="TabControl">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -383,11 +385,22 @@
                     Margin="0,16,0,8">
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="SPECTRUM PREVIEW"
+                        <TextBlock x:Name="PreviewHeaderLabel"
                                    FontSize="10"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource OpTextMutedBrush}"
-                                   VerticalAlignment="Center"/>
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="SPECTRUM PREVIEW"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding WebViewAvailable}" Value="False">
+                                            <Setter Property="Text" Value="POST PREVIEW (WebView2 unavailable — showing plain text)"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBlock Text=" — renders exactly as it will appear on the forum"
                                    FontSize="11"
                                    Foreground="{StaticResource OpTextSecondaryBrush}"
@@ -412,7 +425,34 @@
                     Style="{StaticResource OpPanelBorderStyle}"
                     Padding="0"
                     Margin="0,0,0,16">
-                <wv2:WebView2 x:Name="WebView"/>
+                <Grid>
+                    <wv2:WebView2 x:Name="WebView"
+                                  Visibility="{Binding WebViewAvailable, Converter={StaticResource BoolToVis}}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding WebViewAvailable}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
+                        <TextBox Text="{Binding GeneratedPost, Mode=OneWay}"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 BorderThickness="0"
+                                 Padding="16"
+                                 FontFamily="Consolas"
+                                 FontSize="12"
+                                 Background="#0b0e13"
+                                 Foreground="#aeb7c2"
+                                 VerticalScrollBarVisibility="Disabled"/>
+                    </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

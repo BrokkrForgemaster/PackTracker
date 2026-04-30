@@ -43,6 +43,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
     private string _generatedPost = string.Empty;
     private string _htmlPreview = string.Empty;
     private string _statusMessage = string.Empty;
+    private bool _webViewAvailable = true;
 
     public string OrgName
     {
@@ -126,6 +127,12 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
     {
         get => _statusMessage;
         set => SetProperty(ref _statusMessage, value);
+    }
+
+    public bool WebViewAvailable
+    {
+        get => _webViewAvailable;
+        set => SetProperty(ref _webViewAvailable, value);
     }
 
     public ObservableCollection<RecruitmentDivision> Divisions { get; } = new();
