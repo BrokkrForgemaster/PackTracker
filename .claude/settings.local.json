@@ -52,7 +52,14 @@
       "Bash(dir \"B:\\\\PackTracker\\\\PackTracker.Infrastructure\\\\Persistence\\\\Migrations\")",
       "Bash(chmod +x \"B:/PackTracker/.git/hooks/pre-push\")",
       "Bash(bash .git/hooks/pre-push)",
-      "PowerShell(Get-Content *)"
+      "PowerShell(Get-Content *)",
+      "Bash(gh repo *)",
+      "Bash(gh api *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:robertsspaceindustries.com)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:support.robertsspaceindustries.com)"
     ],
     "deny": [],
     "ask": []

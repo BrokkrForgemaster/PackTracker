@@ -1,74 +1,102 @@
 <UserControl x:Class="PackTracker.Presentation.Views.Admin.AdminDashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource MainBackground}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
-        <StackPanel>
-            <Border Style="{DynamicResource GlassPanelStyle}" Padding="20" Margin="0,0,0,24">
+             Background="Transparent">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Style="{StaticResource OpScrollViewerStyle}">
+        <StackPanel Margin="24">
+
+            <!-- Header -->
+            <Border Style="{StaticResource OpHeaderBorderStyle}">
                 <StackPanel>
                     <TextBlock Text="Admin Overview"
-                               FontSize="28"
+                               FontSize="22"
                                FontWeight="Bold"
-                               Foreground="{DynamicResource AccentGoldBrush}"/>
+                               Foreground="{StaticResource OpTextTitleBrush}"/>
                     <TextBlock Text="High-level system analytics and administrative status."
-                               Margin="0,6,0,0"
-                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                               Margin="0,4,0,0"
+                               Foreground="{StaticResource OpTextSecondaryBrush}"
+                               FontSize="12"/>
                 </StackPanel>
             </Border>
 
-            <UniformGrid Columns="4" Margin="0,0,0,24">
-                <Border Style="{DynamicResource GlassPanelStyle}" Margin="0,0,12,0" Padding="16">
+            <!-- Stat cards -->
+            <UniformGrid Columns="4" Margin="0,0,0,16">
+                <Border Style="{StaticResource OpItemBorderStyle}" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock Text="Authority Level" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding HighestTier}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="AUTHORITY LEVEL"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding HighestTier}"
+                                   FontSize="20" FontWeight="Bold"
+                                   Foreground="{StaticResource OpTextTitleBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{DynamicResource GlassPanelStyle}" Margin="6,0,6,0" Padding="16">
+                <Border Style="{StaticResource OpItemBorderStyle}" Margin="5,0">
                     <StackPanel>
-                        <TextBlock Text="Total Members" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding TotalMembers}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="TOTAL MEMBERS"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding TotalMembers}"
+                                   FontSize="20" FontWeight="Bold"
+                                   Foreground="{StaticResource OpTextTitleBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{DynamicResource GlassPanelStyle}" Margin="6,0,6,0" Padding="16">
+                <Border Style="{StaticResource OpItemBorderStyle}" Margin="5,0">
                     <StackPanel>
-                        <TextBlock Text="Admin Staff" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding ActiveAdminRoleAssignments}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="ADMIN STAFF"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding ActiveAdminRoleAssignments}"
+                                   FontSize="20" FontWeight="Bold"
+                                   Foreground="{StaticResource OpTextTitleBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{DynamicResource GlassPanelStyle}" Margin="12,0,0,0" Padding="16">
+                <Border Style="{StaticResource OpItemBorderStyle}" Margin="10,0,0,0">
                     <StackPanel>
-                        <TextBlock Text="Audit Volume" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding TotalAuditEntries}" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="AUDIT VOLUME"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   FontSize="10" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding TotalAuditEntries}"
+                                   FontSize="20" FontWeight="Bold"
+                                   Foreground="{StaticResource OpTextTitleBrush}"/>
                     </StackPanel>
                 </Border>
             </UniformGrid>
 
+            <!-- Lower panels -->
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{DynamicResource GlassPanelStyle}" Padding="20" Margin="0,0,12,0">
+                <Border Grid.Column="0" Style="{StaticResource OpPanelBorderStyle}"
+                        Padding="18" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock Text="Infrastructure Status" FontSize="18" FontWeight="Bold" Margin="0,0,0,16" Foreground="{DynamicResource AccentGoldBrush}"/>
-                        
-                        <Grid Margin="0,0,0,12">
-                            <TextBlock Text="Discord Integration" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <Border HorizontalAlignment="Right" Padding="8,2" CornerRadius="4">
+                        <TextBlock Text="INFRASTRUCTURE STATUS"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   Margin="0,0,0,14"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="Discord Integration"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                       FontSize="13"/>
+                            <Border HorizontalAlignment="Right" Padding="8,3" CornerRadius="3">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding DiscordSettingsConfigured}" Value="True">
-                                                <Setter Property="Background" Value="{DynamicResource SuccessFillBrush}"/>
+                                                <Setter Property="Background" Value="#1A4CAF50"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding DiscordSettingsConfigured}" Value="False">
-                                                <Setter Property="Background" Value="{DynamicResource DangerFillBrush}"/>
+                                                <Setter Property="Background" Value="#1ADC3545"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <TextBlock FontWeight="Bold" FontSize="11">
+                                <TextBlock FontWeight="Bold" FontSize="10" FontFamily="Consolas">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Style.Triggers>
@@ -88,22 +116,38 @@
                         </Grid>
 
                         <Grid>
-                            <TextBlock Text="Core Database" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <Border HorizontalAlignment="Right" Background="{DynamicResource SuccessFillBrush}" Padding="8,2" CornerRadius="4">
-                                <TextBlock Text="CONNECTED" Foreground="{DynamicResource SuccessBrush}" FontWeight="Bold" FontSize="11"/>
+                            <TextBlock Text="Core Database"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                       FontSize="13"/>
+                            <Border HorizontalAlignment="Right" Background="#1A4CAF50" Padding="8,3" CornerRadius="3">
+                                <TextBlock Text="CONNECTED"
+                                           Foreground="{DynamicResource SuccessBrush}"
+                                           FontWeight="Bold" FontSize="10" FontFamily="Consolas"/>
                             </Border>
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="1" Style="{DynamicResource GlassPanelStyle}" Padding="20" Margin="12,0,0,0">
+                <Border Grid.Column="1" Style="{StaticResource OpPanelBorderStyle}"
+                        Padding="18" Margin="10,0,0,0">
                     <StackPanel>
-                        <TextBlock Text="Quick Actions" FontSize="18" FontWeight="Bold" Margin="0,0,0,16" Foreground="{DynamicResource AccentGoldBrush}"/>
-                        <Button Content="System Health Check" Style="{DynamicResource SecondaryActionButtonStyle}" HorizontalAlignment="Left" Width="200"/>
-                        <Button Content="Sync Discord Roles" Style="{DynamicResource SecondaryActionButtonStyle}" HorizontalAlignment="Left" Width="200" Margin="0,8,0,0"/>
+                        <TextBlock Text="QUICK ACTIONS"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   Margin="0,0,0,14"/>
+                        <Button Content="System Health Check"
+                                Style="{DynamicResource SecondaryActionButtonStyle}"
+                                HorizontalAlignment="Left" Width="210"
+                                FontSize="13" Padding="14,8" Margin="0,0,0,0"/>
+                        <Button Content="Sync Discord Roles"
+                                Style="{DynamicResource SecondaryActionButtonStyle}"
+                                HorizontalAlignment="Left" Width="210"
+                                FontSize="13" Padding="14,8" Margin="0"/>
                     </StackPanel>
                 </Border>
             </Grid>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

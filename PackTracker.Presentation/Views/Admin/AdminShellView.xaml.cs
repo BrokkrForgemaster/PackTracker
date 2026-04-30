@@ -10,6 +10,8 @@ public partial class AdminShellView : UserControl
     private readonly AdminDashboardView _dashboardView;
     private readonly AdminSettingsView _settingsView;
     private readonly AdminMembersView _membersView;
+    private readonly AdminMedalsView _medalsView;
+    private readonly AdminRecruitmentView _recruitmentView;
     private readonly NavigationStateService _navigationState;
 
     public AdminShellView(
@@ -17,6 +19,8 @@ public partial class AdminShellView : UserControl
         AdminDashboardView dashboardView,
         AdminSettingsView settingsView,
         AdminMembersView membersView,
+        AdminMedalsView medalsView,
+        AdminRecruitmentView recruitmentView,
         NavigationStateService navigationState)
     {
         InitializeComponent();
@@ -24,6 +28,8 @@ public partial class AdminShellView : UserControl
         _dashboardView = dashboardView;
         _settingsView = settingsView;
         _membersView = membersView;
+        _medalsView = medalsView;
+        _recruitmentView = recruitmentView;
         _navigationState = navigationState;
 
         ShowDashboard();
@@ -39,6 +45,10 @@ public partial class AdminShellView : UserControl
     private void Settings_Click(object sender, System.Windows.RoutedEventArgs e) => ShowSettings();
 
     private void Members_Click(object sender, System.Windows.RoutedEventArgs e) => ShowMembers();
+
+    private void Medals_Click(object sender, System.Windows.RoutedEventArgs e) => ShowMedals();
+
+    private void Recruitment_Click(object sender, System.Windows.RoutedEventArgs e) => ShowRecruitment();
 
     private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
     {
@@ -67,5 +77,19 @@ public partial class AdminShellView : UserControl
         _viewModel.CurrentSection = "Members";
         _navigationState.CaptureAdminView("Members");
         AdminContentHost.Content = _membersView;
+    }
+
+    private void ShowMedals()
+    {
+        _viewModel.CurrentSection = "Medals";
+        _navigationState.CaptureAdminView("Medals");
+        AdminContentHost.Content = _medalsView;
+    }
+
+    private void ShowRecruitment()
+    {
+        _viewModel.CurrentSection = "Recruitment";
+        _navigationState.CaptureAdminView("Recruitment");
+        AdminContentHost.Content = _recruitmentView;
     }
 }

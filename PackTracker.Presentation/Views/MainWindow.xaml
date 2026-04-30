@@ -177,6 +177,10 @@
                                                         Tag="RequestHub"
                                                         Style="{StaticResource SidebarButtonStyle}"
                                                         Click="Navigate_Click"/>
+                                                <Button Content="Profile"
+                                                        Tag="Profile"
+                                                        Style="{StaticResource SidebarButtonStyle}"
+                                                        Click="Navigate_Click"/>
                                                 <Button Content="Settings"
                                                         Tag="Settings"
                                                         Style="{StaticResource SidebarButtonStyle}"

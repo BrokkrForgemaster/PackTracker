@@ -344,6 +344,9 @@ namespace PackTracker.Presentation.Views
                     case "RequestHub":
                         NavigateToRequestsHub();
                         break;
+                    case "Profile":
+                        NavigateToProfile();
+                        break;
                     case "Blueprints":
                         NavigateToBlueprintExplorer();
                         break;
@@ -527,6 +530,24 @@ namespace PackTracker.Presentation.Views
             {
                 MessageBox.Show(
                     "Unable to resolve all required services for settings.",
+                    "Dependency Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void NavigateToProfile()
+        {
+            _currentMainViewKey = "Profile";
+            try
+            {
+                var profileView = _serviceProvider.GetRequiredService<ProfileView>();
+                ContentFrame.Navigate(profileView);
+            }
+            catch (Exception)
+            {
+                MessageBox.Show(
+                    "Unable to open the profile dossier.",
                     "Dependency Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);

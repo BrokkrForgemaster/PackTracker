@@ -56,6 +56,8 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
     public DbSet<MemberRoleAssignment> MemberRoleAssignments => Set<MemberRoleAssignment>();
     public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
     public DbSet<DiscordIntegrationSetting> DiscordIntegrationSettings => Set<DiscordIntegrationSetting>();
+    public DbSet<MedalDefinition> MedalDefinitions => Set<MedalDefinition>();
+    public DbSet<MedalAward> MedalAwards => Set<MedalAward>();
 
     /// <summary>
     /// Gets the synchronization metadata for various tasks.
@@ -226,6 +228,7 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
         ConfigureMemberRoleAssignments(modelBuilder);
         ConfigureAdminAuditLogs(modelBuilder);
         ConfigureDiscordIntegrationSettings(modelBuilder);
+        ConfigureMedals(modelBuilder);
     }
 
     #endregion
@@ -267,6 +270,18 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
 
             entity.Property(p => p.DiscordAvatarUrl)
                 .HasMaxLength(512);
+
+            entity.Property(p => p.ShowcaseImageUrl)
+                .HasMaxLength(1024);
+
+            entity.Property(p => p.ShowcaseEyebrow)
+                .HasMaxLength(100);
+
+            entity.Property(p => p.ShowcaseTagline)
+                .HasMaxLength(200);
+
+            entity.Property(p => p.ShowcaseBio)
+                .HasMaxLength(5000);
 
             entity.Property(p => p.DiscordDisplayName)
                 .HasMaxLength(100);
@@ -888,6 +903,42 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
                 .WithMany()
                 .HasForeignKey(x => x.UpdatedByProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureMedals(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<MedalDefinition>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Name).IsUnique();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.ImagePath).HasMaxLength(512);
+            entity.Property(x => x.SourceSystem).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<MedalAward>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.MedalDefinitionId, x.RecipientName });
+            entity.Property(x => x.RecipientName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.SourceSystem).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Citation).HasMaxLength(4000);
+            entity.Property(x => x.AwardedBy).HasMaxLength(200);
+            entity.Property(x => x.ImportedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(x => x.MedalDefinition)
+                .WithMany(x => x.Awards)
+                .HasForeignKey(x => x.MedalDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Profile)
+                .WithMany()
+                .HasForeignKey(x => x.ProfileId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

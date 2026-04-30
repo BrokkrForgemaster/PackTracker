@@ -113,6 +113,14 @@
     <Content Include="Assets\specops.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Remove="Assets\locops.png" />
+    <Content Include="Assets\locops.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Assets\arcops.png" />
+    <Content Include="Assets\arcops.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Remove="Assets\tacops.png" />
     <Content Include="Assets\tacops.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -18,80 +18,268 @@ public sealed class AdminApiClient
 
     public async Task<AdminAccessDto?> GetAccessAsync(CancellationToken ct = default)
     {
-        try
-        {
-            using var client = _apiClientProvider.CreateClient();
-            _logger.LogInformation("Calling GET {Endpoint}", "api/v1/admin/dashboard/access");
-
-            using var response = await client.GetAsync("api/v1/admin/dashboard/access", ct);
-            _logger.LogInformation("GET /admin/dashboard/access responded with {StatusCode}", response.StatusCode);
-
-            if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
-            {
-                _logger.LogWarning("Admin access returned {StatusCode}; treating as no access.", response.StatusCode);
-                return null;
-            }
-
-            response.EnsureSuccessStatusCode();
-            var dto = await response.Content.ReadFromJsonAsync<AdminAccessDto>(cancellationToken: ct);
-            _logger.LogInformation(
-                "Admin access payload: CanAccessAdmin={CanAccessAdmin}, HighestTier={HighestTier}",
-                dto?.CanAccessAdmin,
-                dto?.HighestTier ?? "<null>");
-            return dto;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "GET /api/v1/admin/dashboard/access failed.");
-            throw;
-        }
+        return await GetSafeAsync(
+            "api/v1/admin/dashboard/access",
+            new AdminAccessDto(),
+            ct);
     }
 
     public async Task<AdminDashboardSummaryDto?> GetDashboardAsync(CancellationToken ct = default)
     {
-        using var client = _apiClientProvider.CreateClient();
-        return await client.GetFromJsonAsync<AdminDashboardSummaryDto>("api/v1/admin/dashboard", ct);
+        return await GetSafeAsync<AdminDashboardSummaryDto>(
+            "api/v1/admin/dashboard",
+            null,
+            ct);
     }
 
     public async Task<AdminSettingsDto?> GetSettingsAsync(CancellationToken ct = default)
     {
-        using var client = _apiClientProvider.CreateClient();
-        return await client.GetFromJsonAsync<AdminSettingsDto>("api/v1/admin/settings", ct);
+        return await GetSafeAsync<AdminSettingsDto>(
+            "api/v1/admin/settings",
+            null,
+            ct);
     }
 
-    public async Task<AdminSettingsDto?> UpdateSettingsAsync(UpdateAdminSettingsRequestDto request, CancellationToken ct = default)
+    public async Task<AdminSettingsDto?> UpdateSettingsAsync(
+        UpdateAdminSettingsRequestDto request,
+        CancellationToken ct = default)
     {
-        using var client = _apiClientProvider.CreateClient();
-        using var response = await client.PutAsJsonAsync("api/v1/admin/settings", request, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<AdminSettingsDto>(cancellationToken: ct);
+        return await PutSafeAsync<UpdateAdminSettingsRequestDto, AdminSettingsDto>(
+            "api/v1/admin/settings",
+            request,
+            null,
+            ct);
     }
 
     public async Task<IReadOnlyList<AdminMemberListItemDto>> GetMembersAsync(CancellationToken ct = default)
     {
-        using var client = _apiClientProvider.CreateClient();
-        return await client.GetFromJsonAsync<IReadOnlyList<AdminMemberListItemDto>>("api/v1/admin/members", ct)
-            ?? Array.Empty<AdminMemberListItemDto>();
+        return await GetSafeAsync<IReadOnlyList<AdminMemberListItemDto>>(
+            "api/v1/admin/members",
+            Array.Empty<AdminMemberListItemDto>(),
+            ct) ?? Array.Empty<AdminMemberListItemDto>();
     }
 
     public async Task<IReadOnlyList<AdminRoleOptionDto>> GetAdminRolesAsync(CancellationToken ct = default)
     {
-        using var client = _apiClientProvider.CreateClient();
-        return await client.GetFromJsonAsync<IReadOnlyList<AdminRoleOptionDto>>("api/v1/admin/members/roles", ct)
-            ?? Array.Empty<AdminRoleOptionDto>();
+        return await GetSafeAsync<IReadOnlyList<AdminRoleOptionDto>>(
+            "api/v1/admin/members/roles",
+            Array.Empty<AdminRoleOptionDto>(),
+            ct) ?? Array.Empty<AdminRoleOptionDto>();
     }
 
     public async Task AssignAdminRoleAsync(AssignAdminRoleRequestDto request, CancellationToken ct = default)
     {
-        using var client = _apiClientProvider.CreateClient();
-        using var response = await client.PostAsJsonAsync("api/v1/admin/members/assign-role", request, ct);
-        response.EnsureSuccessStatusCode();
+        await PostSafeAsync(
+            "api/v1/admin/members/assign-role",
+            request,
+            ct);
     }
 
     public async Task RevokeAdminRoleAsync(RevokeAdminRoleRequestDto request, CancellationToken ct = default)
     {
-        using var client = _apiClientProvider.CreateClient();
-        using var response = await client.PostAsJsonAsync("api/v1/admin/members/revoke-role", request, ct);
-        response.EnsureSuccessStatusCode();
+        await PostSafeAsync(
+            "api/v1/admin/members/revoke-role",
+            request,
+            ct);
+    }
+
+    public async Task<AdminMedalsDto> GetMedalsAsync(CancellationToken ct = default)
+    {
+        return await GetSafeAsync(
+            "api/v1/admin/medals",
+            new AdminMedalsDto(
+                Array.Empty<AdminMedalDefinitionDto>(),
+                Array.Empty<AdminMedalAwardDto>()),
+            ct) ?? new AdminMedalsDto(
+                Array.Empty<AdminMedalDefinitionDto>(),
+                Array.Empty<AdminMedalAwardDto>());
+    }
+
+    public async Task<ImportMedalsResultDto> ImportMedalsAsync(
+        ImportMedalsRequestDto request,
+        CancellationToken ct = default)
+    {
+        return await PostSafeAsync<ImportMedalsRequestDto, ImportMedalsResultDto>(
+            "api/v1/admin/medals/import",
+            request,
+            new ImportMedalsResultDto(
+                0,
+                0,
+                0,
+                0,
+                Array.Empty<string>(),
+                Array.Empty<string>()),
+            ct);
+    }
+
+    private async Task<T?> GetSafeAsync<T>(string endpoint, T? fallback, CancellationToken ct)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+
+            _logger.LogInformation("Calling GET {Endpoint}", endpoint);
+
+            using var response = await client.GetAsync(endpoint, ct);
+
+            _logger.LogInformation(
+                "GET {Endpoint} responded with {StatusCode}",
+                endpoint,
+                response.StatusCode);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LogNonSuccess("GET", endpoint, response.StatusCode);
+                return fallback;
+            }
+
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken: ct) ?? fallback;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("GET {Endpoint} was cancelled.", endpoint);
+            return fallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GET {Endpoint} failed.", endpoint);
+            return fallback;
+        }
+    }
+
+    private async Task PostSafeAsync<TRequest>(string endpoint, TRequest request, CancellationToken ct)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+
+            _logger.LogInformation("Calling POST {Endpoint}", endpoint);
+
+            using var response = await client.PostAsJsonAsync(endpoint, request, ct);
+
+            _logger.LogInformation(
+                "POST {Endpoint} responded with {StatusCode}",
+                endpoint,
+                response.StatusCode);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LogNonSuccess("POST", endpoint, response.StatusCode);
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("POST {Endpoint} was cancelled.", endpoint);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "POST {Endpoint} failed.", endpoint);
+        }
+    }
+
+    private async Task<TResponse> PostSafeAsync<TRequest, TResponse>(
+        string endpoint,
+        TRequest request,
+        TResponse fallback,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+
+            _logger.LogInformation("Calling POST {Endpoint}", endpoint);
+
+            using var response = await client.PostAsJsonAsync(endpoint, request, ct);
+
+            _logger.LogInformation(
+                "POST {Endpoint} responded with {StatusCode}",
+                endpoint,
+                response.StatusCode);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LogNonSuccess("POST", endpoint, response.StatusCode);
+                return fallback;
+            }
+
+            return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken: ct) ?? fallback;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("POST {Endpoint} was cancelled.", endpoint);
+            return fallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "POST {Endpoint} failed.", endpoint);
+            return fallback;
+        }
+    }
+
+    private async Task<TResponse?> PutSafeAsync<TRequest, TResponse>(
+        string endpoint,
+        TRequest request,
+        TResponse? fallback,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+
+            _logger.LogInformation("Calling PUT {Endpoint}", endpoint);
+
+            using var response = await client.PutAsJsonAsync(endpoint, request, ct);
+
+            _logger.LogInformation(
+                "PUT {Endpoint} responded with {StatusCode}",
+                endpoint,
+                response.StatusCode);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LogNonSuccess("PUT", endpoint, response.StatusCode);
+                return fallback;
+            }
+
+            return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken: ct) ?? fallback;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("PUT {Endpoint} was cancelled.", endpoint);
+            return fallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PUT {Endpoint} failed.", endpoint);
+            return fallback;
+        }
+    }
+
+    private void LogNonSuccess(string method, string endpoint, HttpStatusCode statusCode)
+    {
+        if (statusCode == HttpStatusCode.NotFound)
+        {
+            _logger.LogError(
+                "{Method} {Endpoint} returned 404 Not Found. Check that the backend route exists and matches the client endpoint.",
+                method,
+                endpoint);
+            return;
+        }
+
+        if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            _logger.LogWarning(
+                "{Method} {Endpoint} returned {StatusCode}. Treating as no admin access.",
+                method,
+                endpoint,
+                statusCode);
+            return;
+        }
+
+        _logger.LogError(
+            "{Method} {Endpoint} returned unexpected status code {StatusCode}.",
+            method,
+            endpoint,
+            statusCode);
     }
 }

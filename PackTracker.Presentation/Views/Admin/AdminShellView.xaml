@@ -2,14 +2,14 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{DynamicResource MainBackground}">
-    <Grid Margin="0">
+    <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="280"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Grid.Column="0" Margin="20" Style="{DynamicResource SidebarBorderStyle}">
+        <Border Grid.Column="0" Margin="16" Style="{DynamicResource SidebarBorderStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -18,67 +18,75 @@
                 </Grid.RowDefinitions>
 
                 <!-- Header -->
-                <StackPanel Grid.Row="0" Margin="24,32,24,20">
-                    <TextBlock Text="ADMIN" 
-                               FontSize="14" 
-                               FontWeight="Bold" 
+                <StackPanel Grid.Row="0" Margin="20,28,20,16">
+                    <TextBlock Text="ADMIN"
+                               FontSize="12"
+                               FontWeight="Bold"
                                Foreground="{DynamicResource AccentGoldBrush}"
                                HorizontalAlignment="Center"
-                               Margin="0,0,0,4"/>
-                    <TextBlock Text="COMMAND" 
-                               FontSize="28" 
-                               FontWeight="Black" 
+                               Margin="0,0,0,2"/>
+                    <TextBlock Text="COMMAND"
+                               FontSize="26"
+                               FontWeight="Black"
                                HorizontalAlignment="Center"
                                Foreground="White"/>
-                    
-                    <Border Background="{DynamicResource SurfaceGlassBrush}" 
-                            CornerRadius="8" 
-                            Padding="12,6" 
-                            Margin="0,20,0,0"
+                    <Border Background="{DynamicResource SurfaceGlassBrush}"
+                            CornerRadius="8"
+                            Padding="10,5"
+                            Margin="0,16,0,0"
                             HorizontalAlignment="Center">
-                        <TextBlock Text="{Binding AdminTierLabel}" 
+                        <TextBlock Text="{Binding AdminTierLabel}"
                                    FontWeight="SemiBold"
+                                   FontSize="13"
                                    Foreground="{DynamicResource AccentGoldBrush}"/>
                     </Border>
                 </StackPanel>
 
                 <!-- Navigation -->
-                <ScrollViewer Grid.Row="1" Margin="20,0">
-                    <StackPanel x:Name="AdminNavPanel">
-                        <Button Content="Dashboard" 
-                                Tag="Dashboard"
+                <ScrollViewer Grid.Row="1" Margin="16,0" VerticalScrollBarVisibility="Hidden">
+                    <StackPanel>
+                        <Button Content="Dashboard"
                                 Style="{DynamicResource SidebarButtonStyle}"
                                 Click="Dashboard_Click"/>
-                        
-                        <Button Content="Members" 
-                                Tag="Members"
+                        <Button Content="Members"
                                 Style="{DynamicResource SidebarButtonStyle}"
                                 Click="Members_Click"/>
-                        
-                        <Button Content="Admin Settings" 
-                                Tag="Settings"
+                        <Button Content="Admin Settings"
                                 Style="{DynamicResource SidebarButtonStyle}"
                                 Click="Settings_Click"/>
 
-                        <Separator Background="{DynamicResource GlassBorderBrush}" Margin="12,20"/>
-                        
-                        <Button Content="Audit Logs" IsEnabled="False" Style="{DynamicResource SidebarButtonStyle}"/>
-                        <Button Content="Medals" IsEnabled="False" Style="{DynamicResource SidebarButtonStyle}"/>
+                        <Separator Background="{DynamicResource GlassBorderBrush}" Margin="8,16"/>
+
+                        <Button Content="Recruitment Post"
+                                Style="{DynamicResource SidebarButtonStyle}"
+                                Click="Recruitment_Click"/>
+
+                        <Separator Background="{DynamicResource GlassBorderBrush}" Margin="8,16"/>
+
+                        <Button Content="Audit Logs"
+                                IsEnabled="False"
+                                Style="{DynamicResource SidebarButtonStyle}"/>
+                        <Button Content="Medals"
+                                Style="{DynamicResource SidebarButtonStyle}"
+                                Click="Medals_Click"/>
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- Back Action -->
-                <Border Grid.Row="2" Padding="20,0,20,24">
-                    <Button Content="RETURN TO HUB" 
+                <!-- Return -->
+                <Border Grid.Row="2" Padding="16,0,16,20">
+                    <Button Content="RETURN TO HUB"
                             Style="{DynamicResource PrimaryActionButtonStyle}"
                             Click="Back_Click"/>
                 </Border>
             </Grid>
         </Border>
 
-        <!-- Content Area -->
-        <Grid Grid.Column="1">
+        <!-- Content area -->
+        <Border Grid.Column="1"
+                Background="{StaticResource OpBackgroundPanelBrush}"
+                Margin="0,16,16,16"
+                CornerRadius="10">
             <ContentControl x:Name="AdminContentHost"/>
-        </Grid>
+        </Border>
     </Grid>
 </UserControl>

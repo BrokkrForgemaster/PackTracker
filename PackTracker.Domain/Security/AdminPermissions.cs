@@ -11,6 +11,8 @@ public static class AdminPermissions
     public const string AuditFullView = "audit.full.view";
     public const string MembersView = "members.view";
     public const string MembersRolesManage = "members.roles.manage";
+    public const string MedalsView = "medals.view";
+    public const string MedalsManage = "medals.manage";
     public const string RecordsArchive = "records.archive";
     public const string RecordsDelete = "records.delete";
     public const string ApprovalsOverride = "approvals.override";

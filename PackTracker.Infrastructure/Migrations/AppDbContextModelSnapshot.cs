@@ -898,6 +898,99 @@ namespace PackTracker.Infrastructure.Migrations
                     b.ToTable("DiscordIntegrationSettings");
                 });
 
+            modelBuilder.Entity("PackTracker.Domain.Entities.MedalAward", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AwardedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AwardedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Citation")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("ImportedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("MedalDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecipientName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SourceSystem")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MedalDefinitionId", "RecipientName");
+
+                    b.HasIndex("ProfileId");
+
+                    b.ToTable("MedalAwards");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.MedalDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SourceSystem")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("MedalDefinitions");
+                });
+
             modelBuilder.Entity("PackTracker.Domain.Entities.Material", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1173,6 +1266,22 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Property<string>("DiscordAvatarUrl")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<string>("ShowcaseBio")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<string>("ShowcaseEyebrow")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ShowcaseImageUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("ShowcaseTagline")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("DiscordDisplayName")
                         .HasMaxLength(100)
@@ -1620,6 +1729,24 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Navigation("UpdatedByProfile");
                 });
 
+            modelBuilder.Entity("PackTracker.Domain.Entities.MedalAward", b =>
+                {
+                    b.HasOne("PackTracker.Domain.Entities.MedalDefinition", "MedalDefinition")
+                        .WithMany("Awards")
+                        .HasForeignKey("MedalDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "Profile")
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("MedalDefinition");
+
+                    b.Navigation("Profile");
+                });
+
             modelBuilder.Entity("PackTracker.Domain.Entities.CommodityPrice", b =>
                 {
                     b.HasOne("PackTracker.Domain.Entities.Commodity", "Commodity")
@@ -1783,6 +1910,11 @@ namespace PackTracker.Infrastructure.Migrations
             modelBuilder.Entity("PackTracker.Domain.Entities.Commodity", b =>
                 {
                     b.Navigation("Prices");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.MedalDefinition", b =>
+                {
+                    b.Navigation("Awards");
                 });
 #pragma warning restore 612, 618
         }

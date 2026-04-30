@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.DTOs.Profiles;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
@@ -18,15 +19,20 @@ public class ProfilesController : ControllerBase
     #region Fields
 
     private readonly IProfileService _profiles;
+    private readonly IApplicationDbContext _db;
     private readonly ILogger<ProfilesController> _logger;
 
     #endregion
 
     #region Constructor
 
-    public ProfilesController(IProfileService profiles, ILogger<ProfilesController> logger)
+    public ProfilesController(
+        IProfileService profiles,
+        IApplicationDbContext db,
+        ILogger<ProfilesController> logger)
     {
         _profiles = profiles;
+        _db = db;
         _logger = logger;
     }
 
@@ -69,21 +75,77 @@ public class ProfilesController : ControllerBase
                 .Select(c => c.Value)
                 .FirstOrDefault();
 
-        return Ok(new
+        var medals = await _db.MedalAwards
+            .AsNoTracking()
+            .Where(x => x.ProfileId == profile.Id)
+            .Include(x => x.MedalDefinition)
+            .OrderBy(x => x.MedalDefinition.DisplayOrder)
+            .ThenBy(x => x.MedalDefinition.Name)
+            .Select(x => new CurrentProfileMedalDto(
+                x.MedalDefinitionId,
+                x.MedalDefinition.Name,
+                x.MedalDefinition.Description,
+                x.MedalDefinition.ImagePath,
+                x.Citation,
+                x.AwardedAt))
+            .ToListAsync(ct);
+
+        return Ok(MapCurrentProfile(profile, effectiveRank, effectiveDivision, medals));
+    }
+
+    [HttpPut("me/showcase")]
+    [Authorize]
+    public async Task<IActionResult> UpdateMyShowcase([FromBody] UpdateMyShowcaseRequestDto request, CancellationToken ct)
+    {
+        var discordId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(discordId))
         {
-            profile.Id,
-            profile.DiscordId,
-            profile.Username,
-            profile.Discriminator,
-            profile.DiscordDisplayName,
-            DiscordRank = effectiveRank,
-            DiscordDivision = effectiveDivision,
-            profile.DiscordAvatarUrl,
-            profile.IsOnline,
-            profile.LastSeenAt,
-            profile.CreatedAt,
-            profile.LastLogin
-        });
+            _logger.LogWarning("Missing Discord ID claim during showcase update.");
+            return Unauthorized();
+        }
+
+        var profile = await _profiles.UpdateShowcaseAsync(
+            discordId,
+            request.ShowcaseImageUrl,
+            request.ShowcaseEyebrow,
+            request.ShowcaseTagline,
+            request.ShowcaseBio,
+            ct);
+
+        if (profile == null)
+        {
+            _logger.LogWarning("Profile not found for showcase update. DiscordId={DiscordId}", discordId);
+            return NotFound();
+        }
+
+        var effectiveDivision = profile.DiscordDivision
+            ?? User.FindFirstValue("urn:discord:division");
+
+        var effectiveRank = !string.IsNullOrWhiteSpace(profile.DiscordRank)
+            ? profile.DiscordRank
+            : User.Claims
+                .Where(c => c.Type == ClaimTypes.Role
+                         && c.Value != PackTracker.Domain.Security.SecurityConstants.Roles.HouseWolfMember)
+                .Select(c => c.Value)
+                .FirstOrDefault();
+
+        var medals = await _db.MedalAwards
+            .AsNoTracking()
+            .Where(x => x.ProfileId == profile.Id)
+            .Include(x => x.MedalDefinition)
+            .OrderBy(x => x.MedalDefinition.DisplayOrder)
+            .ThenBy(x => x.MedalDefinition.Name)
+            .Select(x => new CurrentProfileMedalDto(
+                x.MedalDefinitionId,
+                x.MedalDefinition.Name,
+                x.MedalDefinition.Description,
+                x.MedalDefinition.ImagePath,
+                x.Citation,
+                x.AwardedAt))
+            .ToListAsync(ct);
+
+        return Ok(MapCurrentProfile(profile, effectiveRank, effectiveDivision, medals));
     }
 
     #endregion
@@ -164,4 +226,28 @@ public class ProfilesController : ControllerBase
     }
 
     #endregion
+
+    private static CurrentProfileDto MapCurrentProfile(
+        Profile profile,
+        string? effectiveRank,
+        string? effectiveDivision,
+        IReadOnlyList<CurrentProfileMedalDto> medals) =>
+        new(
+            profile.Id,
+            profile.DiscordId,
+            profile.Username,
+            profile.Discriminator,
+            profile.DiscordDisplayName,
+            effectiveRank,
+            effectiveDivision,
+            profile.DiscordAvatarUrl,
+            profile.IsOnline,
+            profile.LastSeenAt,
+            profile.CreatedAt,
+            profile.LastLogin,
+            profile.ShowcaseImageUrl,
+            profile.ShowcaseEyebrow,
+            profile.ShowcaseTagline,
+            profile.ShowcaseBio,
+            medals);
 }

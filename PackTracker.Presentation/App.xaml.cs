@@ -113,14 +113,19 @@ public partial class App : System.Windows.Application
         services.AddTransient<CraftingRequestsView>();
         services.AddTransient<ProcurementRequestsViewModel>();
         services.AddTransient<ProcurementRequestsView>();
+        services.AddTransient<ProfileViewModel>();
         services.AddTransient<ComponentViewModel>();
         services.AddTransient<AdminShellViewModel>();
         services.AddTransient<AdminDashboardViewModel>();
         services.AddTransient<AdminSettingsViewModel>();
         services.AddTransient<AdminMembersViewModel>();
+        services.AddTransient<AdminMedalsViewModel>();
+        services.AddTransient<AdminRecruitmentViewModel>();
         services.AddTransient<AdminDashboardView>();
         services.AddTransient<AdminSettingsView>();
         services.AddTransient<AdminMembersView>();
+        services.AddTransient<AdminMedalsView>();
+        services.AddTransient<AdminRecruitmentView>();
         services.AddTransient<AdminShellView>();
 
         // Embedded API host — registered as singleton so we can start/stop it manually
@@ -134,6 +139,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<GuideAssignmentHandler>();
         services.AddTransient<GuideDashboardViewModel>();
         services.AddTransient<NewRequestViewModel>();
+        services.AddTransient<ProfileView>();
         services.AddTransient<SettingsView>();
         services.AddSignalR();
         

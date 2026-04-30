@@ -6,6 +6,11 @@ public sealed record AdminMemberListItemDto(
     string? DisplayName,
     string DiscordId,
     string? DiscordRank,
+    string? DiscordDivision,
+    string? ShowcaseImageUrl,
+    string? ShowcaseEyebrow,
+    string? ShowcaseTagline,
+    string? ShowcaseBio,
     DateTime JoinDate,
     DateTime LastLogin,
     IReadOnlyCollection<string> ActiveAdminRoles);

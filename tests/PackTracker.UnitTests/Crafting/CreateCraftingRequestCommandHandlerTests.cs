@@ -209,6 +209,8 @@ public sealed class CreateCraftingRequestCommandHandlerTests
         public DbSet<CommodityPrice> CommodityPrices => _inner.CommodityPrices;
         public DbSet<RequestClaim> RequestClaims => _inner.RequestClaims;
         public DbSet<LobbyChatMessage> LobbyChatMessages => _inner.LobbyChatMessages;
+        public DbSet<MedalDefinition> MedalDefinitions => _inner.MedalDefinitions;
+        public DbSet<MedalAward> MedalAwards => _inner.MedalAwards;
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

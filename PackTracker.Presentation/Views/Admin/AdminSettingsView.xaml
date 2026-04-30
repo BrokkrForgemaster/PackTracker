@@ -1,35 +1,107 @@
 <UserControl x:Class="PackTracker.Presentation.Views.Admin.AdminSettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Style="{StaticResource OpScrollViewerStyle}">
         <StackPanel Margin="24">
-            <TextBlock Text="Admin Settings"
-                       FontSize="28"
-                       FontWeight="Bold"
-                       Foreground="White"/>
-            <TextBlock Text="Discord integration foundation for future admin workflows."
-                       Margin="0,6,0,18"
-                       Foreground="#D0D0D0"/>
 
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <CheckBox Content="Operations Enabled" IsChecked="{Binding OperationsEnabled}" Foreground="White" Margin="0,0,20,0"/>
-                <CheckBox Content="Medal Announcements Enabled" IsChecked="{Binding MedalAnnouncementsEnabled}" Foreground="White" Margin="0,0,20,0"/>
-                <CheckBox Content="Recruiting Posts Enabled" IsChecked="{Binding RecruitingPostsEnabled}" Foreground="White"/>
-            </StackPanel>
+            <!-- Header -->
+            <Border Style="{StaticResource OpHeaderBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="Admin Settings"
+                               FontSize="22"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource OpTextTitleBrush}"/>
+                    <TextBlock Text="Discord integration and guild automation configuration."
+                               Margin="0,4,0,0"
+                               Foreground="{StaticResource OpTextSecondaryBrush}"
+                               FontSize="12"/>
+                </StackPanel>
+            </Border>
 
-            <TextBlock Text="Operations Channel ID" Foreground="#C8A040"/>
-            <TextBox Text="{Binding OperationsChannelId}" Margin="0,4,0,12"/>
+            <!-- Feature toggles -->
+            <Border Style="{StaticResource OpPanelBorderStyle}" Padding="18" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="FEATURE FLAGS"
+                               FontSize="10" FontWeight="Bold"
+                               Foreground="{StaticResource OpTextMutedBrush}"
+                               Margin="0,0,0,14"/>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding OperationsEnabled}"
+                                  Foreground="{StaticResource OpTextPrimaryBrush}"
+                                  Margin="0,0,28,0">
+                            <TextBlock Text="Operations Enabled"
+                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                       FontSize="13"/>
+                        </CheckBox>
+                        <CheckBox IsChecked="{Binding MedalAnnouncementsEnabled}"
+                                  Foreground="{StaticResource OpTextPrimaryBrush}"
+                                  Margin="0,0,28,0">
+                            <TextBlock Text="Medal Announcements"
+                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                       FontSize="13"/>
+                        </CheckBox>
+                        <CheckBox IsChecked="{Binding RecruitingPostsEnabled}"
+                                  Foreground="{StaticResource OpTextPrimaryBrush}">
+                            <TextBlock Text="Recruiting Posts"
+                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                       FontSize="13"/>
+                        </CheckBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
 
-            <TextBlock Text="Medal Announcements Channel ID" Foreground="#C8A040"/>
-            <TextBox Text="{Binding MedalAnnouncementsChannelId}" Margin="0,4,0,12"/>
+            <!-- Channel IDs -->
+            <Border Style="{StaticResource OpPanelBorderStyle}" Padding="18" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="DISCORD CHANNELS"
+                               FontSize="10" FontWeight="Bold"
+                               Foreground="{StaticResource OpTextMutedBrush}"
+                               Margin="0,0,0,16"/>
 
-            <TextBlock Text="Recruiting Posts Channel ID" Foreground="#C8A040"/>
-            <TextBox Text="{Binding RecruitingPostsChannelId}" Margin="0,4,0,12"/>
+                    <TextBlock Text="Operations Channel ID"
+                               Foreground="{StaticResource OpTextAccentBrush}"
+                               FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding OperationsChannelId}"
+                             Style="{StaticResource OpTextBoxStyle}"
+                             MaxWidth="400" HorizontalAlignment="Left"
+                             Margin="0,0,0,14"/>
 
-            <StackPanel Orientation="Horizontal">
-                <Button Content="Save Settings" Width="140" Click="Save_Click"/>
-                <TextBlock Text="{Binding StatusMessage}" Margin="16,4,0,0" Foreground="#D0D0D0"/>
-            </StackPanel>
+                    <TextBlock Text="Medal Announcements Channel ID"
+                               Foreground="{StaticResource OpTextAccentBrush}"
+                               FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding MedalAnnouncementsChannelId}"
+                             Style="{StaticResource OpTextBoxStyle}"
+                             MaxWidth="400" HorizontalAlignment="Left"
+                             Margin="0,0,0,14"/>
+
+                    <TextBlock Text="Recruiting Posts Channel ID"
+                               Foreground="{StaticResource OpTextAccentBrush}"
+                               FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding RecruitingPostsChannelId}"
+                             Style="{StaticResource OpTextBoxStyle}"
+                             MaxWidth="400" HorizontalAlignment="Left"
+                             Margin="0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Save row -->
+            <Border Style="{StaticResource OpPanelBorderStyle}" Padding="18">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Save Settings"
+                            Width="160"
+                            Style="{DynamicResource PrimaryActionButtonStyle}"
+                            FontSize="13" Padding="14,9"
+                            Margin="0"
+                            Click="Save_Click"/>
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Margin="20,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource OpTextAccentBrush}"
+                               FontSize="12"/>
+                </StackPanel>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -54,6 +54,26 @@ public class Profile
     /// </summary>
     public string? DiscordAvatarUrl { get; set; }
 
+    /// <summary>
+    /// Optional custom portrait image for showcase/leadership cards.
+    /// </summary>
+    public string? ShowcaseImageUrl { get; set; }
+
+    /// <summary>
+    /// Small upper label for showcase cards.
+    /// </summary>
+    public string? ShowcaseEyebrow { get; set; }
+
+    /// <summary>
+    /// Short subtitle or role line for showcase cards.
+    /// </summary>
+    public string? ShowcaseTagline { get; set; }
+
+    /// <summary>
+    /// Long-form biography/description for showcase cards.
+    /// </summary>
+    public string? ShowcaseBio { get; set; }
+
     #endregion
 
     #region Presence / Activity

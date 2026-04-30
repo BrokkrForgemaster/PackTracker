@@ -98,5 +98,23 @@ public interface IProfileService
     /// <returns>The updated profile, or <c>null</c> if no matching profile exists.</returns>
     Task<Profile?> TouchLastSeenAsync(string discordId, CancellationToken ct);
 
+    /// <summary>
+    /// Updates the self-managed showcase fields for the specified Discord user.
+    /// </summary>
+    /// <param name="discordId">The Discord user ID.</param>
+    /// <param name="showcaseImageUrl">Optional portrait image URL.</param>
+    /// <param name="showcaseEyebrow">Optional upper label.</param>
+    /// <param name="showcaseTagline">Optional role line.</param>
+    /// <param name="showcaseBio">Optional biography text.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The updated profile, or <c>null</c> if the profile does not exist.</returns>
+    Task<Profile?> UpdateShowcaseAsync(
+        string discordId,
+        string? showcaseImageUrl,
+        string? showcaseEyebrow,
+        string? showcaseTagline,
+        string? showcaseBio,
+        CancellationToken ct);
+
     #endregion
 }

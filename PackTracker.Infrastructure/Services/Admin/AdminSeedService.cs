@@ -62,21 +62,24 @@ public sealed class AdminSeedService
                 AdminPermissions.AdminAccess,
                 AdminPermissions.DashboardView,
                 AdminPermissions.SettingsView,
-                AdminPermissions.MembersView
+                AdminPermissions.MembersView,
+                AdminPermissions.MedalsView
             ],
             [AdminRoleNames.FleetCommander] =
             [
                 AdminPermissions.AdminAccess,
                 AdminPermissions.DashboardView,
                 AdminPermissions.SettingsView,
-                AdminPermissions.MembersView
+                AdminPermissions.MembersView,
+                AdminPermissions.MedalsView
             ],
             [AdminRoleNames.Armor] =
             [
                 AdminPermissions.AdminAccess,
                 AdminPermissions.DashboardView,
                 AdminPermissions.SettingsView,
-                AdminPermissions.MembersView
+                AdminPermissions.MembersView,
+                AdminPermissions.MedalsView
             ],
             [AdminRoleNames.HighCouncilor] =
             [
@@ -84,6 +87,7 @@ public sealed class AdminSeedService
                 AdminPermissions.DashboardView,
                 AdminPermissions.SettingsView,
                 AdminPermissions.MembersView,
+                AdminPermissions.MedalsView,
                 AdminPermissions.AuditView
             ],
             [AdminRoleNames.HandOfTheClan] =
@@ -95,6 +99,8 @@ public sealed class AdminSeedService
                 AdminPermissions.SettingsSystemManage,
                 AdminPermissions.MembersView,
                 AdminPermissions.MembersRolesManage,
+                AdminPermissions.MedalsView,
+                AdminPermissions.MedalsManage,
                 AdminPermissions.AuditView,
                 AdminPermissions.AuditFullView,
                 AdminPermissions.RecordsArchive,
@@ -110,6 +116,8 @@ public sealed class AdminSeedService
                 AdminPermissions.SettingsSystemManage,
                 AdminPermissions.MembersView,
                 AdminPermissions.MembersRolesManage,
+                AdminPermissions.MedalsView,
+                AdminPermissions.MedalsManage,
                 AdminPermissions.AuditView,
                 AdminPermissions.AuditFullView,
                 AdminPermissions.RecordsArchive,

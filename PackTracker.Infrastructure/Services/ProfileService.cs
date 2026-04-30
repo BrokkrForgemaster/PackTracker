@@ -487,6 +487,37 @@ public class ProfileService : IProfileService
         return profile;
     }
 
+    public async Task<Profile?> UpdateShowcaseAsync(
+        string discordId,
+        string? showcaseImageUrl,
+        string? showcaseEyebrow,
+        string? showcaseTagline,
+        string? showcaseBio,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(discordId))
+            return null;
+
+        var profile = await _db.Profiles
+            .FirstOrDefaultAsync(p => p.DiscordId == discordId, ct);
+
+        if (profile == null)
+        {
+            _logger.LogWarning("UpdateShowcase failed. Profile not found for DiscordId={DiscordId}", discordId);
+            return null;
+        }
+
+        profile.ShowcaseImageUrl = NormalizeOptional(showcaseImageUrl);
+        profile.ShowcaseEyebrow = NormalizeOptional(showcaseEyebrow);
+        profile.ShowcaseTagline = NormalizeOptional(showcaseTagline);
+        profile.ShowcaseBio = NormalizeOptional(showcaseBio);
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Updated showcase profile for DiscordId={DiscordId}", discordId);
+        return profile;
+    }
+
     #endregion
 
     #region Private Helpers
@@ -537,6 +568,9 @@ public class ProfileService : IProfileService
 
         return avatarUrl.Trim();
     }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private async Task<DiscordUserResponse?> GetDiscordUserProfileAsync(string accessToken, CancellationToken ct)
     {

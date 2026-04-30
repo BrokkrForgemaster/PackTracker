@@ -32,6 +32,11 @@ public sealed class GetAdminMembersQueryHandler : IRequestHandler<GetAdminMember
                 x.DiscordDisplayName,
                 x.DiscordId,
                 x.DiscordRank,
+                x.DiscordDivision,
+                x.ShowcaseImageUrl,
+                x.ShowcaseEyebrow,
+                x.ShowcaseTagline,
+                x.ShowcaseBio,
                 x.CreatedAt,
                 x.LastLogin,
                 _db.MemberRoleAssignments
