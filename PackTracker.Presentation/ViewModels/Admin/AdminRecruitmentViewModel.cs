@@ -426,12 +426,16 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             ? $"<div class='div-thumb div-thumb-fallback'>{Enc(division.Emoji)}</div>"
             : $"<img class='div-thumb' src='{ResolveImg(division.ImagePath)}' alt='{Enc(division.Name)}'>";
 
+        var nameIcon = string.IsNullOrWhiteSpace(division.ImagePath)
+            ? $"{Enc(division.Emoji)} "
+            : $"<img class='div-icon' src='{ResolveImg(division.ImagePath)}' alt='{Enc(division.Emoji)}'> ";
+
         var description = Enc(division.Description).Replace("\n", "<br>", StringComparison.Ordinal);
 
         return $"""
             <div class="division-entry">
               <div class="division-copy">
-                <p class="division-name"><strong>{Enc(division.Emoji)} {Enc(division.Name)}</strong></p>
+                <p class="division-name"><strong>{nameIcon}{Enc(division.Name)}</strong></p>
                 <p class="division-tagline"><em>{Enc(division.Tagline)}</em></p>
                 <p class="division-description">{description}</p>
               </div>
@@ -719,6 +723,15 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             justify-content: center;
             color: #d3dbe5;
             font-size: 38px;
+          }
+
+          .div-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: cover;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-bottom: 2px;
           }
 
           .why-list {
