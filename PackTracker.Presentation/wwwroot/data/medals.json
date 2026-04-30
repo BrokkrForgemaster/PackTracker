@@ -1,0 +1,85 @@
+{
+    "available_medals": [
+        {
+            "name": "Medal of Honor",
+            "description": "The Medal of Honor is the highest award presented by the House Wolf Warlord, in the name of House Wolf. It is awarded for conspicuous gallantry and intrepidity at the risk of life, above and beyond the call of duty during missions against enemies of House Wolf.",
+            "image": "../Assets/medals/Medal_of_Honor.png"
+        },
+        {
+            "name": "Distinguished Service Cross",
+            "description": "The second highest award in House Wolf, given for true gallantry and selfless action in combat against an armed enemy force. Heroism must be notable and involve great risk of life.",
+            "image": "../Assets/medals/Distinguished_Service_Cross.png"
+        },
+        {
+            "name": "Air Forces Cross",
+            "description": "Awarded by the House Wolf Warlord or Hand of the Clan to members of the Air Forces for extraordinary heroism not justifying the Distinguished Service Cross.",
+            "image": "../Assets/medals/Air_Force_Cross.png"
+        },
+        {
+            "name": "Ground Forces Cross",
+            "description": "Awarded by the House Wolf Warlord or Hand of the Clan to Ground Forces members for extraordinary heroism not justifying the Distinguished Service Cross.",
+            "image": "../Assets/medals/Ground_Forces_Cross.png"
+        },
+        {
+            "name": "Silver Star",
+            "description": "The third-highest decoration for valor in combat, awarded for gallantry in action against enemies of House Wolf, not meeting the threshold for higher awards.",
+            "image": "../Assets/medals/Silver_Star.png"
+        },
+        {
+            "name": "Legion of Merit",
+            "description": "Awarded for exceptionally meritorious conduct in the performance of outstanding services and achievements, typically in command or high-responsibility roles.",
+            "image": "../Assets/medals/Legion_of_Merit.png"
+        },
+        {
+            "name": "Bronze Star",
+            "description": "Awarded for heroic or meritorious achievement or service in a combat zone, below the threshold for the Silver Star or Legion of Merit.",
+            "image": "../Assets/medals/Bronze_Star.png"
+        },
+        {
+            "name": "Meritorious Achievement Medal",
+            "description": "Awarded for non-combat achievement or, in some cases, in place of the Bronze Star in a combat theater. Recognizes actions comparable to the Legion of Merit in lower roles.",
+            "image": "../Assets/medals/Meritorious_Achievement_Medal.png"
+        },
+        {
+            "name": "Commendation Medal",
+            "description": "Given for a heroic act not occurring during combat, typically involving voluntary risk of life and selfless bravery beyond normal duty expectations.",
+            "image": "../Assets/medals/Commendation_Medal.png"
+        },
+        {
+            "name": "Achievement Medal",
+            "description": "Awarded for outstanding achievement or meritorious service to House Wolf. May also recognize minor acts of courage.",
+            "image": "../Assets/medals/Achievement_Medal.png"
+        },
+        {
+            "name": "Fighter Pilot Ace",
+            "description": "Awarded to fighter pilots with at least 45 confirmed aerial victories in air-to-air combat, witnessed by an NCO or higher-ranked observer.",
+            "image": "../Assets/medals/Fighter_Pilot_Ace_Medal.png"
+        },
+        {
+            "name": "Distinguished Service Medal",
+            "description": "Awarded for exceptionally meritorious service while in a position of great responsibility. May be awarded to non-members only under exceptional circumstances.",
+            "image": "../Assets/medals/Distinguished_Service_Medal.png"
+        },
+        {
+            "name": "Distinguished Flying Cross",
+            "description": "Awarded for heroism or extraordinary achievement during aerial flight in the course of military operations.",
+            "image": "../Assets/medals/Distinguished_Flying_Cross.png"
+        },
+        {
+            "name": "Medal of the Wolf",
+            "description": "Highest non-combat honor for House Wolf enlisted members. Awarded for voluntary risk of life in hazardous situations not involving armed enemies.",
+            "image": "../Assets/medals/Medal_of_the_Wolf.png"
+        },
+        {
+            "name": "Wolf Pack Medal",
+            "description": "Recognizes gallantry or meritorious service in a combat zone over time. Awarded to personnel with recurring operational roles or noteworthy contributions to combat missions.",
+            "image": "../Assets/medals/Wolf_Pack_Medal.png"
+        }
+    ],
+    "nominations": [
+    ],
+    "recipients": {
+        "": []
+        
+    }
+}
