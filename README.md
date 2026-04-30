@@ -90,11 +90,13 @@ API controllers include `DashboardController`, `UexController`, `BlueprintsContr
 
 </details>
 
-### Operations and Real-Time Coordination
+### Operations and Real-Time Coordination (Coming Soon)
 
-<p align="center">
-  <img src="PackTracker.Presentation/Assets/tacops.png" alt="Operations art" width="720" />
-</p>
+[//]: # (<p align="center">)
+
+[//]: # (  <img src="PackTracker.Presentation/Assets/tacops.png" alt="Operations art" width="720" />)
+
+[//]: # (</p>)
 
 The dashboard is designed to act as a live coordination surface instead of a static admin panel. SignalR is used for real-time communication and request broadcasting so operators can react without manual refresh loops.
 
@@ -111,7 +113,10 @@ The dashboard is designed to act as a live coordination surface instead of a sta
 ### Trading, Blueprints, and Crafting
 
 <p align="center">
-  <img src="PackTracker.Presentation/Assets/specops.png" alt="Crafting and blueprint systems" width="720" />
+<img src="docs/images/trading_hub.png" alt="Crafting and blueprint systems" width="720" />
+<img src="docs/images/blueprint.png" alt="Crafting and blueprint systems" width="720" />
+<img src="docs/images/crafting_request.png" alt="Crafting and blueprint systems" width="720" />
+<img src="docs/images/procurement.png" alt="Crafting and blueprint systems" width="720" />
 </p>
 
 PackTracker goes beyond task tracking by integrating market intelligence and blueprint data into request workflows. That gives users a path from planning, to sourcing, to fulfillment.
@@ -131,7 +136,7 @@ PackTracker goes beyond task tracking by integrating market intelligence and blu
 ### Requests, Logistics, and Member Support
 
 <p align="center">
-  <img src="PackTracker.Presentation/Assets/locops.png" alt="Logistics and request workflows" width="720" />
+  <img src="docs/images/request.png" alt="Logistics and request workflows" width="720" />
 </p>
 
 The request system is split by operational intent so teams can manage general assistance separately from production and logistics work.
@@ -150,7 +155,9 @@ The request system is split by operational intent so teams can manage general as
 ### Identity, Roles, and Recognition
 
 <p align="center">
-  <img src="PackTracker.Presentation/Assets/leadership.png" alt="Leadership and roles" width="720" />
+  <img src="docs/images/procurement.png" alt="Leadership and roles" width="720" />
+<img src="docs/images/medals.png" alt="Crafting and blueprint systems" width="720" />
+<img src="docs/images/recruitment.png" alt="Crafting and blueprint systems" width="720" />
 </p>
 
 PackTracker includes organization-facing identity and recognition systems, including role-aware behavior and medal assets used by the desktop application.
