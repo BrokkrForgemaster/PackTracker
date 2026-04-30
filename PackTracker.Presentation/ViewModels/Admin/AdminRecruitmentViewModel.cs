@@ -422,10 +422,6 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
 
     private static string BuildDivisionHtml(RecruitmentDivision division)
     {
-        var media = string.IsNullOrWhiteSpace(division.ImagePath)
-            ? $"<div class='div-thumb div-thumb-fallback'>{Enc(division.Emoji)}</div>"
-            : $"<img class='div-thumb' src='{ResolveImg(division.ImagePath)}' alt='{Enc(division.Name)}'>";
-
         var nameIcon = string.IsNullOrWhiteSpace(division.ImagePath)
             ? $"{Enc(division.Emoji)} "
             : $"<img class='div-icon' src='{ResolveImg(division.ImagePath)}' alt='{Enc(division.Emoji)}'> ";
@@ -434,12 +430,9 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
 
         return $"""
             <div class="division-entry">
-              <div class="division-copy">
-                <p class="division-name"><strong>{nameIcon}{Enc(division.Name)}</strong></p>
-                <p class="division-tagline"><em>{Enc(division.Tagline)}</em></p>
-                <p class="division-description">{description}</p>
-              </div>
-              <div class="division-media">{media}</div>
+              <p class="division-name"><strong>{nameIcon}{Enc(division.Name)}</strong></p>
+              <p class="division-tagline"><em>{Enc(division.Tagline)}</em></p>
+              <p class="division-description">{description}</p>
             </div>
             <hr class="sp-hr">
             """;
@@ -684,10 +677,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
           }
 
           .division-entry {
-            display: grid;
-            grid-template-columns: 1fr 140px;
-            gap: 16px;
-            align-items: start;
+            margin-bottom: 4px;
           }
 
           .division-name {
@@ -700,29 +690,6 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
 
           .division-description {
             margin-bottom: 0 !important;
-          }
-
-          .division-media {
-            display: flex;
-            justify-content: flex-end;
-          }
-
-          .div-thumb {
-            width: 130px;
-            height: 95px;
-            object-fit: cover;
-            border-radius: 3px;
-            border: 1px solid #263044;
-            background: #161d29;
-            display: block;
-          }
-
-          .div-thumb-fallback {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #d3dbe5;
-            font-size: 38px;
           }
 
           .div-icon {
