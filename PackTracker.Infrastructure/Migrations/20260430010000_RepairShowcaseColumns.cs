@@ -8,22 +8,10 @@ namespace PackTracker.Infrastructure.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // The two prior migrations may be recorded in __EFMigrationsHistory without their
-            // DDL having actually executed (phantom entries from a failed dotnet-ef run).
-            // Remove the phantom entries so that EF will re-run them on the next startup.
-            migrationBuilder.Sql(@"
-                DELETE FROM ""__EFMigrationsHistory""
-                WHERE ""MigrationId"" IN (
-                    '20260429234500_AddMedalsIntegration',
-                    '20260430000500_AddProfileShowcaseFields'
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM information_schema.columns
-                    WHERE table_name = 'Profiles' AND column_name = 'ShowcaseBio'
-                );
-            ");
-
-            // Idempotent column additions — safe whether or not the prior migrations ran.
+            // The two prior migrations have phantom entries in __EFMigrationsHistory
+            // (recorded without their DDL actually executing). This migration applies
+            // all of that DDL idempotently so the phantom entries remain valid and EF
+            // never tries to re-run those migrations.
             migrationBuilder.Sql(@"
                 ALTER TABLE ""Profiles""
                     ADD COLUMN IF NOT EXISTS ""ShowcaseBio""       character varying(5000),
