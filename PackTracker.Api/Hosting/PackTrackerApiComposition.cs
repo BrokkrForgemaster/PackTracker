@@ -43,12 +43,25 @@ public static class PackTrackerApiComposition
             options.KnownNetworks.Clear();
             options.KnownProxies.Clear();
 
-            foreach (var proxy in securityOptions.TrustedProxies)
+            if (securityOptions.TrustedProxies.Count > 0)
             {
-                if (System.Net.IPAddress.TryParse(proxy, out var address))
+                foreach (var proxy in securityOptions.TrustedProxies)
                 {
-                    options.KnownProxies.Add(address);
+                    if (System.Net.IPAddress.TryParse(proxy, out var address))
+                    {
+                        options.KnownProxies.Add(address);
+                    }
                 }
+            }
+            else
+            {
+                // No specific proxy IPs configured — trust all upstream headers.
+                // Required for PaaS deployments (Render, Railway, Fly.io) where proxy
+                // IPs are ephemeral. Without this, X-Forwarded-Proto is ignored,
+                // Request.Scheme stays "http", and the OAuth code-exchange builds a
+                // redirect_uri Discord rejects as mismatched.
+                options.KnownNetworks.Add(new IPNetwork(System.Net.IPAddress.Any, 0));
+                options.KnownNetworks.Add(new IPNetwork(System.Net.IPAddress.IPv6Any, 0));
             }
         });
 
