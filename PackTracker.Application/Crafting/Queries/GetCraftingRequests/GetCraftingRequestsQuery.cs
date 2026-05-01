@@ -34,9 +34,14 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        _logger.LogInformation(
+            "GetCraftingRequests: DiscordId={DiscordId} ProfileId={ProfileId}",
+            _currentUser.UserId, currentProfileId);
+
         try
         {
             var rows = await BuildFullProjectionQuery(currentProfileId).ToListAsync(cancellationToken);
+            _logger.LogInformation("GetCraftingRequests: returned {Count} rows", rows.Count);
             return MapRows(rows);
         }
         catch (Exception ex) when (IsLegacyCraftingMetadataFailure(ex))
@@ -64,7 +69,9 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
         from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
         join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
         from material in materialGroup.DefaultIfEmpty()
-        where req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed
+        where (req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed)
+           || req.RequesterProfileId == currentProfileId
+           || req.AssignedCrafterProfileId == currentProfileId
         where req.Status == RequestStatus.Open
             || req.RequesterProfileId == currentProfileId
             || req.AssignedCrafterProfileId == currentProfileId
@@ -115,7 +122,9 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
         from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
         join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
         from material in materialGroup.DefaultIfEmpty()
-        where req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed
+        where (req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed)
+           || req.RequesterProfileId == currentProfileId
+           || req.AssignedCrafterProfileId == currentProfileId
         where req.Status == RequestStatus.Open
             || req.RequesterProfileId == currentProfileId
             || req.AssignedCrafterProfileId == currentProfileId

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
@@ -12,11 +13,16 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<GetProcurementRequestsQueryHandler> _logger;
 
-    public GetProcurementRequestsQueryHandler(IApplicationDbContext db, ICurrentUserService currentUser)
+    public GetProcurementRequestsQueryHandler(
+        IApplicationDbContext db,
+        ICurrentUserService currentUser,
+        ILogger<GetProcurementRequestsQueryHandler> logger)
     {
         _db = db;
         _currentUser = currentUser;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<MaterialProcurementRequestListItemDto>> Handle(GetProcurementRequestsQuery request, CancellationToken cancellationToken)
@@ -28,9 +34,16 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        return await _db.MaterialProcurementRequests
+        _logger.LogInformation(
+            "GetProcurementRequests: DiscordId={DiscordId} ProfileId={ProfileId}",
+            _currentUser.UserId, currentProfileId);
+
+        var results = await _db.MaterialProcurementRequests
             .AsNoTracking()
-            .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
+            .Where(x => (x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
+                     || x.RequesterProfileId == currentProfileId
+                     || x.AssignedToProfileId == currentProfileId
+                     || _db.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Procurement" && c.ProfileId == currentProfileId))
             .Where(x => x.Status == RequestStatus.Open
                      || x.RequesterProfileId == currentProfileId
                      || x.AssignedToProfileId == currentProfileId
@@ -68,5 +81,8 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .OrderByDescending(x => x.IsPinned)
             .ThenByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation("GetProcurementRequests: returned {Count} items", results.Count);
+        return results;
     }
 }

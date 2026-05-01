@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
@@ -14,11 +15,16 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<QueryAssistanceRequestsQueryHandler> _logger;
 
-    public QueryAssistanceRequestsQueryHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser)
+    public QueryAssistanceRequestsQueryHandler(
+        IApplicationDbContext dbContext,
+        ICurrentUserService currentUser,
+        ILogger<QueryAssistanceRequestsQueryHandler> logger)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<AssistanceRequestDto>> Handle(QueryAssistanceRequestsQuery request, CancellationToken cancellationToken)
@@ -29,6 +35,10 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
             .Select(x => (Guid?)x.Id)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "QueryAssistanceRequests: DiscordId={DiscordId} ProfileId={ProfileId}",
+            _currentUser.UserId, currentProfileId);
 
         var query = _dbContext.AssistanceRequests
             .AsNoTracking()
@@ -42,9 +52,11 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
         if (request.Status.HasValue)
             query = query.Where(x => x.Status == request.Status.Value);
         else
-            query = query.Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed);
+            // Owners always see their own items regardless of status; hide Cancelled/Completed from everyone else
+            query = query.Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed
+                                  || x.CreatedByProfileId == currentProfileId);
 
-        return await query
+        var result = await query
             .OrderByDescending(x => x.IsPinned)
             .ThenByDescending(x => x.CreatedAt)
             .Select(x => new AssistanceRequestDto
@@ -76,5 +88,8 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
             })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        _logger.LogInformation("QueryAssistanceRequests: returned {Count} items", result.Count);
+        return result;
     }
 }
