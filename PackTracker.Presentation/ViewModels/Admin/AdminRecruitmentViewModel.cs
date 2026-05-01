@@ -156,23 +156,17 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
         _headline = "STRENGTH IN UNITY. VICTORY IN BATTLE.";
         _bannerImagePath = "https://i.imgur.com/66hj66F.png";
         _openingStatement =
-            "Somewhere in the verse, a fight is already happening.\n\n" +
-            "House Wolf is an organization with structure, purpose, and teeth — forged in battle, " +
-            "sustained by loyalty, and growing stronger with every pilot who finds their place in the pack.\n\n" +
-            "The verse is brutal. Move with us.";
+            "House Wolf is a disciplined, active org with structure, purpose, and teeth. " +
+            "Whether you fly combat, run logistics, or operate in the shadows — there's a place for you in the pack.";
         _whyJoinText =
-            "Rank that means something — Progression is earned, not gifted. Climb through a structured hierarchy and lead when you're ready.\n" +
-            "Operations with actual coordination — Scheduled ops, voice comms, real planning. Not just \"who wants to shoot things tonight.\"\n" +
-            "Every role matters — Combat, industry, recon, exploration, crafting. The pack needs all of it. None of it is lesser.\n" +
-            "Brotherhood that shows up — When your ship is on fire and your shields are gone, you want people on comms who already have a wing inbound. That's us.\n" +
-            "A home that lasts — House Wolf is built for the long game. When Star Citizen hits its stride, we'll already be entrenched.";
+            "Rank with clear progression\n" +
+            "Structured PvP & PvE roles\n" +
+            "Strong logistics and support backbone\n" +
+            "Coordinated missions & fleet operations\n" +
+            "A united, disciplined, battle-ready pack";
         _callToAction =
-            "The lone wolf doesn't survive the verse. The pack does.\n\n" +
-            "If you're tired of pugging it alone, tired of orgs that ghost their own members, tired of " +
-            "joining something that turns out to be nothing — come find out what it looks like when a " +
-            "crew actually gives a damn.\n\n" +
-            "Apply on RSI. Join the Discord. Tell us which division calls to you.\n\n" +
-            "We'll take it from there.";
+            "Do you fight alone — or run with the pack?\n\n" +
+            "Join House Wolf today.";
         _websiteUrl = "https://www.housewolf.co/";
         _rsiUrl = "https://robertsspaceindustries.com/orgs/CUTTERWOLF";
         _discordUrl = "https://discord.gg/housewolf";
@@ -201,10 +195,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Tagline = "First in. Last standing.",
             ImagePath = "https://i.imgur.com/lD4P6Cv.png",
             Description =
-                "TACOPS is the tip of the blade. Fighter pilots, gunship crews, and battlefield commanders " +
-                "who don't wait for permission to engage. Whether you're hunting bounties, running fleet PvP, " +
-                "or holding a chokepoint under fire — if your instinct is to push forward, TACOPS is where " +
-                "you belong. We don't ask if the odds are good. We make the odds irrelevant."
+                "Elite warriors specializing in PvP & PvE. Strike fast. Dominate every engagement."
         });
 
         RegisterDivision(new RecruitmentDivision
@@ -215,10 +206,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Tagline = "Without us, nothing moves.",
             ImagePath = "https://i.imgur.com/HfepOyk.png",
             Description =
-                "Every warfighter needs fuel, ore, parts, and a ship that still flies. LOCOPS keeps the " +
-                "machine running. Miners, haulers, salvagers, engineers — these are not support roles, they " +
-                "are power projection roles. The org that controls resources controls the verse. LOCOPS " +
-                "doesn't fight on the frontline because LOCOPS is the reason there's a frontline at all."
+                "The engine of House Wolf. Mining, salvage, transport, support, and engineering — you power our war machine."
         });
 
         RegisterDivision(new RecruitmentDivision
@@ -229,10 +217,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Tagline = "You won't see us coming. Neither will they.",
             ImagePath = "https://i.imgur.com/6rilziI.png",
             Description =
-                "SPECOPS operates where the rules end. Covert interdictions, precision eliminations, " +
-                "deep-recon insertion, high-value target extraction — if TACOPS is the punch, SPECOPS is " +
-                "the knife already in the room before the fight starts. Entry is selective. Standards are " +
-                "high. Results are absolute."
+                "Black ops specialists running covert strikes, infiltration, rapid response, and mission-critical support."
         });
 
         RegisterDivision(new RecruitmentDivision
@@ -243,12 +228,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Tagline = "We go first. So the pack can go further.",
             ImagePath = "https://i.imgur.com/TlCNBwW.png",
             Description =
-                "Before the battle, before the haul, before the strike — someone has to cross the threshold " +
-                "into the unknown. ARCOPS is the forward edge of House Wolf, pushing into uncharted systems " +
-                "to explore, analyze, and understand what lies beyond known space. Through scientific study, " +
-                "data collection, and advanced crafting, ARCOPS doesn't just discover the verse — it " +
-                "translates discovery into capability. The maps TACOPS uses, the technology SPECOPS deploys, " +
-                "the equipment LOCOPS depends on — ARCOPS builds the foundation every other division stands on."
+                "Explorers and crafters. We map the unknown, gather intel, craft equipment, and build the foundation every other division stands on."
         });
 
         Rebuild();
