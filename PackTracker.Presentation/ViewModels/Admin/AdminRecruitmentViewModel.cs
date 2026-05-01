@@ -151,7 +151,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
     {
         _orgName = "House Wolf";
         _headline = "STRENGTH IN UNITY. VICTORY IN BATTLE.";
-        _bannerImagePath = "HousewolfBanner.png";
+        _bannerImagePath = "https://i.imgur.com/66hj66F.png";
         _openingStatement =
             "Somewhere in the verse, a fight is already happening.\n\n" +
             "A mining convoy is being hit. A station is under siege. A contract just went loud. " +
@@ -201,7 +201,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Emoji = "⚔",
             Name = "TACOPS — THE SPEAR",
             Tagline = "First in. Last standing.",
-            ImagePath = "tacops.png",
+            ImagePath = "https://i.imgur.com/lD4P6Cv.png",
             Description =
                 "TACOPS is the tip of the blade. Fighter pilots, gunship crews, and battlefield commanders " +
                 "who don't wait for permission to engage. Whether you're hunting bounties, running fleet PvP, " +
@@ -215,7 +215,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Emoji = "⚙",
             Name = "LOCOPS — THE BACKBONE",
             Tagline = "Without us, nothing moves.",
-            ImagePath = "locops.png",
+            ImagePath = "https://i.imgur.com/HfepOyk.png",
             Description =
                 "Every warfighter needs fuel, ore, parts, and a ship that still flies. LOCOPS keeps the " +
                 "machine running. Miners, haulers, salvagers, engineers — these are not support roles, they " +
@@ -229,7 +229,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Emoji = "🛡",
             Name = "SPECOPS — THE SHADOW",
             Tagline = "You won't see us coming. Neither will they.",
-            ImagePath = "specops.png",
+            ImagePath = "https://i.imgur.com/6rilziI.png",
             Description =
                 "SPECOPS operates where the rules end. Covert interdictions, precision eliminations, " +
                 "deep-recon insertion, high-value target extraction — if TACOPS is the punch, SPECOPS is " +
@@ -243,7 +243,7 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
             Emoji = "🧭",
             Name = "ARCOPS — THE VANGUARD",
             Tagline = "We go first. So the pack can go further.",
-            ImagePath = "arcops.png",
+            ImagePath = "https://i.imgur.com/TlCNBwW.png",
             Description =
                 "Before the battle, before the haul, before the strike — someone has to cross the threshold " +
                 "into the unknown. ARCOPS is the forward edge of House Wolf, pushing into uncharted systems " +
