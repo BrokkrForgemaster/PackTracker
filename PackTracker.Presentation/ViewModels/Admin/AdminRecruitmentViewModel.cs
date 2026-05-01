@@ -135,6 +135,9 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
         set => SetProperty(ref _webViewAvailable, value);
     }
 
+    public int CharacterCount => _generatedPost.Length;
+    public bool IsOverLimit => _generatedPost.Length > 2000;
+
     public ObservableCollection<RecruitmentDivision> Divisions { get; } = new();
 
     public ICommand CopyCommand { get; }
@@ -154,14 +157,9 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
         _bannerImagePath = "https://i.imgur.com/66hj66F.png";
         _openingStatement =
             "Somewhere in the verse, a fight is already happening.\n\n" +
-            "A mining convoy is being hit. A station is under siege. A contract just went loud. " +
-            "And while lone wolves scatter and mercs count their credits before the smoke clears — " +
-            "House Wolf answers the call together.\n\n" +
-            "We are not a lobby. We are not a Discord server with a pretty tag. We are an organization " +
-            "with structure, purpose, and teeth. Forged in battle, sustained by loyalty, and growing " +
-            "stronger with every pilot who finds their place in the pack.\n\n" +
-            "The verse is brutal. It rewards those who move with intention.\n\n" +
-            "Move with us.";
+            "House Wolf is an organization with structure, purpose, and teeth — forged in battle, " +
+            "sustained by loyalty, and growing stronger with every pilot who finds their place in the pack.\n\n" +
+            "The verse is brutal. Move with us.";
         _whyJoinText =
             "Rank that means something — Progression is earned, not gifted. Climb through a structured hierarchy and lead when you're ready.\n" +
             "Operations with actual coordination — Scheduled ops, voice comms, real planning. Not just \"who wants to shoot things tonight.\"\n" +
@@ -265,6 +263,11 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
 
     private void CopyToClipboard()
     {
+        if (IsOverLimit)
+        {
+            StatusMessage = $"Post is {_generatedPost.Length - 2000} characters over the 2000 limit — trim content first.";
+            return;
+        }
         Clipboard.SetText(GeneratedPost);
         StatusMessage = "Copied to clipboard.";
     }
@@ -272,6 +275,8 @@ public sealed class AdminRecruitmentViewModel : ViewModelBase
     private void Rebuild()
     {
         GeneratedPost = BuildPost();
+        OnPropertyChanged(nameof(CharacterCount));
+        OnPropertyChanged(nameof(IsOverLimit));
         HtmlPreview = BuildHtml();
     }
 

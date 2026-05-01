@@ -412,6 +412,26 @@
                                    Foreground="{StaticResource OpTextAccentBrush}"
                                    FontSize="12"
                                    Margin="0,0,16,0"/>
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,14,0">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="{}{0} / 2000">
+                                    <Binding Path="CharacterCount"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource OpTextSecondaryBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOverLimit}" Value="True">
+                                            <Setter Property="Foreground" Value="#E05555"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <Button Content="Copy Post Text"
                                 Style="{DynamicResource PrimaryActionButtonStyle}"
                                 FontSize="13"
