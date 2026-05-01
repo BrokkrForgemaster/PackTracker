@@ -90,15 +90,21 @@ public sealed class ClaimProcurementRequestCommandHandler : IRequestHandler<Clai
             : null;
 
         await _notifier.NotifyAsync("ProcurementUpdated", command.RequestId, cancellationToken);
-        await _notifier.NotifyClaimedAsync(
-            requesterDiscordId: requesterProfile?.DiscordId ?? string.Empty,
-            claimerDiscordId: profile.DiscordId,
-            claimerDisplayName: profile.DiscordDisplayName ?? profile.Username,
-            requesterDisplayName: requesterProfile?.DiscordDisplayName ?? requesterProfile?.Username ?? string.Empty,
-            requestId: command.RequestId,
-            requestType: "Procurement",
-            requestLabel: request.Material?.Name ?? "Procurement Request",
-            cancellationToken: cancellationToken);
+
+        // Skip the claim notification when the requester claims their own request
+        var isSelfClaim = requesterProfile is not null && requesterProfile.DiscordId == profile.DiscordId;
+        if (!isSelfClaim && requesterProfile is not null && !string.IsNullOrWhiteSpace(requesterProfile.DiscordId))
+        {
+            await _notifier.NotifyClaimedAsync(
+                requesterDiscordId: requesterProfile.DiscordId,
+                claimerDiscordId: profile.DiscordId,
+                claimerDisplayName: profile.DiscordDisplayName ?? profile.Username,
+                requesterDisplayName: requesterProfile.DiscordDisplayName ?? requesterProfile.Username ?? string.Empty,
+                requestId: command.RequestId,
+                requestType: "Procurement",
+                requestLabel: request.Material?.Name ?? "Procurement Request",
+                cancellationToken: cancellationToken);
+        }
 
         return OperationResult<Guid>.Ok(command.RequestId);
     }

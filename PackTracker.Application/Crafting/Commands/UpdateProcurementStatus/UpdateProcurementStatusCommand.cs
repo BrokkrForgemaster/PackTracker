@@ -57,8 +57,8 @@ public sealed class UpdateProcurementStatusCommandHandler : IRequestHandler<Upda
             if (profile is null)
                 return new StatusUpdateResult(false, "Unauthorized");
 
-            if (profile.Id != entity.RequesterProfileId)
-                return new StatusUpdateResult(false, "Only the creator may complete this request.");
+            if (profile.Id != entity.RequesterProfileId && profile.Id != entity.AssignedToProfileId)
+                return new StatusUpdateResult(false, "Only the requester or assignee may complete this request.");
         }
 
         var previousStatus = entity.Status;

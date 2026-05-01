@@ -142,7 +142,8 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
 
         var handler = new GetProcurementRequestsQueryHandler(
             db,
-            new TestCurrentUserService(currentUser.DiscordId, "Mismatch Display Name"));
+            new TestCurrentUserService(currentUser.DiscordId, "Mismatch Display Name"),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<GetProcurementRequestsQueryHandler>.Instance);
 
         var result = await handler.Handle(new GetProcurementRequestsQuery(), CancellationToken.None);
 

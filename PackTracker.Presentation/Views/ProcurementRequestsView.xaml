@@ -6,6 +6,34 @@
              Background="Transparent">
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -158,24 +186,28 @@
                             <StackPanel Grid.Column="1" Width="200" Margin="24,0,0,0">
                                 <TextBlock Text="ACTIONS" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,0,12"/>
                                 <Button Content="CLAIM REQUEST"
+                                        Style="{StaticResource ActionButtonStyle}"
                                         Command="{Binding ClaimCommand}"
                                         IsEnabled="{Binding CanClaim}"
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#2B4E2E" Foreground="#EEF6EE"
                                         BorderBrush="#5C8B5E" BorderThickness="1"/>
                                 <Button Content="MARK IN PROGRESS"
+                                        Style="{StaticResource ActionButtonStyle}"
                                         Command="{Binding MarkInProgressCommand}"
                                         IsEnabled="{Binding CanMarkInProgress}"
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#5A3A14" Foreground="#F8E9D4"
                                         BorderBrush="#A36E2F" BorderThickness="1"/>
                                 <Button Content="MARK COMPLETED"
+                                        Style="{StaticResource ActionButtonStyle}"
                                         Command="{Binding MarkCompletedCommand}"
                                         IsEnabled="{Binding CanMarkCompleted}"
                                         Margin="0,0,0,8" Padding="12,8" FontWeight="Bold"
                                         Background="#24374A" Foreground="#E8F0F8"
                                         BorderBrush="#4F6A84" BorderThickness="1"/>
                                 <Button Content="REMOVE REQUEST"
+                                        Style="{StaticResource ActionButtonStyle}"
                                         Command="{Binding CancelCommand}"
                                         IsEnabled="{Binding CanCancel}"
                                         Padding="12,8" FontWeight="Bold"
