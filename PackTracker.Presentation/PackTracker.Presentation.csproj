@@ -154,10 +154,10 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>0.5.2</Version>
-    <AssemblyVersion>0.5.2</AssemblyVersion>
-    <FileVersion>0.5.2</FileVersion>
-    <InformationalVersion>0.5.2</InformationalVersion>
+    <Version>0.5.4</Version>
+    <AssemblyVersion>0.5.4</AssemblyVersion>
+    <FileVersion>0.5.4</FileVersion>
+    <InformationalVersion>0.5.4</InformationalVersion>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
