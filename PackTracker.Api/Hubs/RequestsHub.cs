@@ -620,6 +620,9 @@ public class RequestsHub : Hub
         if (targetProfile == null)
             throw new HubException($"User '{targetUsername}' was not found.");
 
+        if (targetProfile.DiscordId == senderDiscordId)
+            throw new HubException("You cannot send a direct message to yourself.");
+
         var senderDisplayName = senderProfile?.DiscordDisplayName ?? senderUsername;
         var senderAvatarUrl = senderProfile?.DiscordAvatarUrl;
         var senderRole = senderProfile?.DiscordRank;
