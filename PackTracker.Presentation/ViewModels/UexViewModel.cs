@@ -20,6 +20,10 @@ public partial class UexViewModel : ObservableObject
     private readonly IUexService _uex;
     private readonly ILogger<UexViewModel> _logger;
     private bool _shipsLoaded;
+    private bool _suppressCommodityFilter;
+    private bool _suppressShipFilter;
+    private List<Commodity> _allCommodities = new();
+    private List<UexVehicleDto> _allShips = new();
 
     #endregion
 
@@ -27,6 +31,7 @@ public partial class UexViewModel : ObservableObject
 
     [ObservableProperty] private ObservableCollection<Commodity> _commodities = new();
     [ObservableProperty] private Commodity? _selectedCommodity;
+    [ObservableProperty] private string _commoditySearch = string.Empty;
 
     [ObservableProperty] private ObservableCollection<UexTradeRouteDto> _allRoutes = new();
     [ObservableProperty] private ObservableCollection<UexTradeRouteDto> _topRoutes = new();
@@ -37,6 +42,7 @@ public partial class UexViewModel : ObservableObject
 
     [ObservableProperty] private ObservableCollection<UexVehicleDto> _ships = new();
     [ObservableProperty] private UexVehicleDto? _selectedShip;
+    [ObservableProperty] private string _shipSearch = string.Empty;
 
     [ObservableProperty] private decimal? _estimatedProfit;
 
@@ -78,7 +84,8 @@ public partial class UexViewModel : ObservableObject
             _logger.LogInformation("Loading UEX commodities...");
 
             var dbCommodities = await _uex.CommoditiesAsync(CancellationToken.None);
-            Commodities = new ObservableCollection<Commodity>(dbCommodities);
+            _allCommodities = dbCommodities.ToList();
+            Commodities = new ObservableCollection<Commodity>(_allCommodities);
 
             StatusMessage = Commodities.Count == 0
                 ? "No commodities available."
@@ -121,7 +128,8 @@ public partial class UexViewModel : ObservableObject
             _logger.LogInformation("Loading UEX ships...");
 
             var ships = await _uex.GetVehiclesAsync(null, CancellationToken.None);
-            Ships = new ObservableCollection<UexVehicleDto>(ships);
+            _allShips = ships.ToList();
+            Ships = new ObservableCollection<UexVehicleDto>(_allShips);
             _shipsLoaded = true;
 
             _logger.LogInformation("Loaded {Count} vehicles from UEX.", Ships.Count);
@@ -141,8 +149,21 @@ public partial class UexViewModel : ObservableObject
         }
     }
 
+    partial void OnShipSearchChanged(string value)
+    {
+        if (_suppressShipFilter) return;
+        var filtered = string.IsNullOrWhiteSpace(value)
+            ? _allShips
+            : _allShips.Where(s => s.NameFull != null && s.NameFull.Contains(value, StringComparison.OrdinalIgnoreCase)).ToList();
+        Ships = new ObservableCollection<UexVehicleDto>(filtered);
+    }
+
     partial void OnSelectedShipChanged(UexVehicleDto? value)
     {
+        _suppressShipFilter = true;
+        ShipSearch = value?.NameFull ?? string.Empty;
+        _suppressShipFilter = false;
+        Ships = new ObservableCollection<UexVehicleDto>(_allShips);
         CalculateShipProfit();
     }
 
@@ -175,8 +196,21 @@ public partial class UexViewModel : ObservableObject
     /// <summary>
     /// Triggers route loading whenever the user selects a commodity.
     /// </summary>
+    partial void OnCommoditySearchChanged(string value)
+    {
+        if (_suppressCommodityFilter) return;
+        var filtered = string.IsNullOrWhiteSpace(value)
+            ? _allCommodities
+            : _allCommodities.Where(c => c.Name.Contains(value, StringComparison.OrdinalIgnoreCase)).ToList();
+        Commodities = new ObservableCollection<Commodity>(filtered);
+    }
+
     partial void OnSelectedCommodityChanged(Commodity? value)
     {
+        _suppressCommodityFilter = true;
+        CommoditySearch = value?.Name ?? string.Empty;
+        _suppressCommodityFilter = false;
+        Commodities = new ObservableCollection<Commodity>(_allCommodities);
         if (value is not null)
             _ = LoadRoutesForCommodityAsync(value);
     }

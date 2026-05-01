@@ -78,6 +78,10 @@
                 <TextBlock Text="COMMODITY" Foreground="{StaticResource OpTextMutedBrush}" FontSize="10"
                            FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0" />
                 <ComboBox Width="320"
+                          IsEditable="True"
+                          IsTextSearchEnabled="False"
+                          StaysOpenOnEdit="True"
+                          Text="{Binding CommoditySearch, UpdateSourceTrigger=PropertyChanged}"
                           ItemsSource="{Binding Commodities}"
                           SelectedItem="{Binding SelectedCommodity, Mode=TwoWay}"
                           Style="{StaticResource OpComboBoxStyle}">
@@ -234,7 +238,11 @@
 
                             <TextBlock Text="SHIP" Foreground="{StaticResource OpTextMutedBrush}"
                                        FontSize="10" FontWeight="Bold" Margin="0,0,0,6" />
-                            <ComboBox ItemsSource="{Binding Ships}"
+                            <ComboBox IsEditable="True"
+                                      IsTextSearchEnabled="False"
+                                      StaysOpenOnEdit="True"
+                                      Text="{Binding ShipSearch, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{Binding Ships}"
                                       SelectedItem="{Binding SelectedShip, Mode=TwoWay}"
                                       Style="{StaticResource OpComboBoxStyle}"
                                       Margin="0,0,0,16">
