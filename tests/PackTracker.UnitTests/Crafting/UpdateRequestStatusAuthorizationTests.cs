@@ -96,7 +96,7 @@ public sealed class UpdateRequestStatusAuthorizationTests
             CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Equal("Only the creator may complete this request.", result.Message);
+        Assert.Equal("Only the requester or assignee may complete this request.", result.Message);
 
         var updated = await db.MaterialProcurementRequests.SingleAsync();
         Assert.Equal(RequestStatus.Accepted, updated.Status);

@@ -71,11 +71,33 @@ public class AssistanceRequestsControllerTests
     }
 
     [Fact]
-    public async Task GetRequests_ExcludesCancelledAndCompleted()
+    public async Task GetRequests_ExcludesCancelledAndCompleted_ForNonOwner()
+    {
+        var db = CreateDb();
+        var ownerProfile = await SeedProfileAsync(db, discordId: "owner-discord-999");
+        // Current user is a different person — should not see the owner's closed items
+        var controller = BuildController(db, discordId: "viewer-discord-111");
+
+        db.AssistanceRequests.AddRange(
+            new AssistanceRequest { Title = "Open", Status = RequestStatus.Open, CreatedByProfileId = ownerProfile.Id },
+            new AssistanceRequest { Title = "Cancelled", Status = RequestStatus.Cancelled, CreatedByProfileId = ownerProfile.Id },
+            new AssistanceRequest { Title = "Completed", Status = RequestStatus.Completed, CreatedByProfileId = ownerProfile.Id });
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetRequests(null, null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<AssistanceRequestDto>>(ok.Value);
+        Assert.Single(list);
+        Assert.Equal("Open", list[0].Title);
+    }
+
+    [Fact]
+    public async Task GetRequests_OwnerSeesAllTheirOwnRequests()
     {
         var db = CreateDb();
         var profile = await SeedProfileAsync(db);
-        var controller = BuildController(db);
+        var controller = BuildController(db); // current user IS the owner
 
         db.AssistanceRequests.AddRange(
             new AssistanceRequest { Title = "Open", Status = RequestStatus.Open, CreatedByProfileId = profile.Id },
@@ -87,8 +109,7 @@ public class AssistanceRequestsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<AssistanceRequestDto>>(ok.Value);
-        Assert.Single(list);
-        Assert.Equal("Open", list[0].Title);
+        Assert.Equal(3, list.Count);
     }
 
     [Fact]
