@@ -59,7 +59,8 @@
       "WebFetch(domain:robertsspaceindustries.com)",
       "WebSearch",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:support.robertsspaceindustries.com)"
+      "WebFetch(domain:support.robertsspaceindustries.com)",
+      "WebFetch(domain:imgur.com)"
     ],
     "deny": [],
     "ask": []
