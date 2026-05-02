@@ -30,7 +30,13 @@ public class DataAccessLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<
         var requestType = typeof(TRequest);
         var requestNamespace = requestType.Namespace;
         var requestName = requestType.Name;
+        var requestFullName = requestType.FullName;
 
+        // TEMPORARY DEBUG LOGGING
+        _logger.LogInformation("DataAccessLoggingBehavior triggered for {RequestType}. Namespace={Namespace}. FullName={FullName}", 
+            requestName, requestNamespace, requestFullName);
+
+        /* 
         // Constraint: Explicit exit for non-target namespaces using StartsWith
         if (requestNamespace == null || 
             (!requestNamespace.StartsWith("PackTracker.Application.Requests", StringComparison.Ordinal) && 
@@ -44,6 +50,7 @@ public class DataAccessLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<
         {
             return await next();
         }
+        */
 
         var sw = Stopwatch.StartNew();
         var response = await next();
