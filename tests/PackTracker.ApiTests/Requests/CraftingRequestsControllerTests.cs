@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PackTracker.Api.Controllers;
 using PackTracker.Api.Hubs;
+using PackTracker.ApiTests.TestDoubles;
 using PackTracker.Application;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.Interfaces;
@@ -58,6 +59,7 @@ public class CraftingRequestsControllerTests
         services.AddApplication();
         services.AddScoped<IApplicationDbContext>(_ => db);
         services.AddScoped<ICurrentUserService>(_ => new TestCurrentUserService(discordId, username));
+        services.AddScoped<IProfileService>(_ => new FakeProfileService(db));
         services.AddScoped<ICraftingWorkflowNotifier>(_ => new TestCraftingWorkflowNotifier(hubMock.Object));
         services.AddLogging();
 

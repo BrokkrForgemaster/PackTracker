@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PackTracker.Api.Controllers;
+using PackTracker.ApiTests.TestDoubles;
 using PackTracker.Application;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Application.Interfaces;
@@ -33,6 +34,7 @@ public class AssistanceRequestsControllerTests
         services.AddApplication();
         services.AddSingleton<IApplicationDbContext>(db);
         services.AddSingleton<ICurrentUserService>(new TestCurrentUserService(discordId, displayName, role));
+        services.AddSingleton<IProfileService>(_ => new FakeProfileService(db));
         services.AddSingleton<IAssistanceRequestNotifier, TestAssistanceRequestNotifier>();
 
         var provider = services.BuildServiceProvider();
@@ -93,7 +95,7 @@ public class AssistanceRequestsControllerTests
     }
 
     [Fact]
-    public async Task GetRequests_OwnerSeesAllTheirOwnRequests()
+    public async Task GetRequests_OwnerOnlySeesActiveRequestsByDefault()
     {
         var db = CreateDb();
         var profile = await SeedProfileAsync(db);
@@ -109,7 +111,8 @@ public class AssistanceRequestsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<AssistanceRequestDto>>(ok.Value);
-        Assert.Equal(3, list.Count);
+        var request = Assert.Single(list);
+        Assert.Equal("Open", request.Title);
     }
 
     [Fact]
