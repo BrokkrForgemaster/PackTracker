@@ -112,6 +112,30 @@ public sealed class AdminApiClient
             ct);
     }
 
+    public async Task<IReadOnlyList<AdminRequestHistoryItemDto>> GetAssistanceRequestHistoryAsync(CancellationToken ct = default)
+    {
+        return await GetSafeAsync<IReadOnlyList<AdminRequestHistoryItemDto>>(
+            "api/v1/admin/requests/history/assistance",
+            Array.Empty<AdminRequestHistoryItemDto>(),
+            ct) ?? Array.Empty<AdminRequestHistoryItemDto>();
+    }
+
+    public async Task<IReadOnlyList<AdminRequestHistoryItemDto>> GetCraftingRequestHistoryAsync(CancellationToken ct = default)
+    {
+        return await GetSafeAsync<IReadOnlyList<AdminRequestHistoryItemDto>>(
+            "api/v1/admin/requests/history/crafting",
+            Array.Empty<AdminRequestHistoryItemDto>(),
+            ct) ?? Array.Empty<AdminRequestHistoryItemDto>();
+    }
+
+    public async Task<IReadOnlyList<AdminRequestHistoryItemDto>> GetProcurementRequestHistoryAsync(CancellationToken ct = default)
+    {
+        return await GetSafeAsync<IReadOnlyList<AdminRequestHistoryItemDto>>(
+            "api/v1/admin/requests/history/procurement",
+            Array.Empty<AdminRequestHistoryItemDto>(),
+            ct) ?? Array.Empty<AdminRequestHistoryItemDto>();
+    }
+
     private async Task<T?> GetSafeAsync<T>(string endpoint, T? fallback, CancellationToken ct)
     {
         try

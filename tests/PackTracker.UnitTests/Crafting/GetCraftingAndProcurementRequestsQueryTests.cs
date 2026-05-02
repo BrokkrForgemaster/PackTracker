@@ -162,8 +162,7 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
 
         var handler = new GetProcurementRequestsQueryHandler(
             db,
-            CreateResolver(currentUser).Object,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<GetProcurementRequestsQueryHandler>.Instance);
+            CreateResolver(currentUser).Object);
 
         var result = await handler.Handle(new GetProcurementRequestsQuery(), CancellationToken.None);
 

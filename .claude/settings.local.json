@@ -60,7 +60,8 @@
       "WebSearch",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:support.robertsspaceindustries.com)",
-      "WebFetch(domain:imgur.com)"
+      "WebFetch(domain:imgur.com)",
+      "Bash(Get-ChildItem *)"
     ],
     "deny": [],
     "ask": []

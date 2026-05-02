@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
@@ -15,16 +14,13 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserProfileResolver _currentUserProfileResolver;
-    private readonly ILogger<QueryAssistanceRequestsQueryHandler> _logger;
 
     public QueryAssistanceRequestsQueryHandler(
         IApplicationDbContext dbContext,
-        ICurrentUserProfileResolver currentUserProfileResolver,
-        ILogger<QueryAssistanceRequestsQueryHandler> logger)
+        ICurrentUserProfileResolver currentUserProfileResolver)
     {
         _dbContext = dbContext;
         _currentUserProfileResolver = currentUserProfileResolver;
-        _logger = logger;
     }
 
     public async Task<IReadOnlyList<AssistanceRequestDto>> Handle(QueryAssistanceRequestsQuery request, CancellationToken cancellationToken)
@@ -113,7 +109,6 @@ public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryA
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        _logger.LogInformation("QueryAssistanceRequests: returned {Count} items", result.Count);
         return result;
     }
 }

@@ -12,6 +12,7 @@ public partial class AdminShellView : UserControl
     private readonly AdminMembersView _membersView;
     private readonly AdminMedalsView _medalsView;
     private readonly AdminRecruitmentView _recruitmentView;
+    private readonly AdminRequestHistoryView _requestHistoryView;
     private readonly NavigationStateService _navigationState;
 
     public AdminShellView(
@@ -21,6 +22,7 @@ public partial class AdminShellView : UserControl
         AdminMembersView membersView,
         AdminMedalsView medalsView,
         AdminRecruitmentView recruitmentView,
+        AdminRequestHistoryView requestHistoryView,
         NavigationStateService navigationState)
     {
         InitializeComponent();
@@ -30,6 +32,7 @@ public partial class AdminShellView : UserControl
         _membersView = membersView;
         _medalsView = medalsView;
         _recruitmentView = recruitmentView;
+        _requestHistoryView = requestHistoryView;
         _navigationState = navigationState;
 
         ShowDashboard();
@@ -49,6 +52,8 @@ public partial class AdminShellView : UserControl
     private void Medals_Click(object sender, System.Windows.RoutedEventArgs e) => ShowMedals();
 
     private void Recruitment_Click(object sender, System.Windows.RoutedEventArgs e) => ShowRecruitment();
+
+    private void RequestHistory_Click(object sender, System.Windows.RoutedEventArgs e) => ShowRequestHistory();
 
     private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
     {
@@ -91,5 +96,12 @@ public partial class AdminShellView : UserControl
         _viewModel.CurrentSection = "Recruitment";
         _navigationState.CaptureAdminView("Recruitment");
         AdminContentHost.Content = _recruitmentView;
+    }
+
+    private void ShowRequestHistory()
+    {
+        _viewModel.CurrentSection = "Request History";
+        _navigationState.CaptureAdminView("RequestHistory");
+        AdminContentHost.Content = _requestHistoryView;
     }
 }

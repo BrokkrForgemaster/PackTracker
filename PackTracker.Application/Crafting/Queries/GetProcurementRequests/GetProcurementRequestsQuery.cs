@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
@@ -13,27 +12,19 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserProfileResolver _currentUserProfileResolver;
-    private readonly ILogger<GetProcurementRequestsQueryHandler> _logger;
 
     public GetProcurementRequestsQueryHandler(
         IApplicationDbContext db,
-        ICurrentUserProfileResolver currentUserProfileResolver,
-        ILogger<GetProcurementRequestsQueryHandler> logger)
+        ICurrentUserProfileResolver currentUserProfileResolver)
     {
         _db = db;
         _currentUserProfileResolver = currentUserProfileResolver;
-        _logger = logger;
     }
 
     public async Task<IReadOnlyList<MaterialProcurementRequestListItemDto>> Handle(GetProcurementRequestsQuery request, CancellationToken cancellationToken)
     {
         var currentUserProfile = await _currentUserProfileResolver.ResolveAsync(cancellationToken);
         var currentProfileId = currentUserProfile.ProfileId;
-
-        _logger.LogInformation(
-            "[DIAGNOSTIC] Applying procurement filters: ProfileId={ProfileId}, StatusExclusions={Statuses}",
-            currentProfileId?.ToString() ?? "NULL",
-            "Cancelled, Completed");
 
         var results = await _db.MaterialProcurementRequests
             .AsNoTracking()
@@ -76,7 +67,6 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .ThenByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation("[DIAGNOSTIC] GetProcurementRequests returned {Count} items", results.Count);
         return results;
     }
 }

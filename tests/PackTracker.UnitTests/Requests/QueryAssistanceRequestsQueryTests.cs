@@ -50,8 +50,7 @@ public sealed class QueryAssistanceRequestsQueryTests
 
         var handler = new QueryAssistanceRequestsQueryHandler(
             db,
-            CreateResolver(currentUser).Object,
-            NullLogger<QueryAssistanceRequestsQueryHandler>.Instance);
+            CreateResolver(currentUser).Object);
 
         var result = await handler.Handle(new QueryAssistanceRequestsQuery(null, null), CancellationToken.None);
 
@@ -81,8 +80,7 @@ public sealed class QueryAssistanceRequestsQueryTests
 
         var handler = new QueryAssistanceRequestsQueryHandler(
             db,
-            CreateResolver(currentUser).Object,
-            NullLogger<QueryAssistanceRequestsQueryHandler>.Instance);
+            CreateResolver(currentUser).Object);
 
         var result = await handler.Handle(
             new QueryAssistanceRequestsQuery(null, RequestStatus.Completed),
