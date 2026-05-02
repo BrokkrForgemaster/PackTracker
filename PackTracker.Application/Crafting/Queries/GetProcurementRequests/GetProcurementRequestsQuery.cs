@@ -35,8 +35,14 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .ConfigureAwait(false);
 
         _logger.LogInformation(
-            "GetProcurementRequests: DiscordId={DiscordId} ProfileId={ProfileId}",
-            _currentUser.UserId, currentProfileId);
+            "[DIAGNOSTIC] Identity resolution: DiscordId={DiscordId}, ProfileId={ProfileId}",
+            _currentUser.UserId,
+            currentProfileId?.ToString() ?? "NULL");
+
+        _logger.LogInformation(
+            "[DIAGNOSTIC] Applying procurement filters: ProfileId={ProfileId}, StatusExclusions={Statuses}",
+            currentProfileId?.ToString() ?? "NULL",
+            "Cancelled, Completed");
 
         var results = await _db.MaterialProcurementRequests
             .AsNoTracking()
@@ -82,7 +88,7 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
             .ThenByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation("GetProcurementRequests: returned {Count} items", results.Count);
+        _logger.LogInformation("[DIAGNOSTIC] GetProcurementRequests returned {Count} items", results.Count);
         return results;
     }
 }

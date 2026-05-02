@@ -1,22 +1,30 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using PackTracker.Application.Admin.DTOs;
 using PackTracker.Application.Admin.Commands.AssignAdminRole;
 using PackTracker.Application.Admin.Commands.RevokeAdminRole;
-using PackTracker.Application.Admin.DTOs;
 using PackTracker.Application.Admin.Queries.GetAdminMembers;
 using PackTracker.Application.Admin.Queries.GetAdminRoles;
 
 namespace PackTracker.Api.Controllers.Admin;
 
+/// <summary name="MembersController">
+/// Controller for managing admin members and their roles.
+/// </summary>
 public sealed class MembersController : AdminControllerBase
 {
+    #region Properties
     private readonly IMediator _mediator;
-
+    #endregion
+    
+    #region Constructors
     public MembersController(IMediator mediator)
     {
         _mediator = mediator;
     }
+    #endregion
 
+    #region Endpoints
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<AdminMemberListItemDto>), StatusCodes.Status200OK)]
     public Task<IReadOnlyList<AdminMemberListItemDto>> Get(CancellationToken ct) =>
@@ -42,4 +50,5 @@ public sealed class MembersController : AdminControllerBase
         await _mediator.Send(new RevokeAdminRoleCommand(request), ct);
         return NoContent();
     }
+    #endregion
 }

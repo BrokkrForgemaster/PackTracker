@@ -14,6 +14,19 @@ public static class ApiAuthenticationDefaults
     #endregion
     
     #region Methods
+    
+    /// <summary>
+    /// Selects the appropriate authentication scheme based on the incoming HTTP request context.
+    /// </summary>
+    /// <param name="context">
+    /// The HTTP context of the incoming request, used to determine the authentication scheme.
+    /// </param>
+    /// <returns>
+    /// A string representing the selected authentication scheme, which can be
+    /// <see cref="JwtBearerDefaults.AuthenticationScheme"/> for API requests
+    /// or requests with Bearer tokens, or <see cref="CookieScheme"/> for other requests,
+    ///  including those with SignalR access tokens.
+    /// </returns>
     public static string SelectScheme(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -35,6 +48,18 @@ public static class ApiAuthenticationDefaults
             : CookieScheme;
     }
 
+    /// <summary>
+    /// Extracts the SignalR access token from the query string of the HTTP request
+    /// if the request is targeting the SignalR hubs endpoint.
+    /// </summary>
+    /// <param name="request">
+    /// The HTTP request from which to extract the SignalR access token.
+    /// The method checks if the request path starts with "/hubs"
+    /// </param>
+    /// <returns>
+    /// A string containing the SignalR access token if it is present in the query string
+    /// and the request path starts with "/hubs";
+    /// </returns>
     public static string? GetSignalRAccessToken(HttpRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

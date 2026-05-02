@@ -1,28 +1,37 @@
-using System.Security.Claims;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using PackTracker.Domain.Security;
 using PackTracker.Application.Admin.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using PackTracker.Application.Admin.Queries.GetAdminAccess;
 using PackTracker.Application.Admin.Queries.GetAdminDashboardSummary;
-using PackTracker.Domain.Security;
 
 namespace PackTracker.Api.Controllers.Admin;
 
+/// <summary name="DashboardController">
+/// Controller for admin dashboard related endpoints. This includes endpoints for retrieving admin access
+/// information and dashboard summaries. Access to these endpoints is restricted based on the user's permissions,
+/// with some endpoints requiring only authentication and others requiring specific admin access rights.
+/// </summary>
 [ApiController]
 [Route("api/v1/admin/dashboard")]
 public sealed class DashboardController : ControllerBase
 {
+    #region Properties
     private readonly IMediator _mediator;
     private readonly ILogger<DashboardController> _logger;
-
+    #endregion
+    
+    #region Constructor
     public DashboardController(IMediator mediator, ILogger<DashboardController> logger)
     {
         _mediator = mediator;
         _logger = logger;
     }
+    #endregion
 
+    #region Endpoints
     [HttpGet("access")]
     [Authorize]
     [ProducesResponseType(typeof(AdminAccessDto), StatusCodes.Status200OK)]
@@ -54,4 +63,5 @@ public sealed class DashboardController : ControllerBase
     [ProducesResponseType(typeof(AdminDashboardSummaryDto), StatusCodes.Status200OK)]
     public Task<AdminDashboardSummaryDto> GetSummary(CancellationToken ct) =>
         _mediator.Send(new GetAdminDashboardSummaryQuery(), ct);
+    #endregion
 }

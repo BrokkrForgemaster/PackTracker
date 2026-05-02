@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Request;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
@@ -16,15 +17,26 @@ public sealed class QueryLegacyRequestsQueryHandler : IRequestHandler<QueryLegac
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<QueryLegacyRequestsQueryHandler> _logger;
 
-    public QueryLegacyRequestsQueryHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser)
+    public QueryLegacyRequestsQueryHandler(
+        IApplicationDbContext dbContext,
+        ICurrentUserService currentUser,
+        ILogger<QueryLegacyRequestsQueryHandler> logger)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<RequestTicketDto>> Handle(QueryLegacyRequestsQuery request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation(
+            "[DIAGNOSTIC] QueryLegacyRequests: DiscordId={DiscordId}, StatusFilter={Status}, Mine={Mine}",
+            _currentUser.UserId,
+            request.Status?.ToString() ?? "ALL",
+            request.Mine);
+
         var query = _dbContext.RequestTickets.AsNoTracking().AsQueryable();
 
         if (request.Status.HasValue)

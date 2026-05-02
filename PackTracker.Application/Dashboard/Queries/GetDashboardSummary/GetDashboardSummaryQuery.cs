@@ -40,6 +40,16 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
 
         var currentProfileId = currentProfile?.Id;
 
+        _logger.LogInformation(
+            "[DIAGNOSTIC] Identity resolution: DiscordId={DiscordId}, ProfileId={ProfileId}",
+            _currentUser.UserId,
+            currentProfileId?.ToString() ?? "NULL");
+
+        _logger.LogInformation(
+            "[DIAGNOSTIC] Applying dashboard filters: ProfileId={ProfileId}, ExcludedStatuses={Statuses}",
+            currentProfileId?.ToString() ?? "NULL",
+            "Cancelled, Completed");
+
         var assistance = await _dbContext.AssistanceRequests
             .AsNoTracking()
             .Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
@@ -134,6 +144,8 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
             .Concat(crafting)
             .Concat(procurement)
             .ToList();
+
+        _logger.LogInformation("[DIAGNOSTIC] Dashboard summary returned {Count} active requests", allActiveRequests.Count);
 
         return new DashboardSummaryDto
         {

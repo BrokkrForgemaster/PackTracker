@@ -35,13 +35,19 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
             .ConfigureAwait(false);
 
         _logger.LogInformation(
-            "GetCraftingRequests: DiscordId={DiscordId} ProfileId={ProfileId}",
-            _currentUser.UserId, currentProfileId);
+            "[DIAGNOSTIC] Identity resolution: DiscordId={DiscordId}, ProfileId={ProfileId}",
+            _currentUser.UserId,
+            currentProfileId?.ToString() ?? "NULL");
+
+        _logger.LogInformation(
+            "[DIAGNOSTIC] Applying crafting filters: ProfileId={ProfileId}, StatusExclusions={Statuses}",
+            currentProfileId?.ToString() ?? "NULL",
+            "Cancelled, Completed");
 
         try
         {
             var rows = await BuildFullProjectionQuery(currentProfileId).ToListAsync(cancellationToken);
-            _logger.LogInformation("GetCraftingRequests: returned {Count} rows", rows.Count);
+            _logger.LogInformation("[DIAGNOSTIC] GetCraftingRequests returned {Count} rows", rows.Count);
             return MapRows(rows);
         }
         catch (Exception ex) when (IsLegacyCraftingMetadataFailure(ex))
