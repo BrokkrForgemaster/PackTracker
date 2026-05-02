@@ -408,31 +408,6 @@ dotnet run --project PackTracker.Api
 
 ---
 
-## Screenshot Notes
-
-This README already uses real repository assets so it renders cleanly today, but it is also structured to support richer product screenshots later.
-
-<details>
-<summary><strong>Recommended screenshot convention</strong></summary>
-
-If you want section-specific UI screenshots, add them under a dedicated folder such as `docs/images/` and swap the current image tags section by section. A clean convention would be:
-
-```text
-docs/images/
-|- dashboard.png
-|- trading-hub.png
-|- blueprint-explorer.png
-|- crafting-center.png
-|- procurement-center.png
-`- request-hub.png
-```
-
-That will keep README asset links short and easy to maintain.
-
-</details>
-
----
-
 ## License
 
 This repository is licensed under the [MIT License](LICENSE).
