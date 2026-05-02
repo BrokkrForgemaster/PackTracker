@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using PackTracker.Application.Dashboard.Queries.GetDashboardSummary;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
@@ -120,7 +121,7 @@ public sealed class GetDashboardSummaryQueryTests
 
         var handler = new GetDashboardSummaryQueryHandler(
             db,
-            new TestCurrentUserService(currentUser.DiscordId, currentUser.Username),
+            CreateResolver(currentUser).Object,
             NullLogger<GetDashboardSummaryQueryHandler>.Instance);
 
         var result = await handler.Handle(new GetDashboardSummaryQuery(), CancellationToken.None);
@@ -170,17 +171,13 @@ public sealed class GetDashboardSummaryQueryTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
 
-    private sealed class TestCurrentUserService : ICurrentUserService
+    private static Mock<ICurrentUserProfileResolver> CreateResolver(Profile profile)
     {
-        public TestCurrentUserService(string userId, string displayName)
-        {
-            UserId = userId;
-            DisplayName = displayName;
-        }
+        var resolver = new Mock<ICurrentUserProfileResolver>();
+        resolver
+            .Setup(x => x.ResolveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CurrentUserProfileContext(profile.DiscordId, profile));
 
-        public string UserId { get; }
-        public string DisplayName { get; }
-        public bool IsAuthenticated => true;
-        public bool IsInRole(string role) => false;
+        return resolver;
     }
 }

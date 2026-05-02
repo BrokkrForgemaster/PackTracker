@@ -14,47 +14,71 @@ public sealed record QueryAssistanceRequestsQuery(
 public sealed class QueryAssistanceRequestsQueryHandler : IRequestHandler<QueryAssistanceRequestsQuery, IReadOnlyList<AssistanceRequestDto>>
 {
     private readonly IApplicationDbContext _dbContext;
-    private readonly ICurrentUserService _currentUser;
+    private readonly ICurrentUserProfileResolver _currentUserProfileResolver;
     private readonly ILogger<QueryAssistanceRequestsQueryHandler> _logger;
 
     public QueryAssistanceRequestsQueryHandler(
         IApplicationDbContext dbContext,
-        ICurrentUserService currentUser,
+        ICurrentUserProfileResolver currentUserProfileResolver,
         ILogger<QueryAssistanceRequestsQueryHandler> logger)
     {
         _dbContext = dbContext;
-        _currentUser = currentUser;
+        _currentUserProfileResolver = currentUserProfileResolver;
         _logger = logger;
     }
 
     public async Task<IReadOnlyList<AssistanceRequestDto>> Handle(QueryAssistanceRequestsQuery request, CancellationToken cancellationToken)
     {
-        var currentProfileId = await _dbContext.Profiles
-            .AsNoTracking()
-            .Where(x => x.DiscordId == _currentUser.UserId)
-            .Select(x => (Guid?)x.Id)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        _logger.LogInformation(
-            "QueryAssistanceRequests: DiscordId={DiscordId} ProfileId={ProfileId}",
-            _currentUser.UserId, currentProfileId);
+        var currentUserProfile = await _currentUserProfileResolver.ResolveAsync(cancellationToken);
+        var currentProfileId = currentUserProfile.ProfileId;
 
         var query = _dbContext.AssistanceRequests
             .AsNoTracking()
-            .Where(x => x.Status == RequestStatus.Open
-                     || x.CreatedByProfileId == currentProfileId
-                     || _dbContext.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Assistance" && c.ProfileId == currentProfileId));
+            .Where(x =>
+                x.Status == RequestStatus.Open
+                || ((x.Status == RequestStatus.Accepted || x.Status == RequestStatus.InProgress)
+                    && (x.CreatedByProfileId == currentProfileId
+                        || _dbContext.RequestClaims.Any(c =>
+                            c.RequestId == x.Id
+                            && c.RequestType == "Assistance"
+                            && c.ProfileId == currentProfileId))));
 
         if (request.Kind.HasValue)
             query = query.Where(x => x.Kind == request.Kind.Value);
 
         if (request.Status.HasValue)
-            query = query.Where(x => x.Status == request.Status.Value);
+        {
+            query = request.Status.Value switch
+            {
+                RequestStatus.Open => query.Where(x => x.Status == RequestStatus.Open),
+                RequestStatus.Accepted => query.Where(x =>
+                    x.Status == RequestStatus.Accepted
+                    && (x.CreatedByProfileId == currentProfileId
+                        || _dbContext.RequestClaims.Any(c =>
+                            c.RequestId == x.Id
+                            && c.RequestType == "Assistance"
+                            && c.ProfileId == currentProfileId))),
+                RequestStatus.InProgress => query.Where(x =>
+                    x.Status == RequestStatus.InProgress
+                    && (x.CreatedByProfileId == currentProfileId
+                        || _dbContext.RequestClaims.Any(c =>
+                            c.RequestId == x.Id
+                            && c.RequestType == "Assistance"
+                            && c.ProfileId == currentProfileId))),
+                _ => query.Where(_ => false)
+            };
+        }
         else
-            // Owners always see their own items regardless of status; hide Cancelled/Completed from everyone else
-            query = query.Where(x => x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed
-                                  || x.CreatedByProfileId == currentProfileId);
+        {
+            query = query.Where(x =>
+                x.Status == RequestStatus.Open
+                || ((x.Status == RequestStatus.Accepted || x.Status == RequestStatus.InProgress)
+                    && (x.CreatedByProfileId == currentProfileId
+                        || _dbContext.RequestClaims.Any(c =>
+                            c.RequestId == x.Id
+                            && c.RequestType == "Assistance"
+                            && c.ProfileId == currentProfileId))));
+        }
 
         var result = await query
             .OrderByDescending(x => x.IsPinned)

@@ -12,32 +12,23 @@ public sealed record GetCraftingRequestsQuery : IRequest<IReadOnlyList<CraftingR
 public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftingRequestsQuery, IReadOnlyList<CraftingRequestListItemDto>>
 {
     private readonly IApplicationDbContext _db;
-    private readonly ICurrentUserService _currentUser;
+    private readonly ICurrentUserProfileResolver _currentUserProfileResolver;
     private readonly ILogger<GetCraftingRequestsQueryHandler> _logger;
 
     public GetCraftingRequestsQueryHandler(
         IApplicationDbContext db,
-        ICurrentUserService currentUser,
+        ICurrentUserProfileResolver currentUserProfileResolver,
         ILogger<GetCraftingRequestsQueryHandler> logger)
     {
         _db = db;
-        _currentUser = currentUser;
+        _currentUserProfileResolver = currentUserProfileResolver;
         _logger = logger;
     }
 
     public async Task<IReadOnlyList<CraftingRequestListItemDto>> Handle(GetCraftingRequestsQuery request, CancellationToken cancellationToken)
     {
-        var currentProfileId = await _db.Profiles
-            .AsNoTracking()
-            .Where(x => x.DiscordId == _currentUser.UserId)
-            .Select(x => (Guid?)x.Id)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        _logger.LogInformation(
-            "[DIAGNOSTIC] Identity resolution: DiscordId={DiscordId}, ProfileId={ProfileId}",
-            _currentUser.UserId,
-            currentProfileId?.ToString() ?? "NULL");
+        var currentUserProfile = await _currentUserProfileResolver.ResolveAsync(cancellationToken);
+        var currentProfileId = currentUserProfile.ProfileId;
 
         _logger.LogInformation(
             "[DIAGNOSTIC] Applying crafting filters: ProfileId={ProfileId}, StatusExclusions={Statuses}",

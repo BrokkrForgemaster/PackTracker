@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using PackTracker.Application.Crafting.Queries.GetCraftingRequests;
 using PackTracker.Application.Crafting.Queries.GetProcurementRequests;
 using PackTracker.Application.Interfaces;
@@ -67,7 +68,7 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
 
         var handler = new GetCraftingRequestsQueryHandler(
             db,
-            new TestCurrentUserService(currentUser.DiscordId, "Mismatch Display Name"),
+            CreateResolver(currentUser).Object,
             NullLogger<GetCraftingRequestsQueryHandler>.Instance);
 
         var result = await handler.Handle(new GetCraftingRequestsQuery(), CancellationToken.None);
@@ -142,7 +143,7 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
 
         var handler = new GetProcurementRequestsQueryHandler(
             db,
-            new TestCurrentUserService(currentUser.DiscordId, "Mismatch Display Name"),
+            CreateResolver(currentUser).Object,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<GetProcurementRequestsQueryHandler>.Instance);
 
         var result = await handler.Handle(new GetProcurementRequestsQuery(), CancellationToken.None);
@@ -176,17 +177,13 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
             Slug = "fs9-lmg"
         };
 
-    private sealed class TestCurrentUserService : ICurrentUserService
+    private static Mock<ICurrentUserProfileResolver> CreateResolver(Profile profile)
     {
-        public TestCurrentUserService(string userId, string displayName)
-        {
-            UserId = userId;
-            DisplayName = displayName;
-        }
+        var resolver = new Mock<ICurrentUserProfileResolver>();
+        resolver
+            .Setup(x => x.ResolveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CurrentUserProfileContext(profile.DiscordId, profile));
 
-        public string UserId { get; }
-        public string DisplayName { get; }
-        public bool IsAuthenticated => true;
-        public bool IsInRole(string role) => false;
+        return resolver;
     }
 }

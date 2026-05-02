@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using PackTracker.Application.Blueprints.Queries.GetOwnedBlueprints;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
@@ -113,7 +115,8 @@ public sealed class GetOwnedBlueprintsQueryTests
 
         await db.SaveChangesAsync();
 
-        var handler = new GetOwnedBlueprintsQueryHandler(db, new TestCurrentUserService("discord-1"));
+        var resolver = CreateResolver(currentProfile);
+        var handler = new GetOwnedBlueprintsQueryHandler(db, resolver.Object, NullLogger<GetOwnedBlueprintsQueryHandler>.Instance);
 
         var result = await handler.Handle(new GetOwnedBlueprintsQuery(), CancellationToken.None);
 
@@ -126,21 +129,33 @@ public sealed class GetOwnedBlueprintsQueryTests
         Assert.Contains(item.Materials, x => x.MaterialName == "Corundum" && x.QuantityRequired == 6);
     }
 
+    [Fact]
+    public async Task Handle_ReturnsEmptyWhenCurrentUserProfileCannotBeResolved()
+    {
+        await using var db = CreateDb();
+
+        var handler = new GetOwnedBlueprintsQueryHandler(
+            db,
+            CreateResolver(profile: null).Object,
+            NullLogger<GetOwnedBlueprintsQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetOwnedBlueprintsQuery(), CancellationToken.None);
+
+        Assert.Empty(result);
+    }
+
     private static AppDbContext CreateDb() =>
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
 
-    private sealed class TestCurrentUserService : ICurrentUserService
+    private static Mock<ICurrentUserProfileResolver> CreateResolver(Profile? profile)
     {
-        public TestCurrentUserService(string userId)
-        {
-            UserId = userId;
-        }
+        var resolver = new Mock<ICurrentUserProfileResolver>();
+        resolver
+            .Setup(x => x.ResolveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CurrentUserProfileContext(profile?.DiscordId ?? "discord-1", profile));
 
-        public string UserId { get; }
-        public string DisplayName => "sentinel";
-        public bool IsAuthenticated => true;
-        public bool IsInRole(string role) => false;
+        return resolver;
     }
 }

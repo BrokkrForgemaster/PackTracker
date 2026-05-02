@@ -12,32 +12,23 @@ public sealed record GetProcurementRequestsQuery : IRequest<IReadOnlyList<Materi
 public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProcurementRequestsQuery, IReadOnlyList<MaterialProcurementRequestListItemDto>>
 {
     private readonly IApplicationDbContext _db;
-    private readonly ICurrentUserService _currentUser;
+    private readonly ICurrentUserProfileResolver _currentUserProfileResolver;
     private readonly ILogger<GetProcurementRequestsQueryHandler> _logger;
 
     public GetProcurementRequestsQueryHandler(
         IApplicationDbContext db,
-        ICurrentUserService currentUser,
+        ICurrentUserProfileResolver currentUserProfileResolver,
         ILogger<GetProcurementRequestsQueryHandler> logger)
     {
         _db = db;
-        _currentUser = currentUser;
+        _currentUserProfileResolver = currentUserProfileResolver;
         _logger = logger;
     }
 
     public async Task<IReadOnlyList<MaterialProcurementRequestListItemDto>> Handle(GetProcurementRequestsQuery request, CancellationToken cancellationToken)
     {
-        var currentProfileId = await _db.Profiles
-            .AsNoTracking()
-            .Where(x => x.DiscordId == _currentUser.UserId)
-            .Select(x => (Guid?)x.Id)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        _logger.LogInformation(
-            "[DIAGNOSTIC] Identity resolution: DiscordId={DiscordId}, ProfileId={ProfileId}",
-            _currentUser.UserId,
-            currentProfileId?.ToString() ?? "NULL");
+        var currentUserProfile = await _currentUserProfileResolver.ResolveAsync(cancellationToken);
+        var currentProfileId = currentUserProfile.ProfileId;
 
         _logger.LogInformation(
             "[DIAGNOSTIC] Applying procurement filters: ProfileId={ProfileId}, StatusExclusions={Statuses}",

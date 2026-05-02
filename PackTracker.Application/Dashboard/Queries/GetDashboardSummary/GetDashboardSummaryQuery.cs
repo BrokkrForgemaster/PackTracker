@@ -12,38 +12,24 @@ public sealed record GetDashboardSummaryQuery : IRequest<DashboardSummaryDto?>;
 public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSummaryQuery, DashboardSummaryDto?>
 {
     private readonly IApplicationDbContext _dbContext;
-    private readonly ICurrentUserService _currentUser;
+    private readonly ICurrentUserProfileResolver _currentUserProfileResolver;
     private readonly ILogger<GetDashboardSummaryQueryHandler> _logger;
 
     public GetDashboardSummaryQueryHandler(
         IApplicationDbContext dbContext,
-        ICurrentUserService currentUser,
+        ICurrentUserProfileResolver currentUserProfileResolver,
         ILogger<GetDashboardSummaryQueryHandler> logger)
     {
         _dbContext = dbContext;
-        _currentUser = currentUser;
+        _currentUserProfileResolver = currentUserProfileResolver;
         _logger = logger;
     }
 
     public async Task<DashboardSummaryDto?> Handle(GetDashboardSummaryQuery request, CancellationToken cancellationToken)
     {
-        var currentProfile = await _dbContext.Profiles
-            .AsNoTracking()
-            .Where(x => x.DiscordId == _currentUser.UserId)
-            .Select(x => new
-            {
-                Id = (Guid?)x.Id,
-                x.AcknowledgedClaimCounts
-            })
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        var currentProfileId = currentProfile?.Id;
-
-        _logger.LogInformation(
-            "[DIAGNOSTIC] Identity resolution: DiscordId={DiscordId}, ProfileId={ProfileId}",
-            _currentUser.UserId,
-            currentProfileId?.ToString() ?? "NULL");
+        var currentUserProfile = await _currentUserProfileResolver.ResolveAsync(cancellationToken);
+        var profile = currentUserProfile.Profile;
+        var currentProfileId = currentUserProfile.ProfileId;
 
         _logger.LogInformation(
             "[DIAGNOSTIC] Applying dashboard filters: ProfileId={ProfileId}, ExcludedStatuses={Statuses}",
@@ -151,7 +137,7 @@ public sealed class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboa
         {
             ActiveRequests = OrderDashboardRequests(allActiveRequests),
             ScheduledGuides = guides,
-            AcknowledgedClaimCounts = currentProfile?.AcknowledgedClaimCounts
+            AcknowledgedClaimCounts = profile?.AcknowledgedClaimCounts
                 ?.ToDictionary(static pair => pair.Key, static pair => pair.Value)
                 ?? new Dictionary<string, int>(),
             PersonalContext = new PersonalContextDto

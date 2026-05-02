@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.DTOs.Crafting;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Enums;
@@ -12,26 +13,31 @@ public sealed class GetOwnedBlueprintsQueryHandler
     : IRequestHandler<GetOwnedBlueprintsQuery, IReadOnlyList<OwnedBlueprintSummaryDto>>
 {
     private readonly IApplicationDbContext _db;
-    private readonly ICurrentUserService _currentUser;
+    private readonly ICurrentUserProfileResolver _currentUserProfileResolver;
+    private readonly ILogger<GetOwnedBlueprintsQueryHandler> _logger;
 
-    public GetOwnedBlueprintsQueryHandler(IApplicationDbContext db, ICurrentUserService currentUser)
+    public GetOwnedBlueprintsQueryHandler(
+        IApplicationDbContext db,
+        ICurrentUserProfileResolver currentUserProfileResolver,
+        ILogger<GetOwnedBlueprintsQueryHandler> logger)
     {
         _db = db;
-        _currentUser = currentUser;
+        _currentUserProfileResolver = currentUserProfileResolver;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<OwnedBlueprintSummaryDto>> Handle(
         GetOwnedBlueprintsQuery request,
         CancellationToken cancellationToken)
     {
-        var currentProfileId = await _db.Profiles
-            .AsNoTracking()
-            .Where(x => x.DiscordId == _currentUser.UserId)
-            .Select(x => (Guid?)x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+        var currentUserProfile = await _currentUserProfileResolver.ResolveAsync(cancellationToken);
+        var currentProfileId = currentUserProfile.ProfileId;
 
         if (!currentProfileId.HasValue)
+        {
+            _logger.LogInformation("GetOwnedBlueprints: skipping lookup because ProfileId could not be resolved.");
             return Array.Empty<OwnedBlueprintSummaryDto>();
+        }
 
         var ownedBlueprints = await _db.MemberBlueprintOwnerships
             .AsNoTracking()

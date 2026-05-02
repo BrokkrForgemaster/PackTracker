@@ -1,26 +1,29 @@
 ﻿using System.Net;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using PackTracker.Api.Authentication;
-using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
+using Microsoft.AspNetCore.Authorization;
+using PackTracker.Application.Interfaces;
+using Microsoft.AspNetCore.Authentication;
 
 namespace PackTracker.Api.Controllers;
 
-/// <summary>
+/// <summary name="AuthController">
 /// Handles Discord OAuth login and JWT/refresh token issuance.
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 public class AuthController : ControllerBase
 {
+    #region Properties
     private readonly IAuthWorkflowService _authWorkflow;
     private readonly ILogger<AuthController> _logger;
     private readonly AuthOptions _authOptions;
-
+    #endregion
+    
+    #region Constructors
     public AuthController(
         IAuthWorkflowService authWorkflow,
         ILogger<AuthController> logger,
@@ -34,7 +37,9 @@ public class AuthController : ControllerBase
         _logger = logger;
         _authOptions = authOptions.Value;
     }
-
+    #endregion
+    
+    #region Endpoints
     [AllowAnonymous]
     [HttpGet("login")]
     public async Task<IActionResult> Login(
@@ -350,4 +355,5 @@ public class AuthController : ControllerBase
     public record RefreshTokenRequest(string RefreshToken);
 
     public record LoginTokenPayload(string access_token, string refresh_token, int expires_in);
+    #endregion
 }

@@ -443,9 +443,7 @@ public partial class RequestsViewModel : ObservableObject
             null,
             DomainRequestStatus.Open.ToString(),
             DomainRequestStatus.Accepted.ToString(),
-            DomainRequestStatus.InProgress.ToString(),
-            DomainRequestStatus.Completed.ToString(),
-            DomainRequestStatus.Cancelled.ToString()
+            DomainRequestStatus.InProgress.ToString()
         };
 
     private string BuildRequestsQueryUrl()

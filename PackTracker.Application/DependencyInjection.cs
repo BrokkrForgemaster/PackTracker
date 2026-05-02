@@ -2,6 +2,8 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.Common.Behaviors;
+using PackTracker.Application.Common.Identity;
+using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Application;
 
@@ -15,6 +17,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(DataAccessLoggingBehavior<,>));
+        services.AddScoped<ICurrentUserProfileResolver, CurrentUserProfileResolver>();
 
         return services;
     }

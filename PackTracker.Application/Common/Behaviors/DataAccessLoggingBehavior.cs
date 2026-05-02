@@ -30,17 +30,14 @@ public class DataAccessLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<
         var requestType = typeof(TRequest);
         var requestNamespace = requestType.Namespace;
         var requestName = requestType.Name;
-        var requestFullName = requestType.FullName;
 
-        // TEMPORARY DEBUG LOGGING
-        _logger.LogInformation("DataAccessLoggingBehavior triggered for {RequestType}. Namespace={Namespace}. FullName={FullName}", 
-            requestName, requestNamespace, requestFullName);
-
-        /* 
         // Constraint: Explicit exit for non-target namespaces using StartsWith
+        // We include Dashboard, Requests, Crafting, and Guides as they all feed the main view.
         if (requestNamespace == null || 
             (!requestNamespace.StartsWith("PackTracker.Application.Requests", StringComparison.Ordinal) && 
-             !requestNamespace.StartsWith("PackTracker.Application.Crafting", StringComparison.Ordinal)))
+             !requestNamespace.StartsWith("PackTracker.Application.Crafting", StringComparison.Ordinal) &&
+             !requestNamespace.StartsWith("PackTracker.Application.Dashboard", StringComparison.Ordinal) &&
+             !requestNamespace.StartsWith("PackTracker.Application.Guides", StringComparison.Ordinal)))
         {
             return await next();
         }
@@ -50,7 +47,6 @@ public class DataAccessLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<
         {
             return await next();
         }
-        */
 
         var sw = Stopwatch.StartNew();
         var response = await next();
@@ -62,13 +58,11 @@ public class DataAccessLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<
         var discordId = _currentUser.UserId;
         
         // Constraint: Do NOT attempt ProfileId lookup. Only log if available in request.
-        // We try to extract it from the request object if it follows common naming patterns.
         var profileId = GetProfileIdFromRequest(request) ?? "NULL";
 
         if (resultCount == 0)
         {
             // Constraint: Log WARNING for zero results in target modules with full context
-            // We extract a summary of the request properties as "filters" for context.
             var filters = GetFilterSummary(request);
 
             _logger.LogWarning(
