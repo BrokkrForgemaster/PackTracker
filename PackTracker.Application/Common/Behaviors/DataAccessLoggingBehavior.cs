@@ -92,7 +92,10 @@ public class DataAccessLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<
         // We avoid properties like "Notes", "Description", or "Content" to stay safe.
         var props = typeof(TRequest).GetProperties()
             .Where(p => p.PropertyType.IsValueType || p.PropertyType == typeof(string))
-            .Where(p => !p.Name.Contains("Notes") && !p.Name.Contains("Description") && !p.Name.Contains("Content"))
+            .Where(p =>
+                !p.Name.Contains("Notes", StringComparison.OrdinalIgnoreCase) &&
+                !p.Name.Contains("Description", StringComparison.OrdinalIgnoreCase) &&
+                !p.Name.Contains("Content", StringComparison.OrdinalIgnoreCase))
             .Select(p => $"{p.Name}={p.GetValue(request) ?? "NULL"}");
 
         return string.Join(", ", props);
