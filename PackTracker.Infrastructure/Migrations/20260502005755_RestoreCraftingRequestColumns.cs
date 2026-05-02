@@ -10,30 +10,21 @@ namespace PackTracker.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "ItemName",
-                table: "CraftingRequests",
-                type: "text",
-                nullable: true);
-
-            migrationBuilder.AddColumn<int>(
-                name: "MaterialSupplyMode",
-                table: "CraftingRequests",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
+            migrationBuilder.Sql("""
+                ALTER TABLE "CraftingRequests"
+                    ADD COLUMN IF NOT EXISTS "ItemName" text,
+                    ADD COLUMN IF NOT EXISTS "MaterialSupplyMode" integer NOT NULL DEFAULT 0;
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "ItemName",
-                table: "CraftingRequests");
-
-            migrationBuilder.DropColumn(
-                name: "MaterialSupplyMode",
-                table: "CraftingRequests");
+            migrationBuilder.Sql("""
+                ALTER TABLE "CraftingRequests"
+                    DROP COLUMN IF EXISTS "ItemName",
+                    DROP COLUMN IF EXISTS "MaterialSupplyMode";
+                """);
         }
     }
 }
