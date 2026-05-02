@@ -1,30 +1,37 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.DTOs.Wiki;
 using PackTracker.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using PackTracker.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace PackTracker.Api.Controllers;
 
+/// <summary name="WikiSyncController">
+/// Controller responsible for handling API requests related to synchronizing data from the Star Citizen Wiki.
+/// </summary>
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 [Route("api/v1/wiki")]
 public class WikiSyncController : ControllerBase
 {
+    #region Properties
     private readonly IWikiSyncService _wikiSync;
     private readonly AppDbContext _db;
     private readonly ILogger<WikiSyncController> _logger;
-
+    #endregion
+    
+    #region Constructors
     public WikiSyncController(IWikiSyncService wikiSync, AppDbContext db, ILogger<WikiSyncController> logger)
     {
         _wikiSync = wikiSync;
         _db = db;
         _logger = logger;
     }
-
-    /// <summary>Triggers a full blueprint sync from the Star Citizen Wiki API.</summary>
+    #endregion
+    
+    #region Endpoints
     [HttpPost("sync/blueprints")]
     public async Task<ActionResult<WikiSyncResult>> SyncBlueprints(CancellationToken ct)
     {
@@ -32,8 +39,7 @@ public class WikiSyncController : ControllerBase
         var result = await _wikiSync.SyncBlueprintsAsync(ct);
         return Ok(result);
     }
-
-    /// <summary>Triggers a full item sync (mining, armor, weapons) from the Star Citizen Wiki API.</summary>
+    
     [HttpPost("sync/items")]
     public async Task<ActionResult<WikiSyncResult>> SyncItems(CancellationToken ct)
     {
@@ -41,8 +47,7 @@ public class WikiSyncController : ControllerBase
         var result = await _wikiSync.SyncItemsAsync(ct);
         return Ok(result);
     }
-
-    /// <summary>Returns the last recorded sync timestamps.</summary>
+    
     [HttpGet("sync/status")]
     public async Task<ActionResult<WikiSyncStatusDto>> GetStatus(CancellationToken ct)
     {
@@ -62,12 +67,7 @@ public class WikiSyncController : ControllerBase
             ItemSyncSuccess = itemSync?.IsSuccess ?? false
         });
     }
+    #endregion
 }
 
-public class WikiSyncStatusDto
-{
-    public string? LastBlueprintSync { get; set; }
-    public string? LastItemSync { get; set; }
-    public bool BlueprintSyncSuccess { get; set; }
-    public bool ItemSyncSuccess { get; set; }
-}
+

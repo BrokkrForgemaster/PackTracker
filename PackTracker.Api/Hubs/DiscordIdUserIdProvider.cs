@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace PackTracker.Api.Hubs;
 
-/// <summary>
+/// <summary name="DiscordIdUserIdProvider">
 /// Routes SignalR Clients.User() calls to connections by Discord ID.
 /// Checks both long-form ClaimTypes.NameIdentifier URI and the short-form "nameidentifier"
 /// so the lookup works regardless of whether JwtBearer maps inbound claims.

@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace PackTracker.Api.Middleware;
 
-/// <summary>
+/// <summary name="CorreltationIdMiddleware">
 /// Middleware that ensures every request has a correlation ID for tracing across logs and services.
 /// </summary>
 public class CorrelationIdMiddleware

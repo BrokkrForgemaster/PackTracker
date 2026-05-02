@@ -1,24 +1,29 @@
-using Microsoft.AspNetCore.Authentication.OAuth;
-using Microsoft.AspNetCore.HttpOverrides;
+using PackTracker.Api.Hubs;
+using PackTracker.Application;
+using PackTracker.Api.Services;
+using PackTracker.Api.Middleware;
+using PackTracker.Domain.Security;
+using PackTracker.Api.Controllers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Api.Authentication;
-using PackTracker.Api.Controllers;
-using PackTracker.Api.Hubs;
-using PackTracker.Api.Middleware;
-using PackTracker.Api.Services;
-using PackTracker.Application;
-using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
+using Microsoft.AspNetCore.HttpOverrides;
+using PackTracker.Application.Interfaces;
+using PackTracker.Infrastructure.Services;
 using PackTracker.Infrastructure.ApiHosting;
 using PackTracker.Infrastructure.Persistence;
-using PackTracker.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using PackTracker.Infrastructure.Services.Admin;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using PackTracker.Domain.Security;
 
 namespace PackTracker.Api.Hosting;
 
+/// <summary name="PackTrackerApiComposition">
+/// Central composition root for the PackTracker API application. This class is responsible for configuring
+/// services, middleware, and application initialization logic. It serves as the main entry point for setting up
+/// the API host, ensuring that all necessary components are registered and configured in a cohesive manner.
+/// </summary>
 public static class PackTrackerApiComposition
 {
     public static void ConfigureServices(

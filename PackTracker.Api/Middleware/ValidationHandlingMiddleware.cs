@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using PackTracker.Common.DTOs;
 using System.Text.Json;
+using PackTracker.Common.DTOs;
+using Microsoft.AspNetCore.Mvc;
 
 namespace PackTracker.Api.Middleware;
 
-/// <summary>
+/// <summary name="ValidationHandlingMiddleware">
 /// Middleware that standardizes validation error responses.
 /// </summary>
 public class ValidationHandlingMiddleware

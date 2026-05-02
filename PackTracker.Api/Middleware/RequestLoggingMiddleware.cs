@@ -3,7 +3,7 @@ using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Api.Middleware;
 
-/// <summary>
+/// <summary name="RequestLoggingMiddleware">
 /// Middleware for logging incoming HTTP requests and responses.
 /// </summary>
 public class RequestLoggingMiddleware

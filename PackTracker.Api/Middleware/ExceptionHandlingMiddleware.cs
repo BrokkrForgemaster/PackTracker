@@ -1,14 +1,13 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
-using Microsoft.Extensions.Hosting;
-using PackTracker.Application.Admin.Common;
-using PackTracker.Application.Interfaces;
 using PackTracker.Common.DTOs;
+using PackTracker.Application.Interfaces;
+using PackTracker.Application.Admin.Common;
 
 namespace PackTracker.Api.Middleware;
 
-/// <summary>
+/// <summary name="ExecptionHandlingMiddleware">
 /// Middleware that catches unhandled exceptions and returns a standardized error response.
 /// </summary>
 public class ExceptionHandlingMiddleware

@@ -1,17 +1,17 @@
-using System.Collections.Concurrent;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+using PackTracker.Domain.Security;
+using PackTracker.Domain.Entities;
 using Microsoft.AspNetCore.SignalR;
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Interfaces;
-using PackTracker.Domain.Entities;
-using PackTracker.Domain.Security;
+using Microsoft.AspNetCore.Authorization;
 using PackTracker.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace PackTracker.Api.Hubs;
 
-/// <summary>
+/// <summary name="RequestsHub">
 /// SignalR hub used for realtime request updates, request-specific rooms,
 /// operational lobbies, presence tracking, and role-based chat channels.
 /// </summary>

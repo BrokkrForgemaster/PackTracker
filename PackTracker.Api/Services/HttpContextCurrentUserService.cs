@@ -3,15 +3,23 @@ using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Api.Services;
 
+/// <summary name="HttpContextCurrentUserService">
+/// Implements ICurrentUserService by extracting user information from the current HTTP context.
+/// </summary>
 public sealed class HttpContextCurrentUserService : ICurrentUserService
 {
+    #region Properties
     private readonly IHttpContextAccessor _httpContextAccessor;
-
+    #endregion
+    
+    #region Constructor
     public HttpContextCurrentUserService(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
     }
+    #endregion
 
+    #region Methods
     public string UserId =>
         _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? _httpContextAccessor.HttpContext?.User.FindFirstValue("nameidentifier")
@@ -36,4 +44,5 @@ public sealed class HttpContextCurrentUserService : ICurrentUserService
         ?? [];
 
     public bool IsInRole(string role) => _httpContextAccessor.HttpContext?.User.IsInRole(role) == true;
+    #endregion
 }
