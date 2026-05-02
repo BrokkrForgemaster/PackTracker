@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using PackTracker.Application.Admin.DTOs;
 using PackTracker.Presentation.Services.Navigation;
 using PackTracker.Presentation.ViewModels.Admin;
 
@@ -13,6 +14,7 @@ public partial class AdminShellView : UserControl
     private readonly AdminMedalsView _medalsView;
     private readonly AdminRecruitmentView _recruitmentView;
     private readonly AdminRequestHistoryView _requestHistoryView;
+    private readonly AdminRequestDetailView _requestDetailView;
     private readonly NavigationStateService _navigationState;
 
     public AdminShellView(
@@ -23,6 +25,7 @@ public partial class AdminShellView : UserControl
         AdminMedalsView medalsView,
         AdminRecruitmentView recruitmentView,
         AdminRequestHistoryView requestHistoryView,
+        AdminRequestDetailView requestDetailView,
         NavigationStateService navigationState)
     {
         InitializeComponent();
@@ -33,7 +36,11 @@ public partial class AdminShellView : UserControl
         _medalsView = medalsView;
         _recruitmentView = recruitmentView;
         _requestHistoryView = requestHistoryView;
+        _requestDetailView = requestDetailView;
         _navigationState = navigationState;
+
+        _requestHistoryView.RequestSelected += ShowRequestDetail;
+        _requestDetailView.BackRequested += ShowRequestHistory;
 
         ShowDashboard();
     }
@@ -103,5 +110,12 @@ public partial class AdminShellView : UserControl
         _viewModel.CurrentSection = "Request History";
         _navigationState.CaptureAdminView("RequestHistory");
         AdminContentHost.Content = _requestHistoryView;
+    }
+
+    private void ShowRequestDetail(AdminRequestHistoryItemDto item)
+    {
+        _viewModel.CurrentSection = "Request History";
+        _ = _requestDetailView.LoadAsync(item.Id, item.RequestType);
+        AdminContentHost.Content = _requestDetailView;
     }
 }

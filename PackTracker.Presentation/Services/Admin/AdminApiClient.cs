@@ -136,6 +136,12 @@ public sealed class AdminApiClient
             ct) ?? Array.Empty<AdminRequestHistoryItemDto>();
     }
 
+    public Task<AdminRequestDetailDto?> GetRequestDetailAsync(Guid id, string requestType, CancellationToken ct = default) =>
+        GetSafeAsync<AdminRequestDetailDto>(
+            $"api/v1/admin/requests/history/{requestType.ToLowerInvariant()}/{id}",
+            null,
+            ct);
+
     private async Task<T?> GetSafeAsync<T>(string endpoint, T? fallback, CancellationToken ct)
     {
         try

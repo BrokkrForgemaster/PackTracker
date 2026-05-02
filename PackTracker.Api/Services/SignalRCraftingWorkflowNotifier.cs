@@ -1,20 +1,28 @@
-using Microsoft.AspNetCore.SignalR;
 using PackTracker.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Api.Services;
 
+/// <summary name="SignalRCraftingWorkflowNotifier">
+/// Implements <see cref="ICraftingWorkflowNotifier"/> using SignalR to send real-time notifications to connected clients.
+/// </summary>
 public sealed class SignalRCraftingWorkflowNotifier : ICraftingWorkflowNotifier
 {
+    #region Properties
     private readonly IHubContext<RequestsHub> _hubContext;
     private readonly IDiscordNotifier _discord;
-
+    #endregion
+    
+    #region Constructor
     public SignalRCraftingWorkflowNotifier(IHubContext<RequestsHub> hubContext, IDiscordNotifier discord)
     {
         _hubContext = hubContext;
         _discord = discord;
     }
-
+    #endregion
+    
+    #region Methods
     public Task NotifyAsync(string eventName, Guid requestId, CancellationToken cancellationToken) =>
         _hubContext.Clients.All.SendAsync(eventName, requestId, cancellationToken);
 
@@ -52,4 +60,5 @@ public sealed class SignalRCraftingWorkflowNotifier : ICraftingWorkflowNotifier
             claimerDisplayName: claimerDisplayName,
             requestId: requestId);
     }
+    #endregion
 }

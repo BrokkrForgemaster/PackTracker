@@ -9,9 +9,16 @@ public sealed class AdminRequestHistoryViewModel : ViewModelBase
     private readonly AdminApiClient _api;
     private string _selectedHistoryType = "Assistance";
     private string _statusMessage = "No history loaded.";
+    private AdminRequestHistoryItemDto? _selectedItem;
 
     public ObservableCollection<string> HistoryTypes { get; } = ["Assistance", "Crafting", "Procurement"];
     public ObservableCollection<AdminRequestHistoryItemDto> Items { get; } = new();
+
+    public AdminRequestHistoryItemDto? SelectedItem
+    {
+        get => _selectedItem;
+        set => SetProperty(ref _selectedItem, value);
+    }
 
     public string SelectedHistoryType
     {

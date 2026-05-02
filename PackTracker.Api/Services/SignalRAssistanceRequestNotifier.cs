@@ -1,20 +1,28 @@
-using Microsoft.AspNetCore.SignalR;
 using PackTracker.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using PackTracker.Application.Interfaces;
 
 namespace PackTracker.Api.Services;
 
+/// <summary name="SignalRAssistanceRequestNotifier">
+/// Implements <see cref="IAssistanceRequestNotifier"/> using SignalR to notify clients in real-time about assistance request events.
+/// </summary>
 public sealed class SignalRAssistanceRequestNotifier : IAssistanceRequestNotifier
 {
+    #region Properties
     private readonly IHubContext<RequestsHub> _hubContext;
     private readonly IDiscordNotifier _discord;
-
+    #endregion
+    
+    #region Constructor
     public SignalRAssistanceRequestNotifier(IHubContext<RequestsHub> hubContext, IDiscordNotifier discord)
     {
         _hubContext = hubContext;
         _discord = discord;
     }
-
+    #endregion
+    
+    #region Methods
     public Task NotifyCreatedAsync(Guid requestId, CancellationToken cancellationToken) =>
         _hubContext.Clients.All.SendAsync("AssistanceRequestCreated", requestId, cancellationToken);
 
@@ -54,4 +62,5 @@ public sealed class SignalRAssistanceRequestNotifier : IAssistanceRequestNotifie
             claimerDisplayName: claimerDisplayName,
             requestId: requestId);
     }
+    #endregion
 }

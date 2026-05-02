@@ -122,12 +122,14 @@ public partial class App : System.Windows.Application
         services.AddTransient<AdminMedalsViewModel>();
         services.AddTransient<AdminRecruitmentViewModel>();
         services.AddTransient<AdminRequestHistoryViewModel>();
+        services.AddTransient<AdminRequestDetailViewModel>();
         services.AddTransient<AdminDashboardView>();
         services.AddTransient<AdminSettingsView>();
         services.AddTransient<AdminMembersView>();
         services.AddTransient<AdminMedalsView>();
         services.AddTransient<AdminRecruitmentView>();
         services.AddTransient<AdminRequestHistoryView>();
+        services.AddTransient<AdminRequestDetailView>();
         services.AddTransient<AdminShellView>();
 
         // Embedded API host — registered as singleton so we can start/stop it manually
