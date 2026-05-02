@@ -66,12 +66,10 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
         from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
         join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
         from material in materialGroup.DefaultIfEmpty()
-        where (req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed)
-           || req.RequesterProfileId == currentProfileId
-           || req.AssignedCrafterProfileId == currentProfileId
         where req.Status == RequestStatus.Open
-            || req.RequesterProfileId == currentProfileId
-            || req.AssignedCrafterProfileId == currentProfileId
+           || ((req.Status == RequestStatus.Accepted || req.Status == RequestStatus.InProgress)
+               && (req.RequesterProfileId == currentProfileId
+                   || req.AssignedCrafterProfileId == currentProfileId))
         orderby req.CreatedAt descending
         select new CraftingRequestRow(
             req.Id,
@@ -119,12 +117,10 @@ public sealed class GetCraftingRequestsQueryHandler : IRequestHandler<GetCraftin
         from recipeMaterial in recipeMaterialGroup.DefaultIfEmpty()
         join material in _db.Materials.AsNoTracking() on recipeMaterial.MaterialId equals material.Id into materialGroup
         from material in materialGroup.DefaultIfEmpty()
-        where (req.Status != RequestStatus.Cancelled && req.Status != RequestStatus.Completed)
-           || req.RequesterProfileId == currentProfileId
-           || req.AssignedCrafterProfileId == currentProfileId
         where req.Status == RequestStatus.Open
-            || req.RequesterProfileId == currentProfileId
-            || req.AssignedCrafterProfileId == currentProfileId
+           || ((req.Status == RequestStatus.Accepted || req.Status == RequestStatus.InProgress)
+               && (req.RequesterProfileId == currentProfileId
+                   || req.AssignedCrafterProfileId == currentProfileId))
         orderby req.CreatedAt descending
         select new CraftingRequestRow(
             req.Id,

@@ -37,14 +37,11 @@ public sealed class GetProcurementRequestsQueryHandler : IRequestHandler<GetProc
 
         var results = await _db.MaterialProcurementRequests
             .AsNoTracking()
-            .Where(x => (x.Status != RequestStatus.Cancelled && x.Status != RequestStatus.Completed)
-                     || x.RequesterProfileId == currentProfileId
-                     || x.AssignedToProfileId == currentProfileId
-                     || _db.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Procurement" && c.ProfileId == currentProfileId))
             .Where(x => x.Status == RequestStatus.Open
-                     || x.RequesterProfileId == currentProfileId
-                     || x.AssignedToProfileId == currentProfileId
-                     || _db.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Procurement" && c.ProfileId == currentProfileId))
+                     || ((x.Status == RequestStatus.Accepted || x.Status == RequestStatus.InProgress)
+                         && (x.RequesterProfileId == currentProfileId
+                             || x.AssignedToProfileId == currentProfileId
+                             || _db.RequestClaims.Any(c => c.RequestId == x.Id && c.RequestType == "Procurement" && c.ProfileId == currentProfileId))))
             .Select(x => new MaterialProcurementRequestListItemDto
             {
                 Id = x.Id,

@@ -62,6 +62,15 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
                 Priority = RequestPriority.Low,
                 ItemName = "Hidden Craft",
                 CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+            },
+            new CraftingRequest
+            {
+                BlueprintId = blueprint.Id,
+                RequesterProfileId = currentUser.Id,
+                Status = RequestStatus.Cancelled,
+                Priority = RequestPriority.Normal,
+                ItemName = "My Cancelled Craft",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-20)
             });
 
         await db.SaveChangesAsync();
@@ -78,6 +87,7 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
         Assert.Contains(result, x => x.BlueprintName == "My Craft" && x.Status == RequestStatus.Accepted.ToString());
         Assert.Contains(result, x => x.BlueprintName == "Assigned Craft" && x.Status == RequestStatus.InProgress.ToString());
         Assert.DoesNotContain(result, x => x.BlueprintName == "Hidden Craft");
+        Assert.DoesNotContain(result, x => x.BlueprintName == "My Cancelled Craft");
     }
 
     [Fact]
@@ -137,6 +147,15 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
                 Priority = RequestPriority.Low,
                 QuantityRequested = 4,
                 CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+            },
+            new MaterialProcurementRequest
+            {
+                MaterialId = material.Id,
+                RequesterProfileId = currentUser.Id,
+                Status = RequestStatus.Cancelled,
+                Priority = RequestPriority.Normal,
+                QuantityRequested = 5,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-20)
             });
 
         await db.SaveChangesAsync();
@@ -150,6 +169,7 @@ public sealed class GetCraftingAndProcurementRequestsQueryTests
 
         Assert.Equal(3, result.Count);
         Assert.DoesNotContain(result, x => x.QuantityRequested == 4);
+        Assert.DoesNotContain(result, x => x.QuantityRequested == 5);
         Assert.Contains(result, x => x.Status == RequestStatus.Open.ToString());
         Assert.Contains(result, x => x.Status == RequestStatus.Accepted.ToString() && x.RequesterUsername == currentUser.Username);
         Assert.Contains(result, x => x.Status == RequestStatus.InProgress.ToString() && x.AssignedToUsername == currentUser.DiscordDisplayName);
