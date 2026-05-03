@@ -3,10 +3,13 @@ using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.Admin.Abstractions;
 using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.BackgroundServices;
+using PackTracker.Infrastructure.Discord;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;
 using PackTracker.Infrastructure.Services.Admin;
+using DiscordAnnouncementService = PackTracker.Infrastructure.Services.DiscordAnnouncementService;
+using IDiscordAnnouncementService = PackTracker.Application.Interfaces.IDiscordAnnouncementService;
 
 namespace PackTracker.Infrastructure;
 
@@ -100,7 +103,6 @@ public static class DependencyInjection
     private static void RegisterCoreServices(IServiceCollection services, ISettingsService settings)
     {
         services.AddSingleton(settings);
-
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IWikiSyncService, WikiSyncService>();
         services.AddScoped<IDistributedLockService, DatabaseDistributedLockService>();
@@ -138,7 +140,7 @@ public static class DependencyInjection
             });
         }
 
-        services.AddHttpClient<IDiscordNotifier, DiscordNotifier>();
+        services.AddHttpClient<IDiscordAnnouncementService, DiscordAnnouncementService>();
 
         services.AddHttpClient("WikiApi", client =>
         {

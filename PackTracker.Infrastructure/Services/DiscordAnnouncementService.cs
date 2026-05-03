@@ -9,28 +9,29 @@ namespace PackTracker.Infrastructure.Services;
 /// <summary>
 /// Sends operational notifications to Discord using a configured webhook.
 /// </summary>
-public sealed class DiscordNotifier : IDiscordNotifier
+public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
 {
     #region Fields
 
     private readonly HttpClient _http;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<DiscordNotifier> _logger;
+    private readonly ILogger<DiscordAnnouncementService> _logger;
+    private readonly HttpClient _httpClient;
 
     #endregion
 
     #region Constructor
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DiscordNotifier"/> class.
+    /// Initializes a new instance of the <see cref="DiscordAnnouncementService"/> class.
     /// </summary>
     /// <param name="http">The HTTP client used to send webhook requests.</param>
     /// <param name="configuration">The application configuration.</param>
     /// <param name="logger">The logger instance.</param>
-    public DiscordNotifier(
+    public DiscordAnnouncementService(
         HttpClient http,
         IConfiguration configuration,
-        ILogger<DiscordNotifier> logger)
+        ILogger<DiscordAnnouncementService> logger)
     {
         _http = http;
         _configuration = configuration;
@@ -239,6 +240,93 @@ public sealed class DiscordNotifier : IDiscordNotifier
                 "Discord webhook failed. Event={EventName} RequestId={RequestId}",
                 eventName,
                 requestId);
+        }
+    }
+
+    public async Task SendRibbonAwardedAsync(
+        string recipientName,
+        string ribbonName,
+        string citation,
+        string? imagePath,
+        CancellationToken cancellationToken = default)
+    {
+        var embed = new
+        {
+            title = $"🎖️ {ribbonName}",
+            description = $"**{recipientName}** has earned a new House Wolf ribbon.",
+            color = 0x8B0000,
+            fields = new[]
+            {
+                new
+                {
+                    name = "Citation",
+                    value = string.IsNullOrWhiteSpace(citation)
+                        ? "*No citation provided.*"
+                        : citation,
+                    inline = false
+                }
+            },
+            thumbnail = string.IsNullOrWhiteSpace(imagePath)
+                ? null
+                : new
+                {
+                    url = imagePath
+                },
+            footer = new
+            {
+                text = "House Wolf • PackTracker • Run with the Pack"
+            },
+            timestamp = DateTimeOffset.UtcNow
+        };
+
+        await SendEmbedAsync(embed, cancellationToken);
+    }
+
+    private async Task SendEmbedAsync(
+        object embed,
+        CancellationToken cancellationToken = default)
+    {
+        var token = _configuration["Discord:BotToken"];
+        var channelId = _configuration["Discord:AnnouncementChannelId"];
+
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(channelId))
+        {
+            _logger.LogWarning(
+                "Discord announcement skipped. Missing bot token or announcement channel ID.");
+
+            return;
+        }
+
+        var payload = new
+        {
+            embeds = new[]
+            {
+                embed
+            }
+        };
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"https://discord.com/api/v10/channels/{channelId}/messages");
+
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bot", token);
+
+        request.Content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(payload),
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            _logger.LogWarning(
+                "Failed to send Discord announcement. Status: {Status}. Body: {Body}",
+                response.StatusCode,
+                body);
         }
     }
 

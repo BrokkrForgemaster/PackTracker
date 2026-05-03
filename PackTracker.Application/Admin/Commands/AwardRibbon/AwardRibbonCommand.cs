@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PackTracker.Application.Admin.Abstractions;
 using PackTracker.Application.Admin.DTOs;
+using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
 using PackTracker.Domain.Security;
 
@@ -15,17 +16,20 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
     private readonly IAuthorizationService _authorization;
     private readonly IAuditLogService _audit;
     private readonly IRbacService _rbac;
+    private readonly IDiscordAnnouncementService _discordAnnouncements;
 
     public AwardRibbonCommandHandler(
         IAdminDbContext db,
         IAuthorizationService authorization,
         IAuditLogService audit,
-        IRbacService rbac)
+        IRbacService rbac,
+        IDiscordAnnouncementService discordAnnouncements)
     {
         _db = db;
         _authorization = authorization;
         _audit = audit;
         _rbac = rbac;
+        _discordAnnouncements = discordAnnouncements;
     }
 
     public async Task<AwardRibbonResultDto> Handle(AwardRibbonCommand command, CancellationToken ct)
@@ -35,11 +39,21 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
 
         var req = command.Request;
         var ribbonName = req.RibbonName.Trim();
-        var recipientName = req.RecipientName.Trim();
 
-        // Find or create the MedalDefinition
+        if (req.ProfileIds.Count == 0)
+        {
+            return new AwardRibbonResultDto(
+                Guid.Empty,
+                ribbonName,
+                "No recipients selected",
+                AlreadyAwarded: true);
+        }
+
         var definition = await _db.MedalDefinitions
-            .FirstOrDefaultAsync(m => m.Name.ToLower() == ribbonName.ToLower(), ct);
+            .FirstOrDefaultAsync(
+                m => m.Name.ToLower() == ribbonName.ToLower()
+                     && m.AwardType == "Ribbon",
+                ct);
 
         if (definition is null)
         {
@@ -50,44 +64,99 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                 ImagePath = req.RibbonImagePath,
                 SourceSystem = "PackTracker",
                 DisplayOrder = 0,
+                AwardType = "Ribbon",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+
             _db.MedalDefinitions.Add(definition);
             await _db.SaveChangesAsync(ct);
         }
 
-        // Check for duplicate award
-        var existing = await _db.MedalAwards
-            .FirstOrDefaultAsync(a =>
-                a.MedalDefinitionId == definition.Id &&
-                a.RecipientName.ToLower() == recipientName.ToLower(), ct);
+        var profiles = await _db.Profiles
+            .Where(x => req.ProfileIds.Contains(x.Id))
+            .ToListAsync(ct);
 
-        if (existing is not null)
+        var createdAwards = new List<(Guid AwardId, string RecipientName, string Citation)>();
+        var skippedCount = 0;
+
+        foreach (var profile in profiles)
         {
-            return new AwardRibbonResultDto(existing.Id, ribbonName, recipientName, AlreadyAwarded: true);
+            var recipientName = !string.IsNullOrWhiteSpace(profile.DiscordDisplayName)
+                ? profile.DiscordDisplayName
+                : profile.Username;
+
+            var existing = await _db.MedalAwards
+                .FirstOrDefaultAsync(a =>
+                    a.MedalDefinitionId == definition.Id &&
+                    a.ProfileId == profile.Id &&
+                    a.AwardType == "Ribbon",
+                    ct);
+
+            if (existing is not null)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            var award = new MedalAward
+            {
+                MedalDefinitionId = definition.Id,
+                ProfileId = profile.Id,
+                RecipientName = recipientName,
+                Citation = string.IsNullOrWhiteSpace(req.Citation) ? null : req.Citation.Trim(),
+                AwardedBy = ctx.DisplayName,
+                AwardedAt = DateTime.UtcNow,
+                ImportedAt = DateTime.UtcNow,
+                SourceSystem = "PackTracker",
+                AwardType = "Ribbon"
+            };
+
+            _db.MedalAwards.Add(award);
+
+            createdAwards.Add((
+                award.Id,
+                recipientName,
+                award.Citation ?? string.Empty));
         }
 
-        var award = new MedalAward
-        {
-            MedalDefinitionId = definition.Id,
-            ProfileId = req.ProfileId,
-            RecipientName = recipientName,
-            Citation = string.IsNullOrWhiteSpace(req.Citation) ? null : req.Citation.Trim(),
-            AwardedBy = ctx.DisplayName,
-            AwardedAt = DateTime.UtcNow,
-            ImportedAt = DateTime.UtcNow,
-            SourceSystem = "PackTracker"
-        };
-
-        _db.MedalAwards.Add(award);
         await _db.SaveChangesAsync(ct);
 
-        await _audit.WriteAsync(new AdminAuditLogEntryDto(
-            "RibbonAwarded", "MedalAward", award.Id.ToString(),
-            $"Awarded '{ribbonName}' to {recipientName} by {ctx.DisplayName}.",
-            "Info", null, null), ct);
+        if (createdAwards.Count > 0)
+        {
+            var recipientList = string.Join("\n", createdAwards.Select(x => $"• {x.RecipientName}"));
 
-        return new AwardRibbonResultDto(award.Id, ribbonName, recipientName, AlreadyAwarded: false);
+            await _discordAnnouncements.SendRibbonAwardedAsync(
+                recipientList,
+                ribbonName,
+                string.IsNullOrWhiteSpace(req.Citation)
+                    ? $"Awarded to:\n{recipientList}"
+                    : req.Citation.Trim(),
+                definition.ImagePath,
+                ct);
+        }
+
+        await _audit.WriteAsync(new AdminAuditLogEntryDto(
+            "RibbonAwarded",
+            "MedalAward",
+            definition.Id.ToString(),
+            $"Awarded '{ribbonName}' to {createdAwards.Count} member(s) by {ctx.DisplayName}. Skipped {skippedCount} duplicate(s).",
+            "Info",
+            null,
+            null), ct);
+
+        var firstAwardId = createdAwards.Count > 0
+            ? createdAwards[0].AwardId
+            : Guid.Empty;
+
+        var resultRecipientName = createdAwards.Count == 1
+            ? createdAwards[0].RecipientName
+            : $"{createdAwards.Count} members";
+
+        return new AwardRibbonResultDto(
+            firstAwardId,
+            ribbonName,
+            resultRecipientName,
+            AlreadyAwarded: createdAwards.Count == 0);
     }
 }

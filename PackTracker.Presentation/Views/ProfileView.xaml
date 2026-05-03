@@ -3,30 +3,31 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:dto="clr-namespace:PackTracker.Application.DTOs.Profiles;assembly=PackTracker.Application"
              Background="Transparent">
+
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <Border Style="{StaticResource OpHeaderBorderStyle}"
                 Padding="18">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
                     <TextBlock Text="PROFILE DOSSIER"
                                Foreground="{StaticResource OpTextTitleBrush}"
                                FontSize="22"
-                               FontWeight="Bold" />
-                    <TextBlock Text="Manage your own showcase card and review medals already recorded on your profile."
+                               FontWeight="Bold"/>
+                    <TextBlock Text="Manage your showcase card and review awards recorded on your profile."
                                Margin="0,4,0,0"
                                Foreground="{StaticResource OpTextSecondaryBrush}"
                                FontSize="12"
-                               TextWrapping="Wrap" />
+                               TextWrapping="Wrap"/>
                 </StackPanel>
 
                 <TextBlock Grid.Column="1"
@@ -34,21 +35,25 @@
                            VerticalAlignment="Center"
                            Foreground="{StaticResource OpTextAccentBrush}"
                            FontSize="12"
-                           Margin="20,0,0,0" />
+                           Margin="20,0,0,0"/>
             </Grid>
         </Border>
 
         <Grid Grid.Row="1"
               Margin="0,18,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.1*" />
-                <ColumnDefinition Width="20" />
-                <ColumnDefinition Width="0.9*" />
+                <ColumnDefinition Width="1.1*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="0.9*"/>
             </Grid.ColumnDefinitions>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
+            <!-- LEFT SIDE -->
+            <ScrollViewer Grid.Column="0"
+                          VerticalScrollBarVisibility="Auto"
                           Style="{StaticResource OpScrollViewerStyle}">
                 <StackPanel>
+
+                    <!-- Character Profile Info -->
                     <Border Style="{StaticResource OpPanelBorderStyle}"
                             Padding="18"
                             Margin="0,0,0,16">
@@ -57,137 +62,207 @@
                                        Foreground="{StaticResource OpTextMutedBrush}"
                                        FontSize="10"
                                        FontWeight="Bold"
-                                       Margin="0,0,0,12" />
+                                       Margin="0,0,0,12"/>
 
                             <TextBlock Text="Your character profile is now synchronized with housewolf.co."
                                        Foreground="{StaticResource OpTextAccentBrush}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
-                                       Margin="0,0,0,8" />
+                                       Margin="0,0,0,8"/>
 
-                            <TextBlock
-                                Text="Biographies, portraits, and divisions are managed through the central House Wolf database. Any changes made there will appear here automatically."
-                                Foreground="{StaticResource OpTextSecondaryBrush}"
-                                FontSize="12"
-                                LineHeight="20"
-                                TextWrapping="Wrap"
-                                Margin="0,0,0,16" />
+                            <TextBlock Text="Biographies, portraits, and divisions are managed through the central House Wolf database. Any changes made there will appear here automatically."
+                                       Foreground="{StaticResource OpTextSecondaryBrush}"
+                                       FontSize="12"
+                                       LineHeight="20"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,16"/>
 
-                            <TextBlock
-                                Text="If you previously had a local profile set up in PackTracker, we've automatically migrated your data to the new system."
-                                Foreground="{StaticResource OpTextMutedBrush}"
-                                FontSize="11"
-                                FontStyle="Italic"
-                                TextWrapping="Wrap"
-                                Margin="0,0,0,14" />
+                            <TextBlock Text="If you previously had a local profile set up in PackTracker, we've automatically migrated your data to the new system."
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       FontSize="11"
+                                       FontStyle="Italic"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,14"/>
 
                             <Button Content="EDIT ON HOUSEWOLF.CO"
                                     Style="{DynamicResource SecondaryActionButtonStyle}"
                                     Padding="14,8"
                                     FontSize="13"
                                     HorizontalAlignment="Left"
-                                    Command="{Binding OpenHouseWolfWebsiteCommand}" />
+                                    Command="{Binding OpenHouseWolfWebsiteCommand}"/>
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource OpPanelBorderStyle}"
-                            Padding="18">
-                        <StackPanel>
-                            <TextBlock Text="MEDALS AND ACHIEVEMENTS"
-                                       Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       Margin="0,0,0,12" />
+                    <!-- SERVICE SHADOW BOX NOW ON LEFT -->
+                    <Border CornerRadius="24"
+                            Padding="20"
+                            Background="#120D09"
+                            BorderBrush="#5A3218"
+                            BorderThickness="2"
+                            Margin="0,0,0,16">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000"
+                                              BlurRadius="26"
+                                              ShadowDepth="8"
+                                              Opacity="0.65"/>
+                        </Border.Effect>
 
-                            <TextBlock Text="Imported medals attached to your profile appear here automatically."
-                                       Foreground="{StaticResource OpTextSecondaryBrush}"
-                                       FontSize="11"
-                                       TextWrapping="Wrap"
-                                       Margin="0,0,0,14" />
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                            <ItemsControl ItemsSource="{Binding Medals}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
-                                        <Border Background="#120D0A"
-                                                BorderBrush="{StaticResource OpBorderItemBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="8"
-                                                Padding="12"
-                                                Margin="0,0,0,10">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="64" />
-                                                    <ColumnDefinition Width="12" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,0,16">
+                                <TextBlock Text="SERVICE SHADOW BOX"
+                                           Foreground="#D6A04B"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="Medals and combat ribbons earned through House Wolf service"
+                                           Foreground="{StaticResource OpTextMutedBrush}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
 
-                                                <Border Width="64"
-                                                        Height="64"
-                                                        CornerRadius="8"
-                                                        Background="#1B1820"
-                                                        BorderBrush="#3A3144"
-                                                        BorderThickness="1">
-                                                    <Grid>
+                            <!-- Medals -->
+                            <Border Grid.Row="1"
+                                    CornerRadius="16"
+                                    Background="#080706"
+                                    BorderBrush="#A16207"
+                                    BorderThickness="1"
+                                    Padding="16"
+                                    Margin="0,0,0,14">
+                                <StackPanel>
+                                    <TextBlock Text="MEDALS"
+                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Margin="0,0,0,12"/>
+
+                                    <ItemsControl ItemsSource="{Binding DisplayMedals}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel HorizontalAlignment="Center"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
+                                                <StackPanel Width="90"
+                                                            Margin="8"
+                                                            ToolTip="{Binding Citation}">
+                                                    <Border Width="82"
+                                                            Height="96"
+                                                            CornerRadius="10"
+                                                            Background="#17110D"
+                                                            BorderBrush="#3F2A17"
+                                                            BorderThickness="1"
+                                                            Padding="6">
                                                         <Image Source="{Binding ImagePath}"
-                                                               Stretch="Uniform"
-                                                               Margin="8" />
-                                                        <TextBlock Text="HW"
-                                                                   Foreground="#C8A84B"
-                                                                   FontWeight="Bold"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center" />
-                                                    </Grid>
-                                                </Border>
+                                                               Stretch="Uniform"/>
+                                                    </Border>
 
-                                                <StackPanel Grid.Column="2">
                                                     <TextBlock Text="{Binding Name}"
-                                                               Foreground="{StaticResource OpTextTitleBrush}"
-                                                               FontSize="14"
-                                                               FontWeight="Bold" />
-                                                    <TextBlock Text="{Binding Description}"
-                                                               Foreground="{StaticResource OpTextSecondaryBrush}"
-                                                               FontSize="11"
+                                                               Foreground="#E7D6B5"
+                                                               FontSize="9"
+                                                               TextAlignment="Center"
                                                                TextWrapping="Wrap"
-                                                               Margin="0,4,0,0" />
-                                                    <TextBlock Text="{Binding Citation}"
-                                                               Foreground="{StaticResource OpTextAccentBrush}"
-                                                               FontSize="11"
-                                                               TextWrapping="Wrap"
-                                                               Margin="0,6,0,0" />
+                                                               Margin="0,6,0,0"/>
                                                 </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
 
-                            <TextBlock Text="No medals recorded yet."
-                                       Foreground="{StaticResource OpTextMutedBrush}"
-                                       FontSize="12"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,10,0,0">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Medals.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
+                                    <TextBlock Text="No medals recorded yet."
+                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                               FontSize="11"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,8,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding DisplayMedals.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Ribbons -->
+                            <Border Grid.Row="2"
+                                    CornerRadius="16"
+                                    Background="#080706"
+                                    BorderBrush="#3F2A17"
+                                    BorderThickness="1"
+                                    Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="COMBAT RIBBONS"
+                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Margin="0,0,0,12"/>
+
+                                    <ItemsControl ItemsSource="{Binding DisplayRibbons}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel HorizontalAlignment="Center"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
+                                                <Border Width="110"
+                                                        Height="38"
+                                                        CornerRadius="5"
+                                                        Background="#130F0B"
+                                                        BorderBrush="#4A3420"
+                                                        BorderThickness="1"
+                                                        Padding="4"
+                                                        Margin="5"
+                                                        ToolTip="{Binding Citation}">
+                                                    <Image Source="{Binding ImagePath}"
+                                                           Stretch="Uniform"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="No ribbons recorded yet."
+                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                               FontSize="11"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,8,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding DisplayRibbons.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
 
+            <!-- RIGHT SIDE PROFILE CARD ONLY -->
             <ScrollViewer Grid.Column="2"
                           VerticalScrollBarVisibility="Auto"
                           Style="{StaticResource OpScrollViewerStyle}">
                 <StackPanel>
-
-                    <!-- Profile Card -->
                     <Border Style="{StaticResource OpPanelBorderStyle}"
                             Padding="14"
                             Background="#070B11"
@@ -196,8 +271,8 @@
                         <Grid Width="340"
                               HorizontalAlignment="Center">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="300" />
-                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="300"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <Border Grid.Row="0"
@@ -208,23 +283,23 @@
                                     ClipToBounds="True">
                                 <Grid>
                                     <Image Source="{Binding ShowcaseImageSource}"
-                                           Stretch="UniformToFill" />
-                                    <Rectangle Fill="#68000000" />
+                                           Stretch="UniformToFill"/>
+                                    <Rectangle Fill="#68000000"/>
                                     <StackPanel VerticalAlignment="Bottom"
                                                 Margin="18,0,18,18">
                                         <TextBlock Text="{Binding ShowcaseEyebrow}"
                                                    Foreground="#BFD1EA"
-                                                   FontSize="11" />
+                                                   FontSize="11"/>
                                         <TextBlock Text="{Binding PreviewDisplayName}"
                                                    Foreground="White"
                                                    FontSize="24"
                                                    FontWeight="Bold"
-                                                   Margin="0,6,0,0" />
+                                                   Margin="0,6,0,0"/>
                                         <TextBlock Text="{Binding ShowcaseTagline}"
                                                    Foreground="#E0D0B1"
                                                    FontSize="13"
                                                    Margin="0,8,0,0"
-                                                   TextWrapping="Wrap" />
+                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -240,174 +315,12 @@
                                                Foreground="#F3F5F7"
                                                FontSize="13"
                                                TextWrapping="Wrap"
-                                               Margin="0,0,0,14" />
+                                               Margin="0,0,0,14"/>
                                     <TextBlock Text="{Binding ShowcaseBio}"
                                                Foreground="#F3F5F7"
                                                FontSize="14"
                                                LineHeight="28"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </Border>
-
-                    <!-- Shadow Box Awards Display -->
-                    <Border CornerRadius="24"
-                            Padding="18"
-                            Background="#120D09"
-                            BorderBrush="#5A3218"
-                            BorderThickness="2">
-                        <Border.Effect>
-                            <DropShadowEffect Color="#000000"
-                                              BlurRadius="26"
-                                              ShadowDepth="8"
-                                              Opacity="0.65" />
-                        </Border.Effect>
-
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <StackPanel Margin="0,0,0,16">
-                                <TextBlock Text="SERVICE SHADOW BOX"
-                                           Foreground="#D6A04B"
-                                           FontSize="15"
-                                           FontWeight="Bold"
-                                           HorizontalAlignment="Center" />
-                                <TextBlock Text="Medals and combat ribbons earned through House Wolf service"
-                                           Foreground="{StaticResource OpTextMutedBrush}"
-                                           FontSize="11"
-                                           TextWrapping="Wrap"
-                                           TextAlignment="Center"
-                                           Margin="0,4,0,0" />
-                            </StackPanel>
-
-                            <!-- Medals Row -->
-                            <Border Grid.Row="1"
-                                    CornerRadius="16"
-                                    Background="#080706"
-                                    BorderBrush="#A16207"
-                                    BorderThickness="1"
-                                    Padding="14"
-                                    Margin="0,0,0,14">
-                                <StackPanel>
-                                    <TextBlock Text="MEDALS"
-                                               Foreground="{StaticResource OpTextMutedBrush}"
-                                               FontSize="10"
-                                               FontWeight="Bold"
-                                               Margin="0,0,0,10" />
-
-                                    <ItemsControl ItemsSource="{Binding DisplayMedals}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel HorizontalAlignment="Center" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
-                                                <StackPanel Width="74"
-                                                            Margin="6"
-                                                            ToolTip="{Binding Citation}">
-                                                    <Border Width="68"
-                                                            Height="82"
-                                                            CornerRadius="8"
-                                                            Background="#17110D"
-                                                            BorderBrush="#3F2A17"
-                                                            BorderThickness="1"
-                                                            Padding="5">
-                                                        <Image Source="{Binding ImagePath}"
-                                                               Stretch="Uniform" />
-                                                    </Border>
-
-                                                    <TextBlock Text="{Binding Name}"
-                                                               Foreground="#E7D6B5"
-                                                               FontSize="9"
-                                                               TextAlignment="Center"
-                                                               TextWrapping="Wrap"
-                                                               Margin="0,6,0,0" />
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-
-                                    <TextBlock Text="No medals recorded yet."
-                                               Foreground="{StaticResource OpTextMutedBrush}"
-                                               FontSize="11"
-                                               HorizontalAlignment="Center"
-                                               Margin="0,8,0,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding DisplayMedals.Count}" Value="0">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Ribbons Row -->
-                            <Border Grid.Row="2"
-                                    CornerRadius="16"
-                                    Background="#080706"
-                                    BorderBrush="#3F2A17"
-                                    BorderThickness="1"
-                                    Padding="14">
-                                <StackPanel>
-                                    <TextBlock Text="COMBAT RIBBONS"
-                                               Foreground="{StaticResource OpTextMutedBrush}"
-                                               FontSize="10"
-                                               FontWeight="Bold"
-                                               Margin="0,0,0,10" />
-
-                                    <ItemsControl ItemsSource="{Binding DisplayRibbons}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel HorizontalAlignment="Center" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
-                                                <Border Width="92"
-                                                        Height="34"
-                                                        CornerRadius="5"
-                                                        Background="#130F0B"
-                                                        BorderBrush="#4A3420"
-                                                        BorderThickness="1"
-                                                        Padding="4"
-                                                        Margin="4"
-                                                        ToolTip="{Binding Citation}">
-                                                    <Image Source="{Binding ImagePath}"
-                                                           Stretch="Uniform" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-
-                                    <TextBlock Text="No ribbons recorded yet."
-                                               Foreground="{StaticResource OpTextMutedBrush}"
-                                               FontSize="11"
-                                               HorizontalAlignment="Center"
-                                               Margin="0,8,0,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding DisplayRibbons.Count}" Value="0">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
                         </Grid>

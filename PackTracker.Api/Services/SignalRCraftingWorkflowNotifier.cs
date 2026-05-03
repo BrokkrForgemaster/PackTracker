@@ -11,11 +11,11 @@ public sealed class SignalRCraftingWorkflowNotifier : ICraftingWorkflowNotifier
 {
     #region Properties
     private readonly IHubContext<RequestsHub> _hubContext;
-    private readonly IDiscordNotifier _discord;
+    private readonly IDiscordAnnouncementService _discord;
     #endregion
     
     #region Constructor
-    public SignalRCraftingWorkflowNotifier(IHubContext<RequestsHub> hubContext, IDiscordNotifier discord)
+    public SignalRCraftingWorkflowNotifier(IHubContext<RequestsHub> hubContext, IDiscordAnnouncementService discord)
     {
         _hubContext = hubContext;
         _discord = discord;

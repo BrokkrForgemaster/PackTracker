@@ -49,14 +49,16 @@ public sealed class ImportMedalsCommandTests
 
         var handler = new ImportMedalsCommandHandler(db, authorization.Object, audit.Object, rbac.Object);
         var request = new ImportMedalsRequestDto(
-            [
-                new ImportMedalDefinitionDto("Medal of Honor", "Highest honor.", "images/medals/Medal_of_Honor.png"),
-                new ImportMedalDefinitionDto("Silver Star", "Valor in combat.", "images/medals/Silver_Star.png")
-            ],
-            new Dictionary<string, IReadOnlyList<string>>
+            AvailableMedals: new[]
             {
-                ["Brokkr Forgemaster"] = ["Medal of Honor"],
-                ["Unknown Pilot"] = ["Silver Star"]
+                new ImportMedalDefinitionDto("Medal of Honor", "Highest military decoration.", null),
+                new ImportMedalDefinitionDto("Silver Star", "Third-highest military decoration.", null)
+            },
+            AvailableRibbons: Array.Empty<ImportMedalDefinitionDto>(),
+            Recipients: new Dictionary<string, IReadOnlyList<string>>
+            {
+                ["Medal of Honor"] = ["Brokkr Forgemaster"],
+                ["Silver Star"] = ["Unknown Pilot"]
             });
 
         var result = await handler.Handle(new ImportMedalsCommand(request), CancellationToken.None);

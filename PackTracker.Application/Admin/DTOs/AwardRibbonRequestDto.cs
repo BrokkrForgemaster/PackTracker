@@ -4,6 +4,5 @@ public sealed record AwardRibbonRequestDto(
     string RibbonName,
     string RibbonDescription,
     string? RibbonImagePath,
-    Guid? ProfileId,
-    string RecipientName,
+    List<Guid> ProfileIds,
     string? Citation);

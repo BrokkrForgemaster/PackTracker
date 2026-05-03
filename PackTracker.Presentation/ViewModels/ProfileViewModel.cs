@@ -210,9 +210,6 @@ public sealed class ProfileViewModel : ViewModelBase
 
                     RefreshPreviewImage();
 
-                    _logger.LogInformation("FINAL PROFILE IMAGE URL: {Final}", ShowcaseImageUrl);
-                    _logger.LogInformation("FINAL PROFILE IMAGE SOURCE SET: {HasImage}", ShowcaseImageSource is not null);
-
                     StatusMessage = dto.Medals.Count == 0
                         ? "Profile synced with housewolf.co."
                         : $"Profile synced with housewolf.co. {dto.Medals.Count} award(s) on record.";
@@ -379,7 +376,7 @@ public sealed class ProfileViewModel : ViewModelBase
     {
         try
         {
-            Process.Start(new ProcessStartInfo("https://www.housewolf.co/profile")
+            Process.Start(new ProcessStartInfo("https://www.housewolf.co")
             {
                 UseShellExecute = true
             });

@@ -12,7 +12,7 @@ public sealed record ImportMedalsCommand(ImportMedalsRequestDto Request) : IRequ
 
 public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCommand, ImportMedalsResultDto>
 {
-    private const string SourceSystem = "wolf_raid";
+    private const string SourceSystem = "PackTracker";
 
     private readonly IAdminDbContext _db;
     private readonly IAuthorizationService _authorization;
@@ -31,19 +31,24 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
         _rbac = rbac;
     }
 
-    public async Task<ImportMedalsResultDto> Handle(ImportMedalsCommand command, CancellationToken cancellationToken)
+    public async Task<ImportMedalsResultDto> Handle(
+        ImportMedalsCommand command,
+        CancellationToken cancellationToken)
     {
-        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, cancellationToken);
+        await _authorization.RequirePermissionAsync(
+            AdminPermissions.MedalsManage,
+            cancellationToken);
 
         await _rbac.GetCurrentAdminContextAsync(cancellationToken);
+
         var result = await ImportAsync(command.Request, cancellationToken);
 
         await _audit.WriteAsync(
             new AdminAuditLogEntryDto(
-                "MedalsImported",
-                "MedalCatalog",
+                "AwardsImported",
+                "AwardCatalog",
                 SourceSystem,
-                $"Imported medals from {SourceSystem}.",
+                $"Imported awards from {SourceSystem}.",
                 "Info",
                 null,
                 JsonSerializer.Serialize(result)),
@@ -52,7 +57,9 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
         return result;
     }
 
-    private async Task<ImportMedalsResultDto> ImportAsync(ImportMedalsRequestDto request, CancellationToken cancellationToken)
+    private async Task<ImportMedalsResultDto> ImportAsync(
+        ImportMedalsRequestDto request,
+        CancellationToken cancellationToken)
     {
         var medalDefinitionsCreated = 0;
         var medalDefinitionsUpdated = 0;
@@ -62,44 +69,23 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
         var unmatchedRecipients = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var unknownMedals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var existingMedals = (await _db.MedalDefinitions.ToListAsync(cancellationToken))
+        var existingDefinitions = (await _db.MedalDefinitions
+                .ToListAsync(cancellationToken))
             .ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
-        for (var i = 0; i < request.AvailableMedals.Count; i++)
-        {
-            var incoming = request.AvailableMedals[i];
-            if (string.IsNullOrWhiteSpace(incoming.Name))
-            {
-                continue;
-            }
+        ImportDefinitions(
+            request.AvailableMedals,
+            "Medal",
+            existingDefinitions,
+            ref medalDefinitionsCreated,
+            ref medalDefinitionsUpdated);
 
-            var name = incoming.Name.Trim();
-            if (existingMedals.TryGetValue(name, out var medal))
-            {
-                medal.Description = incoming.Description.Trim();
-                medal.ImagePath = string.IsNullOrWhiteSpace(incoming.Image) ? null : incoming.Image.Trim();
-                medal.SourceSystem = SourceSystem;
-                medal.DisplayOrder = i;
-                medal.UpdatedAt = DateTime.UtcNow;
-                medalDefinitionsUpdated++;
-                continue;
-            }
-
-            medal = new MedalDefinition
-            {
-                Name = name,
-                Description = incoming.Description.Trim(),
-                ImagePath = string.IsNullOrWhiteSpace(incoming.Image) ? null : incoming.Image.Trim(),
-                SourceSystem = SourceSystem,
-                DisplayOrder = i,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _db.MedalDefinitions.Add(medal);
-            existingMedals.Add(name, medal);
-            medalDefinitionsCreated++;
-        }
+        ImportDefinitions(
+            request.AvailableRibbons,
+            "Ribbon",
+            existingDefinitions,
+            ref medalDefinitionsCreated,
+            ref medalDefinitionsUpdated);
 
         var existingAwards = await _db.MedalAwards
             .AsNoTracking()
@@ -123,36 +109,33 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
         foreach (var recipient in request.Recipients)
         {
             var recipientName = recipient.Key.Trim();
+
             if (string.IsNullOrWhiteSpace(recipientName))
-            {
                 continue;
-            }
 
             var profile = profileCandidates.FirstOrDefault(x =>
                 string.Equals(x.Username, recipientName, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(x.DiscordDisplayName, recipientName, StringComparison.OrdinalIgnoreCase));
 
             if (profile is null)
-            {
                 unmatchedRecipients.Add(recipientName);
-            }
 
-            foreach (var medalNameRaw in recipient.Value)
+            foreach (var awardNameRaw in recipient.Value)
             {
-                if (string.IsNullOrWhiteSpace(medalNameRaw))
-                {
+                if (string.IsNullOrWhiteSpace(awardNameRaw))
                     continue;
-                }
 
-                var medalName = medalNameRaw.Trim();
-                if (!existingMedals.TryGetValue(medalName, out var medal))
+                var awardName = awardNameRaw.Trim();
+
+                if (!existingDefinitions.TryGetValue(awardName, out var definition))
                 {
-                    unknownMedals.Add(medalName);
+                    unknownMedals.Add(awardName);
                     awardsSkipped++;
                     continue;
                 }
 
-                var awardKey = BuildAwardKey(medal.Id, recipientName);
+                var awardKey = BuildAwardKey(definition.Id, recipientName);
+
                 if (!awardKeys.Add(awardKey))
                 {
                     awardsSkipped++;
@@ -161,9 +144,10 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
 
                 _db.MedalAwards.Add(new MedalAward
                 {
-                    MedalDefinitionId = medal.Id,
+                    MedalDefinitionId = definition.Id,
                     ProfileId = profile?.Id,
                     RecipientName = recipientName,
+                    AwardType = definition.AwardType,
                     ImportedAt = DateTime.UtcNow,
                     SourceSystem = SourceSystem
                 });
@@ -183,6 +167,60 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
             unknownMedals.OrderBy(static x => x).ToArray());
     }
 
-    private static string BuildAwardKey(Guid medalDefinitionId, string recipientName) =>
-        $"{medalDefinitionId:N}:{recipientName.Trim()}";
+    private void ImportDefinitions(
+        IReadOnlyList<ImportMedalDefinitionDto> incomingDefinitions,
+        string awardType,
+        Dictionary<string, MedalDefinition> existingDefinitions,
+        ref int medalDefinitionsCreated,
+        ref int medalDefinitionsUpdated)
+    {
+        for (var i = 0; i < incomingDefinitions.Count; i++)
+        {
+            var incoming = incomingDefinitions[i];
+
+            if (string.IsNullOrWhiteSpace(incoming.Name))
+                continue;
+
+            var name = incoming.Name.Trim();
+            var description = incoming.Description?.Trim() ?? string.Empty;
+            var imagePath = string.IsNullOrWhiteSpace(incoming.Image)
+                ? null
+                : incoming.Image.Trim();
+
+            if (existingDefinitions.TryGetValue(name, out var definition))
+            {
+                definition.Description = description;
+                definition.ImagePath = imagePath;
+                definition.SourceSystem = SourceSystem;
+                definition.DisplayOrder = i;
+                definition.AwardType = awardType;
+                definition.UpdatedAt = DateTime.UtcNow;
+
+                medalDefinitionsUpdated++;
+                continue;
+            }
+
+            definition = new MedalDefinition
+            {
+                Name = name,
+                Description = description,
+                ImagePath = imagePath,
+                SourceSystem = SourceSystem,
+                DisplayOrder = i,
+                AwardType = awardType,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _db.MedalDefinitions.Add(definition);
+            existingDefinitions.Add(name, definition);
+
+            medalDefinitionsCreated++;
+        }
+    }
+
+    private static string BuildAwardKey(Guid medalDefinitionId, string recipientName)
+    {
+        return $"{medalDefinitionId:N}:{recipientName.Trim()}";
+    }
 }

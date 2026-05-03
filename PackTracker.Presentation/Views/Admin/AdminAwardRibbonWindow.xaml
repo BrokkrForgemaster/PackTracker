@@ -1,6 +1,7 @@
 <Window x:Class="PackTracker.Presentation.Views.Admin.AdminAwardRibbonWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
         Title="Award Ribbon"
         Background="Transparent"
         WindowStyle="None"
@@ -8,6 +9,10 @@
         FontFamily="Segoe UI"
         AllowsTransparency="True"
         ResizeMode="NoResize">
+
+    <Window.Resources>
+        <converters:ImagePathToPackUriConverter x:Key="ImagePathToPackUri"/>
+    </Window.Resources>
 
     <Border CornerRadius="16"
             Background="#14110E"
@@ -21,7 +26,6 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Title bar -->
             <Border Grid.Row="0"
                     Background="#0F0C09"
                     CornerRadius="14,14,0,0"
@@ -29,67 +33,48 @@
                 <Grid>
                     <StackPanel>
                         <TextBlock Text="AWARD RIBBON"
-                                   FontSize="11" FontWeight="Bold"
+                                   FontSize="11"
+                                   FontWeight="Bold"
                                    Foreground="{StaticResource OpTextMutedBrush}"/>
-                        <TextBlock Text="Select a member and a ribbon. Citation is optional. Awards are immediate."
+                        <TextBlock Text="Select one or more members and a ribbon. Citation is optional. Awards are immediate."
                                    FontSize="12"
                                    Foreground="{StaticResource OpTextSecondaryBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
+
                     <Button Content="&#x2715;"
-                            HorizontalAlignment="Right" VerticalAlignment="Center"
-                            Width="30" Height="30"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Width="30"
+                            Height="30"
                             Cursor="Hand"
-                            Click="Close_Click">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="#5A4A38"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="FontSize" Value="14"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="15">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#33000000"/>
-                                        <Setter Property="Foreground" Value="#C8C0B0"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Click="Close_Click"/>
                 </Grid>
             </Border>
 
-            <!-- Main content: 2-column layout -->
-            <Grid Grid.Row="1" Margin="0">
+            <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="240"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Member search -->
                 <Border Grid.Column="0"
                         BorderBrush="#2A2118"
                         BorderThickness="0,0,1,0"
                         Background="#12100D">
-                    <Grid Margin="16,16,16,16">
+                    <Grid Margin="16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Text="SELECT MEMBER"
-                                   FontSize="10" FontWeight="Bold"
+
+                        <TextBlock Text="SELECT MEMBERS"
+                                   FontSize="10"
+                                   FontWeight="Bold"
                                    Foreground="{StaticResource OpTextMutedBrush}"
                                    Margin="0,0,0,10"/>
+
                         <TextBox x:Name="MemberSearch"
                                  Grid.Row="1"
                                  Background="#1D1A15"
@@ -99,26 +84,11 @@
                                  Padding="8,6"
                                  FontSize="12"
                                  Margin="0,0,0,10"
-                                 TextChanged="MemberSearch_TextChanged">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="TextBox">
-                                                <Border Background="{TemplateBinding Background}"
-                                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                                        CornerRadius="6">
-                                                    <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
+                                 TextChanged="MemberSearch_TextChanged"/>
+
                         <ListBox x:Name="MemberListBox"
                                  Grid.Row="2"
+                                 SelectionMode="Extended"
                                  Background="Transparent"
                                  BorderThickness="0"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -149,13 +119,16 @@
                                     </Style.Triggers>
                                 </Style>
                             </ListBox.ItemContainerStyle>
+
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
-                                        <TextBlock FontSize="13" FontWeight="SemiBold"
+                                        <TextBlock FontSize="13"
+                                                   FontWeight="SemiBold"
                                                    Foreground="{StaticResource OpTextPrimaryBrush}"
                                                    Text="{Binding DisplayLabel}"/>
-                                        <TextBlock FontSize="11" Margin="0,1,0,0"
+                                        <TextBlock FontSize="11"
+                                                   Margin="0,1,0,0"
                                                    Foreground="{StaticResource OpTextMutedBrush}"
                                                    Text="{Binding SubLabel}"/>
                                     </StackPanel>
@@ -165,30 +138,30 @@
                     </Grid>
                 </Border>
 
-                <!-- Right: Ribbon gallery + summary + citation -->
                 <ScrollViewer Grid.Column="1"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               Background="#14110E">
                     <StackPanel Margin="16">
 
-                        <!-- Ribbon gallery label -->
                         <TextBlock Text="SELECT RIBBON"
-                                   FontSize="10" FontWeight="Bold"
+                                   FontSize="10"
+                                   FontWeight="Bold"
                                    Foreground="{StaticResource OpTextMutedBrush}"
                                    Margin="0,0,0,10"/>
 
-                        <!-- Ribbon cards -->
                         <ItemsControl x:Name="RibbonPickerList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel Orientation="Horizontal"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
+
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border x:Name="RibbonCard"
-                                            Width="130" Height="110"
+                                            Width="130"
+                                            Height="110"
                                             Margin="5"
                                             CornerRadius="8"
                                             Cursor="Hand"
@@ -206,19 +179,27 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
+
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-                                            <Image Source="{Binding PackUri}"
-                                                   Stretch="Uniform" Margin="8,8,8,4"
+
+                                            <Image Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
+                                                   Stretch="Uniform"
+                                                   Margin="8,8,8,4"
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <Border Grid.Row="1" Background="#0F0C09"
-                                                    CornerRadius="0,0,7,7" Padding="6,4">
-                                                <TextBlock Text="{Binding Name}" FontSize="10"
+
+                                            <Border Grid.Row="1"
+                                                    Background="#0F0C09"
+                                                    CornerRadius="0,0,7,7"
+                                                    Padding="6,4">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="10"
                                                            Foreground="#8A7460"
-                                                           TextAlignment="Center" TextWrapping="Wrap"/>
+                                                           TextAlignment="Center"
+                                                           TextWrapping="Wrap"/>
                                             </Border>
                                         </Grid>
                                     </Border>
@@ -226,7 +207,6 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <!-- Selection summary -->
                         <Border Background="#1A1610"
                                 BorderBrush="#2A2118"
                                 BorderThickness="1"
@@ -238,30 +218,41 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
+
                                 <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                    <TextBlock Text="MEMBER" FontSize="9" FontWeight="Bold"
-                                               Foreground="{StaticResource OpTextMutedBrush}" Margin="0,0,0,3"/>
+                                    <TextBlock Text="MEMBERS"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                               Margin="0,0,0,3"/>
                                     <TextBlock x:Name="SelectedMemberLabel"
                                                Text="None selected"
-                                               FontSize="12" Foreground="{StaticResource OpTextSecondaryBrush}"
+                                               FontSize="12"
+                                               Foreground="{StaticResource OpTextSecondaryBrush}"
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
+
                                 <StackPanel Grid.Column="1">
-                                    <TextBlock Text="RIBBON" FontSize="9" FontWeight="Bold"
-                                               Foreground="{StaticResource OpTextMutedBrush}" Margin="0,0,0,3"/>
+                                    <TextBlock Text="RIBBON"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                               Margin="0,0,0,3"/>
                                     <TextBlock x:Name="SelectedRibbonLabel"
                                                Text="None selected"
-                                               FontSize="12" Foreground="{StaticResource OpTextSecondaryBrush}"
+                                               FontSize="12"
+                                               Foreground="{StaticResource OpTextSecondaryBrush}"
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
 
-                        <!-- Citation -->
                         <TextBlock Text="CITATION (OPTIONAL)"
-                                   FontSize="10" FontWeight="Bold"
+                                   FontSize="10"
+                                   FontWeight="Bold"
                                    Foreground="{StaticResource OpTextMutedBrush}"
                                    Margin="0,16,0,6"/>
+
                         <TextBox x:Name="CitationBox"
                                  Background="#1D1A15"
                                  Foreground="{StaticResource OpTextPrimaryBrush}"
@@ -272,31 +263,11 @@
                                  AcceptsReturn="True"
                                  TextWrapping="Wrap"
                                  Height="100"
-                                 VerticalScrollBarVisibility="Auto">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="TextBox">
-                                                <Border Background="{TemplateBinding Background}"
-                                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                                        CornerRadius="6">
-                                                    <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
-                                                                  VerticalScrollBarVisibility="Auto"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
-
+                                 VerticalScrollBarVisibility="Auto"/>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
 
-            <!-- Bottom bar -->
             <Border Grid.Row="2"
                     BorderBrush="#2A2118"
                     BorderThickness="0,1,0,0"
@@ -307,73 +278,17 @@
                                FontSize="12"
                                Foreground="#B05050"
                                Visibility="Collapsed"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right">
                         <Button Content="CANCEL"
-                                Padding="20,10" Margin="0,0,10,0"
-                                Click="Close_Click">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Background" Value="#1D1610"/>
-                                    <Setter Property="Foreground" Value="#A08060"/>
-                                    <Setter Property="BorderBrush" Value="#3E3023"/>
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="FontSize" Value="12"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}"
-                                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                                        CornerRadius="6"
-                                                        Padding="{TemplateBinding Padding}">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#2A2118"/>
-                                            <Setter Property="Foreground" Value="#C2A23A"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                                Padding="20,10"
+                                Margin="0,0,10,0"
+                                Click="Close_Click"/>
+
                         <Button Content="AWARD RIBBON"
                                 Padding="20,10"
-                                Click="Submit_Click">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Background" Value="#2A1F14"/>
-                                    <Setter Property="Foreground" Value="#C2A23A"/>
-                                    <Setter Property="BorderBrush" Value="#C2A23A"/>
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="FontSize" Value="12"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}"
-                                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                                        CornerRadius="6"
-                                                        Padding="{TemplateBinding Padding}">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#3A2A18"/>
-                                            <Setter Property="Foreground" Value="#F0C84A"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                                Click="Submit_Click"/>
                     </StackPanel>
                 </Grid>
             </Border>

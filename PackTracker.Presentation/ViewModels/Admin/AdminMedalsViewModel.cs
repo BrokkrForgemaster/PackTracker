@@ -14,11 +14,11 @@ public sealed class AdminMedalsViewModel : ViewModelBase
     private string _statusMessage = string.Empty;
     private AdminMedalDefinitionDto? _selectedMedal;
     private AdminMedalAwardDto? _selectedAward;
-    private RibbonEntry? _selectedRibbon;
+    private AdminMedalDefinitionDto? _selectedRibbonDefinition;
 
     public ObservableCollection<AdminMedalDefinitionDto> Medals { get; } = new();
     public ObservableCollection<AdminMedalAwardDto> Awards { get; } = new();
-    public ObservableCollection<RibbonEntry> Ribbons { get; } = new();
+    public ObservableCollection<AdminMedalDefinitionDto> RibbonDefinitions { get; } = new();
 
     public string ImportJson
     {
@@ -44,10 +44,10 @@ public sealed class AdminMedalsViewModel : ViewModelBase
         set => SetProperty(ref _selectedAward, value);
     }
 
-    public RibbonEntry? SelectedRibbon
+    public AdminMedalDefinitionDto? SelectedRibbonDefinition
     {
-        get => _selectedRibbon;
-        set => SetProperty(ref _selectedRibbon, value);
+        get => _selectedRibbonDefinition;
+        set => SetProperty(ref _selectedRibbonDefinition, value);
     }
 
     public AdminMedalsViewModel(AdminApiClient api)
@@ -61,63 +61,50 @@ public sealed class AdminMedalsViewModel : ViewModelBase
 
         Medals.Clear();
         Awards.Clear();
+        RibbonDefinitions.Clear();
 
-        foreach (var medal in dto.AvailableMedals)
-            Medals.Add(medal);
+        foreach (var award in dto.AvailableMedals)
+        {
+            if (string.Equals(award.AwardType, "Ribbon", StringComparison.OrdinalIgnoreCase))
+                RibbonDefinitions.Add(award);
+            else
+                Medals.Add(award);
+        }
 
         foreach (var award in dto.Awards)
             Awards.Add(award);
 
-        await LoadRibbonsAsync();
-
-        StatusMessage = $"Loaded {Medals.Count} medals, {Awards.Count} awards, and {Ribbons.Count} ribbon definitions.";
+        StatusMessage = $"Loaded {Medals.Count} medals, {RibbonDefinitions.Count} ribbons, and {Awards.Count} awards.";
     }
 
-    public async Task<AwardRibbonResultDto?> AwardRibbonAsync(AwardRibbonRequestDto request)
-        => await _api.AwardRibbonAsync(request);
-
-    public async Task LoadRibbonsAsync()
+    public Task<AwardRibbonResultDto?> AwardRibbonAsync(AwardRibbonRequestDto request)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "wwwroot", "data", "ribbons.json");
-        if (!File.Exists(path)) return;
-
-        var json = await File.ReadAllTextAsync(path);
-        var doc = JsonSerializer.Deserialize<RibbonsFile>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (doc is null) return;
-
-        Ribbons.Clear();
-        foreach (var r in doc.AvailableRibbons)
-            Ribbons.Add(new RibbonEntry(r.Name, r.Description, r.Image));
+        return _api.AwardRibbonAsync(request);
     }
 
     public void PrepareRibbonsForImport()
     {
-        if (Ribbons.Count == 0)
-        {
-            StatusMessage = "No ribbon definitions loaded.";
-            return;
-        }
-
-        var request = new ImportMedalsRequestDto(
-            Ribbons.Select(r => new ImportMedalDefinitionDto(r.Name, r.Description, r.RawImagePath)).ToList(),
-            new Dictionary<string, IReadOnlyList<string>>());
-
-        ImportJson = JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true });
-        StatusMessage = $"Prepared {Ribbons.Count} ribbon definitions for import. Review and click 'Import Medals' to proceed.";
+        StatusMessage = "Use Load Award File to load ribbons.json, then click Import Awards.";
     }
 
     public async Task ImportAsync()
     {
         if (string.IsNullOrWhiteSpace(ImportJson))
         {
-            StatusMessage = "Paste medal JSON first.";
+            StatusMessage = "Load or paste medal/ribbon JSON first.";
             return;
         }
 
-        var request = JsonSerializer.Deserialize<ImportMedalsRequestDto>(ImportJson);
+        var request = JsonSerializer.Deserialize<ImportMedalsRequestDto>(
+            ImportJson,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
         if (request is null)
         {
-            StatusMessage = "Unable to parse medal JSON.";
+            StatusMessage = "Unable to parse award JSON.";
             return;
         }
 
@@ -126,16 +113,9 @@ public sealed class AdminMedalsViewModel : ViewModelBase
 
         var unmatched = result.UnmatchedRecipients.Count;
         var unknown = result.UnknownMedals.Count;
+
         StatusMessage =
-            $"Imported: +{result.MedalDefinitionsCreated} new medals, {result.MedalDefinitionsUpdated} updated, " +
-            $"+{result.AwardsCreated} awards, {result.AwardsSkipped} skipped, {unmatched} unmatched recipients, {unknown} unknown medals.";
+            $"Imported: +{result.MedalDefinitionsCreated} new definitions, {result.MedalDefinitionsUpdated} updated, " +
+            $"+{result.AwardsCreated} awards, {result.AwardsSkipped} skipped, {unmatched} unmatched recipients, {unknown} unknown definitions.";
     }
-
-    private sealed record RibbonsFile(
-        [property: JsonPropertyName("available_ribbons")] IReadOnlyList<RibbonJson> AvailableRibbons);
-
-    private sealed record RibbonJson(
-        [property: JsonPropertyName("name")] string Name,
-        [property: JsonPropertyName("description")] string Description,
-        [property: JsonPropertyName("image")] string Image);
 }

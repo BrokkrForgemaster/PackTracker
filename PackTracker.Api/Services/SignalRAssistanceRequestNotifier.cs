@@ -11,11 +11,11 @@ public sealed class SignalRAssistanceRequestNotifier : IAssistanceRequestNotifie
 {
     #region Properties
     private readonly IHubContext<RequestsHub> _hubContext;
-    private readonly IDiscordNotifier _discord;
+    private readonly IDiscordAnnouncementService _discord;
     #endregion
     
     #region Constructor
-    public SignalRAssistanceRequestNotifier(IHubContext<RequestsHub> hubContext, IDiscordNotifier discord)
+    public SignalRAssistanceRequestNotifier(IHubContext<RequestsHub> hubContext, IDiscordAnnouncementService discord)
     {
         _hubContext = hubContext;
         _discord = discord;

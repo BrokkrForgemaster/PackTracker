@@ -7,4 +7,5 @@ public sealed record AdminMedalDefinitionDto(
     string? ImagePath,
     string SourceSystem,
     int DisplayOrder,
-    int AwardCount);
+    int AwardCount,
+    string AwardType);

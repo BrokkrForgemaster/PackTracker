@@ -34,7 +34,8 @@ public sealed class GetAdminMedalsQueryHandler : IRequestHandler<GetAdminMedalsQ
                 x.ImagePath,
                 x.SourceSystem,
                 x.DisplayOrder,
-                x.Awards.Count))
+                x.Awards.Count,
+                x.AwardType))
             .ToListAsync(cancellationToken);
 
         var awards = await _db.MedalAwards

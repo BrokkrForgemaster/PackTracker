@@ -14,73 +14,115 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
         <Border Style="{StaticResource OpHeaderBorderStyle}">
             <StackPanel>
                 <TextBlock Text="Medals &amp; Ribbons"
                            FontSize="22"
                            FontWeight="Bold"
                            Foreground="{StaticResource OpTextTitleBrush}"/>
-                <TextBlock Text="Click any card to view details. Use the actions to import medal or ribbon definitions."
+                <TextBlock Text="Load an award JSON file, review it, then import medals and ribbons into PackTracker."
                            Margin="0,4,0,0"
                            Foreground="{StaticResource OpTextSecondaryBrush}"
                            FontSize="12"/>
             </StackPanel>
         </Border>
 
-        <!-- Action buttons -->
         <StackPanel Grid.Row="1"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,0,0,14">
-            <Button Content="Load Ribbons to Import"
-                    Style="{DynamicResource SecondaryActionButtonStyle}"
-                    FontSize="13"
-                    Padding="14,8"
-                    Margin="0,0,8,0"
-                    Click="LoadRibbons_Click"
-                    ToolTip="Populate the import queue with all loaded ribbon definitions"/>
-            <Button Content="Load File"
+
+            <Button Content="Load Award File"
                     Style="{DynamicResource SecondaryActionButtonStyle}"
                     FontSize="13"
                     Padding="14,8"
                     Margin="0,0,8,0"
                     Click="LoadFile_Click"/>
-            <Button Content="Import Medals"
+
+            <Button Content="Import Awards"
                     Style="{DynamicResource PrimaryActionButtonStyle}"
                     FontSize="13"
                     Padding="14,8"
                     Click="Import_Click"/>
         </StackPanel>
 
-        <!-- Scrollable gallery area -->
-        <ScrollViewer Grid.Row="2"
+        <Border Grid.Row="2"
+                Style="{StaticResource OpPanelBorderStyle}"
+                Padding="16"
+                Margin="0,0,0,16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="160"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="LOADED AWARD JSON PREVIEW"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource OpTextMutedBrush}"
+                           Margin="0,0,0,10"/>
+
+                <TextBox Grid.Row="1"
+                         Text="{Binding ImportJson, UpdateSourceTrigger=PropertyChanged}"
+                         Background="#120D0A"
+                         Foreground="{StaticResource OpTextPrimaryBrush}"
+                         BorderBrush="#2A2118"
+                         BorderThickness="1"
+                         Padding="10"
+                         FontFamily="Consolas"
+                         FontSize="12"
+                         AcceptsReturn="True"
+                         TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="3"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
 
-                <!-- Available Medals gallery -->
                 <Border Style="{StaticResource OpPanelBorderStyle}"
                         Padding="0"
                         Margin="0,0,0,16">
                     <StackPanel>
-                        <TextBlock Text="AVAILABLE MEDALS"
-                                   Margin="18,16,18,12"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource OpTextMutedBrush}"/>
+                        <Grid Margin="18,16,18,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="AVAILABLE MEDALS"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource OpTextMutedBrush}"
+                                       VerticalAlignment="Center"/>
+
+                            <Button Content="Nominate Member"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    Style="{DynamicResource SecondaryActionButtonStyle}"
+                                    FontSize="12"
+                                    Padding="12,6"
+                                    Click="NominateButton_Click"/>
+                        </Grid>
+
                         <ItemsControl ItemsSource="{Binding Medals}" Margin="12,0,12,14">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel Orientation="Horizontal"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
+
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Width="220" Height="165"
+                                    <Border Width="220"
+                                            Height="165"
                                             Margin="5"
                                             CornerRadius="8"
                                             Background="#18140F"
@@ -94,7 +136,6 @@
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
 
-                                            <!-- Ribbon image when available -->
                                             <Image Grid.Row="0"
                                                    Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
                                                    Stretch="Uniform"
@@ -103,7 +144,6 @@
                                                    Visibility="{Binding ImagePath, Converter={StaticResource NullToVisible}}"
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
 
-                                            <!-- Placeholder when no image -->
                                             <TextBlock Grid.Row="0"
                                                        Text="✦"
                                                        FontSize="32"
@@ -124,6 +164,7 @@
                                                            LineHeight="15"/>
                                             </Border>
                                         </Grid>
+
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Style.Triggers>
@@ -141,31 +182,42 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Ribbon Definitions gallery -->
                 <Border Style="{StaticResource OpPanelBorderStyle}"
                         Padding="0"
                         Margin="0,0,0,16">
                     <StackPanel>
                         <Grid Margin="18,16,18,12">
-                            <TextBlock Text="RIBBON DEFINITIONS"
-                                       FontSize="10" FontWeight="Bold"
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="AVAILABLE RIBBONS"
+                                       FontSize="10"
+                                       FontWeight="Bold"
                                        Foreground="{StaticResource OpTextMutedBrush}"
                                        VerticalAlignment="Center"/>
+
                             <Button Content="Award Ribbon"
+                                    Grid.Column="1"
                                     HorizontalAlignment="Right"
                                     Style="{DynamicResource SecondaryActionButtonStyle}"
-                                    FontSize="12" Padding="12,6"
+                                    FontSize="12"
+                                    Padding="12,6"
                                     Click="AwardRibbonButton_Click"/>
                         </Grid>
-                        <ItemsControl ItemsSource="{Binding Ribbons}" Margin="12,0,12,14">
+
+                        <ItemsControl ItemsSource="{Binding RibbonDefinitions}" Margin="12,0,12,14">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel Orientation="Horizontal"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
+
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Width="220" Height="165"
+                                    <Border Width="220"
+                                            Height="165"
                                             Margin="5"
                                             CornerRadius="8"
                                             Background="#18140F"
@@ -180,11 +232,20 @@
                                             </Grid.RowDefinitions>
 
                                             <Image Grid.Row="0"
-                                                   Source="{Binding PackUri}"
+                                                   Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
                                                    Stretch="Uniform"
                                                    Margin="14,14,14,8"
                                                    VerticalAlignment="Center"
+                                                   Visibility="{Binding ImagePath, Converter={StaticResource NullToVisible}}"
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                            <TextBlock Grid.Row="0"
+                                                       Text="✦"
+                                                       FontSize="32"
+                                                       Foreground="#2A2118"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Visibility="{Binding ImagePath, Converter={StaticResource NullToInverseVisible}}"/>
 
                                             <Border Grid.Row="1"
                                                     Background="#0F0C09"
@@ -198,6 +259,7 @@
                                                            LineHeight="15"/>
                                             </Border>
                                         </Grid>
+
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Style.Triggers>
@@ -212,155 +274,6 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
-                </Border>
-
-                <!-- Nominations -->
-                <Border Style="{StaticResource OpPanelBorderStyle}"
-                        Padding="0"
-                        Margin="0,0,0,16">
-                    <StackPanel>
-
-                        <!-- Section header row -->
-                        <Grid Margin="18,16,18,12">
-                            <TextBlock Text="NOMINATIONS"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource OpTextMutedBrush}"
-                                       VerticalAlignment="Center"/>
-                            <Button Content="Nominate Member"
-                                    HorizontalAlignment="Right"
-                                    Style="{DynamicResource PrimaryActionButtonStyle}"
-                                    FontSize="12"
-                                    Padding="12,6"
-                                    Click="NominateButton_Click"/>
-                        </Grid>
-
-                        <!-- Tab strip -->
-                        <StackPanel Orientation="Horizontal" Margin="18,0,18,10">
-                            <Button x:Name="PendingTab"
-                                    Content="PENDING"
-                                    Style="{DynamicResource SecondaryActionButtonStyle}"
-                                    FontSize="11" Padding="14,5" Margin="0,0,6,0"
-                                    Click="PendingTab_Click"/>
-                            <Button x:Name="HistoryTab"
-                                    Content="HISTORY"
-                                    Style="{DynamicResource SecondaryActionButtonStyle}"
-                                    FontSize="11" Padding="14,5"
-                                    Click="HistoryTab_Click"/>
-                        </StackPanel>
-
-                        <!-- Pending nominations -->
-                        <StackPanel x:Name="PendingPanel" Margin="12,0,12,14">
-                            <Border x:Name="PendingEmptyState"
-                                    Padding="20,14"
-                                    Visibility="Collapsed">
-                                <TextBlock Text="No pending nominations."
-                                           FontSize="13"
-                                           Foreground="{StaticResource OpTextMutedBrush}"
-                                           HorizontalAlignment="Center"/>
-                            </Border>
-                            <ItemsControl x:Name="PendingList">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Margin="0,0,0,6"
-                                                CornerRadius="7"
-                                                Background="#18140F"
-                                                BorderBrush="#2A2118"
-                                                BorderThickness="1"
-                                                Cursor="Hand"
-                                                MouseLeftButtonUp="NominationCard_MouseLeftButtonUp">
-                                            <Grid Margin="14,10,14,10">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Border Width="5" CornerRadius="3" Background="#C2A23A" Margin="0,0,12,0"/>
-                                                <StackPanel Grid.Column="1">
-                                                    <TextBlock FontSize="14" FontWeight="SemiBold"
-                                                               Foreground="{StaticResource OpTextPrimaryBrush}"
-                                                               Text="{Binding NomineeName}"/>
-                                                    <TextBlock Margin="0,2,0,0" FontSize="12"
-                                                               Foreground="{StaticResource OpTextSecondaryBrush}">
-                                                        <Run Text="Medal: "/><Run Text="{Binding MedalName}" FontWeight="SemiBold" Foreground="#C2A23A"/>
-                                                    </TextBlock>
-                                                    <TextBlock Margin="0,1,0,0" FontSize="11"
-                                                               Foreground="{StaticResource OpTextMutedBrush}">
-                                                        <Run Text="By: "/><Run Text="{Binding NominatorName}"/>
-                                                        <Run Text=" · "/>
-                                                        <Run Text="{Binding SubmittedAt, StringFormat='MMM d, yyyy'}"/>
-                                                    </TextBlock>
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="2" Text="›" FontSize="18"
-                                                           Foreground="#3A3020" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                                            </Grid>
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Style.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="Background" Value="#221A12"/>
-                                                            <Setter Property="BorderBrush" Value="#C2A23A"/>
-                                                        </Trigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <!-- History DataGrid -->
-                        <DataGrid x:Name="HistoryGrid"
-                                  Margin="0,0,0,0"
-                                  Visibility="Collapsed"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  IsReadOnly="True"
-                                  HeadersVisibility="Column"
-                                  BorderThickness="0"
-                                  Background="Transparent"
-                                  RowBackground="#14110E"
-                                  AlternatingRowBackground="#191510"
-                                  HorizontalGridLinesBrush="#2A2118"
-                                  VerticalGridLinesBrush="#2A2118"
-                                  MaxHeight="260"
-                                  Foreground="{StaticResource OpTextPrimaryBrush}">
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="Background" Value="#15120F"/>
-                                    <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}"/>
-                                    <Setter Property="FontSize" Value="10"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="Padding" Value="12,8"/>
-                                    <Setter Property="BorderBrush" Value="#2A2118"/>
-                                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                </Style>
-                            </DataGrid.ColumnHeaderStyle>
-                            <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow">
-                                    <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}"/>
-                                    <Setter Property="FontSize" Value="13"/>
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#20170F"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DataGrid.RowStyle>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="NOMINEE" Binding="{Binding NomineeName}" Width="150"/>
-                                <DataGridTextColumn Header="MEDAL" Binding="{Binding MedalName}" Width="200"/>
-                                <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="80"/>
-                                <DataGridTextColumn Header="NOMINATED BY" Binding="{Binding NominatorName}" Width="150"/>
-                                <DataGridTextColumn Header="REVIEWED BY" Binding="{Binding ReviewedByName}" Width="150"/>
-                                <DataGridTextColumn Header="SUBMITTED" Binding="{Binding SubmittedAt, StringFormat='MMM d, yyyy'}" Width="110"/>
-                                <DataGridTextColumn Header="REVIEWED" Binding="{Binding ReviewedAt, StringFormat='MMM d, yyyy'}" Width="110"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-
                     </StackPanel>
                 </Border>
 
