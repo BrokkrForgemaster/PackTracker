@@ -30,6 +30,10 @@ public class HouseWolfProfileService : IHouseWolfProfileService
     {
         if (string.IsNullOrWhiteSpace(discordId)) return null;
 
+        var settings = _settingsService.GetSettings();
+        if (string.IsNullOrWhiteSpace(settings.HousewolfApiBaseUrl))
+            return null;
+
         try
         {
             using var conn = new NpgsqlConnection(GetConnectionString());

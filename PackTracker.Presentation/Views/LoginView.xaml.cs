@@ -38,10 +38,11 @@ public partial class LoginView : UserControl
     private async Task InitializeAsync()
     {
         StatusPill.Visibility = Visibility.Visible;
+        DiscordStatus.Text = "Connecting to API...";
 
         try
         {
-            var apiReady = await WaitForApiAsync(ApiBaseUrl);
+            var apiReady = await WaitForApiWithStatusAsync(ApiBaseUrl);
             DiscordStatus.Text = apiReady
                 ? "API reachable. Ready for login."
                 : $"API unavailable: {ApiBaseUrl}";
@@ -54,6 +55,42 @@ public partial class LoginView : UserControl
             DiscordStatus.Text = ex.Message;
             DiscordLoginButton.IsEnabled = false;
         }
+    }
+
+    // Polls up to 60s with a mid-wait status update for Render free-tier cold starts.
+    private async Task<bool> WaitForApiWithStatusAsync(string baseUrl)
+    {
+        using var client = new HttpClient();
+        var readinessUrl = $"{baseUrl.TrimEnd('/')}/health/ready";
+        var livenessUrl  = $"{baseUrl.TrimEnd('/')}/health";
+
+        for (int i = 0; i < 40; i++)
+        {
+            if (i == 4)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                    DiscordStatus.Text = "API is starting up — Render may need 30–60s on a cold start...");
+            }
+
+            try
+            {
+                var readinessResponse = await client.GetAsync(readinessUrl);
+                if (readinessResponse.IsSuccessStatusCode)
+                    return true;
+
+                if (readinessResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    var livenessResponse = await client.GetAsync(livenessUrl);
+                    if (livenessResponse.IsSuccessStatusCode)
+                        return true;
+                }
+            }
+            catch { }
+
+            await Task.Delay(1500);
+        }
+
+        return false;
     }
 
     private async void DiscordLogin_Click(object sender, RoutedEventArgs e)

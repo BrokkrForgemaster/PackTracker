@@ -13,5 +13,5 @@ public class MedalDefinition
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<MedalAward> Awards { get; set; } = new List<MedalAward>();
-    public string AwardType { get; set; }
+    public string AwardType { get; set; }  = string.Empty;
 }
