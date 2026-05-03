@@ -29,13 +29,13 @@ public sealed class SubmitMedalNominationCommandHandler : IRequestHandler<Submit
         _rbac = rbac;
     }
 
-    public async Task<MedalNominationDto> Handle(SubmitMedalNominationCommand command, CancellationToken ct)
+    public async Task<MedalNominationDto> Handle(SubmitMedalNominationCommand command, CancellationToken cancellationToken)
     {
-        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, ct);
-        var ctx = await _rbac.GetCurrentAdminContextAsync(ct);
+        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, cancellationToken);
+        var ctx = await _rbac.GetCurrentAdminContextAsync(cancellationToken);
 
         var req = command.Request;
-        var medal = await _db.MedalDefinitions.FirstOrDefaultAsync(m => m.Id == req.MedalDefinitionId, ct)
+        var medal = await _db.MedalDefinitions.FirstOrDefaultAsync(m => m.Id == req.MedalDefinitionId, cancellationToken)
             ?? throw new InvalidOperationException("Medal definition not found.");
 
         var nomination = new MedalNomination
@@ -50,11 +50,11 @@ public sealed class SubmitMedalNominationCommandHandler : IRequestHandler<Submit
         };
 
         _db.MedalNominations.Add(nomination);
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(cancellationToken);
 
         await _audit.WriteAsync(new AdminAuditLogEntryDto(
             "MedalNominationSubmitted", "MedalNomination", nomination.Id.ToString(),
-            $"Nominated {nomination.NomineeName} for {medal.Name}.", "Info", null, null), ct);
+            $"Nominated {nomination.NomineeName} for {medal.Name}.", "Info", null, null), cancellationToken);
 
         return ToDto(nomination, medal.Name, medal.ImagePath);
     }

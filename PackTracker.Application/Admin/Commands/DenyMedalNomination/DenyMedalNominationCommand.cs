@@ -28,14 +28,14 @@ public sealed class DenyMedalNominationCommandHandler : IRequestHandler<DenyMeda
         _rbac = rbac;
     }
 
-    public async Task<MedalNominationDto> Handle(DenyMedalNominationCommand command, CancellationToken ct)
+    public async Task<MedalNominationDto> Handle(DenyMedalNominationCommand command, CancellationToken cancellationToken)
     {
-        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, ct);
-        var ctx = await _rbac.GetCurrentAdminContextAsync(ct);
+        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, cancellationToken);
+        var ctx = await _rbac.GetCurrentAdminContextAsync(cancellationToken);
 
         var nomination = await _db.MedalNominations
             .Include(n => n.MedalDefinition)
-            .FirstOrDefaultAsync(n => n.Id == command.NominationId, ct)
+            .FirstOrDefaultAsync(n => n.Id == command.NominationId, cancellationToken)
             ?? throw new InvalidOperationException("Nomination not found.");
 
         if (nomination.Status != NominationStatus.Pending)
@@ -46,11 +46,11 @@ public sealed class DenyMedalNominationCommandHandler : IRequestHandler<DenyMeda
         nomination.ReviewedByName = ctx.DisplayName;
         nomination.ReviewNotes = command.Request.Notes?.Trim();
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(cancellationToken);
 
         await _audit.WriteAsync(new AdminAuditLogEntryDto(
             "MedalNominationDenied", "MedalNomination", nomination.Id.ToString(),
-            $"Denied nomination of {nomination.NomineeName} for {nomination.MedalDefinition!.Name}.", "Info", null, null), ct);
+            $"Denied nomination of {nomination.NomineeName} for {nomination.MedalDefinition!.Name}.", "Info", null, null), cancellationToken);
 
         return new MedalNominationDto(
             nomination.Id, nomination.MedalDefinitionId, nomination.MedalDefinition!.Name, nomination.MedalDefinition.ImagePath,

@@ -32,10 +32,10 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
         _discordAnnouncements = discordAnnouncements;
     }
 
-    public async Task<AwardRibbonResultDto> Handle(AwardRibbonCommand command, CancellationToken ct)
+    public async Task<AwardRibbonResultDto> Handle(AwardRibbonCommand command, CancellationToken cancellationToken)
     {
-        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, ct);
-        var ctx = await _rbac.GetCurrentAdminContextAsync(ct);
+        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, cancellationToken);
+        var ctx = await _rbac.GetCurrentAdminContextAsync(cancellationToken);
 
         var req = command.Request;
         var ribbonName = req.RibbonName.Trim();
@@ -51,9 +51,10 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
 
         var definition = await _db.MedalDefinitions
             .FirstOrDefaultAsync(
-                m => m.Name.ToLower() == ribbonName.ToLower()
-                     && m.AwardType == "Ribbon",
-                ct);
+                m =>
+                    string.Equals(m.Name, ribbonName, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(m.AwardType, "Ribbon", StringComparison.OrdinalIgnoreCase),
+                cancellationToken);
 
         if (definition is null)
         {
@@ -71,12 +72,12 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
             };
 
             _db.MedalDefinitions.Add(definition);
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(cancellationToken);
         }
 
         var profiles = await _db.Profiles
             .Where(x => req.ProfileIds.Contains(x.Id))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         var createdAwards = new List<(Guid AwardId, string RecipientName, string Citation)>();
         var skippedCount = 0;
@@ -92,7 +93,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                     a.MedalDefinitionId == definition.Id &&
                     a.ProfileId == profile.Id &&
                     a.AwardType == "Ribbon",
-                    ct);
+                    cancellationToken);
 
             if (existing is not null)
             {
@@ -121,7 +122,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                 award.Citation ?? string.Empty));
         }
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(cancellationToken);
 
         if (createdAwards.Count > 0)
         {
@@ -134,7 +135,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                     ? $"Awarded to:\n{recipientList}"
                     : req.Citation.Trim(),
                 definition.PublicImageUrl,
-                ct);
+                cancellationToken);
         }
 
         await _audit.WriteAsync(new AdminAuditLogEntryDto(
@@ -144,7 +145,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
             $"Awarded '{ribbonName}' to {createdAwards.Count} member(s) by {ctx.DisplayName}. Skipped {skippedCount} duplicate(s).",
             "Info",
             null,
-            null), ct);
+            null), cancellationToken);
 
         var firstAwardId = createdAwards.Count > 0
             ? createdAwards[0].AwardId

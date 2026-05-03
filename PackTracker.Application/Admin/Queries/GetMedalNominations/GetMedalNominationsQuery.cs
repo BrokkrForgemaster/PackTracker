@@ -19,9 +19,9 @@ public sealed class GetMedalNominationsQueryHandler : IRequestHandler<GetMedalNo
         _authorization = authorization;
     }
 
-    public async Task<IReadOnlyList<MedalNominationDto>> Handle(GetMedalNominationsQuery _, CancellationToken ct)
+    public async Task<IReadOnlyList<MedalNominationDto>> Handle(GetMedalNominationsQuery _, CancellationToken cancellationToken)
     {
-        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsView, ct);
+        await _authorization.RequirePermissionAsync(AdminPermissions.MedalsView, cancellationToken);
 
         return await _db.MedalNominations
             .Include(n => n.MedalDefinition)
@@ -31,6 +31,6 @@ public sealed class GetMedalNominationsQueryHandler : IRequestHandler<GetMedalNo
                 n.NomineeProfileId, n.NomineeName, n.NominatorName,
                 n.Citation, n.Status.ToString(),
                 n.SubmittedAt, n.ReviewedAt, n.ReviewedByName, n.ReviewNotes))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
     }
 }
