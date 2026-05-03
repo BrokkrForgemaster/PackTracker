@@ -1,0 +1,181 @@
+<UserControl x:Class="PackTracker.Presentation.Views.Admin.AdminNominationsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Style="{StaticResource OpHeaderBorderStyle}">
+            <StackPanel>
+                <TextBlock Text="Medal Nominations"
+                           FontSize="22" FontWeight="Bold"
+                           Foreground="{StaticResource OpTextTitleBrush}"/>
+                <TextBlock Text="Review and act on pending nominations. Approved nominations automatically create award records."
+                           Margin="0,4,0,0"
+                           Foreground="{StaticResource OpTextSecondaryBrush}"
+                           FontSize="12"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Action bar -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,14">
+            <Button Content="Nominate Member"
+                    Style="{DynamicResource PrimaryActionButtonStyle}"
+                    FontSize="13" Padding="14,8"
+                    Click="NominateButton_Click"/>
+        </StackPanel>
+
+        <!-- Tabs: Pending / History -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Tab Strip -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <Button x:Name="PendingTab" Content="PENDING"
+                        Style="{DynamicResource SecondaryActionButtonStyle}"
+                        FontSize="11" Padding="16,6" Margin="0,0,6,0"
+                        Click="PendingTab_Click"/>
+                <Button x:Name="HistoryTab" Content="HISTORY"
+                        Style="{DynamicResource SecondaryActionButtonStyle}"
+                        FontSize="11" Padding="16,6"
+                        Click="HistoryTab_Click"/>
+            </StackPanel>
+
+            <!-- Pending panel -->
+            <ScrollViewer x:Name="PendingPanel" Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Empty state -->
+                    <Border x:Name="PendingEmptyState"
+                            Style="{StaticResource OpPanelBorderStyle}"
+                            Padding="40" Margin="0,0,0,12"
+                            Visibility="Collapsed">
+                        <TextBlock Text="No pending nominations."
+                                   FontSize="14"
+                                   Foreground="{StaticResource OpTextMutedBrush}"
+                                   HorizontalAlignment="Center"/>
+                    </Border>
+
+                    <ItemsControl x:Name="PendingList"
+                                  ItemsSource="{Binding PendingNominations}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,0,0,10"
+                                        CornerRadius="8"
+                                        Background="#18140F"
+                                        BorderBrush="#2A2118"
+                                        BorderThickness="1"
+                                        Cursor="Hand"
+                                        MouseLeftButtonUp="NominationCard_MouseLeftButtonUp">
+                                    <Grid Margin="18,14,18,14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Status indicator -->
+                                        <Border Width="6" CornerRadius="3" Background="#C2A23A" Margin="0,0,14,0"/>
+
+                                        <!-- Nomination info -->
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock FontSize="15" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource OpTextPrimaryBrush}"
+                                                       Text="{Binding NomineeName}"/>
+                                            <TextBlock Margin="0,3,0,0" FontSize="12"
+                                                       Foreground="{StaticResource OpTextSecondaryBrush}">
+                                                <Run Text="Medal: "/><Run Text="{Binding MedalName}" FontWeight="SemiBold" Foreground="#C2A23A"/>
+                                            </TextBlock>
+                                            <TextBlock Margin="0,2,0,0" FontSize="11"
+                                                       Foreground="{StaticResource OpTextMutedBrush}">
+                                                <Run Text="Nominated by: "/><Run Text="{Binding NominatorName}"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{Binding SubmittedAt, StringFormat='MMM d, yyyy'}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- Review arrow -->
+                                        <TextBlock Grid.Column="2" Text="›" FontSize="20"
+                                                   Foreground="#3A3020"
+                                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    </Grid>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#221A12"/>
+                                                    <Setter Property="BorderBrush" Value="#C2A23A"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- History panel -->
+            <ScrollViewer x:Name="HistoryPanel" Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          Visibility="Collapsed">
+                <Border Style="{StaticResource OpPanelBorderStyle}" Padding="0">
+                    <DataGrid ItemsSource="{Binding HistoryNominations}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              BorderThickness="0"
+                              Background="Transparent"
+                              RowBackground="#14110E"
+                              AlternatingRowBackground="#191510"
+                              HorizontalGridLinesBrush="#2A2118"
+                              VerticalGridLinesBrush="#2A2118"
+                              Foreground="{StaticResource OpTextPrimaryBrush}">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#15120F"/>
+                                <Setter Property="Foreground" Value="{StaticResource OpTextMutedBrush}"/>
+                                <Setter Property="FontSize" Value="10"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Padding" Value="12,8"/>
+                                <Setter Property="BorderBrush" Value="#2A2118"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Foreground" Value="{StaticResource OpTextPrimaryBrush}"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#20170F"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="NOMINEE" Binding="{Binding NomineeName}" Width="160"/>
+                            <DataGridTextColumn Header="MEDAL" Binding="{Binding MedalName}" Width="200"/>
+                            <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="80"/>
+                            <DataGridTextColumn Header="NOMINATED BY" Binding="{Binding NominatorName}" Width="160"/>
+                            <DataGridTextColumn Header="REVIEWED BY" Binding="{Binding ReviewedByName}" Width="160"/>
+                            <DataGridTextColumn Header="SUBMITTED" Binding="{Binding SubmittedAt, StringFormat='MMM d, yyyy'}" Width="120"/>
+                            <DataGridTextColumn Header="REVIEWED" Binding="{Binding ReviewedAt, StringFormat='MMM d, yyyy'}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

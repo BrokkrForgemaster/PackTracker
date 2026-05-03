@@ -1,0 +1,68 @@
+{
+  "available_ribbons": [
+    {
+      "name": "ASD Mission Ribbon",
+      "description": "Awarded for participation in ASD-designated missions in support of House Wolf operations.",
+      "image": "../Assets/ribbons/ASDMissionRibbon.png"
+    },
+    {
+      "name": "House Wolf Contributor",
+      "description": "Awarded to members who actively contribute to the growth, development, or success of House Wolf.",
+      "image": "../Assets/ribbons/HWContributer.png"
+    },
+    {
+      "name": "Discord Booster Ribbon",
+      "description": "Awarded to members who support the House Wolf community through Discord boosting.",
+      "image": "../Assets/ribbons/HWDiscordBooster.png"
+    },
+    {
+      "name": "Minor Operation Ribbon",
+      "description": "Awarded for participation in Mine or Die operational missions.",
+      "image": "../Assets/ribbons/mineordiemissionribbon.png"
+    },
+    {
+      "name": "Pack Tracker Beta Team",
+      "description": "Awarded to members who participated in testing and development of PackTracker systems.",
+      "image": "../Assets/ribbons/PackTrackerBetaTeam.png"
+    },
+    {
+      "name": "Pyro Service Ribbon",
+      "description": "Awarded for service or operations conducted within the Pyro system.",
+      "image": "../Assets/ribbons/pyroserviceribbon.png"
+    },
+    {
+      "name": "Quarantine Mission Ribbon",
+      "description": "Awarded for participation in quarantine or containment-based missions.",
+      "image": "../Assets/ribbons/QVIntelMissionRibbon.png"
+    },
+    {
+      "name": "Rockbreaker Mission Ribbon",
+      "description": "Awarded for participation in mining or resource extraction operations.",
+      "image": "../Assets/ribbons/RockBreakerMissionRibbon.png"
+    },
+    {
+      "name": "Stormbreaker Mission Ribbon",
+      "description": "Awarded for participation in high-intensity or large-scale operations.",
+      "image": "../Assets/ribbons/stormbreakermission.png"
+    },
+    {
+      "name": "Tactical Strike Group Ribbon",
+      "description": "Awarded for participation in coordinated tactical strike group missions.",
+      "image": "../Assets/ribbons/tsgmission.png"
+    },
+    {
+      "name": "Wolf Dragoon Ribbon",
+      "description": "Awarded to members serving within or supporting Dragoon operations.",
+      "image": "../Assets/ribbons/WolfDragoonRibbon.png"
+    },
+    {
+      "name": "Xeno Threat Mission Ribbon",
+      "description": "Awarded for participation in XenoThreat or similar large-scale event operations.",
+      "image": "../Assets/ribbons/xenothreatmission.png"
+    }
+  ],
+  "assignments": [],
+  "recipients": {
+    "": []
+  }
+}

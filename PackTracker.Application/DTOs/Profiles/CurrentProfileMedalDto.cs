@@ -6,4 +6,5 @@ public sealed record CurrentProfileMedalDto(
     string Description,
     string? ImagePath,
     string? Citation,
-    DateTime? AwardedAt);
+    DateTime? AwardedAt,
+    string AwardType);

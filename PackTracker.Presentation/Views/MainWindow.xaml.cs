@@ -359,6 +359,9 @@ namespace PackTracker.Presentation.Views
                     case "Settings":
                         NavigateToSettings();
                         break;
+                    case "Recruitment":
+                        NavigateToRecruitment();
+                        break;
                     case "Admin":
                         NavigateToAdmin();
                         break;
@@ -404,6 +407,13 @@ namespace PackTracker.Presentation.Views
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        private void NavigateToRecruitment()
+        {
+            _currentMainViewKey = "Recruitment";
+            var recruitmentView = _serviceProvider.GetRequiredService<RecruitmentView>();
+            ContentFrame.Navigate(recruitmentView);
         }
 
         private void NavigateToBlueprintExplorer()

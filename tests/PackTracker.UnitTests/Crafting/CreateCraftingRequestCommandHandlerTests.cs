@@ -211,6 +211,7 @@ public sealed class CreateCraftingRequestCommandHandlerTests
         public DbSet<LobbyChatMessage> LobbyChatMessages => _inner.LobbyChatMessages;
         public DbSet<MedalDefinition> MedalDefinitions => _inner.MedalDefinitions;
         public DbSet<MedalAward> MedalAwards => _inner.MedalAwards;
+        public DbSet<MedalNomination> MedalNominations => _inner.MedalNominations;
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

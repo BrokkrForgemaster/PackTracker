@@ -2,23 +2,23 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
-using PackTracker.Presentation.ViewModels.Admin;
+using PackTracker.Presentation.ViewModels;
 
-namespace PackTracker.Presentation.Views.Admin;
+namespace PackTracker.Presentation.Views;
 
-public partial class AdminRecruitmentView : UserControl
+public partial class RecruitmentView : UserControl
 {
-    private readonly AdminRecruitmentViewModel _viewModel;
+    private readonly RecruitmentViewModel _viewModel;
     private bool _webViewReady;
 
-    public AdminRecruitmentView(AdminRecruitmentViewModel viewModel)
+    public RecruitmentView(RecruitmentViewModel viewModel)
     {
         InitializeComponent();
         DataContext = _viewModel = viewModel;
 
         _viewModel.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(AdminRecruitmentViewModel.HtmlPreview))
+            if (e.PropertyName == nameof(RecruitmentViewModel.HtmlPreview))
                 Dispatcher.Invoke(RefreshPreview);
         };
 

@@ -139,7 +139,7 @@
                         <Button Content="System Health Check"
                                 Style="{DynamicResource SecondaryActionButtonStyle}"
                                 HorizontalAlignment="Left" Width="210"
-                                FontSize="13" Padding="14,8" Margin="0,0,0,0"/>
+                                FontSize="13" Padding="14,8" Margin="0,0,0,25"/>
                         <Button Content="Sync Discord Roles"
                                 Style="{DynamicResource SecondaryActionButtonStyle}"
                                 HorizontalAlignment="Left" Width="210"

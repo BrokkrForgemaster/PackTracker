@@ -87,6 +87,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IVersionService, VersionService>();
         services.AddSingleton<SignalRChatService>();
         services.AddSingleton<AvatarCacheService>();
+        services.AddSingleton<IHouseWolfProfileService, HouseWolfProfileService>();
         services.AddHttpClient();
         services.AddSingleton<DiscordEventsService>();
         services.AddSingleton<NavigationStateService>();
@@ -120,16 +121,18 @@ public partial class App : System.Windows.Application
         services.AddTransient<AdminSettingsViewModel>();
         services.AddTransient<AdminMembersViewModel>();
         services.AddTransient<AdminMedalsViewModel>();
-        services.AddTransient<AdminRecruitmentViewModel>();
         services.AddTransient<AdminRequestHistoryViewModel>();
         services.AddTransient<AdminRequestDetailViewModel>();
+        services.AddTransient<AdminNominationsViewModel>();
+        services.AddTransient<RecruitmentViewModel>();
         services.AddTransient<AdminDashboardView>();
         services.AddTransient<AdminSettingsView>();
         services.AddTransient<AdminMembersView>();
         services.AddTransient<AdminMedalsView>();
-        services.AddTransient<AdminRecruitmentView>();
         services.AddTransient<AdminRequestHistoryView>();
         services.AddTransient<AdminRequestDetailView>();
+        services.AddTransient<AdminNominationsView>();
+        services.AddTransient<RecruitmentView>();
         services.AddTransient<AdminShellView>();
 
         // Embedded API host — registered as singleton so we can start/stop it manually

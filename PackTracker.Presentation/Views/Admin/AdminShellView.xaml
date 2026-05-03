@@ -57,9 +57,6 @@
 
                         <Separator Background="{DynamicResource GlassBorderBrush}" Margin="8,16"/>
 
-                        <Button Content="Recruitment Post"
-                                Style="{DynamicResource SidebarButtonStyle}"
-                                Click="Recruitment_Click"/>
                         <Button Content="Request History"
                                 Style="{DynamicResource SidebarButtonStyle}"
                                 Click="RequestHistory_Click"/>
@@ -78,7 +75,7 @@
                 <!-- Return -->
                 <Border Grid.Row="2" Padding="16,0,16,20">
                     <Button Content="RETURN TO HUB"
-                            Style="{DynamicResource PrimaryActionButtonStyle}"
+                            Style="{DynamicResource SidebarButtonStyle}"
                             Click="Back_Click"/>
                 </Border>
             </Grid>

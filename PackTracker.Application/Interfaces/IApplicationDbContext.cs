@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<LobbyChatMessage> LobbyChatMessages { get; }
     DbSet<MedalDefinition> MedalDefinitions { get; }
     DbSet<MedalAward> MedalAwards { get; }
+    DbSet<MedalNomination> MedalNominations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task<int> ExecuteSqlInterpolatedAsync(FormattableString sql, CancellationToken cancellationToken = default);

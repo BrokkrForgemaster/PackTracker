@@ -133,6 +133,8 @@ public sealed class SettingsService : ISettingsService, IDisposable
             settings.DiscordRefreshToken = SecretStorage.Unprotect(settings.DiscordRefreshToken);
             settings.JwtToken = SecretStorage.Unprotect(settings.JwtToken);
             settings.JwtRefreshToken = SecretStorage.Unprotect(settings.JwtRefreshToken);
+            settings.DatabaseUsername = SecretStorage.Unprotect(settings.DatabaseUsername);
+            settings.DatabasePassword = SecretStorage.Unprotect(settings.DatabasePassword);
 
             return NormalizeSettings(settings);
         }
@@ -304,6 +306,22 @@ public sealed class SettingsService : ISettingsService, IDisposable
             Assign(ref blueprintUrl, configuration["Blueprints:DataSourceUrl"]);
             updatedSettings.BlueprintDataSourceUrl = blueprintUrl;
 
+            var hwApiBase = updatedSettings.HousewolfApiBaseUrl;
+            Assign(ref hwApiBase, configuration["AppSettings:HousewolfApiBaseUrl"]);
+            updatedSettings.HousewolfApiBaseUrl = hwApiBase;
+
+            var dbName = updatedSettings.DatabaseName;
+            Assign(ref dbName, configuration["AppSettings:databaseName"]);
+            updatedSettings.DatabaseName = dbName;
+
+            var dbUser = updatedSettings.DatabaseUsername;
+            Assign(ref dbUser, configuration["AppSettings:databaseUsername"]);
+            updatedSettings.DatabaseUsername = dbUser;
+
+            var dbPass = updatedSettings.DatabasePassword;
+            Assign(ref dbPass, configuration["AppSettings:databasePassword"]);
+            updatedSettings.DatabasePassword = dbPass;
+
             updatedSettings = NormalizeSettings(updatedSettings);
 
             if (!SettingsEqual(_settings, updatedSettings))
@@ -369,7 +387,11 @@ public sealed class SettingsService : ISettingsService, IDisposable
                 DiscordAccessToken = SecretStorage.Protect(normalizedSettings.DiscordAccessToken),
                 DiscordRefreshToken = SecretStorage.Protect(normalizedSettings.DiscordRefreshToken),
                 JwtToken = SecretStorage.Protect(normalizedSettings.JwtToken),
-                JwtRefreshToken = SecretStorage.Protect(normalizedSettings.JwtRefreshToken)
+                JwtRefreshToken = SecretStorage.Protect(normalizedSettings.JwtRefreshToken),
+                HousewolfApiBaseUrl = normalizedSettings.HousewolfApiBaseUrl,
+                DatabaseName = normalizedSettings.DatabaseName,
+                DatabaseUsername = SecretStorage.Protect(normalizedSettings.DatabaseUsername),
+                DatabasePassword = SecretStorage.Protect(normalizedSettings.DatabasePassword)
             };
 
             JsonObject root;
@@ -436,7 +458,11 @@ public sealed class SettingsService : ISettingsService, IDisposable
             DiscordAccessToken = source.DiscordAccessToken,
             DiscordRefreshToken = source.DiscordRefreshToken,
             JwtToken = source.JwtToken,
-            JwtRefreshToken = source.JwtRefreshToken
+            JwtRefreshToken = source.JwtRefreshToken,
+            HousewolfApiBaseUrl = source.HousewolfApiBaseUrl,
+            DatabaseName = source.DatabaseName,
+            DatabaseUsername = source.DatabaseUsername,
+            DatabasePassword = source.DatabasePassword
         };
 
     private const string DefaultApiBaseUrl = "https://packtracker-yke3.onrender.com";
@@ -493,5 +519,9 @@ public sealed class SettingsService : ISettingsService, IDisposable
         && left.DiscordAccessToken == right.DiscordAccessToken
         && left.DiscordRefreshToken == right.DiscordRefreshToken
         && left.JwtToken == right.JwtToken
-        && left.JwtRefreshToken == right.JwtRefreshToken;
+        && left.JwtRefreshToken == right.JwtRefreshToken
+        && left.HousewolfApiBaseUrl == right.HousewolfApiBaseUrl
+        && left.DatabaseName == right.DatabaseName
+        && left.DatabaseUsername == right.DatabaseUsername
+        && left.DatabasePassword == right.DatabasePassword;
 }

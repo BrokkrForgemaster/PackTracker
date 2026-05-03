@@ -1167,6 +1167,69 @@ namespace PackTracker.Infrastructure.Migrations
                     b.ToTable("MedalDefinitions");
                 });
 
+            modelBuilder.Entity("PackTracker.Domain.Entities.MedalNomination", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Citation")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("MedalDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NominatorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("NominatorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NomineeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("NomineeProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("ReviewedByProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MedalDefinitionId");
+
+                    b.HasIndex("NomineeProfileId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SubmittedAt");
+
+                    b.ToTable("MedalNominations", (string)null);
+                });
+
             modelBuilder.Entity("PackTracker.Domain.Entities.MemberBlueprintOwnership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1824,6 +1887,24 @@ namespace PackTracker.Infrastructure.Migrations
                     b.Navigation("MedalDefinition");
 
                     b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("PackTracker.Domain.Entities.MedalNomination", b =>
+                {
+                    b.HasOne("PackTracker.Domain.Entities.MedalDefinition", "MedalDefinition")
+                        .WithMany()
+                        .HasForeignKey("MedalDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PackTracker.Domain.Entities.Profile", "NomineeProfile")
+                        .WithMany()
+                        .HasForeignKey("NomineeProfileId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("MedalDefinition");
+
+                    b.Navigation("NomineeProfile");
                 });
 
             modelBuilder.Entity("PackTracker.Domain.Entities.MemberBlueprintOwnership", b =>

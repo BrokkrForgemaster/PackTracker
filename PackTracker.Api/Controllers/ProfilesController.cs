@@ -87,7 +87,8 @@ public class ProfilesController : ControllerBase
                 x.MedalDefinition.Description,
                 x.MedalDefinition.ImagePath,
                 x.Citation,
-                x.AwardedAt))
+                x.AwardedAt,
+                x.MedalDefinition.AwardType))
             .ToListAsync(ct);
 
         return Ok(MapCurrentProfile(profile, effectiveRank, effectiveDivision, medals));
@@ -142,7 +143,8 @@ public class ProfilesController : ControllerBase
                 x.MedalDefinition.Description,
                 x.MedalDefinition.ImagePath,
                 x.Citation,
-                x.AwardedAt))
+                x.AwardedAt,
+                x.AwardType))
             .ToListAsync(ct);
 
         return Ok(MapCurrentProfile(profile, effectiveRank, effectiveDivision, medals));

@@ -58,6 +58,7 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
     public DbSet<DiscordIntegrationSetting> DiscordIntegrationSettings => Set<DiscordIntegrationSetting>();
     public DbSet<MedalDefinition> MedalDefinitions => Set<MedalDefinition>();
     public DbSet<MedalAward> MedalAwards => Set<MedalAward>();
+    public DbSet<MedalNomination> MedalNominations => Set<MedalNomination>();
 
     /// <summary>
     /// Gets the synchronization metadata for various tasks.
@@ -229,6 +230,7 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
         ConfigureAdminAuditLogs(modelBuilder);
         ConfigureDiscordIntegrationSettings(modelBuilder);
         ConfigureMedals(modelBuilder);
+        ConfigureMedalNominations(modelBuilder);
     }
 
     #endregion
@@ -904,6 +906,23 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
                 .HasForeignKey(x => x.UpdatedByProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+    }
+
+    private static void ConfigureMedalNominations(ModelBuilder modelBuilder)
+    {
+        var n = modelBuilder.Entity<MedalNomination>();
+        n.HasKey(x => x.Id);
+        n.Property(x => x.NomineeName).HasMaxLength(200).IsRequired();
+        n.Property(x => x.NominatorName).HasMaxLength(200).IsRequired();
+        n.Property(x => x.Citation).HasMaxLength(2000).IsRequired();
+        n.Property(x => x.ReviewNotes).HasMaxLength(1000);
+        n.Property(x => x.ReviewedByName).HasMaxLength(200);
+        n.Property(x => x.Status).HasConversion<int>();
+        n.HasOne(x => x.MedalDefinition).WithMany().HasForeignKey(x => x.MedalDefinitionId).OnDelete(DeleteBehavior.Restrict);
+        n.HasOne(x => x.NomineeProfile).WithMany().HasForeignKey(x => x.NomineeProfileId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
+        n.HasIndex(x => x.Status);
+        n.HasIndex(x => x.SubmittedAt);
+        n.ToTable("MedalNominations");
     }
 
     private static void ConfigureMedals(ModelBuilder modelBuilder)

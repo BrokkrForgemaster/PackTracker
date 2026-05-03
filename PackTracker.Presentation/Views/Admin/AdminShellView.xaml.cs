@@ -12,7 +12,6 @@ public partial class AdminShellView : UserControl
     private readonly AdminSettingsView _settingsView;
     private readonly AdminMembersView _membersView;
     private readonly AdminMedalsView _medalsView;
-    private readonly AdminRecruitmentView _recruitmentView;
     private readonly AdminRequestHistoryView _requestHistoryView;
     private readonly AdminRequestDetailView _requestDetailView;
     private readonly NavigationStateService _navigationState;
@@ -23,7 +22,6 @@ public partial class AdminShellView : UserControl
         AdminSettingsView settingsView,
         AdminMembersView membersView,
         AdminMedalsView medalsView,
-        AdminRecruitmentView recruitmentView,
         AdminRequestHistoryView requestHistoryView,
         AdminRequestDetailView requestDetailView,
         NavigationStateService navigationState)
@@ -34,7 +32,6 @@ public partial class AdminShellView : UserControl
         _settingsView = settingsView;
         _membersView = membersView;
         _medalsView = medalsView;
-        _recruitmentView = recruitmentView;
         _requestHistoryView = requestHistoryView;
         _requestDetailView = requestDetailView;
         _navigationState = navigationState;
@@ -51,23 +48,15 @@ public partial class AdminShellView : UserControl
     }
 
     private void Dashboard_Click(object sender, System.Windows.RoutedEventArgs e) => ShowDashboard();
-
     private void Settings_Click(object sender, System.Windows.RoutedEventArgs e) => ShowSettings();
-
     private void Members_Click(object sender, System.Windows.RoutedEventArgs e) => ShowMembers();
-
     private void Medals_Click(object sender, System.Windows.RoutedEventArgs e) => ShowMedals();
-
-    private void Recruitment_Click(object sender, System.Windows.RoutedEventArgs e) => ShowRecruitment();
-
     private void RequestHistory_Click(object sender, System.Windows.RoutedEventArgs e) => ShowRequestHistory();
 
     private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         if (System.Windows.Window.GetWindow(this) is MainWindow mainWindow)
-        {
             mainWindow.ReturnFromAdmin();
-        }
     }
 
     private void ShowDashboard()
@@ -96,13 +85,6 @@ public partial class AdminShellView : UserControl
         _viewModel.CurrentSection = "Medals";
         _navigationState.CaptureAdminView("Medals");
         AdminContentHost.Content = _medalsView;
-    }
-
-    private void ShowRecruitment()
-    {
-        _viewModel.CurrentSection = "Recruitment";
-        _navigationState.CaptureAdminView("Recruitment");
-        AdminContentHost.Content = _recruitmentView;
     }
 
     private void ShowRequestHistory()

@@ -142,6 +142,38 @@ public sealed class AdminApiClient
             null,
             ct);
 
+    public async Task<IReadOnlyList<MedalNominationDto>> GetNominationsAsync(CancellationToken ct = default)
+    {
+        return await GetSafeAsync<IReadOnlyList<MedalNominationDto>>(
+            "api/v1/admin/nominations",
+            Array.Empty<MedalNominationDto>(),
+            ct) ?? Array.Empty<MedalNominationDto>();
+    }
+
+    public Task<MedalNominationDto?> SubmitNominationAsync(SubmitMedalNominationRequestDto request, CancellationToken ct = default) =>
+        PostNullableSafeAsync<SubmitMedalNominationRequestDto, MedalNominationDto>(
+            "api/v1/admin/nominations",
+            request,
+            ct);
+
+    public Task<AwardRibbonResultDto?> AwardRibbonAsync(AwardRibbonRequestDto request, CancellationToken ct = default) =>
+        PostNullableSafeAsync<AwardRibbonRequestDto, AwardRibbonResultDto>(
+            "api/v1/admin/medals/award-ribbon",
+            request,
+            ct);
+
+    public Task<MedalNominationDto?> ApproveNominationAsync(Guid id, ReviewMedalNominationRequestDto request, CancellationToken ct = default) =>
+        PostNullableSafeAsync<ReviewMedalNominationRequestDto, MedalNominationDto>(
+            $"api/v1/admin/nominations/{id}/approve",
+            request,
+            ct);
+
+    public Task<MedalNominationDto?> DenyNominationAsync(Guid id, ReviewMedalNominationRequestDto request, CancellationToken ct = default) =>
+        PostNullableSafeAsync<ReviewMedalNominationRequestDto, MedalNominationDto>(
+            $"api/v1/admin/nominations/{id}/deny",
+            request,
+            ct);
+
     private async Task<T?> GetSafeAsync<T>(string endpoint, T? fallback, CancellationToken ct)
     {
         try
@@ -243,6 +275,44 @@ public sealed class AdminApiClient
         {
             _logger.LogError(ex, "POST {Endpoint} failed.", endpoint);
             return fallback;
+        }
+    }
+
+    private async Task<TResponse?> PostNullableSafeAsync<TRequest, TResponse>(
+        string endpoint,
+        TRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var client = _apiClientProvider.CreateClient();
+
+            _logger.LogInformation("Calling POST {Endpoint}", endpoint);
+
+            using var response = await client.PostAsJsonAsync(endpoint, request, ct);
+
+            _logger.LogInformation(
+                "POST {Endpoint} responded with {StatusCode}",
+                endpoint,
+                response.StatusCode);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LogNonSuccess("POST", endpoint, response.StatusCode);
+                return default;
+            }
+
+            return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken: ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("POST {Endpoint} was cancelled.", endpoint);
+            return default;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "POST {Endpoint} failed.", endpoint);
+            return default;
         }
     }
 

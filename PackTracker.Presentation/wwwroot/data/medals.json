@@ -13,7 +13,7 @@
         {
             "name": "Air Forces Cross",
             "description": "Awarded by the House Wolf Warlord or Hand of the Clan to members of the Air Forces for extraordinary heroism not justifying the Distinguished Service Cross.",
-            "image": "../Assets/medals/Air_Force_Cross.png"
+            "image": "../Assets/medals/Air_Forces_Cross.png"
         },
         {
             "name": "Ground Forces Cross",

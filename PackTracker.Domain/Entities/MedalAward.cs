@@ -14,4 +14,5 @@ public class MedalAward
 
     public MedalDefinition MedalDefinition { get; set; } = null!;
     public Profile? Profile { get; set; }
+    public string AwardType { get; set; }
 }
