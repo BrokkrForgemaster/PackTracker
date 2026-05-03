@@ -51,8 +51,8 @@ public sealed class ImportMedalsCommandTests
         var request = new ImportMedalsRequestDto(
             AvailableMedals: new[]
             {
-                new ImportMedalDefinitionDto("Medal of Honor", "Highest military decoration.", null),
-                new ImportMedalDefinitionDto("Silver Star", "Third-highest military decoration.", null)
+                new ImportMedalDefinitionDto("Medal of Honor", "Highest military decoration.", null, null),
+                new ImportMedalDefinitionDto("Silver Star", "Third-highest military decoration.", null,  null),
             },
             AvailableRibbons: Array.Empty<ImportMedalDefinitionDto>(),
             Recipients: new Dictionary<string, IReadOnlyList<string>>

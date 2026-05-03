@@ -5,6 +5,7 @@ public sealed record AdminMedalDefinitionDto(
     string Name,
     string Description,
     string? ImagePath,
+    string? PublicImageUrl,
     string SourceSystem,
     int DisplayOrder,
     int AwardCount,

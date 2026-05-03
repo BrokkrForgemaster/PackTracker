@@ -934,7 +934,9 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Description).HasMaxLength(4000).IsRequired();
             entity.Property(x => x.ImagePath).HasMaxLength(512);
+            entity.Property(x => x.PublicImageUrl).HasMaxLength(1024);
             entity.Property(x => x.SourceSystem).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.AwardType).HasMaxLength(50).IsRequired().HasDefaultValue("Medal");
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
         });
@@ -945,6 +947,7 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
             entity.HasIndex(x => new { x.MedalDefinitionId, x.RecipientName });
             entity.Property(x => x.RecipientName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.SourceSystem).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.AwardType).HasMaxLength(50).IsRequired().HasDefaultValue("Medal");
             entity.Property(x => x.Citation).HasMaxLength(4000);
             entity.Property(x => x.AwardedBy).HasMaxLength(200);
             entity.Property(x => x.ImportedAt).HasDefaultValueSql("now()");

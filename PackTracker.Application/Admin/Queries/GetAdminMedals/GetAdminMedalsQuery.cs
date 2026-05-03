@@ -32,6 +32,7 @@ public sealed class GetAdminMedalsQueryHandler : IRequestHandler<GetAdminMedalsQ
                 x.Name,
                 x.Description,
                 x.ImagePath,
+                x.PublicImageUrl,
                 x.SourceSystem,
                 x.DisplayOrder,
                 x.Awards.Count,

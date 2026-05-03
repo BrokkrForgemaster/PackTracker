@@ -99,17 +99,24 @@ public sealed class AdminApiClient
         ImportMedalsRequestDto request,
         CancellationToken ct = default)
     {
-        return await PostSafeAsync<ImportMedalsRequestDto, ImportMedalsResultDto>(
-            "api/v1/admin/medals/import",
-            request,
-            new ImportMedalsResultDto(
-                0,
-                0,
-                0,
-                0,
-                Array.Empty<string>(),
-                Array.Empty<string>()),
-            ct);
+        using var client = _apiClientProvider.CreateClient();
+
+        _logger.LogInformation("Calling POST api/v1/admin/medals/import");
+
+        using var response = await client.PostAsJsonAsync("api/v1/admin/medals/import", request, ct);
+
+        _logger.LogInformation("POST api/v1/admin/medals/import responded with {StatusCode}", response.StatusCode);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            var preview = body.Length > 300 ? body[..300] : body;
+            throw new InvalidOperationException(
+                $"Import failed ({(int)response.StatusCode} {response.StatusCode}): {preview}");
+        }
+
+        return await response.Content.ReadFromJsonAsync<ImportMedalsResultDto>(cancellationToken: ct)
+            ?? new ImportMedalsResultDto(0, 0, 0, 0, Array.Empty<string>(), Array.Empty<string>());
     }
 
     public async Task<IReadOnlyList<AdminRequestHistoryItemDto>> GetAssistanceRequestHistoryAsync(CancellationToken ct = default)

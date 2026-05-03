@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using PackTracker.Application.Admin.Abstractions;
 using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.BackgroundServices;
-using PackTracker.Infrastructure.Discord;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Security;
 using PackTracker.Infrastructure.Services;

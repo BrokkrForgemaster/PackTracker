@@ -62,6 +62,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                 Name = ribbonName,
                 Description = req.RibbonDescription.Trim(),
                 ImagePath = req.RibbonImagePath,
+                PublicImageUrl = req.RibbonPublicImageUrl,
                 SourceSystem = "PackTracker",
                 DisplayOrder = 0,
                 AwardType = "Ribbon",
@@ -132,7 +133,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                 string.IsNullOrWhiteSpace(req.Citation)
                     ? $"Awarded to:\n{recipientList}"
                     : req.Citation.Trim(),
-                definition.ImagePath,
+                definition.PublicImageUrl,
                 ct);
         }
 

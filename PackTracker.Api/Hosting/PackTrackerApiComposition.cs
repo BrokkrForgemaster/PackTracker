@@ -267,6 +267,13 @@ public static class PackTrackerApiComposition
 
                 CREATE INDEX IF NOT EXISTS ""IX_MedalAwards_ProfileId""
                     ON ""MedalAwards"" (""ProfileId"");
+
+                ALTER TABLE ""MedalDefinitions""
+                    ADD COLUMN IF NOT EXISTS ""AwardType"" character varying(50) NOT NULL DEFAULT 'Medal',
+                    ADD COLUMN IF NOT EXISTS ""PublicImageUrl"" character varying(1024);
+
+                ALTER TABLE ""MedalAwards""
+                    ADD COLUMN IF NOT EXISTS ""AwardType"" character varying(50) NOT NULL DEFAULT 'Medal';
             ", cancellationToken);
             logger.LogInformation("Schema pre-check complete.");
         }

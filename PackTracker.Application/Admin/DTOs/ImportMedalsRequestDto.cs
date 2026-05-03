@@ -29,4 +29,7 @@ public sealed record ImportMedalDefinitionDto(
     string Description,
 
     [property: JsonPropertyName("image")]
-    string? Image);
+    string? Image,
+
+    [property: JsonPropertyName("publicUrl")]
+    string? PublicUrl);

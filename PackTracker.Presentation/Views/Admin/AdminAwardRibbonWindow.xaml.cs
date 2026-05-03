@@ -132,6 +132,7 @@ public partial class AdminAwardRibbonWindow : Window
                 _selectedRibbon.Name,
                 _selectedRibbon.Description,
                 _selectedRibbon.ImagePath,
+                _selectedRibbon.PublicImageUrl,
                 profileIds,
                 CitationBox.Text);
 

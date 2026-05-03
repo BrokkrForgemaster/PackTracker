@@ -99,7 +99,8 @@ public sealed class AdminMedalsViewModel : ViewModelBase
             ImportJson,
             new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true
+                PropertyNameCaseInsensitive = true,
+                AllowTrailingCommas = true
             });
 
         if (request is null)

@@ -16,7 +16,6 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
     private readonly HttpClient _http;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DiscordAnnouncementService> _logger;
-    private readonly HttpClient _httpClient;
 
     #endregion
 
@@ -317,7 +316,7 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
             System.Text.Encoding.UTF8,
             "application/json");
 
-        var response = await _httpClient.SendAsync(request, cancellationToken);
+        var response = await _http.SendAsync(request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
