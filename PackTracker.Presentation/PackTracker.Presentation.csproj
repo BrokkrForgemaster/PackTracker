@@ -154,7 +154,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <NoWarn>CA1305;CA1310;CA1869;CA2201;CA1849</NoWarn>
+    <NoWarn>CA1305;CA1310;CA1869;CA2201;CA1849;CA1866</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
