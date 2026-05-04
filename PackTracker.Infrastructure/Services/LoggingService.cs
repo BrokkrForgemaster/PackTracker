@@ -7,6 +7,7 @@ namespace PackTracker.Infrastructure.Services;
 /// Serilog logging service implementation of <see cref="ILoggingService{T}"/>
 /// </summary>
 /// <typeparam name="T"></typeparam>
+#pragma warning disable CA2254
 public class SerilogLoggingService<T> : ILoggingService<T>
 {
     private readonly ILogger<T> _logger;

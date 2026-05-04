@@ -258,7 +258,7 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
         var embed = new
         {
             title = $"🎖️ {ribbonName}",
-            description = recipientName.Contains("\n")
+            description = recipientName.Contains('\n')
                 ? $"The following members have earned a new House Wolf award."
                 : $"**{recipientName}** has earned a new House Wolf award.",
             color = 0x8B0000,
@@ -266,7 +266,7 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
             {
                 new
                 {
-                    name = recipientName.Contains("\n") ? "Recipients" : "Awarded To",
+                    name = recipientName.Contains('\n') ? "Recipients" : "Awarded To",
                     value = recipientName,
                     inline = false
                 },

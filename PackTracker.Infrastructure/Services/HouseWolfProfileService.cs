@@ -59,7 +59,7 @@ public class HouseWolfProfileService : IHouseWolfProfileService
 
             if (tableName == null)
             {
-                throw new Exception("CharacterProfile table not found in HouseWolf database.");
+                throw new InvalidOperationException("CharacterProfile table not found in HouseWolf database.");
             }
 
             // --- Column Discovery ---
@@ -91,7 +91,7 @@ public class HouseWolfProfileService : IHouseWolfProfileService
 
             if (idColumn == null)
             {
-                throw new Exception(
+                throw new InvalidOperationException(
                     $"Could not find a user/discord ID column in {tableName}. Available: {string.Join(", ", columns)}");
             }
 
@@ -114,7 +114,7 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     var name = reader.GetName(i).ToLowerInvariant();
-                    var val = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    var val = await reader.IsDBNullAsync(i) ? null : reader.GetValue(i);
 
                     switch (name)
                     {
@@ -180,7 +180,7 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                 }
             }
 
-            if (tableName == null) throw new Exception("CharacterProfile table not found.");
+            if (tableName == null) throw new InvalidOperationException("CharacterProfile table not found.");
 
             // --- Column Discovery ---
             var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -210,7 +210,7 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                 string.Equals(c, "subDivision", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(c, "sub_division", StringComparison.OrdinalIgnoreCase));
 
-            if (userIdCol == null) throw new Exception($"Could not find userId column in {tableName}.");
+            if (userIdCol == null) throw new InvalidOperationException($"Could not find userId column in {tableName}.");
 
             // Check if profile exists using discovered columns
             object? existingId = null;
@@ -270,7 +270,7 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                         using var r = await defaultCmd.ExecuteReaderAsync();
                         if (await r.ReadAsync())
                         {
-                            hasDefault = !r.IsDBNull(0);
+                            hasDefault = !await r.IsDBNullAsync(0);
                             dataType = r.GetString(1).ToLowerInvariant();
                         }
                     }
@@ -351,7 +351,7 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                 {
                     using var maxCmd = new NpgsqlCommand($"SELECT MAX(\"{idCol}\") FROM {tableName}", conn);
                     var maxVal = await maxCmd.ExecuteScalarAsync();
-                    int nextId = (maxVal == null || maxVal == DBNull.Value) ? 1 : Convert.ToInt32(maxVal) + 1;
+                    int nextId = (maxVal == null || maxVal == DBNull.Value) ? 1 : Convert.ToInt32(maxVal, System.Globalization.CultureInfo.InvariantCulture) + 1;
                     insertCmd.Parameters.AddWithValue("nextIdInt", nextId);
                 }
 
