@@ -358,16 +358,27 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
             System.Text.Encoding.UTF8,
             "application/json");
 
-        var response = await _http.SendAsync(request, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var response = await _http.SendAsync(request, cancellationToken);
 
-            _logger.LogWarning(
-                "Failed to send Discord announcement. Status: {Status}. Body: {Body}",
-                response.StatusCode,
-                body);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                _logger.LogWarning(
+                    "Failed to send Discord announcement. Status: {Status}. Body: {Body}",
+                    response.StatusCode,
+                    body);
+            }
+            else
+            {
+                _logger.LogInformation("Discord embed announcement sent successfully to channel {ChannelId}.", channelId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Discord embed announcement failed for channel {ChannelId}.", channelId);
         }
     }
 

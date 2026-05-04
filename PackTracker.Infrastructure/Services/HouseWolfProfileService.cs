@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using PackTracker.Application.Interfaces;
@@ -10,33 +11,62 @@ namespace PackTracker.Infrastructure.Services;
 public class HouseWolfProfileService : IHouseWolfProfileService
 {
     private readonly ISettingsService _settingsService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<HouseWolfProfileService> _logger;
 
-    public HouseWolfProfileService(ISettingsService settingsService, ILogger<HouseWolfProfileService> logger)
+    public HouseWolfProfileService(
+        ISettingsService settingsService,
+        IConfiguration configuration,
+        ILogger<HouseWolfProfileService> logger)
     {
         _settingsService = settingsService;
+        _configuration = configuration;
         _logger = logger;
     }
 
-    private string GetConnectionString()
+    private string? GetConnectionString()
     {
-        var s = _settingsService.GetSettings();
-        // Construct connection string for Neon PostgreSQL with error details enabled
-        return
-            $"Host={s.HousewolfApiBaseUrl};Username={s.DatabaseUsername};Password={s.DatabasePassword};Database={s.DatabaseName};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true";
+        // Prefer server-side IConfiguration (environment variables / appsettings)
+        var host = _configuration["HouseWolf:Host"]
+                   ?? _configuration["AppSettings:HousewolfApiBaseUrl"];
+        var db = _configuration["HouseWolf:Database"]
+                 ?? _configuration["AppSettings:databaseName"];
+        var user = _configuration["HouseWolf:Username"]
+                   ?? _configuration["AppSettings:databaseUsername"];
+        var pass = _configuration["HouseWolf:Password"]
+                   ?? _configuration["AppSettings:databasePassword"];
+
+        // Fall back to file-based SettingsService (desktop client)
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(db)
+            || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass))
+        {
+            var s = _settingsService.GetSettings();
+            if (string.IsNullOrWhiteSpace(host)) host = s.HousewolfApiBaseUrl;
+            if (string.IsNullOrWhiteSpace(db)) db = s.DatabaseName;
+            if (string.IsNullOrWhiteSpace(user)) user = s.DatabaseUsername;
+            if (string.IsNullOrWhiteSpace(pass)) pass = s.DatabasePassword;
+        }
+
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            _logger.LogWarning("HouseWolf NeonDB host is not configured. Skipping profile sync.");
+            return null;
+        }
+
+        return $"Host={host};Username={user};Password={pass};Database={db};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true";
     }
 
     public async Task<HouseWolfCharacterProfile?> GetProfileByDiscordIdAsync(string discordId)
     {
         if (string.IsNullOrWhiteSpace(discordId)) return null;
 
-        var settings = _settingsService.GetSettings();
-        if (string.IsNullOrWhiteSpace(settings.HousewolfApiBaseUrl))
+        var connectionString = GetConnectionString();
+        if (connectionString is null)
             return null;
 
         try
         {
-            using var conn = new NpgsqlConnection(GetConnectionString());
+            using var conn = new NpgsqlConnection(connectionString);
             await conn.OpenAsync();
 
             string[] possibleTableNames = { "\"CharacterProfile\"", "character_profile", "profiles", "users" };
@@ -158,9 +188,13 @@ public class HouseWolfProfileService : IHouseWolfProfileService
 
     public async Task UpsertProfileAsync(HouseWolfCharacterProfile profile)
     {
+        var connectionString = GetConnectionString();
+        if (connectionString is null)
+            return;
+
         try
         {
-            using var conn = new NpgsqlConnection(GetConnectionString());
+            using var conn = new NpgsqlConnection(connectionString);
             await conn.OpenAsync();
 
             // --- Table Discovery ---

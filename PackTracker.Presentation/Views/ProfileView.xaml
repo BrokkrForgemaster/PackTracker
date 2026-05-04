@@ -224,18 +224,25 @@
 
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
-                                                <Border Width="110"
-                                                        Height="38"
-                                                        CornerRadius="5"
-                                                        Background="#130F0B"
-                                                        BorderBrush="#4A3420"
-                                                        BorderThickness="1"
-                                                        Padding="4"
-                                                        Margin="5"
-                                                        ToolTip="{Binding Citation}">
-                                                    <Image Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
-                                                           Stretch="Uniform"/>
-                                                </Border>
+                                                <StackPanel Width="180"
+                                                            Margin="6"
+                                                            ToolTip="{Binding Citation}">
+                                                    <Border Height="56"
+                                                            CornerRadius="6"
+                                                            Background="#130F0B"
+                                                            BorderBrush="#4A3420"
+                                                            BorderThickness="1"
+                                                            Padding="6">
+                                                        <Image Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
+                                                               Stretch="Uniform"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Foreground="#E7D6B5"
+                                                               FontSize="9"
+                                                               TextAlignment="Center"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,4,0,0"/>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
