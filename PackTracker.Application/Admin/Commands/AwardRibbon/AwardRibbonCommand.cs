@@ -49,12 +49,14 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                 AlreadyAwarded: true);
         }
 
+#pragma warning disable CA1304, CA1311, CA1862
         var definition = await _db.MedalDefinitions
             .FirstOrDefaultAsync(
                 m =>
                     m.Name.ToLower() == ribbonName.ToLower() &&
                     m.AwardType == "Ribbon",
                 cancellationToken);
+#pragma warning restore CA1304, CA1311, CA1862
 
         if (definition is null)
         {
