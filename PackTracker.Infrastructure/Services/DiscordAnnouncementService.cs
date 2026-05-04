@@ -255,6 +255,10 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
         string? imagePath,
         CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation(
+            "SendRibbonAwardedAsync called. Ribbon={Ribbon}, Recipient={Recipient}, ImagePath={ImagePath}",
+            ribbonName, recipientName, imagePath);
+
         var embed = new
         {
             title = $"🎖️ {ribbonName}",
@@ -301,9 +305,13 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
     {
         // Use the standard authentication path for the bot token
         var token = _configuration["Authentication:Discord:BotToken"] ?? _configuration["Discord:BotToken"];
-        
+
         // Channel ID can come from config, but we prefer the database settings
         var channelId = _configuration["Authentication:Discord:AnnouncementChannelId"] ?? _configuration["Discord:AnnouncementChannelId"];
+
+        _logger.LogInformation(
+            "SendEmbedAsync: BotToken present={HasToken}, ChannelId from config={ChannelId}",
+            !string.IsNullOrWhiteSpace(token), channelId ?? "(null)");
 
         try
         {

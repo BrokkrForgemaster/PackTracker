@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PackTracker.Application.Admin.Abstractions;
 using PackTracker.Application.Admin.DTOs;
 using PackTracker.Application.Interfaces;
@@ -17,31 +18,40 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
     private readonly IAuditLogService _audit;
     private readonly IRbacService _rbac;
     private readonly IDiscordAnnouncementService _discordAnnouncements;
+    private readonly ILogger<AwardRibbonCommandHandler> _logger;
 
     public AwardRibbonCommandHandler(
         IAdminDbContext db,
         IAuthorizationService authorization,
         IAuditLogService audit,
         IRbacService rbac,
-        IDiscordAnnouncementService discordAnnouncements)
+        IDiscordAnnouncementService discordAnnouncements,
+        ILogger<AwardRibbonCommandHandler> logger)
     {
         _db = db;
         _authorization = authorization;
         _audit = audit;
         _rbac = rbac;
         _discordAnnouncements = discordAnnouncements;
+        _logger = logger;
     }
 
     public async Task<AwardRibbonResultDto> Handle(AwardRibbonCommand command, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("AwardRibbon handler started.");
+
         await _authorization.RequirePermissionAsync(AdminPermissions.MedalsManage, cancellationToken);
         var ctx = await _rbac.GetCurrentAdminContextAsync(cancellationToken);
 
         var req = command.Request;
         var ribbonName = req.RibbonName.Trim();
 
+        _logger.LogInformation("AwardRibbon: Ribbon={RibbonName}, Recipients={Count}",
+            ribbonName, req.ProfileIds.Count);
+
         if (req.ProfileIds.Count == 0)
         {
+            _logger.LogWarning("AwardRibbon: No recipients selected.");
             return new AwardRibbonResultDto(
                 Guid.Empty,
                 ribbonName,
@@ -126,18 +136,39 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        _logger.LogInformation(
+            "AwardRibbon: {Created} created, {Skipped} skipped (duplicates).",
+            createdAwards.Count, skippedCount);
+
         if (createdAwards.Count > 0)
         {
             var recipientList = string.Join("\n", createdAwards.Select(x => $"• {x.RecipientName}"));
 
-            await _discordAnnouncements.SendRibbonAwardedAsync(
-                recipientList,
-                ribbonName,
-                string.IsNullOrWhiteSpace(req.Citation)
-                    ? $"Awarded to:\n{recipientList}"
-                    : req.Citation.Trim(),
-                definition.PublicImageUrl,
-                cancellationToken);
+            _logger.LogInformation(
+                "AwardRibbon: Sending Discord announcement for ribbon '{RibbonName}' to {Count} recipient(s). PublicImageUrl={ImageUrl}",
+                ribbonName, createdAwards.Count, definition.PublicImageUrl);
+
+            try
+            {
+                await _discordAnnouncements.SendRibbonAwardedAsync(
+                    recipientList,
+                    ribbonName,
+                    string.IsNullOrWhiteSpace(req.Citation)
+                        ? $"Awarded to:\n{recipientList}"
+                        : req.Citation.Trim(),
+                    definition.PublicImageUrl,
+                    cancellationToken);
+
+                _logger.LogInformation("AwardRibbon: Discord announcement call completed.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "AwardRibbon: Discord announcement failed.");
+            }
+        }
+        else
+        {
+            _logger.LogInformation("AwardRibbon: All recipients already had this ribbon. Skipping Discord announcement.");
         }
 
         await _audit.WriteAsync(new AdminAuditLogEntryDto(

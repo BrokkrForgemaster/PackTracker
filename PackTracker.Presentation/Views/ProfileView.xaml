@@ -158,8 +158,20 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
                                                 <StackPanel Width="90"
-                                                            Margin="8"
-                                                            ToolTip="{Binding Citation}">
+                                                            Margin="8">
+                                                    <StackPanel.Style>
+                                                        <Style TargetType="StackPanel">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Citation}" Value="{x:Null}">
+                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Citation}" Value="">
+                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                            <Setter Property="ToolTip" Value="{Binding Citation}"/>
+                                                        </Style>
+                                                    </StackPanel.Style>
                                                     <Border Width="82"
                                                             Height="96"
                                                             CornerRadius="10"
@@ -225,8 +237,20 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
                                                 <StackPanel Width="180"
-                                                            Margin="6"
-                                                            ToolTip="{Binding Citation}">
+                                                            Margin="6">
+                                                    <StackPanel.Style>
+                                                        <Style TargetType="StackPanel">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Citation}" Value="{x:Null}">
+                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Citation}" Value="">
+                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                            <Setter Property="ToolTip" Value="{Binding Citation}"/>
+                                                        </Style>
+                                                    </StackPanel.Style>
                                                     <Border Height="56"
                                                             CornerRadius="6"
                                                             Background="#130F0B"
