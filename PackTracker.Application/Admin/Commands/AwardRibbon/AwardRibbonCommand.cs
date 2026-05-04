@@ -52,8 +52,8 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
         var definition = await _db.MedalDefinitions
             .FirstOrDefaultAsync(
                 m =>
-                    string.Equals(m.Name, ribbonName, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(m.AwardType, "Ribbon", StringComparison.OrdinalIgnoreCase),
+                    m.Name.ToLower() == ribbonName.ToLower() &&
+                    m.AwardType == "Ribbon",
                 cancellationToken);
 
         if (definition is null)
