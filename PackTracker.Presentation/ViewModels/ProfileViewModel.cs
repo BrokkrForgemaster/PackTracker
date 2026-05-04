@@ -286,15 +286,22 @@ public sealed class ProfileViewModel : ViewModelBase
 
         try
         {
+            // Handle base64 data URIs (e.g. "data:image/png;base64,iVBOR...")
+            if (value.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Loading base64 image (length={Length})", value.Length);
+                return BuildImageFromBase64(value);
+            }
+
             _logger.LogInformation("Attempting to load image from: {Url}", value);
-            
+
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
-            
+
             // OnLoad ensures the image is fully downloaded/decoded before EndInit returns,
             // which is important for freezing and thread safety.
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            
+
             // IgnoreImageCache prevents stale images if the URL is updated on the server.
             bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
 
@@ -318,9 +325,52 @@ public sealed class ProfileViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "FAILED to load profile image from {Url}", value);
-            
+
             // If the showcase image failed and we haven't tried the Discord avatar yet, try it.
             if (value != DiscordAvatarUrl && !string.IsNullOrWhiteSpace(DiscordAvatarUrl))
+            {
+                _logger.LogInformation("Falling back to Discord avatar: {AvatarUrl}", DiscordAvatarUrl);
+                return BuildImageSource(DiscordAvatarUrl);
+            }
+
+            return null;
+        }
+    }
+
+    private ImageSource? BuildImageFromBase64(string dataUri)
+    {
+        try
+        {
+            // Strip the "data:image/...;base64," prefix
+            var commaIndex = dataUri.IndexOf(',');
+            if (commaIndex < 0)
+            {
+                _logger.LogWarning("Invalid data URI: no comma separator found.");
+                return null;
+            }
+
+            var base64 = dataUri[(commaIndex + 1)..];
+            var bytes = Convert.FromBase64String(base64);
+
+            var bitmap = new BitmapImage();
+            using (var ms = new MemoryStream(bytes))
+            {
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.StreamSource = ms;
+                bitmap.EndInit();
+            }
+
+            if (bitmap.CanFreeze)
+                bitmap.Freeze();
+
+            return bitmap;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to decode base64 image data.");
+
+            if (!string.IsNullOrWhiteSpace(DiscordAvatarUrl))
             {
                 _logger.LogInformation("Falling back to Discord avatar: {AvatarUrl}", DiscordAvatarUrl);
                 return BuildImageSource(DiscordAvatarUrl);
