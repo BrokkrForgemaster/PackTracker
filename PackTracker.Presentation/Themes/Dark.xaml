@@ -49,8 +49,6 @@
     <GradientStop Color="#22C2A23A" Offset="1"/>
   </LinearGradientBrush>
 
-  <BitmapImage x:Key="SidebarImage" UriSource="pack://application:,,,/Assets/HWiconnew.png"/>
-
   <!-- Elevation helpers -->
   <DropShadowEffect x:Key="CardShadow"
                     Color="{DynamicResource AccentColor}"

@@ -947,7 +947,7 @@ namespace PackTracker.Presentation.Views
         {
             Icon = LoadPackImage("Assets/housewolf2.ico");
             MainBackgroundImage.Source = LoadPackImage("Assets/Pack_Tracker.png");
-         
+            SidebarThemeImage.Source = ResolveSidebarThemeImage();
         }
 
         private ImageSource? ResolveSidebarThemeImage()
