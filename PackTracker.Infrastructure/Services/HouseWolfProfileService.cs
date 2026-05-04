@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using PackTracker.Application.Interfaces;
 
-namespace PackTracker.Presentation.Services;
+namespace PackTracker.Infrastructure.Services;
 
 public class HouseWolfProfileService : IHouseWolfProfileService
 {
@@ -345,9 +345,6 @@ public class HouseWolfProfileService : IHouseWolfProfileService
 
                 if (insertVals.Contains("@nextIdStr"))
                 {
-                    // Generate a CUID-like or NanoID-like string (using a simple logic for now)
-                    // The error showed 'cmiadld540001l5043l4hi843', which is 25 chars.
-                    // I'll just use a GUID without hyphens for now.
                     insertCmd.Parameters.AddWithValue("nextIdStr", Guid.NewGuid().ToString("n"));
                 }
                 else if (insertVals.Contains("@nextIdInt"))

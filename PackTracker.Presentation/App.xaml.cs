@@ -87,7 +87,6 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IVersionService, VersionService>();
         services.AddSingleton<SignalRChatService>();
         services.AddSingleton<AvatarCacheService>();
-        services.AddSingleton<IHouseWolfProfileService, HouseWolfProfileService>();
         services.AddHttpClient();
         services.AddSingleton<DiscordEventsService>();
         services.AddSingleton<NavigationStateService>();

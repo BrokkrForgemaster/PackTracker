@@ -10,17 +10,20 @@ namespace PackTracker.Infrastructure.Services;
 public sealed class AuthWorkflowService : IAuthWorkflowService
 {
     private readonly IProfileService _profiles;
+    private readonly IHouseWolfProfileService _houseWolf;
     private readonly JwtTokenService _jwt;
     private readonly AppDbContext _db;
     private readonly ILogger<AuthWorkflowService> _logger;
 
     public AuthWorkflowService(
         IProfileService profiles,
+        IHouseWolfProfileService houseWolf,
         JwtTokenService jwt,
         AppDbContext db,
         ILogger<AuthWorkflowService> logger)
     {
         _profiles = profiles;
+        _houseWolf = houseWolf;
         _jwt = jwt;
         _db = db;
         _logger = logger;
@@ -49,6 +52,36 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
 
         profile.DiscordDisplayName = request.DisplayName ?? profile.DiscordDisplayName;
         profile.Discriminator = request.Discriminator;
+
+        // --- HouseWolf Sync ---
+        try
+        {
+            var hwProfile = await _houseWolf.GetProfileByDiscordIdAsync(request.DiscordId);
+            if (hwProfile != null)
+            {
+                if (!string.IsNullOrWhiteSpace(hwProfile.ImageUrl))
+                    profile.ShowcaseImageUrl = hwProfile.ImageUrl;
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.Bio))
+                    profile.ShowcaseBio = hwProfile.Bio;
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.SubDivision))
+                    profile.ShowcaseEyebrow = hwProfile.SubDivision;
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.Division))
+                    profile.ShowcaseTagline = hwProfile.Division;
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.CharacterName))
+                    profile.DiscordDisplayName = hwProfile.CharacterName;
+                
+                _logger.LogInformation("Profile {DiscordId} synced with HouseWolf data.", request.DiscordId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to sync profile {DiscordId} with HouseWolf during login.", request.DiscordId);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
 
         var (access, refresh, expires) = await _jwt.IssueTokenPairAsync(profile, cancellationToken);

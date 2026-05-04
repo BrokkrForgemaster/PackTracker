@@ -103,6 +103,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(settings);
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IHouseWolfProfileService, HouseWolfProfileService>();
         services.AddScoped<IWikiSyncService, WikiSyncService>();
         services.AddScoped<IDistributedLockService, DatabaseDistributedLockService>();
         services.AddScoped<IDataMaintenanceService, DataMaintenanceService>();

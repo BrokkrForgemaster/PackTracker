@@ -1,0 +1,104 @@
+{
+  "available_ribbons": [
+    {
+      "name": "ASD Mission Ribbon",
+      "description": "Awarded for participation in ASD-designated missions supporting House Wolf operational objectives.",
+      "image": "Assets/ribbons/ASDMissionRibbon.png"
+    },
+    {
+      "name": "1 Year Service Ribbon",
+      "description": "Awarded for one year of honorable service within House Wolf.",
+      "image": "Assets/ribbons/HWSeviceRibbon.png"
+    },
+    {
+      "name": "2 Year Service Ribbon",
+      "description": "Awarded for two years of honorable service within House Wolf.",
+      "image": "Assets/ribbons/HW2YearService.png"
+    },
+    {
+      "name": "3 Year Service Ribbon",
+      "description": "Awarded for three years of dedicated service within House Wolf.",
+      "image": "Assets/ribbons/HW3YearsServiceRibbon.png"
+    },
+    {
+      "name": "4 Year Service Ribbon",
+      "description": "Awarded for four years of continued service and commitment to the organization.",
+      "image": "Assets/ribbons/HW4YearsServiceRibbon.png"
+    },
+    {
+      "name": "5 Year Service Ribbon",
+      "description": "Awarded for five years of distinguished service to House Wolf.",
+      "image": "Assets/ribbons/HW5YearServiceRibbon.png"
+    },
+    {
+      "name": "House Wolf Contributor",
+      "description": "Recognizes members who have contributed to the growth, development, or support of House Wolf.",
+      "image": "Assets/ribbons/HWContributer.png"
+    },
+    {
+      "name": "Discord Booster Ribbon",
+      "description": "Awarded to members who support the House Wolf Discord server through boosting.",
+      "image": "Assets/ribbons/HWDiscordBooster.png"
+    },
+    {
+      "name": "NCO Service Ribbon",
+      "description": "Awarded to Non-Commissioned Officers for leadership and service within House Wolf.",
+      "image": "Assets/ribbons/HWNCORibbon.png"
+    },
+    {
+      "name": "Officer Service Ribbon",
+      "description": "Awarded to Officers for leadership, command responsibility, and organizational impact.",
+      "image": "Assets/ribbons/HWOfficerRibbon.png"
+    },
+    {
+      "name": "Mine or Die Mission Ribbon",
+      "description": "Awarded for participation in smaller-scale or support operations.",
+      "image": "Assets/ribbons/mineordiemissionribbon.png"
+    },
+    {
+      "name": "PackTracker Beta Team",
+      "description": "Awarded to members who participated in testing and development of PackTracker.",
+      "image": "Assets/ribbons/PackTrackerBetaTeam.png"
+    },
+    {
+      "name": "Pyro Service Ribbon",
+      "description": "Awarded for operations conducted in the Pyro system.",
+      "image": "Assets/ribbons/pyroserviceribbon.png"
+    },
+    {
+      "name": "QV Station Intel Mission Ribbon",
+      "description": "Awarded for participation in intelligence and reconnaissance missions.",
+      "image": "Assets/ribbons/QVIntelMissionRibbon.png"
+    },
+    {
+      "name": "Rockbreaker Mission Ribbon",
+      "description": "Awarded for mining and resource extraction missions.",
+      "image": "Assets/ribbons/RockBreakerMissionRibbon.png"
+    },
+    {
+      "name": "Star Citizen Supporter Ribbon",
+      "description": "Awarded to individuals who have demonstrated ongoing support and dedication to the Star Citizen project.",
+      "image": "Assets/ribbons/SCSupporter.png"
+    },
+    {
+      "name": "Stormbreaker Mission Ribbon",
+      "description": "Awarded for participation in high-risk or large-scale operations.",
+      "image": "Assets/ribbons/stormbreakermission.png"
+    },
+    {
+      "name": "Tactical Strike Group Ribbon",
+      "description": "Awarded for coordinated combat operations with tactical strike teams.",
+      "image": "Assets/ribbons/tsgmission.png"
+    },
+    {
+      "name": "Wolf Dragoon Ribbon",
+      "description": "Awarded to elite members demonstrating exceptional combat capability.",
+      "image": "Assets/ribbons/WolfDragoonRibbon.png"
+    },
+    {
+      "name": "Xeno Threat Mission Ribbon",
+      "description": "Awarded for participation in XenoThreat-related operations.",
+      "image": "Assets/ribbons/xenothreatmission.png"
+    }
+  ]
+}

@@ -30,8 +30,10 @@ public class AuthControllerTests
         var jwt = new JwtTokenService(authOptions, db, NullLogger<JwtTokenService>.Instance);
         var logger = NullLogger<AuthController>.Instance;
         var profiles = new Mock<IProfileService>();
+        var houseWolf = new Mock<IHouseWolfProfileService>();
         var authWorkflow = new AuthWorkflowService(
             profiles.Object,
+            houseWolf.Object,
             jwt,
             db,
             NullLogger<AuthWorkflowService>.Instance);

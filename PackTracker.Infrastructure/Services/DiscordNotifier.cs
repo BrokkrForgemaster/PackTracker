@@ -1,46 +1,40 @@
 using System.Net.Http.Json;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
 using PackTracker.Domain.Entities;
-using PackTracker.Infrastructure.Persistence;
 
 namespace PackTracker.Infrastructure.Services;
 
 /// <summary>
 /// Sends operational notifications to Discord using a configured webhook.
 /// </summary>
-public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
+public sealed class DiscordNotifier : IDiscordNotifier
 {
     #region Fields
 
     private readonly HttpClient _http;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<DiscordAnnouncementService> _logger;
-    private readonly AppDbContext _db;
+    private readonly ILogger<DiscordNotifier> _logger;
 
     #endregion
 
     #region Constructor
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DiscordAnnouncementService"/> class.
+    /// Initializes a new instance of the <see cref="DiscordNotifier"/> class.
     /// </summary>
     /// <param name="http">The HTTP client used to send webhook requests.</param>
     /// <param name="configuration">The application configuration.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="db">The database context.</param>
-    public DiscordAnnouncementService(
+    public DiscordNotifier(
         HttpClient http,
         IConfiguration configuration,
-        ILogger<DiscordAnnouncementService> logger,
-        AppDbContext db)
+        ILogger<DiscordNotifier> logger)
     {
         _http = http;
         _configuration = configuration;
         _logger = logger;
-        _db = db;
     }
 
     #endregion
@@ -133,31 +127,6 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
 
     #endregion
 
-    #region Claims
-
-    /// <inheritdoc />
-    public async Task NotifyRequestClaimedAsync(
-        string requestType,
-        string requestLabel,
-        string requesterDisplayName,
-        string claimerDisplayName,
-        Guid requestId)
-    {
-        var payload = new
-        {
-            content =
-                $"🤝 **Request Accepted:** {requestLabel}\n" +
-                $"**Type:** {requestType}\n" +
-                $"**Requested by:** {requesterDisplayName}\n" +
-                $"**Accepted by:** {claimerDisplayName}\n" +
-                $"**Request ID:** {requestId}"
-        };
-
-        await SendWebhookAsync(payload, "RequestClaimed", requestId);
-    }
-
-    #endregion
-
     #region Procurement
 
     /// <inheritdoc />
@@ -245,129 +214,6 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
                 "Discord webhook failed. Event={EventName} RequestId={RequestId}",
                 eventName,
                 requestId);
-        }
-    }
-
-    public async Task SendRibbonAwardedAsync(
-        string recipientName,
-        string ribbonName,
-        string citation,
-        string? imagePath,
-        CancellationToken cancellationToken = default)
-    {
-        var embed = new
-        {
-            title = $"🎖️ {ribbonName}",
-            description = recipientName.Contains("\n")
-                ? $"The following members have earned a new House Wolf award."
-                : $"**{recipientName}** has earned a new House Wolf award.",
-            color = 0x8B0000,
-            fields = new[]
-            {
-                new
-                {
-                    name = recipientName.Contains("\n") ? "Recipients" : "Awarded To",
-                    value = recipientName,
-                    inline = false
-                },
-                new
-                {
-                    name = "Citation",
-                    value = string.IsNullOrWhiteSpace(citation)
-                        ? "*No citation provided.*"
-                        : citation,
-                    inline = false
-                }
-            },
-            thumbnail = string.IsNullOrWhiteSpace(imagePath)
-                ? null
-                : new
-                {
-                    url = imagePath
-                },
-            footer = new
-            {
-                text = "House Wolf • PackTracker • Run with the Pack"
-            },
-            timestamp = DateTimeOffset.UtcNow
-        };
-
-        await SendEmbedAsync(embed, cancellationToken);
-    }
-
-    private async Task SendEmbedAsync(
-        object embed,
-        CancellationToken cancellationToken = default)
-    {
-        // Use the standard authentication path for the bot token
-        var token = _configuration["Authentication:Discord:BotToken"] ?? _configuration["Discord:BotToken"];
-        
-        // Channel ID can come from config, but we prefer the database settings
-        var channelId = _configuration["Authentication:Discord:AnnouncementChannelId"] ?? _configuration["Discord:AnnouncementChannelId"];
-
-        try
-        {
-            var dbSettings = await _db.DiscordIntegrationSettings
-                .OrderByDescending(x => x.UpdatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (dbSettings != null && dbSettings.MedalAnnouncementsEnabled && !string.IsNullOrWhiteSpace(dbSettings.MedalAnnouncementsChannelId))
-            {
-                channelId = dbSettings.MedalAnnouncementsChannelId;
-                _logger.LogInformation("Using Discord announcement channel ID from database: {ChannelId}", channelId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to load Discord integration settings from database. Falling back to configuration.");
-        }
-
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            _logger.LogWarning(
-                "Discord announcement skipped. Missing bot token (Authentication:Discord:BotToken).");
-
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(channelId))
-        {
-            _logger.LogWarning(
-                "Discord announcement skipped. Missing announcement channel ID.");
-
-            return;
-        }
-
-        var payload = new
-        {
-            embeds = new[]
-            {
-                embed
-            }
-        };
-
-        using var request = new HttpRequestMessage(
-            HttpMethod.Post,
-            $"https://discord.com/api/v10/channels/{channelId}/messages");
-
-        request.Headers.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bot", token);
-
-        request.Content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(payload),
-            System.Text.Encoding.UTF8,
-            "application/json");
-
-        var response = await _http.SendAsync(request, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            _logger.LogWarning(
-                "Failed to send Discord announcement. Status: {Status}. Body: {Body}",
-                response.StatusCode,
-                body);
         }
     }
 

@@ -1,6 +1,4 @@
-using System.Threading.Tasks;
-
-namespace PackTracker.Presentation.Services;
+namespace PackTracker.Application.Interfaces;
 
 public interface IHouseWolfProfileService
 {

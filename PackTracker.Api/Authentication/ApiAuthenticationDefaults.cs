@@ -14,8 +14,7 @@ public static class ApiAuthenticationDefaults
     #endregion
     
     #region Methods
-    
-    /// <summary>
+    /// <summary name="SelectScheme">
     /// Selects the appropriate authentication scheme based on the incoming HTTP request context.
     /// </summary>
     /// <param name="context">

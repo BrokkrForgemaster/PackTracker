@@ -15,7 +15,6 @@ namespace PackTracker.Presentation.ViewModels;
 public sealed class ProfileViewModel : ViewModelBase
 {
     private readonly IApiClientProvider _apiClientProvider;
-    private readonly IHouseWolfProfileService _houseWolfProfileService;
     private readonly ILogger<ProfileViewModel> _logger;
 
     private Guid _profileId;
@@ -39,11 +38,9 @@ public sealed class ProfileViewModel : ViewModelBase
 
     public ProfileViewModel(
         IApiClientProvider apiClientProvider,
-        IHouseWolfProfileService houseWolfProfileService,
         ILogger<ProfileViewModel> logger)
     {
         _apiClientProvider = apiClientProvider;
-        _houseWolfProfileService = houseWolfProfileService;
         _logger = logger;
 
         OpenHouseWolfWebsiteCommand = new RelayCommand(OpenHouseWolfWebsite);
@@ -182,48 +179,9 @@ public sealed class ProfileViewModel : ViewModelBase
 
             Apply(dto);
 
-            try
-            {
-                var hwProfile = await _houseWolfProfileService.GetProfileByDiscordIdAsync(dto.DiscordId); ;
-
-                if (hwProfile is not null)
-                {
-                    if (!string.IsNullOrWhiteSpace(hwProfile.ImageUrl))
-                    {
-                        var houseWolfImage = NormalizeUrl(hwProfile.ImageUrl);
-
-                        if (!string.IsNullOrWhiteSpace(houseWolfImage))
-                            ShowcaseImageUrl = houseWolfImage;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(hwProfile.SubDivision))
-                        ShowcaseEyebrow = hwProfile.SubDivision;
-
-                    if (!string.IsNullOrWhiteSpace(hwProfile.Bio))
-                        ShowcaseBio = hwProfile.Bio;
-
-                    if (!string.IsNullOrWhiteSpace(hwProfile.CharacterName))
-                        DisplayName = hwProfile.CharacterName;
-
-                    if (!string.IsNullOrWhiteSpace(hwProfile.Division))
-                        DiscordDivision = hwProfile.Division;
-
-                    RefreshPreviewImage();
-
-                    StatusMessage = dto.Medals.Count == 0
-                        ? "Profile synced with housewolf.co."
-                        : $"Profile synced with housewolf.co. {dto.Medals.Count} award(s) on record.";
-                }
-                else
-                {
-                    StatusMessage = "Profile loaded. No HouseWolf character profile found.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "HouseWolf database connection failed.");
-                StatusMessage = "Profile loaded locally. (HouseWolf Offline)";
-            }
+            StatusMessage = dto.Medals.Count == 0
+                ? "Profile synchronized."
+                : $"Profile synchronized. {dto.Medals.Count} award(s) on record.";
         }
         catch (Exception ex)
         {
@@ -281,6 +239,7 @@ public sealed class ProfileViewModel : ViewModelBase
             ? ShowcaseImageUrl
             : DiscordAvatarUrl;
 
+        _logger.LogInformation("Refreshing preview image. Preferred: {Preferred}", preferredImage);
         ShowcaseImageSource = BuildImageSource(preferredImage);
     }
 
@@ -291,85 +250,84 @@ public sealed class ProfileViewModel : ViewModelBase
 
         url = url.Trim();
 
+        // 1. Full URLs
         if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             return url;
 
+        // 2. Data URIs
         if (url.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
             return url;
 
-        if (File.Exists(url))
+        // 3. Local Files (only if we are sure it's a path)
+        if (url.Contains(":\\") || url.StartsWith("\\\\") || (url.Contains("/") && File.Exists(url)))
             return url;
 
-        if (url.StartsWith("/"))
-        {
-            const string baseUrl = "https://www.housewolf.co";
-            return $"{baseUrl.TrimEnd('/')}/{url.TrimStart('/')}";
-        }
+        const string host = "housewolf.co";
+        const string baseUrl = "https://www.housewolf.co";
 
-        return url;
+        // 4. Domain-only URLs
+        if (url.StartsWith(host, StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("www." + host, StringComparison.OrdinalIgnoreCase))
+            return $"https://{url.TrimStart('/')}";
+
+        // 5. Relative paths for HouseWolf
+        var path = url.TrimStart('/');
+        return $"{baseUrl}/{path}";
     }
 
     private ImageSource? BuildImageSource(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
+            _logger.LogWarning("Cannot build image source: URL is empty.");
             return null;
+        }
 
         try
         {
-            if (value.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
-            {
-                var commaIndex = value.IndexOf(',');
-                if (commaIndex < 0)
-                    return null;
-
-                var base64 = value[(commaIndex + 1)..];
-                var bytes = Convert.FromBase64String(base64);
-
-                using var stream = new MemoryStream(bytes);
-                var image = new BitmapImage();
-
-                image.BeginInit();
-                image.CacheOption = BitmapCacheOption.OnLoad;
-                image.StreamSource = stream;
-                image.EndInit();
-                image.Freeze();
-
-                return image;
-            }
-
-            if (File.Exists(value))
-            {
-                var image = new BitmapImage();
-
-                image.BeginInit();
-                image.CacheOption = BitmapCacheOption.OnLoad;
-                image.UriSource = new Uri(value, UriKind.Absolute);
-                image.EndInit();
-                image.Freeze();
-
-                return image;
-            }
+            _logger.LogInformation("Attempting to load image from: {Url}", value);
+            
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            
+            // OnLoad ensures the image is fully downloaded/decoded before EndInit returns,
+            // which is important for freezing and thread safety.
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            
+            // IgnoreImageCache prevents stale images if the URL is updated on the server.
+            bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
 
             if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
             {
-                var image = new BitmapImage();
-
-                image.BeginInit();
-                image.CacheOption = BitmapCacheOption.OnLoad;
-                image.UriSource = uri;
-                image.EndInit();
-                image.Freeze();
-
-                return image;
+                bitmap.UriSource = uri;
             }
+            else
+            {
+                // Fallback for relative paths that slipped through
+                bitmap.UriSource = new Uri(value, UriKind.RelativeOrAbsolute);
+            }
+
+            bitmap.EndInit();
+
+            if (bitmap.CanFreeze)
+                bitmap.Freeze();
+
+            return bitmap;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to build profile image source.");
-        }
+            _logger.LogError(ex, "FAILED to load profile image from {Url}", value);
+            
+            // If the showcase image failed and we haven't tried the Discord avatar yet, try it.
+            if (value != DiscordAvatarUrl && !string.IsNullOrWhiteSpace(DiscordAvatarUrl))
+            {
+                _logger.LogInformation("Falling back to Discord avatar: {AvatarUrl}", DiscordAvatarUrl);
+                return BuildImageSource(DiscordAvatarUrl);
+            }
 
-        return null;
+            return null;
+        }
     }
 
     private void OpenHouseWolfWebsite()
