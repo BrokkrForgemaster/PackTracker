@@ -20,7 +20,6 @@ public class ProfilesController : ControllerBase
 
     private readonly IProfileService _profiles;
     private readonly IApplicationDbContext _db;
-    private readonly IHouseWolfProfileService _houseWolf;
     private readonly ILogger<ProfilesController> _logger;
 
     #endregion
@@ -30,12 +29,10 @@ public class ProfilesController : ControllerBase
     public ProfilesController(
         IProfileService profiles,
         IApplicationDbContext db,
-        IHouseWolfProfileService houseWolf,
         ILogger<ProfilesController> logger)
     {
         _profiles = profiles;
         _db = db;
-        _houseWolf = houseWolf;
         _logger = logger;
     }
 
@@ -64,56 +61,6 @@ public class ProfilesController : ControllerBase
         {
             _logger.LogWarning("Profile not found for DiscordId={DiscordId}", discordId);
             return NotFound();
-        }
-
-        // Sync with HouseWolf profile data (image, bio, division, etc.)
-        try
-        {
-            var hwProfile = await _houseWolf.GetProfileByDiscordIdAsync(discordId);
-            if (hwProfile != null)
-            {
-                var changed = false;
-
-                if (!string.IsNullOrWhiteSpace(hwProfile.ImageUrl) && profile.ShowcaseImageUrl != hwProfile.ImageUrl)
-                {
-                    profile.ShowcaseImageUrl = hwProfile.ImageUrl;
-                    changed = true;
-                }
-
-                if (!string.IsNullOrWhiteSpace(hwProfile.Bio) && profile.ShowcaseBio != hwProfile.Bio)
-                {
-                    profile.ShowcaseBio = hwProfile.Bio;
-                    changed = true;
-                }
-
-                if (!string.IsNullOrWhiteSpace(hwProfile.SubDivision) && profile.ShowcaseEyebrow != hwProfile.SubDivision)
-                {
-                    profile.ShowcaseEyebrow = hwProfile.SubDivision;
-                    changed = true;
-                }
-
-                if (!string.IsNullOrWhiteSpace(hwProfile.Division) && profile.ShowcaseTagline != hwProfile.Division)
-                {
-                    profile.ShowcaseTagline = hwProfile.Division;
-                    changed = true;
-                }
-
-                if (!string.IsNullOrWhiteSpace(hwProfile.CharacterName) && profile.DiscordDisplayName != hwProfile.CharacterName)
-                {
-                    profile.DiscordDisplayName = hwProfile.CharacterName;
-                    changed = true;
-                }
-
-                if (changed)
-                {
-                    await _db.SaveChangesAsync(ct);
-                    _logger.LogInformation("Synced HouseWolf profile data for DiscordId={DiscordId}", discordId);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to sync HouseWolf profile for DiscordId={DiscordId}. Continuing with existing data.", discordId);
         }
 
         // Fall back to JWT claims if the DB profile hasn't been synced yet.
