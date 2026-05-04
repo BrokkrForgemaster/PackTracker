@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -836,11 +837,11 @@ namespace PackTracker.Presentation.Views
             });
         }
 
-        private (string? DisplayName, string? Username) ExtractJwtIdentity(string? token)
+        private static (string? DiscordId, string? DisplayName, string? Username) ExtractJwtIdentity(string? token)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
-                return (null, null);
+                return (null, null, null);
             }
 
             try
@@ -848,8 +849,13 @@ namespace PackTracker.Presentation.Views
                 var handler = new JwtSecurityTokenHandler();
                 var jwt = handler.ReadJwtToken(token);
 
+                string? discordId =
+                    jwt.Claims.FirstOrDefault(c => c.Type == "sub")?.Value ??
+                    jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
                 string? displayName =
                     jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value ??
+                    jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ??
                     jwt.Claims.FirstOrDefault(c => c.Type == "unique_name")?.Value ??
                     jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
 
@@ -858,11 +864,11 @@ namespace PackTracker.Presentation.Views
                     jwt.Claims.FirstOrDefault(c => c.Type == "username")?.Value ??
                     jwt.Claims.FirstOrDefault(c => c.Type == "unique_name")?.Value;
 
-                return (displayName?.Trim(), username?.Trim());
+                return (discordId?.Trim(), displayName?.Trim(), username?.Trim());
             }
             catch
             {
-                return (null, null);
+                return (null, null, null);
             }
         }
 
