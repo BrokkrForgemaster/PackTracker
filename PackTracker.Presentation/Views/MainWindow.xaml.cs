@@ -849,22 +849,39 @@ namespace PackTracker.Presentation.Views
                 var handler = new JwtSecurityTokenHandler();
                 var jwt = handler.ReadJwtToken(token);
 
-                string? discordId =
-                    jwt.Claims.FirstOrDefault(c => c.Type == "sub")?.Value ??
-                    jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                string? GetClaim(params string[] claimTypes)
+                {
+                    return jwt.Claims
+                        .FirstOrDefault(c => claimTypes.Contains(c.Type, StringComparer.OrdinalIgnoreCase))
+                        ?.Value
+                        ?.Trim();
+                }
 
-                string? displayName =
-                    jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value ??
-                    jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ??
-                    jwt.Claims.FirstOrDefault(c => c.Type == "unique_name")?.Value ??
-                    jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value;
+                var discordId = GetClaim(
+                    "sub",
+                    "discord_id",
+                    "discordId",
+                    ClaimTypes.NameIdentifier);
 
-                string? username =
-                    jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value ??
-                    jwt.Claims.FirstOrDefault(c => c.Type == "username")?.Value ??
-                    jwt.Claims.FirstOrDefault(c => c.Type == "unique_name")?.Value;
+                var displayName = GetClaim(
+                    "name",
+                    "display_name",
+                    "displayName",
+                    "nickname",
+                    "unique_name",
+                    "preferred_username",
+                    ClaimTypes.Name);
 
-                return (discordId?.Trim(), displayName?.Trim(), username?.Trim());
+                var username = GetClaim(
+                    "username",
+                    "preferred_username",
+                    "unique_name",
+                    "name",
+                    ClaimTypes.Name,
+                    ClaimTypes.GivenName,
+                    ClaimTypes.Upn);
+
+                return (discordId, displayName, username);
             }
             catch
             {
