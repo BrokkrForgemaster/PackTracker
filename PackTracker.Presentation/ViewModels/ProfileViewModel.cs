@@ -260,7 +260,7 @@ public sealed class ProfileViewModel : ViewModelBase
             return url;
 
         // 3. Local Files (only if we are sure it's a path)
-        if (url.Contains(":\\") || url.StartsWith("\\\\") || (url.Contains("/") && File.Exists(url)))
+        if (url.Contains(":\\") || url.StartsWith("\\\\") || (url.Contains('/') && File.Exists(url)))
             return url;
 
         const string host = "housewolf.co";
