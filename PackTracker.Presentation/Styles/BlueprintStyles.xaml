@@ -30,14 +30,14 @@
          SEARCH BOX
     ══════════════════════════════════════ -->
     <Style x:Key="SearchBoxStyle" TargetType="TextBox">
-        <Setter Property="Background"               Value="#1A1510"/>
-        <Setter Property="Foreground"               Value="#E8D5B0"/>
-        <Setter Property="CaretBrush"               Value="#C8922A"/>
-        <Setter Property="BorderBrush"              Value="#3D2A1A"/>
-        <Setter Property="BorderThickness"          Value="1"/>
-        <Setter Property="FontSize"                 Value="13"/>
-        <Setter Property="Padding"                  Value="10,8"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="#1A1510" />
+        <Setter Property="Foreground" Value="#E8D5B0" />
+        <Setter Property="CaretBrush" Value="#C8922A" />
+        <Setter Property="BorderBrush" Value="#3D2A1A" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -55,10 +55,12 @@
                                        IsHitTestVisible="False">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource TemplatedParent}}" Value="">
-                                                <Setter Property="Visibility" Value="Visible"/>
+                                            <DataTrigger
+                                                Binding="{Binding Text, RelativeSource={RelativeSource TemplatedParent}}"
+                                                Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -66,12 +68,12 @@
                             </TextBlock>
                             <ScrollViewer x:Name="PART_ContentHost"
                                           Margin="{TemplateBinding Padding}"
-                                          VerticalAlignment="Center"/>
+                                          VerticalAlignment="Center" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter Property="BorderBrush" Value="#8B1A0F"/>
+                            <Setter Property="BorderBrush" Value="#8B1A0F" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -84,12 +86,12 @@
          BLUEPRINT LIST BOX ITEM
     ══════════════════════════════════════ -->
     <Style x:Key="BlueprintListItemStyle" TargetType="ListBoxItem">
-        <Setter Property="Background"      Value="Transparent"/>
-        <Setter Property="BorderBrush"     Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding"         Value="0"/>
-        <Setter Property="Cursor"          Value="Hand"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
@@ -98,16 +100,16 @@
                             BorderBrush="Transparent"
                             BorderThickness="2,0,0,0"
                             Padding="12,9">
-                        <ContentPresenter HorizontalAlignment="Stretch"/>
+                        <ContentPresenter HorizontalAlignment="Stretch" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="ItemBorder" Property="Background"  Value="#1A1510"/>
-                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#3D2A1A"/>
+                            <Setter TargetName="ItemBorder" Property="Background" Value="#1A1510" />
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#3D2A1A" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ItemBorder" Property="Background"  Value="#251C14"/>
-                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#8B1A0F"/>
+                            <Setter TargetName="ItemBorder" Property="Background" Value="#251C14" />
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#8B1A0F" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -120,12 +122,12 @@
          BLUEPRINT LIST BOX CONTAINER
     ══════════════════════════════════════ -->
     <Style x:Key="BlueprintListStyle" TargetType="ListBox">
-        <Setter Property="Background"      Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding"         Value="0"/>
-        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
-        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"   Value="Auto"/>
-        <Setter Property="ItemContainerStyle" Value="{StaticResource BlueprintListItemStyle}"/>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource BlueprintListItemStyle}" />
     </Style>
 
 
@@ -133,19 +135,19 @@
          FINAL MODIFIERS SECTION CARD
     ══════════════════════════════════════ -->
     <Style x:Key="ModifierSectionStyle" TargetType="Border">
-        <Setter Property="Background" Value="#12100E"/>
+        <Setter Property="Background" Value="#12100E" />
         <Setter Property="BorderBrush">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#8B1A0F" Offset="0"/>
-                    <GradientStop Color="#3D2A1A" Offset="0.4"/>
-                    <GradientStop Color="#3D2A1A" Offset="1"/>
+                    <GradientStop Color="#8B1A0F" Offset="0" />
+                    <GradientStop Color="#3D2A1A" Offset="0.4" />
+                    <GradientStop Color="#3D2A1A" Offset="1" />
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="BorderThickness" Value="2,1,1,1"/>
-        <Setter Property="CornerRadius"    Value="8"/>
-        <Setter Property="Padding"         Value="20,16"/>
+        <Setter Property="BorderThickness" Value="2,1,1,1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="20,16" />
     </Style>
 
 
@@ -153,37 +155,57 @@
          MODIFIER ROW
     ══════════════════════════════════════ -->
     <Style x:Key="ModifierRowStyle" TargetType="Border">
-        <Setter Property="Background"      Value="#1A1510"/>
-        <Setter Property="BorderBrush"     Value="#2A2018"/>
-        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="Padding"         Value="14,10"/>
-        <Setter Property="Margin"          Value="0,0,0,2"/>
-        <Setter Property="CornerRadius"    Value="4"/>
+        <Setter Property="Background" Value="#1A1510" />
+        <Setter Property="BorderBrush" Value="#2A2018" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="CornerRadius" Value="4" />
     </Style>
 
 
-    <!-- ══════════════════════════════════════
-         THIN SCROLLBAR (keyed — no implicit override)
-    ══════════════════════════════════════ -->
-    <Style x:Key="ThinScrollBarStyle" TargetType="ScrollBar">
-        <Setter Property="Width"      Value="1"/>
-        <Setter Property="Background" Value="Transparent"/>
+    <Style x:Key="UltraThinScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="ScrollBar">
-                    <Grid Background="Transparent">
-                        <Track x:Name="PART_Track" IsDirectionReversed="True">
-                            <Track.Thumb>
-                                <Thumb>
-                                    <Thumb.Template>
-                                        <ControlTemplate TargetType="Thumb">
-                                            <Border Background="#3D2A1A" CornerRadius="3"/>
-                                        </ControlTemplate>
-                                    </Thumb.Template>
-                                </Thumb>
-                            </Track.Thumb>
-                        </Track>
+                <ControlTemplate TargetType="{x:Type ScrollViewer}">
+                    <Grid x:Name="ScrollViewerRoot"
+                          Background="#01000000">
+
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                Margin="{TemplateBinding Padding}"
+                                                CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                Content="{TemplateBinding Content}"
+                                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+
+                        <ScrollBar x:Name="PART_VerticalScrollBar"
+                                   Width="4"
+                                   Minimum="0"
+                                   Maximum="{TemplateBinding ScrollableHeight}"
+                                   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}"
+                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Stretch"
+                                   Opacity="0"
+                                   Style="{StaticResource UltraThinScrollBarStyle}"
+                                   Panel.ZIndex="10" />
                     </Grid>
+
+                    <!-- 🔥 THIS IS WHERE IT GOES -->
+                    <ControlTemplate.Triggers>
+                        <Trigger SourceName="ScrollViewerRoot"
+                                 Property="IsMouseOver"
+                                 Value="True">
+                            <Setter TargetName="PART_VerticalScrollBar"
+                                    Property="Opacity"
+                                    Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -201,7 +223,7 @@
                         <!-- Track background -->
                         <Border Height="4" CornerRadius="2"
                                 Background="#2A1E12"
-                                VerticalAlignment="Center"/>
+                                VerticalAlignment="Center" />
                         <Track x:Name="PART_Track">
                             <!-- Filled portion (left of thumb) -->
                             <Track.DecreaseRepeatButton>
@@ -211,8 +233,8 @@
                                             <Border Height="4" CornerRadius="2">
                                                 <Border.Background>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#8B1A0F" Offset="0"/>
-                                                        <GradientStop Color="#C8922A" Offset="1"/>
+                                                        <GradientStop Color="#8B1A0F" Offset="0" />
+                                                        <GradientStop Color="#C8922A" Offset="1" />
                                                     </LinearGradientBrush>
                                                 </Border.Background>
                                             </Border>
@@ -225,7 +247,7 @@
                                 <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
                                     <RepeatButton.Template>
                                         <ControlTemplate TargetType="RepeatButton">
-                                            <Border Background="Transparent"/>
+                                            <Border Background="Transparent" />
                                         </ControlTemplate>
                                     </RepeatButton.Template>
                                 </RepeatButton>
@@ -243,7 +265,7 @@
                                                     <DropShadowEffect Color="#C8922A"
                                                                       BlurRadius="6"
                                                                       ShadowDepth="0"
-                                                                      Opacity="0.7"/>
+                                                                      Opacity="0.7" />
                                                 </Ellipse.Effect>
                                             </Ellipse>
                                         </ControlTemplate>
@@ -262,9 +284,9 @@
          COMPONENT STEPPER BUTTONS  (− / +)
     ══════════════════════════════════════ -->
     <Style x:Key="StepperButtonStyle" TargetType="Button">
-        <Setter Property="Width"  Value="24"/>
-        <Setter Property="Height" Value="24"/>
-        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -274,15 +296,15 @@
                             BorderThickness="1"
                             CornerRadius="4">
                         <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"/>
+                                          VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background"  Value="#3D2A1A"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="#8B1A0F"/>
+                            <Setter TargetName="Bd" Property="Background" Value="#3D2A1A" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#8B1A0F" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#8B1A0F"/>
+                            <Setter TargetName="Bd" Property="Background" Value="#8B1A0F" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -295,16 +317,16 @@
          COMPONENT QUANTITY TEXTBOX
     ══════════════════════════════════════ -->
     <Style x:Key="QuantityBoxStyle" TargetType="TextBox">
-        <Setter Property="Foreground"               Value="#C8922A"/>
-        <Setter Property="BorderBrush"              Value="#3D2A1A"/>
-        <Setter Property="BorderThickness"          Value="1"/>
-        <Setter Property="Width"                    Value="54"/>
-        <Setter Property="Height"                   Value="26"/>
-        <Setter Property="TextAlignment"            Value="Center"/>
-        <Setter Property="FontWeight"               Value="Bold"/>
-        <Setter Property="FontSize"                 Value="13"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="CaretBrush"               Value="#C8922A"/>
+        <Setter Property="Foreground" Value="#C8922A" />
+        <Setter Property="BorderBrush" Value="#3D2A1A" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Width" Value="54" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="CaretBrush" Value="#C8922A" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -314,11 +336,11 @@
                             CornerRadius="4">
                         <ScrollViewer x:Name="PART_ContentHost"
                                       VerticalAlignment="Center"
-                                      HorizontalAlignment="Center"/>
+                                      HorizontalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter Property="BorderBrush" Value="#C8922A"/>
+                            <Setter Property="BorderBrush" Value="#C8922A" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

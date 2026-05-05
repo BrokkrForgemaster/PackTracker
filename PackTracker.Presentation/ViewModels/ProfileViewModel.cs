@@ -31,10 +31,16 @@ public sealed class ProfileViewModel : ViewModelBase
     private string _statusMessage = "Load your profile to begin.";
     private bool _isBusy;
 
-    public ObservableCollection<CurrentProfileMedalDto> Medals { get; } = new();
-    public ObservableCollection<CurrentProfileMedalDto> DisplayMedals { get; } = new();
-    public ObservableCollection<CurrentProfileMedalDto> DisplayRibbons { get; } = new();
+    private CurrentProfileMedalDto? _selectedAward;
+    private bool _isCitationOpen;
+
+    public ObservableCollection<CurrentProfileMedalDto> Medals { get; set; } = new();
+    public ObservableCollection<CurrentProfileMedalDto> DisplayMedals { get; set; } = new();
+    public ObservableCollection<CurrentProfileMedalDto> DisplayRibbons { get; set; } = new();
+
     public ICommand OpenHouseWolfWebsiteCommand { get; }
+    public ICommand OpenCitationCommand { get; }
+    public ICommand CloseCitationCommand { get; }
 
     public ProfileViewModel(
         IApiClientProvider apiClientProvider,
@@ -44,6 +50,21 @@ public sealed class ProfileViewModel : ViewModelBase
         _logger = logger;
 
         OpenHouseWolfWebsiteCommand = new RelayCommand(OpenHouseWolfWebsite);
+
+        OpenCitationCommand = new RelayCommand<CurrentProfileMedalDto>(award =>
+        {
+            if (award is null)
+                return;
+
+            SelectedAward = award;
+            IsCitationOpen = true;
+        });
+
+        CloseCitationCommand = new RelayCommand(() =>
+        {
+            IsCitationOpen = false;
+            SelectedAward = null;
+        });
     }
 
     public Guid ProfileId
@@ -150,6 +171,35 @@ public sealed class ProfileViewModel : ViewModelBase
         set => SetProperty(ref _isBusy, value);
     }
 
+    public CurrentProfileMedalDto? SelectedAward
+    {
+        get => _selectedAward;
+        set
+        {
+            if (SetProperty(ref _selectedAward, value))
+            {
+                OnPropertyChanged(nameof(SelectedAwardName));
+                OnPropertyChanged(nameof(SelectedAwardCitation));
+            }
+        }
+    }
+
+    public bool IsCitationOpen
+    {
+        get => _isCitationOpen;
+        set => SetProperty(ref _isCitationOpen, value);
+    }
+
+    public string SelectedAwardName =>
+        string.IsNullOrWhiteSpace(SelectedAward?.Name)
+            ? "House Wolf Award"
+            : SelectedAward.Name;
+
+    public string SelectedAwardCitation =>
+        string.IsNullOrWhiteSpace(SelectedAward?.Citation)
+            ? "No citation has been recorded for this award."
+            : SelectedAward.Citation.Trim();
+
     public string PreviewDisplayName =>
         !string.IsNullOrWhiteSpace(DisplayName) ? DisplayName : Username;
 
@@ -217,13 +267,9 @@ public sealed class ProfileViewModel : ViewModelBase
             Medals.Add(award);
 
             if (string.Equals(award.AwardType, "Ribbon", StringComparison.OrdinalIgnoreCase))
-            {
                 DisplayRibbons.Add(award);
-            }
             else
-            {
                 DisplayMedals.Add(award);
-            }
         }
 
         RefreshPreviewImage();
@@ -250,28 +296,25 @@ public sealed class ProfileViewModel : ViewModelBase
 
         url = url.Trim();
 
-        // 1. Full URLs
         if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             return url;
 
-        // 2. Data URIs
         if (url.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
             return url;
 
-        // 3. Local Files (only if we are sure it's a path)
-        if (url.Contains(":\\") || url.StartsWith("\\\\") || (url.Contains('/') && File.Exists(url)))
+        if (url.Contains(":\\", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("\\\\", StringComparison.OrdinalIgnoreCase) ||
+            (url.Contains('/') && File.Exists(url)))
             return url;
 
         const string host = "housewolf.co";
         const string baseUrl = "https://www.housewolf.co";
 
-        // 4. Domain-only URLs
         if (url.StartsWith(host, StringComparison.OrdinalIgnoreCase) ||
             url.StartsWith("www." + host, StringComparison.OrdinalIgnoreCase))
             return $"https://{url.TrimStart('/')}";
 
-        // 5. Relative paths for HouseWolf
         var path = url.TrimStart('/');
         return $"{baseUrl}/{path}";
     }
@@ -286,34 +329,22 @@ public sealed class ProfileViewModel : ViewModelBase
 
         try
         {
-            // Handle base64 data URIs (e.g. "data:image/png;base64,iVBOR...")
             if (value.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogInformation("Loading base64 image (length={Length})", value.Length);
+                _logger.LogInformation("Loading base64 image. Length={Length}", value.Length);
                 return BuildImageFromBase64(value);
             }
 
-            _logger.LogInformation("Attempting to load image from: {Url}", value);
+            _logger.LogInformation("Attempting to load image from {Url}", value);
 
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
-
-            // OnLoad ensures the image is fully downloaded/decoded before EndInit returns,
-            // which is important for freezing and thread safety.
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
-
-            // IgnoreImageCache prevents stale images if the URL is updated on the server.
             bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
 
-            if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
-            {
-                bitmap.UriSource = uri;
-            }
-            else
-            {
-                // Fallback for relative paths that slipped through
-                bitmap.UriSource = new Uri(value, UriKind.RelativeOrAbsolute);
-            }
+            bitmap.UriSource = Uri.TryCreate(value, UriKind.Absolute, out var uri)
+                ? uri
+                : new Uri(value, UriKind.RelativeOrAbsolute);
 
             bitmap.EndInit();
 
@@ -324,9 +355,8 @@ public sealed class ProfileViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "FAILED to load profile image from {Url}", value);
+            _logger.LogError(ex, "Failed to load profile image from {Url}", value);
 
-            // If the showcase image failed and we haven't tried the Discord avatar yet, try it.
             if (value != DiscordAvatarUrl && !string.IsNullOrWhiteSpace(DiscordAvatarUrl))
             {
                 _logger.LogInformation("Falling back to Discord avatar: {AvatarUrl}", DiscordAvatarUrl);
@@ -341,7 +371,6 @@ public sealed class ProfileViewModel : ViewModelBase
     {
         try
         {
-            // Strip the "data:image/...;base64," prefix
             var commaIndex = dataUri.IndexOf(',');
             if (commaIndex < 0)
             {

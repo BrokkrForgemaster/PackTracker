@@ -36,7 +36,7 @@
                                    FontSize="11"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource OpTextMutedBrush}"/>
-                        <TextBlock Text="Select one or more members and a ribbon. Citation is optional. Awards are immediate."
+                        <TextBlock Text="Select one or more members and a ribbon. Citation is optional.&#x0a;Awards are immediate."
                                    FontSize="12"
                                    Foreground="{StaticResource OpTextSecondaryBrush}"
                                    Margin="0,4,0,0"/>
@@ -45,8 +45,9 @@
                     <Button Content="&#x2715;"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                            Width="30"
-                            Height="30"
+                            Background="Red"
+                            Width="20"
+                            Height="20"
                             Cursor="Hand"
                             Click="Close_Click"/>
                 </Grid>
@@ -282,11 +283,13 @@
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Right">
                         <Button Content="CANCEL"
+                                Background="Red"
                                 Padding="20,10"
                                 Margin="0,0,10,0"
                                 Click="Close_Click"/>
 
                         <Button Content="AWARD RIBBON"
+                                Background="Green"
                                 Padding="20,10"
                                 Click="Submit_Click"/>
                     </StackPanel>
