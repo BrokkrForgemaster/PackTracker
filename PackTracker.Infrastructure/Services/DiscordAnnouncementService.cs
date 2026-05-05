@@ -351,6 +351,12 @@ public sealed class DiscordAnnouncementService : IDiscordAnnouncementService
             embeds = new[]
             {
                 embed
+            },
+            // Suppress push notifications so the post doesn't alert the whole server
+            flags = 1 << 12,
+            allowed_mentions = new
+            {
+                parse = Array.Empty<string>()
             }
         };
 
