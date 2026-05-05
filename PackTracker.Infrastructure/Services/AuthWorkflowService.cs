@@ -53,15 +53,12 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
         profile.DiscordDisplayName = request.DisplayName ?? profile.DiscordDisplayName;
         profile.Discriminator = request.Discriminator;
 
-        // --- HouseWolf Sync ---
+        // --- HouseWolf Sync (text fields only; images are handled client-side) ---
         try
         {
             var hwProfile = await _houseWolf.GetProfileByDiscordIdAsync(request.DiscordId);
             if (hwProfile != null)
             {
-                if (!string.IsNullOrWhiteSpace(hwProfile.ImageUrl))
-                    profile.ShowcaseImageUrl = hwProfile.ImageUrl;
-
                 if (!string.IsNullOrWhiteSpace(hwProfile.Bio))
                     profile.ShowcaseBio = hwProfile.Bio;
 
@@ -73,7 +70,7 @@ public sealed class AuthWorkflowService : IAuthWorkflowService
 
                 if (!string.IsNullOrWhiteSpace(hwProfile.CharacterName))
                     profile.DiscordDisplayName = hwProfile.CharacterName;
-                
+
                 _logger.LogInformation("Profile {DiscordId} synced with HouseWolf data.", request.DiscordId);
             }
         }
