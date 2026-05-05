@@ -247,59 +247,23 @@
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
 
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
-                                                <Border Width="210"
+                                         <ItemsControl.ItemTemplate>
+                                             <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
+                                                 <Image Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
+                                                        Height="75"
+                                                        Stretch="Uniform"
+                                                        HorizontalAlignment="Left"
                                                         Margin="4,6"
-                                                        Padding="6"
-                                                        CornerRadius="10"
-                                                        Background="#10100E"
-                                                        BorderBrush="#2A2018"
-                                                        BorderThickness="1"
                                                         Cursor="Hand">
-                                                    <Border.InputBindings>
-                                                        <MouseBinding MouseAction="LeftClick"
-                                                                      Command="{Binding DataContext.OpenCitationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                      CommandParameter="{Binding}" />
-                                                    </Border.InputBindings>
-
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Opacity" Value="0.92" />
-                                                            <Style.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Opacity" Value="1" />
-                                                                    <Setter Property="Background" Value="#17130F" />
-                                                                    <Setter Property="BorderBrush" Value="#D6A04B" />
-                                                                </Trigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-
-                                                    <StackPanel>
-                                                        <Image Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
-                                                               Height="66"
-                                                               Stretch="Uniform"
-                                                               HorizontalAlignment="Left" />
-
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   Foreground="#E7D6B5"
-                                                                   FontSize="10"
-                                                                   FontWeight="SemiBold"
-                                                                   TextAlignment="Left"
-                                                                   TextWrapping="Wrap"
-                                                                   Margin="0,7,0,0" />
-
-                                                        <TextBlock Text="Click to view citation"
-                                                                   Foreground="#8F7B5D"
-                                                                   FontSize="9"
-                                                                   TextAlignment="Left"
-                                                                   Margin="0,3,0,0" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                                     <Image.InputBindings>
+                                                         <MouseBinding MouseAction="LeftClick"
+                                                                       Command="{Binding DataContext.OpenCitationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                       CommandParameter="{Binding}" />
+                                                     </Image.InputBindings>
+                                                 </Image>
+                                             </DataTemplate>
+                                         </ItemsControl.ItemTemplate>
+                                     </ItemsControl>
 
                                     <TextBlock Text="No ribbons recorded yet."
                                                Foreground="{StaticResource OpTextMutedBrush}"

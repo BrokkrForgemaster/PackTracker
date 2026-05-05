@@ -15,14 +15,14 @@
         </Style>
         <!-- Header style for right-aligned numeric columns -->
         <Style x:Key="RightAlignHeader" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#1A1108"/>
-            <Setter Property="Foreground" Value="#C9A458"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Padding" Value="0,6,12,6"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-            <Setter Property="BorderBrush" Value="#3A2D22"/>
-            <Setter Property="BorderThickness" Value="1,0,0,2"/>
+            <Setter Property="Background" Value="#1A1108" />
+            <Setter Property="Foreground" Value="#C9A458" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Padding" Value="0,6,12,6" />
+            <Setter Property="HorizontalContentAlignment" Value="Right" />
+            <Setter Property="BorderBrush" Value="#3A2D22" />
+            <Setter Property="BorderThickness" Value="1,0,0,2" />
             <Setter Property="ContentTemplate">
                 <Setter.Value>
                     <DataTemplate>
@@ -32,7 +32,7 @@
                                    Foreground="#C9A458"
                                    FontWeight="Bold"
                                    FontSize="10"
-                                   Margin="0,0,4,0"/>
+                                   Margin="0,0,4,0" />
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
@@ -93,7 +93,6 @@
                 </ComboBox>
             </StackPanel>
         </Border>
-
         <!-- ── Main Content ── -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
@@ -130,29 +129,29 @@
 
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#1A1108"/>
-                                <Setter Property="Foreground" Value="#C9A458"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="FontSize" Value="10"/>
-                                <Setter Property="Padding" Value="8,6"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                                <Setter Property="BorderBrush" Value="#3A2D22"/>
-                                <Setter Property="BorderThickness" Value="1,0,0,2"/>
+                                <Setter Property="Background" Value="#1A1108" />
+                                <Setter Property="Foreground" Value="#C9A458" />
+                                <Setter Property="FontWeight" Value="Bold" />
+                                <Setter Property="FontSize" Value="10" />
+                                <Setter Property="Padding" Value="8,6" />
+                                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                                <Setter Property="BorderBrush" Value="#3A2D22" />
+                                <Setter Property="BorderThickness" Value="1,0,0,2" />
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
 
                         <!-- Row separator via bottom border -->
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
-                                <Setter Property="BorderBrush" Value="#2A1F16"/>
-                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#2A1F16" />
+                                <Setter Property="BorderThickness" Value="0,0,0,1" />
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#3E3023"/>
-                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Background" Value="#3E3023" />
+                                        <Setter Property="Foreground" Value="White" />
                                     </Trigger>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#2A1E14"/>
+                                        <Setter Property="Background" Value="#2A1E14" />
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -162,7 +161,7 @@
                             <Style TargetType="DataGridCell">
                                 <Setter Property="Padding" Value="8,0" />
                                 <Setter Property="BorderThickness" Value="0" />
-                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="VerticalAlignment" Value="Center" />
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Background" Value="Transparent" />
@@ -175,10 +174,10 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ORIGIN"
                                                 Binding="{Binding OriginTerminalName}"
-                                                Width="1.5*"/>
+                                                Width="1.5*" />
                             <DataGridTextColumn Header="DESTINATION"
                                                 Binding="{Binding DestinationTerminalName}"
-                                                Width="1.5*"/>
+                                                Width="1.5*" />
                             <DataGridTextColumn Binding="{Binding PriceOrigin, StringFormat={}{0:N0}}"
                                                 Width="0.8*"
                                                 ElementStyle="{StaticResource RightAlignCell}"
@@ -238,11 +237,7 @@
 
                             <TextBlock Text="SHIP" Foreground="{StaticResource OpTextMutedBrush}"
                                        FontSize="10" FontWeight="Bold" Margin="0,0,0,6" />
-                            <ComboBox IsEditable="True"
-                                      IsTextSearchEnabled="False"
-                                      StaysOpenOnEdit="True"
-                                      Text="{Binding ShipSearch, UpdateSourceTrigger=PropertyChanged}"
-                                      ItemsSource="{Binding Ships}"
+                            <ComboBox ItemsSource="{Binding Ships}"
                                       SelectedItem="{Binding SelectedShip, Mode=TwoWay}"
                                       Style="{StaticResource OpComboBoxStyle}"
                                       Margin="0,0,0,16">
@@ -291,7 +286,8 @@
                             <ItemsControl ItemsSource="{Binding TopRoutes}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Style="{StaticResource OpItemBorderStyle}" Margin="0,0,0,8" Padding="12">
+                                        <Border Style="{StaticResource OpItemBorderStyle}" Margin="0,0,0,8"
+                                                Padding="12">
                                             <StackPanel>
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
@@ -320,10 +316,12 @@
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="{Binding PriceOrigin, StringFormat='Buy: {0:N0}'}"
-                                                               Foreground="{StaticResource OpTextMutedBrush}" FontSize="11" />
+                                                               Foreground="{StaticResource OpTextMutedBrush}"
+                                                               FontSize="11" />
                                                     <TextBlock Grid.Column="1"
                                                                Text="{Binding Profit, StringFormat='Profit: {0:N0}'}"
-                                                               Foreground="#4ADE80" FontSize="11" HorizontalAlignment="Right" />
+                                                               Foreground="#4ADE80" FontSize="11"
+                                                               HorizontalAlignment="Right" />
                                                 </Grid>
                                             </StackPanel>
                                         </Border>

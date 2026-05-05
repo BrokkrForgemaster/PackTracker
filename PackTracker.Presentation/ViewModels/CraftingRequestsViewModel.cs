@@ -49,7 +49,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
     [ObservableProperty] private bool isLiveChatCounterpartOnline;
 
     // Logic updated to use Status Constants
-    public bool CanAssign => SelectedRequest?.Status == RequestStatus.Open;
+    public bool CanAssign => CanAssignRequest(SelectedRequest);
     public bool CanMarkInProgress => SelectedRequest?.Status == RequestStatus.Accepted;
     public bool CanMarkCompleted => SelectedRequest is not null
         && (SelectedRequest.Status == RequestStatus.Accepted || SelectedRequest.Status == RequestStatus.InProgress)
@@ -316,6 +316,7 @@ public partial class CraftingRequestsViewModel : ObservableObject
         {
             IsLoading = true;
             StatusMessage = "Refreshing...";
+            var selectedRequestId = SelectedRequest?.Id;
 
             using var client = _apiClientProvider.CreateClient();
             using var response = await client.GetAsync("api/v1/crafting/requests");
@@ -336,6 +337,10 @@ public partial class CraftingRequestsViewModel : ObservableObject
             foreach (var item in items)
                 Requests.Add(item);
 
+            SelectedRequest = selectedRequestId.HasValue
+                ? Requests.FirstOrDefault(x => x.Id == selectedRequestId.Value)
+                : null;
+
             StatusMessage = Requests.Count == 0 ? "No requests found." : $"Loaded {Requests.Count} requests.";
             RefreshPresenceState();
         }
@@ -351,6 +356,13 @@ public partial class CraftingRequestsViewModel : ObservableObject
     }
 
     public Task RefreshDataAsync() => RefreshAsync();
+
+    internal static bool CanAssignRequest(CraftingRequestListItemDto? request)
+    {
+        return request is not null
+            && request.Status == RequestStatus.Open
+            && string.IsNullOrWhiteSpace(request.AssignedCrafterUsername);
+    }
 
     private static async Task<string?> TryReadErrorDetailAsync(HttpResponseMessage response)
     {

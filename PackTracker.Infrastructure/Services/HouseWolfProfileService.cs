@@ -56,6 +56,120 @@ public class HouseWolfProfileService : IHouseWolfProfileService
         return $"Host={host};Username={user};Password={pass};Database={db};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true";
     }
 
+    internal static string BuildProfileLookupQuery(
+        string tableName,
+        IReadOnlyCollection<string> profileColumns,
+        IReadOnlyCollection<string> userColumns)
+    {
+        var directDiscordColumn = FindFirstColumn(profileColumns, "discordId", "discord_id");
+        if (directDiscordColumn is not null)
+        {
+            return $@"
+                SELECT cp.*
+                FROM {tableName} cp
+                WHERE cp.""{directDiscordColumn}"" = @discordId
+                LIMIT 1
+                ";
+        }
+
+        var profileUserIdColumn = FindFirstColumn(profileColumns, "userId", "user_id");
+        var userIdColumn = FindFirstColumn(userColumns, "id");
+        var userDiscordColumn = FindFirstColumn(userColumns, "discordId", "discord_id");
+
+        if (profileUserIdColumn is not null &&
+            userIdColumn is not null &&
+            userDiscordColumn is not null)
+        {
+            return $@"
+                SELECT cp.*
+                FROM {tableName} cp
+                INNER JOIN ""User"" u ON u.""{userIdColumn}"" = cp.""{profileUserIdColumn}""
+                WHERE u.""{userDiscordColumn}"" = @discordId
+                LIMIT 1
+                ";
+        }
+
+        var fallbackIdColumn = FindFirstColumn(profileColumns, "id");
+        if (fallbackIdColumn is not null)
+        {
+            return $@"
+                SELECT cp.*
+                FROM {tableName} cp
+                WHERE cp.""{fallbackIdColumn}"" = @discordId
+                LIMIT 1
+                ";
+        }
+
+        throw new InvalidOperationException(
+            $"Could not determine a HouseWolf profile lookup path for {tableName}. " +
+            $"Profile columns: {string.Join(", ", profileColumns)}. " +
+            $"User columns: {string.Join(", ", userColumns)}");
+    }
+
+    internal static void MapProfileField(HouseWolfCharacterProfile profile, string fieldName, object? value)
+    {
+        var normalizedName = fieldName.ToLowerInvariant();
+
+        switch (normalizedName)
+        {
+            case "id":
+                profile.Id = value?.ToString();
+                break;
+            case "userid":
+            case "user_id":
+                profile.UserId = value?.ToString() ?? string.Empty;
+                break;
+            case "discordid":
+            case "discord_id":
+                profile.UserId = value?.ToString() ?? profile.UserId;
+                break;
+            case "charactername":
+            case "character_name":
+            case "displayname":
+            case "display_name":
+                profile.CharacterName = value?.ToString();
+                break;
+            case "division":
+                profile.Division = value?.ToString();
+                break;
+            case "bio":
+            case "biography":
+            case "about":
+            case "description":
+                profile.Bio = value?.ToString();
+                break;
+            case "imageurl":
+            case "image_url":
+            case "image":
+            case "avatar":
+            case "profileimage":
+            case "profile_image":
+            case "portrait":
+            case "portraiturl":
+            case "portrait_url":
+                profile.ImageUrl = value?.ToString();
+                break;
+            case "subdivision":
+            case "sub_division":
+                profile.SubDivision = value?.ToString();
+                break;
+        }
+    }
+
+    private static string? FindFirstColumn(IEnumerable<string> columns, params string[] candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            var match = columns.FirstOrDefault(c => string.Equals(c, candidate, StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
     public async Task<HouseWolfCharacterProfile?> GetProfileByDiscordIdAsync(string discordId)
     {
         if (string.IsNullOrWhiteSpace(discordId)) return null;
@@ -116,26 +230,24 @@ public class HouseWolfProfileService : IHouseWolfProfileService
             _logger.LogInformation("HouseWolf {Table} columns: {Columns}",
                 tableName, string.Join(", ", columns));
 
-            string? idColumn = columns.FirstOrDefault(c =>
-                string.Equals(c, "userId", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(c, "user_id", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(c, "discord_id", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(c, "id", StringComparison.OrdinalIgnoreCase));
-
-            if (idColumn == null)
+            var userColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
             {
-                throw new InvalidOperationException(
-                    $"Could not find a user/discord ID column in {tableName}. Available: {string.Join(", ", columns)}");
+                using var userColCmd = new NpgsqlCommand(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name IN ('User', 'user')",
+                    conn);
+                using var userColReader = await userColCmd.ExecuteReaderAsync();
+                while (await userColReader.ReadAsync())
+                {
+                    userColumns.Add(userColReader.GetString(0));
+                }
+            }
+            catch
+            {
+                // Some HouseWolf deployments may not expose a User table. Direct discord-id lookup will be used instead.
             }
 
-
-            string query = $@"
-                SELECT cp.* 
-                FROM {tableName} cp
-                INNER JOIN ""User"" u ON u.""id"" = cp.""userId""
-                WHERE u.""discordId"" = @discordId
-                LIMIT 1
-                ";
+            string query = BuildProfileLookupQuery(tableName, columns, userColumns);
 
             using var cmd = new NpgsqlCommand(query, conn);
             cmd.Parameters.AddWithValue("discordId", discordId);
@@ -146,40 +258,8 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                 var profile = new HouseWolfCharacterProfile();
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
-                    var name = reader.GetName(i).ToLowerInvariant();
                     var val = await reader.IsDBNullAsync(i) ? null : reader.GetValue(i);
-
-                    switch (name)
-                    {
-                        case "id":
-                            profile.Id = val?.ToString();
-                            break;
-                        case "userid":
-                        case "user_id":
-                            profile.UserId = val?.ToString() ?? string.Empty;
-                            break;
-                        case "charactername":
-                        case "character_name":
-                            profile.CharacterName = val?.ToString();
-                            break;
-                        case "division": profile.Division = val?.ToString(); break;
-                        case "bio": profile.Bio = val?.ToString(); break;
-                        case "imageurl":
-                        case "image_url":
-                        case "image":
-                        case "avatar":
-                        case "profileimage":
-                        case "profile_image":
-                        case "portrait":
-                        case "portraiturl":
-                        case "portrait_url":
-                            profile.ImageUrl = val?.ToString();
-                            break;
-                        case "subdivision":
-                        case "sub_division":
-                            profile.SubDivision = val?.ToString();
-                            break;
-                    }
+                    MapProfileField(profile, reader.GetName(i), val);
                 }
 
                 var imgPreview = profile.ImageUrl == null
