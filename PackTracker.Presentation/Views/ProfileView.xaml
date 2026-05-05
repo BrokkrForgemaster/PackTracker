@@ -7,6 +7,7 @@
 
     <UserControl.Resources>
         <converters:ImagePathToPackUriConverter x:Key="ImagePathToPackUri"/>
+        <converters:NullOrEmptyToNullConverter x:Key="NullOrEmptyToNull"/>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -158,20 +159,8 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
                                                 <StackPanel Width="90"
-                                                            Margin="8">
-                                                    <StackPanel.Style>
-                                                        <Style TargetType="StackPanel">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Citation}" Value="{x:Null}">
-                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Citation}" Value="">
-                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                            <Setter Property="ToolTip" Value="{Binding Citation}"/>
-                                                        </Style>
-                                                    </StackPanel.Style>
+                                                            Margin="8"
+                                                            ToolTip="{Binding Citation, Converter={StaticResource NullOrEmptyToNull}}">
                                                     <Border Width="82"
                                                             Height="96"
                                                             CornerRadius="10"
@@ -236,36 +225,18 @@
 
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
-                                                <StackPanel Width="180"
-                                                            Margin="6,8">
-                                                    <StackPanel.Style>
-                                                        <Style TargetType="StackPanel">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Citation}" Value="{x:Null}">
-                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Citation}" Value="">
-                                                                    <Setter Property="ToolTip" Value="{x:Null}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                            <Setter Property="ToolTip" Value="{Binding Citation}"/>
-                                                        </Style>
-                                                    </StackPanel.Style>
-                                                    <Border Height="56"
-                                                            CornerRadius="6"
-                                                            Background="#130F0B"
-                                                            BorderBrush="#4A3420"
-                                                            BorderThickness="1"
-                                                            Padding="6">
-                                                        <Image Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
-                                                               Stretch="Uniform"/>
-                                                    </Border>
+                                                <StackPanel Width="220"
+                                                            Margin="8,10"
+                                                            ToolTip="{Binding Citation, Converter={StaticResource NullOrEmptyToNull}}">
+                                                    <Image Source="{Binding ImagePath, Converter={StaticResource ImagePathToPackUri}}"
+                                                           Height="72"
+                                                           Stretch="Uniform"/>
                                                     <TextBlock Text="{Binding Name}"
                                                                Foreground="#E7D6B5"
-                                                               FontSize="9"
+                                                               FontSize="10"
                                                                TextAlignment="Center"
                                                                TextWrapping="Wrap"
-                                                               Margin="0,4,0,0"/>
+                                                               Margin="0,6,0,0"/>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

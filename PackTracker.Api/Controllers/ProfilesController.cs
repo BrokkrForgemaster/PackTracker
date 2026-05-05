@@ -66,19 +66,41 @@ public class ProfilesController : ControllerBase
             return NotFound();
         }
 
-        // Fetch HouseWolf image (base64) — pass through in response only, never persisted
+        // Sync HouseWolf profile data. Text fields are persisted; the base64 image
+        // is only passed through in the response (too large for varchar column).
         string? hwImageUrl = null;
         try
         {
             var hwProfile = await _houseWolf.GetProfileByDiscordIdAsync(discordId);
-            if (hwProfile != null && !string.IsNullOrWhiteSpace(hwProfile.ImageUrl))
+            if (hwProfile != null)
             {
-                hwImageUrl = hwProfile.ImageUrl;
+                var changed = false;
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.ImageUrl))
+                    hwImageUrl = hwProfile.ImageUrl;
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.Bio) && profile.ShowcaseBio != hwProfile.Bio)
+                { profile.ShowcaseBio = hwProfile.Bio; changed = true; }
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.SubDivision) && profile.ShowcaseEyebrow != hwProfile.SubDivision)
+                { profile.ShowcaseEyebrow = hwProfile.SubDivision; changed = true; }
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.Division) && profile.ShowcaseTagline != hwProfile.Division)
+                { profile.ShowcaseTagline = hwProfile.Division; changed = true; }
+
+                if (!string.IsNullOrWhiteSpace(hwProfile.CharacterName) && profile.DiscordDisplayName != hwProfile.CharacterName)
+                { profile.DiscordDisplayName = hwProfile.CharacterName; changed = true; }
+
+                if (changed)
+                {
+                    await _db.SaveChangesAsync(ct);
+                    _logger.LogInformation("Synced HouseWolf text fields for DiscordId={DiscordId}", discordId);
+                }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch HouseWolf image for DiscordId={DiscordId}.", discordId);
+            _logger.LogWarning(ex, "Failed to sync HouseWolf profile for DiscordId={DiscordId}.", discordId);
         }
 
         // Fall back to JWT claims if the DB profile hasn't been synced yet.
