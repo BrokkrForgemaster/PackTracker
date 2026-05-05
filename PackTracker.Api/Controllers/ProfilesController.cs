@@ -20,6 +20,7 @@ public class ProfilesController : ControllerBase
 
     private readonly IProfileService _profiles;
     private readonly IApplicationDbContext _db;
+    private readonly IHouseWolfProfileService _houseWolf;
     private readonly ILogger<ProfilesController> _logger;
 
     #endregion
@@ -29,10 +30,12 @@ public class ProfilesController : ControllerBase
     public ProfilesController(
         IProfileService profiles,
         IApplicationDbContext db,
+        IHouseWolfProfileService houseWolf,
         ILogger<ProfilesController> logger)
     {
         _profiles = profiles;
         _db = db;
+        _houseWolf = houseWolf;
         _logger = logger;
     }
 
@@ -63,6 +66,21 @@ public class ProfilesController : ControllerBase
             return NotFound();
         }
 
+        // Fetch HouseWolf image (base64) — pass through in response only, never persisted
+        string? hwImageUrl = null;
+        try
+        {
+            var hwProfile = await _houseWolf.GetProfileByDiscordIdAsync(discordId);
+            if (hwProfile != null && !string.IsNullOrWhiteSpace(hwProfile.ImageUrl))
+            {
+                hwImageUrl = hwProfile.ImageUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch HouseWolf image for DiscordId={DiscordId}.", discordId);
+        }
+
         // Fall back to JWT claims if the DB profile hasn't been synced yet.
         var effectiveDivision = profile.DiscordDivision
             ?? User.FindFirstValue("urn:discord:division");
@@ -91,7 +109,15 @@ public class ProfilesController : ControllerBase
                 x.MedalDefinition.AwardType))
             .ToListAsync(ct);
 
-        return Ok(MapCurrentProfile(profile, effectiveRank, effectiveDivision, medals));
+        var dto = MapCurrentProfile(profile, effectiveRank, effectiveDivision, medals);
+
+        // Override with HouseWolf image if available (base64 is too large to persist)
+        if (!string.IsNullOrWhiteSpace(hwImageUrl))
+        {
+            dto = dto with { ShowcaseImageUrl = hwImageUrl };
+        }
+
+        return Ok(dto);
     }
 
     [HttpPut("me/showcase")]
