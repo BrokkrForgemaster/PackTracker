@@ -1,4 +1,4 @@
-; ============================================================
+﻿; ============================================================
 ; PackTracker - Inno Setup Script
 ; House Wolf Operations Shell for Star Citizen
 ;
@@ -15,7 +15,7 @@
 #ifndef AppVersion
   ; Local builds default to this. Keep in sync with Directory.Build.props
   ; (scripts\bump-version.ps1 updates both atomically).
-  #define AppVersion "0.6.0"
+  #define AppVersion "0.7.1"
 #endif
 
 #define AppName        "PackTracker"
