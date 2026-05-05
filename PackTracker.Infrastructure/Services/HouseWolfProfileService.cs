@@ -113,6 +113,9 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                     columns.Add(schemaReader.GetName(i));
             }
 
+            _logger.LogInformation("HouseWolf {Table} columns: {Columns}",
+                tableName, string.Join(", ", columns));
+
             string? idColumn = columns.FirstOrDefault(c =>
                 string.Equals(c, "userId", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(c, "user_id", StringComparison.OrdinalIgnoreCase) ||
@@ -163,6 +166,13 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                         case "bio": profile.Bio = val?.ToString(); break;
                         case "imageurl":
                         case "image_url":
+                        case "image":
+                        case "avatar":
+                        case "profileimage":
+                        case "profile_image":
+                        case "portrait":
+                        case "portraiturl":
+                        case "portrait_url":
                             profile.ImageUrl = val?.ToString();
                             break;
                         case "subdivision":
@@ -172,8 +182,13 @@ public class HouseWolfProfileService : IHouseWolfProfileService
                     }
                 }
 
+                var imgPreview = profile.ImageUrl == null
+                    ? "(null)"
+                    : profile.ImageUrl.Length > 60
+                        ? profile.ImageUrl[..60] + $"... (len={profile.ImageUrl.Length})"
+                        : profile.ImageUrl;
                 _logger.LogInformation("Fetched HouseWolf profile: Name={Name}, ImageUrl={ImageUrl}",
-                    profile.CharacterName, profile.ImageUrl);
+                    profile.CharacterName, imgPreview);
                 return profile;
             }
         }
