@@ -161,6 +161,9 @@ namespace PackTracker.Presentation.Views
             InitializeComponent();
             InitializeStaticVisualAssets();
 
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            Title = $"PackTracker v{version?.ToString(3) ?? "0.0.0"}";
+
             DataContext = this;
             WindowState = WindowState.Maximized;
             _logger.LogInformation(

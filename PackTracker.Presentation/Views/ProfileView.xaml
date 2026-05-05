@@ -237,7 +237,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type dto:CurrentProfileMedalDto}">
                                                 <StackPanel Width="180"
-                                                            Margin="6">
+                                                            Margin="6,8">
                                                     <StackPanel.Style>
                                                         <Style TargetType="StackPanel">
                                                             <Style.Triggers>
