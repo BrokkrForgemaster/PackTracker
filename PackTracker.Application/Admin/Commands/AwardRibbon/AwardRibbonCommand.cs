@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PackTracker.Application.Admin.Abstractions;
 using PackTracker.Application.Admin.DTOs;
@@ -18,6 +19,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
     private readonly IAuditLogService _audit;
     private readonly IRbacService _rbac;
     private readonly IDiscordAnnouncementService _discordAnnouncements;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<AwardRibbonCommandHandler> _logger;
 
     public AwardRibbonCommandHandler(
@@ -26,6 +28,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
         IAuditLogService audit,
         IRbacService rbac,
         IDiscordAnnouncementService discordAnnouncements,
+        IConfiguration configuration,
         ILogger<AwardRibbonCommandHandler> logger)
     {
         _db = db;
@@ -33,6 +36,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
         _audit = audit;
         _rbac = rbac;
         _discordAnnouncements = discordAnnouncements;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -144,9 +148,20 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
         {
             var recipientList = string.Join("\n", createdAwards.Select(x => $"• {x.RecipientName}"));
 
+            // Resolve the public image URL for the Discord embed
+            var imageUrl = definition.PublicImageUrl;
+            if (string.IsNullOrWhiteSpace(imageUrl) && !string.IsNullOrWhiteSpace(definition.ImagePath))
+            {
+                var baseUrl = _configuration["Api:BaseUrl"]
+                              ?? _configuration["AppSettings:ApiBaseUrl"]
+                              ?? "https://packtracker-yke3.onrender.com";
+                var fileName = Path.GetFileName(definition.ImagePath);
+                imageUrl = $"{baseUrl.TrimEnd('/')}/images/ribbons/{fileName}";
+            }
+
             _logger.LogInformation(
-                "AwardRibbon: Sending Discord announcement for ribbon '{RibbonName}' to {Count} recipient(s). PublicImageUrl={ImageUrl}",
-                ribbonName, createdAwards.Count, definition.PublicImageUrl);
+                "AwardRibbon: Sending Discord announcement for ribbon '{RibbonName}' to {Count} recipient(s). ImageUrl={ImageUrl}",
+                ribbonName, createdAwards.Count, imageUrl);
 
             try
             {
@@ -156,7 +171,7 @@ public sealed class AwardRibbonCommandHandler : IRequestHandler<AwardRibbonComma
                     string.IsNullOrWhiteSpace(req.Citation)
                         ? $"Awarded to:\n{recipientList}"
                         : req.Citation.Trim(),
-                    definition.PublicImageUrl,
+                    imageUrl,
                     cancellationToken);
 
                 _logger.LogInformation("AwardRibbon: Discord announcement call completed.");

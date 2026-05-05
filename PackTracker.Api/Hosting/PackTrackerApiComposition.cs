@@ -124,6 +124,7 @@ public static class PackTrackerApiComposition
         bool enableSwaggerUi)
     {
         app.UseForwardedHeaders();
+        app.UseStaticFiles();
         app.UseCors("PackTrackerDefault");
 
         app.UseMiddleware<CorrelationIdMiddleware>();
