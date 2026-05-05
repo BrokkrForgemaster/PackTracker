@@ -112,13 +112,24 @@ public class UpdateService : IUpdateService
 
         try
         {
-            _logger.LogInformation("Downloading update from {Url}", updateInfo.DownloadUrl);
-
             var tempDirectory = Path.Combine(Path.GetTempPath(), "PackTracker", "Updates");
             Directory.CreateDirectory(tempDirectory);
 
             var fileName = ResolveDownloadFileName(updateInfo.DownloadUrl);
             var filePath = Path.Combine(tempDirectory, fileName);
+
+            // Skip re-download if a previous run already staged this exact installer.
+            if (File.Exists(filePath)
+                && updateInfo.FileSize is long expectedSize
+                && expectedSize > 0
+                && new FileInfo(filePath).Length == expectedSize)
+            {
+                _logger.LogInformation("Reusing previously staged installer at {Path}", filePath);
+                progress?.Report(100);
+                return filePath;
+            }
+
+            _logger.LogInformation("Downloading update from {Url}", updateInfo.DownloadUrl);
 
             if (File.Exists(filePath))
             {
@@ -170,11 +181,20 @@ public class UpdateService : IUpdateService
 
     public async Task InstallAndRestartAsync(string installerPath)
     {
+        await LaunchInstallerAsync(installerPath);
+
+        // Give the installer a beat to spawn before we let go of the file handles.
+        await Task.Delay(1000);
+        Environment.Exit(0);
+    }
+
+    public async Task LaunchInstallerAsync(string installerPath)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(installerPath);
 
         try
         {
-            _logger.LogInformation("Installing update from {Path}", installerPath);
+            _logger.LogInformation("Launching installer from {Path}", installerPath);
 
             if (!File.Exists(installerPath))
             {
@@ -208,7 +228,6 @@ public class UpdateService : IUpdateService
 
                 case ".zip":
                     await ExtractAndReplaceAsync(installerPath);
-                    RestartApplication();
                     return;
 
                 default:
@@ -216,14 +235,11 @@ public class UpdateService : IUpdateService
             }
 
             Process.Start(startInfo);
-            _logger.LogInformation("Installer launched; exiting application to allow update.");
-
-            await Task.Delay(1000);
-            Environment.Exit(0);
+            _logger.LogInformation("Installer process started.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error installing update.");
+            _logger.LogError(ex, "Error launching installer.");
             throw;
         }
     }

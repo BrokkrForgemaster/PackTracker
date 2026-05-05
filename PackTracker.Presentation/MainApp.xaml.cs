@@ -6,8 +6,10 @@ using Microsoft.Extensions.Logging;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
 using PackTracker.Infrastructure;
+using PackTracker.Infrastructure.BackgroundServices;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
+using PackTracker.Infrastructure.Logging;
 using PackTracker.Logging;
 using PackTracker.Presentation.Services;
 using PackTracker.Presentation.Services.Admin;
@@ -48,7 +50,11 @@ public partial class MainApp : System.Windows.Application
         var logsPath = Path.Combine(appDataPath, "logs");
         Directory.CreateDirectory(logsPath);
 
-        services.AddPackTrackerLogging(cfg, "PackTracker.Presentation", logsPath);
+        services.AddPackTrackerLogging(
+            configuration: cfg, 
+            applicationName: "PackTracker.Presentation", 
+            logDirectory: logsPath,
+            extraConfiguration: (logCfg, sp) => logCfg.WriteToDatabase(sp));
 
         // 2️⃣ Settings service (merge environment, secrets, local file)
         var settingsLoggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
@@ -77,6 +83,9 @@ public partial class MainApp : System.Windows.Application
         services.Configure<UexOptions>(cfg.GetSection("Uex"));
         services.Configure<UpdateOptions>(cfg.GetSection(UpdateOptions.SectionName));
         services.AddHttpClient<IUpdateService, UpdateService>();
+        services.AddSingleton<IUpdateNotificationState, UpdateNotificationState>();
+        services.AddSingleton<UpdateMonitorBackgroundService>();
+        services.AddSingleton<UpdateNotificationViewModel>();
 
         // 6️⃣ Core presentation services
         services.AddSingleton<IThemeManager, ThemeManager>();
@@ -131,6 +140,8 @@ public partial class MainApp : System.Windows.Application
         services.AddTransient<AdminRequestHistoryView>();
         services.AddTransient<AdminRequestDetailView>();
         services.AddTransient<AdminNominationsView>();
+        services.AddTransient<AdminAuditLogsViewModel>();
+        services.AddTransient<AdminAuditLogsView>();
         services.AddTransient<RecruitmentView>();
         services.AddTransient<AdminShellView>();
 
@@ -222,6 +233,11 @@ public partial class MainApp : System.Windows.Application
             // Setup main window — NavigateToFirstView in the constructor handles routing
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
+
+            // Start the GitHub update monitor (fire-and-forget; it owns its own loop and delays).
+            var updateMonitor = _serviceProvider.GetRequiredService<UpdateMonitorBackgroundService>();
+            _ = updateMonitor.StartAsync(CancellationToken.None);
+
             Log.Information("✅ PackTracker started successfully.");
         }
         catch (Exception ex)
@@ -241,6 +257,10 @@ public partial class MainApp : System.Windows.Application
     // -------------------------------------------------------------
     protected override void OnExit(ExitEventArgs e)
     {
+        _serviceProvider?.GetService<UpdateMonitorBackgroundService>()
+            ?.StopAsync(CancellationToken.None)
+            .GetAwaiter().GetResult();
+
         _serviceProvider?.GetService<ApiHostedService>()
             ?.StopAsync(CancellationToken.None)
             .GetAwaiter().GetResult();

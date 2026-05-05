@@ -65,13 +65,12 @@ namespace PackTracker.Presentation.Views
 
         private readonly IServiceProvider _serviceProvider;
         private readonly ISettingsService _settingsService;
-        private readonly IUpdateService _updateService;
+        private readonly UpdateNotificationViewModel _updateNotificationViewModel;
         private readonly AdminApiClient _adminApiClient;
         private readonly NavigationStateService _navigationState;
         private readonly DispatcherTimer _timer;
         private readonly ILogger<MainWindow> _logger;
 
-        private UpdateInfo? _pendingUpdate;
         private bool _isAuthenticated;
         private DispatcherTimer? _toastTimer;
         private ImageSource? _currentUserAvatar;
@@ -149,17 +148,20 @@ namespace PackTracker.Presentation.Views
         public MainWindow(
             IServiceProvider serviceProvider,
             ISettingsService settingsService,
-            IUpdateService updateService)
+            UpdateNotificationViewModel updateNotificationViewModel)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-            _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
+            _updateNotificationViewModel = updateNotificationViewModel ?? throw new ArgumentNullException(nameof(updateNotificationViewModel));
             _adminApiClient = serviceProvider.GetRequiredService<AdminApiClient>();
             _navigationState = serviceProvider.GetRequiredService<NavigationStateService>();
             _logger = serviceProvider.GetRequiredService<ILogger<MainWindow>>();
 
             InitializeComponent();
             InitializeStaticVisualAssets();
+
+            UpdateBanner.DataContext = _updateNotificationViewModel;
+            UpdateDialog.DataContext = _updateNotificationViewModel;
 
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             Title = $"PackTracker v{version?.ToString(3) ?? "0.0.0"}";
@@ -186,7 +188,6 @@ namespace PackTracker.Presentation.Views
             Loaded += async (_, _) =>
             {
                 await RefreshSidebarProfileAsync();
-                await CheckForUpdateAsync();
                 SubscribeToClaimNotifications();
             };
         }
@@ -1043,88 +1044,6 @@ namespace PackTracker.Presentation.Views
                 };
                 _toastTimer.Start();
             });
-        }
-
-        #endregion
-
-        #region Auto-Update
-
-        private async Task CheckForUpdateAsync()
-        {
-            try
-            {
-                var update = await _updateService.CheckForUpdateAsync(CancellationToken.None);
-                if (update is not null)
-                    Dispatcher.Invoke(() => ShowUpdateAvailable(update));
-            }
-            catch
-            {
-                // Best effort only.
-            }
-        }
-
-        private void ShowUpdateAvailable(UpdateInfo update)
-        {
-            _pendingUpdate = update;
-
-            PostureTitle.Text = "UPDATE AVAILABLE";
-            PostureTitle.Foreground = Brushes.LightGreen;
-
-            UpdateVersionLabel.Text = $"v{update.Version}  ·  {update.PublishedAt:MMM d, yyyy}";
-            UpdateNotesText.Text = string.IsNullOrWhiteSpace(update.ReleaseNotes)
-                ? "No release notes provided."
-                : update.ReleaseNotes.Trim();
-
-            NormalPostureContent.Visibility = Visibility.Collapsed;
-            UpdatePostureContent.Visibility = Visibility.Visible;
-
-            var notes = string.IsNullOrWhiteSpace(update.ReleaseNotes)
-                ? string.Empty
-                : $"\n\n{update.ReleaseNotes.Trim()}";
-            var result = MessageBox.Show(
-                $"PackTracker v{update.Version} is available.{notes}\n\nDownload and install now?",
-                "Update Available",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information);
-
-            if (result == MessageBoxResult.Yes)
-                DownloadUpdate_Click(this, new RoutedEventArgs());
-        }
-
-        private async void DownloadUpdate_Click(object sender, RoutedEventArgs e)
-        {
-            if (_pendingUpdate is null)
-                return;
-
-            DownloadUpdateButton.IsEnabled = false;
-            DownloadProgressBar.Visibility = Visibility.Visible;
-            DownloadStatusText.Visibility = Visibility.Visible;
-            DownloadStatusText.Text = "Downloading…";
-
-            try
-            {
-                var progress = new Progress<int>(pct =>
-                {
-                    DownloadProgressBar.Value = pct;
-                    DownloadStatusText.Text = $"Downloading… {pct}%";
-                });
-
-                var filePath = await _updateService.DownloadUpdateAsync(
-                    _pendingUpdate,
-                    progress,
-                    CancellationToken.None);
-
-                DownloadStatusText.Text = "Download complete. Launching installer…";
-                await Task.Delay(800);
-
-                await _updateService.InstallAndRestartAsync(filePath);
-            }
-            catch (Exception ex)
-            {
-                DownloadStatusText.Text = $"Download failed: {ex.Message}";
-                DownloadUpdateButton.IsEnabled = true;
-                DownloadProgressBar.Visibility = Visibility.Collapsed;
-            }
         }
 
         #endregion

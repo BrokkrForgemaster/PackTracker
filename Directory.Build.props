@@ -2,9 +2,12 @@
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         
-        <Version>0.1.7</Version>
-        <FileVersion>0.1.7</FileVersion>
-        <AssemblyVersion>0.1.7</AssemblyVersion>
+        <!-- Single source of truth for the application version.
+             scripts\bump-version.ps1 keeps installer\PackTrackerSetup.iss in sync
+             and the release.yml gate fails if a git tag doesn't match this value. -->
+        <Version>0.6.0</Version>
+        <FileVersion>0.6.0</FileVersion>
+        <AssemblyVersion>0.6.0</AssemblyVersion>
         <Authors>House Wolf</Authors>
         <Company>House Wolf</Company>
         <Copyright>Copyright © House Wolf</Copyright>

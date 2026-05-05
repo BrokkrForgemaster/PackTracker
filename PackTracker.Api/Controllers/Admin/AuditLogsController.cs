@@ -27,5 +27,14 @@ public sealed class AuditLogsController : AdminControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<AdminAuditLogListItemDto>), StatusCodes.Status200OK)]
     public Task<IReadOnlyList<AdminAuditLogListItemDto>> Get([FromQuery] int take = 100, CancellationToken ct = default) =>
         _mediator.Send(new GetAuditLogsQuery(take), ct);
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(AdminAuditLogDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminAuditLogDetailDto>> GetById(Guid id, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetAuditLogDetailQuery(id), ct);
+        return result != null ? Ok(result) : NotFound();
+    }
     #endregion
 }

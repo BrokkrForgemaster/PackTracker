@@ -64,8 +64,8 @@
                         <Separator Background="{DynamicResource GlassBorderBrush}" Margin="8,16"/>
 
                         <Button Content="Audit Logs"
-                                IsEnabled="False"
-                                Style="{DynamicResource SidebarButtonStyle}"/>
+                                Style="{DynamicResource SidebarButtonStyle}"
+                                Click="AuditLogs_Click"/>
                         <Button Content="Medals"
                                 Style="{DynamicResource SidebarButtonStyle}"
                                 Click="Medals_Click"/>

@@ -83,6 +83,22 @@ public sealed class AdminApiClient
             ct);
     }
 
+    public async Task<IReadOnlyList<AdminAuditLogListItemDto>> GetAuditLogsAsync(int take = 100, CancellationToken ct = default)
+    {
+        return await GetSafeAsync<IReadOnlyList<AdminAuditLogListItemDto>>(
+            $"api/v1/admin/auditlogs?take={take}",
+            Array.Empty<AdminAuditLogListItemDto>(),
+            ct) ?? Array.Empty<AdminAuditLogListItemDto>();
+    }
+
+    public async Task<AdminAuditLogDetailDto?> GetAuditLogDetailAsync(Guid id, CancellationToken ct = default)
+    {
+        return await GetSafeAsync<AdminAuditLogDetailDto>(
+            $"api/v1/admin/auditlogs/{id}",
+            null,
+            ct);
+    }
+
     public async Task<AdminMedalsDto> GetMedalsAsync(CancellationToken ct = default)
     {
         return await GetSafeAsync(

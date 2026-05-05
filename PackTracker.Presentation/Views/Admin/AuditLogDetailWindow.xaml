@@ -1,0 +1,127 @@
+<Window x:Class="PackTracker.Presentation.Views.Admin.AuditLogDetailWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Audit Log Details" Height="650" Width="900"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource MainBackground}"
+        Foreground="White">
+    <Window.Resources>
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AccentGoldBrush}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style x:Key="ValueStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#1A1510"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#3D2A1A"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" BorderBrush="{DynamicResource AccentGoldBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,20" Padding="0,0,0,10">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="AUDIT LOG #" FontSize="18" FontWeight="Black"/>
+                <TextBlock Text="{Binding Log.Id}" FontSize="18" FontWeight="Light" Margin="10,0,0,0" Opacity="0.7"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Row 0 -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,0">
+                    <TextBlock Text="OCCURRED AT" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.OccurredAt, StringFormat=\{0:yyyy-MM-dd HH:mm:ss.fff\}}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Text="SEVERITY" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.Severity}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+
+                <!-- Row 1 -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">
+                    <TextBlock Text="ACTOR" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.ActorDisplayName}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Text="ACTION" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.Action}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+
+                <!-- Row 2 -->
+                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
+                    <TextBlock Text="TARGET TYPE" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.TargetType}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Text="TARGET ID" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.TargetId}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+
+                <!-- Row 3 -->
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="2">
+                    <TextBlock Text="SUMMARY" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.Summary}" Style="{StaticResource ValueStyle}" TextWrapping="Wrap" MinHeight="60"/>
+                </StackPanel>
+
+                <!-- Row 4 -->
+                <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,10,0">
+                    <TextBlock Text="MACHINE" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.MachineName}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                <StackPanel Grid.Row="4" Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Text="ENVIRONMENT" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.Environment}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+
+                <!-- Row 5 (Exception) -->
+                <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Visibility="{Binding HasException, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="EXCEPTION DETAILS" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Text="{Binding Log.Exception}" 
+                             Style="{StaticResource ValueStyle}" 
+                             FontFamily="Consolas" 
+                             FontSize="11" 
+                             AcceptsReturn="True" 
+                             MinHeight="200" 
+                             VerticalScrollBarVisibility="Auto"/>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+
+        <Button Grid.Row="2" 
+                Content="CLOSE" 
+                Width="120" 
+                HorizontalAlignment="Right" 
+                Padding="20,10" 
+                Style="{DynamicResource SecondaryActionButtonStyle}"
+                Click="Close_Click"/>
+    </Grid>
+</Window>

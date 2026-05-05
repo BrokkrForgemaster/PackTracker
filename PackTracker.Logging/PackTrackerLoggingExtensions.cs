@@ -23,17 +23,26 @@ public static class PackTrackerLoggingExtensions
         this IServiceCollection services,
         IConfiguration configuration,
         string applicationName,
-        string? logDirectory = null)
+        string? logDirectory = null,
+        Action<LoggerConfiguration, IServiceProvider>? extraConfiguration = null)
     {
-        Log.Logger = CreateLogger(configuration, applicationName, logDirectory);
-
         services.AddLogging(builder =>
         {
             builder.ClearProviders();
-            builder.AddSerilog(Log.Logger, dispose: false);
+            builder.AddSerilog(dispose: true);
         });
 
         services.AddSingleton(typeof(ILoggingService<>), typeof(SerilogLoggingService<>));
+
+        // We use a factory to create the logger so it can access the service provider if needed
+        services.AddSingleton<Serilog.ILogger>(sp =>
+        {
+            var loggerConfiguration = new LoggerConfiguration();
+            ConfigureLogger(loggerConfiguration, configuration, applicationName, logDirectory);
+            extraConfiguration?.Invoke(loggerConfiguration, sp);
+            return loggerConfiguration.CreateLogger();
+        });
+
         return services;
     }
 

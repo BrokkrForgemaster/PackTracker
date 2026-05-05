@@ -3,7 +3,7 @@ namespace PackTracker.Domain.Entities.Admin;
 public class AdminAuditLog
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid ActorProfileId { get; set; }
+    public Guid? ActorProfileId { get; set; }
     public string Action { get; set; } = string.Empty;
     public string TargetType { get; set; } = string.Empty;
     public string TargetId { get; set; } = string.Empty;
@@ -12,6 +12,9 @@ public class AdminAuditLog
     public string? AfterJson { get; set; }
     public string Severity { get; set; } = "Info";
     public string? CorrelationId { get; set; }
+    public string? Exception { get; set; }
+    public string? MachineName { get; set; }
+    public string? Environment { get; set; }
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
 
     public Profile? ActorProfile { get; set; }

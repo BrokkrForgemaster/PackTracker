@@ -14,6 +14,7 @@ public partial class AdminShellView : UserControl
     private readonly AdminMedalsView _medalsView;
     private readonly AdminRequestHistoryView _requestHistoryView;
     private readonly AdminRequestDetailView _requestDetailView;
+    private readonly AdminAuditLogsView _auditLogsView;
     private readonly NavigationStateService _navigationState;
 
     public AdminShellView(
@@ -24,6 +25,7 @@ public partial class AdminShellView : UserControl
         AdminMedalsView medalsView,
         AdminRequestHistoryView requestHistoryView,
         AdminRequestDetailView requestDetailView,
+        AdminAuditLogsView auditLogsView,
         NavigationStateService navigationState)
     {
         InitializeComponent();
@@ -34,6 +36,7 @@ public partial class AdminShellView : UserControl
         _medalsView = medalsView;
         _requestHistoryView = requestHistoryView;
         _requestDetailView = requestDetailView;
+        _auditLogsView = auditLogsView;
         _navigationState = navigationState;
 
         _requestHistoryView.RequestSelected += ShowRequestDetail;
@@ -52,6 +55,7 @@ public partial class AdminShellView : UserControl
     private void Members_Click(object sender, System.Windows.RoutedEventArgs e) => ShowMembers();
     private void Medals_Click(object sender, System.Windows.RoutedEventArgs e) => ShowMedals();
     private void RequestHistory_Click(object sender, System.Windows.RoutedEventArgs e) => ShowRequestHistory();
+    private void AuditLogs_Click(object sender, System.Windows.RoutedEventArgs e) => ShowAuditLogs();
 
     private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
     {
@@ -92,6 +96,13 @@ public partial class AdminShellView : UserControl
         _viewModel.CurrentSection = "Request History";
         _navigationState.CaptureAdminView("RequestHistory");
         AdminContentHost.Content = _requestHistoryView;
+    }
+
+    private void ShowAuditLogs()
+    {
+        _viewModel.CurrentSection = "Audit Logs";
+        _navigationState.CaptureAdminView("AuditLogs");
+        AdminContentHost.Content = _auditLogsView;
     }
 
     private void ShowRequestDetail(AdminRequestHistoryItemDto item)

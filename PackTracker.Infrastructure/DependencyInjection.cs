@@ -158,6 +158,7 @@ public static class DependencyInjection
     {
         services.AddHostedService<WikiSyncBackgroundService>();
         services.AddHostedService<TokenCleanupBackgroundService>();
+        services.AddHostedService<AuditLogCleanupBackgroundService>();
     }
 
     #endregion

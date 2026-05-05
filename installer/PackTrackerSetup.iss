@@ -13,7 +13,9 @@
 ; ============================================================
 
 #ifndef AppVersion
-  #define AppVersion "0.5.9"
+  ; Local builds default to this. Keep in sync with Directory.Build.props
+  ; (scripts\bump-version.ps1 updates both atomically).
+  #define AppVersion "0.6.0"
 #endif
 
 #define AppName        "PackTracker"

@@ -30,13 +30,16 @@ public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery
             .Take(request.Take)
             .Select(x => new AdminAuditLogListItemDto(
                 x.Id,
-                x.ActorProfile != null ? x.ActorProfile.Username : "Unknown",
+                x.ActorProfile != null ? x.ActorProfile.Username : "System",
                 x.Action,
                 x.TargetType,
                 x.TargetId,
                 x.Summary,
                 x.Severity,
-                x.OccurredAt))
+                x.OccurredAt,
+                x.MachineName,
+                x.Environment,
+                !string.IsNullOrEmpty(x.Exception)))
             .ToListAsync(cancellationToken);
     }
 }

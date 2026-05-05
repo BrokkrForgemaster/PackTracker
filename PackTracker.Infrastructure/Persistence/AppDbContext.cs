@@ -881,14 +881,18 @@ public class AppDbContext : DbContext, IApplicationDbContext, IAdminDbContext, I
             entity.Property(x => x.Action).HasMaxLength(100).IsRequired();
             entity.Property(x => x.TargetType).HasMaxLength(100).IsRequired();
             entity.Property(x => x.TargetId).HasMaxLength(100).IsRequired();
-            entity.Property(x => x.Summary).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.Summary).HasMaxLength(4000).IsRequired();
             entity.Property(x => x.Severity).HasMaxLength(30).IsRequired();
             entity.Property(x => x.CorrelationId).HasMaxLength(100);
+            entity.Property(x => x.Exception).HasMaxLength(8000);
+            entity.Property(x => x.MachineName).HasMaxLength(100);
+            entity.Property(x => x.Environment).HasMaxLength(50);
 
             entity.HasOne(x => x.ActorProfile)
                 .WithMany()
                 .HasForeignKey(x => x.ActorProfileId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
         });
     }
 

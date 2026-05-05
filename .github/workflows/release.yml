@@ -44,6 +44,22 @@ jobs:
             echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           fi
 
+      # ── Verify Directory.Build.props matches the tag/input version ─
+      # Catches the common failure mode of pushing a tag without bumping the file.
+      - name: Verify version matches Directory.Build.props
+        shell: pwsh
+        run: |
+          $expected = "${{ steps.version.outputs.VERSION }}"
+          [xml]$props = Get-Content Directory.Build.props
+          $declared = $props.Project.PropertyGroup.Version
+          if ($declared -is [System.Array]) { $declared = $declared | Where-Object { $_ } | Select-Object -First 1 }
+          $declared = "$declared".Trim()
+          if ($declared -ne $expected) {
+            Write-Error "Version mismatch: tag/input='$expected' but Directory.Build.props='$declared'. Run scripts/bump-version.ps1 $expected before tagging."
+            exit 1
+          }
+          Write-Host "Version gate passed: $declared"
+
       # ── Restore ───────────────────────────────────────────────────
       - name: Restore
         run: dotnet restore PackTracker.sln

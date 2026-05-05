@@ -5,6 +5,7 @@ using PackTracker.Application.Interfaces;
 using PackTracker.Infrastructure.Services;
 using Microsoft.AspNetCore.DataProtection;
 using PackTracker.Infrastructure.Persistence;
+using PackTracker.Infrastructure.Logging;
 
 DotNetEnv.Env.TraversePath().Load();
 
@@ -15,7 +16,8 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddPackTrackerLogging(
     configuration: builder.Configuration,
     applicationName: "PackTracker.Api",
-    logDirectory: Path.Combine(builder.Environment.ContentRootPath, "Logs"));
+    logDirectory: Path.Combine(builder.Environment.ContentRootPath, "Logs"),
+    extraConfiguration: (cfg, sp) => cfg.WriteToDatabase(sp));
 
 var bootstrapLogger = new LoggerConfiguration()
     .WriteTo.Console()

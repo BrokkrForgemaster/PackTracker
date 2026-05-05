@@ -1,6 +1,6 @@
 namespace PackTracker.Application.Admin.DTOs;
 
-public sealed record AdminAuditLogListItemDto(
+public sealed record AdminAuditLogDetailDto(
     Guid Id,
     string ActorDisplayName,
     string Action,
@@ -9,6 +9,9 @@ public sealed record AdminAuditLogListItemDto(
     string Summary,
     string Severity,
     DateTime OccurredAt,
-    string? MachineName = null,
-    string? Environment = null,
-    bool HasException = false);
+    string? BeforeJson,
+    string? AfterJson,
+    string? CorrelationId,
+    string? Exception,
+    string? MachineName,
+    string? Environment);

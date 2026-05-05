@@ -27,9 +27,18 @@ public interface IUpdateService
 
     /// <summary>
     /// Installs the downloaded update and restarts the application.
+    /// Equivalent to <see cref="LaunchInstallerAsync"/> followed by an immediate process exit.
     /// </summary>
     /// <param name="installerPath">Path to installer file</param>
     Task InstallAndRestartAsync(string installerPath);
+
+    /// <summary>
+    /// Launches the installer process and returns control to the caller.
+    /// The caller is responsible for shutting the application down at a moment of its choosing
+    /// so the installer can replace the running files.
+    /// </summary>
+    /// <param name="installerPath">Path to installer file</param>
+    Task LaunchInstallerAsync(string installerPath);
 
     /// <summary>
     /// Gets the current application version.
