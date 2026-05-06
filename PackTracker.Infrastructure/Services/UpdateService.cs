@@ -285,20 +285,27 @@ public class UpdateService : IUpdateService
 
     internal static string BuildInstallerBootstrapScript(string installerPath, string installerArguments, int processId)
     {
-        var escapedInstallerPath = EscapeForDoubleQuotedBatchArgument(installerPath);
+        // Path goes inside PowerShell single quotes, so escape `'` not `"`.
+        var escapedInstallerPath = EscapeForPowerShellSingleQuotedString(installerPath);
         var escapedInstallerArguments = EscapeForPowerShellSingleQuotedString(installerArguments);
+        var logPath = Path.Combine(Path.GetTempPath(), "PackTracker", "installer-bootstrap.log");
+        var escapedLogPath = EscapeForDoubleQuotedBatchArgument(logPath);
 
         return $"""
                 @echo off
                 setlocal
+                set "LOG={escapedLogPath}"
                 set "TARGET_PID={processId}"
+                >>"%LOG%" echo [%date% %time%] bootstrap start, pid=%TARGET_PID%
                 :wait_for_packtracker_exit
                 tasklist /FI "PID eq %TARGET_PID%" 2>NUL | find /I "%TARGET_PID%" >NUL
                 if not errorlevel 1 (
                     timeout /t 1 /nobreak >NUL
                     goto wait_for_packtracker_exit
                 )
-                powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Start-Process -FilePath '{escapedInstallerPath}' -ArgumentList '{escapedInstallerArguments}' -Verb RunAs"
+                >>"%LOG%" echo [%date% %time%] target exited, invoking PowerShell to launch installer
+                powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Start-Process -FilePath '{escapedInstallerPath}' -ArgumentList '{escapedInstallerArguments}' -Verb RunAs -ErrorAction Stop"
+                >>"%LOG%" echo [%date% %time%] powershell exited with errorlevel %errorlevel%
                 del "%~f0"
                 """;
     }

@@ -40,21 +40,29 @@ public sealed class ImagePathToPackUriConverter : IValueConverter
             return null;
         }
 
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.UriSource = new Uri($"pack://application:,,,/{normalizedPath}", UriKind.Absolute);
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-        bitmap.EndInit();
-        bitmap.Freeze();
-
-        var trimmed = TrimTransparentBounds(bitmap);
-        if (trimmed is not null && trimmed.CanFreeze)
+        try
         {
-            trimmed.Freeze();
-        }
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri($"pack://application:,,,/{normalizedPath}", UriKind.Absolute);
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            bitmap.EndInit();
+            bitmap.Freeze();
 
-        return trimmed;
+            var trimmed = TrimTransparentBounds(bitmap);
+            if (trimmed is not null && trimmed.CanFreeze)
+            {
+                trimmed.Freeze();
+            }
+
+            return trimmed;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to load image resource {Path}", normalizedPath);
+            return null;
+        }
     }
 
     internal static BitmapSource TrimTransparentBounds(BitmapSource source)
