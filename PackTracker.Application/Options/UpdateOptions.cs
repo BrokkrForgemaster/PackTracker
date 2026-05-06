@@ -11,10 +11,10 @@ public sealed class UpdateOptions
     public string? RestartExecutableName { get; set; } = "PackTracker.Presentation.exe";
 
     /// <summary>How often the background monitor polls GitHub Releases.</summary>
-    public double CheckIntervalHours { get; set; } = 4.0;
+    public double CheckIntervalHours { get; set; } = 0.25;
 
     /// <summary>Delay before the first poll after app startup.</summary>
-    public double InitialDelaySeconds { get; set; } = 30.0;
+    public double InitialDelaySeconds { get; set; } = 10.0;
 
     /// <summary>If false, the background monitor never runs.</summary>
     public bool AutoCheckEnabled { get; set; } = true;

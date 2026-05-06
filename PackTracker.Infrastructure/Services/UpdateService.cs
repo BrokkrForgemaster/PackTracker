@@ -183,8 +183,6 @@ public class UpdateService : IUpdateService
     {
         await LaunchInstallerAsync(installerPath);
 
-        // Give the installer a beat to spawn before we let go of the file handles.
-        await Task.Delay(1000);
         Environment.Exit(0);
     }
 
@@ -202,40 +200,21 @@ public class UpdateService : IUpdateService
             }
 
             var extension = Path.GetExtension(installerPath).ToLowerInvariant();
-            ProcessStartInfo startInfo;
 
             switch (extension)
             {
                 case ".exe":
-                    startInfo = new ProcessStartInfo
-                    {
-                        FileName = installerPath,
-                        Arguments = "/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
-                        UseShellExecute = true,
-                        Verb = "runas"
-                    };
-                    break;
-
                 case ".msi":
-                    startInfo = new ProcessStartInfo
-                    {
-                        FileName = "msiexec.exe",
-                        Arguments = $"/i \"{installerPath}\" /quiet /qn /norestart",
-                        UseShellExecute = true,
-                        Verb = "runas"
-                    };
+                    await LaunchInstallerAfterCurrentProcessExitsAsync(installerPath, extension);
                     break;
 
                 case ".zip":
                     await ExtractAndReplaceAsync(installerPath);
-                    return;
+                    break;
 
                 default:
                     throw new NotSupportedException($"Installer type '{extension}' is not supported.");
             }
-
-            Process.Start(startInfo);
-            _logger.LogInformation("Installer process started.");
         }
         catch (Exception ex)
         {
@@ -304,6 +283,68 @@ public class UpdateService : IUpdateService
     private string GetLatestReleaseApiUrl() =>
         $"https://api.github.com/repos/{_options.GitHubOwner}/{_options.GitHubRepository}/releases/latest";
 
+    internal static string BuildInstallerBootstrapScript(string installerPath, string installerArguments, int processId)
+    {
+        var escapedInstallerPath = EscapeForDoubleQuotedBatchArgument(installerPath);
+        var escapedInstallerArguments = EscapeForPowerShellSingleQuotedString(installerArguments);
+
+        return $"""
+                @echo off
+                setlocal
+                set "TARGET_PID={processId}"
+                :wait_for_packtracker_exit
+                tasklist /FI "PID eq %TARGET_PID%" 2>NUL | find /I "%TARGET_PID%" >NUL
+                if not errorlevel 1 (
+                    timeout /t 1 /nobreak >NUL
+                    goto wait_for_packtracker_exit
+                )
+                powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Start-Process -FilePath '{escapedInstallerPath}' -ArgumentList '{escapedInstallerArguments}' -Verb RunAs"
+                del "%~f0"
+                """;
+    }
+
+    internal static string GetInstallerArguments(string extension, string installerPath)
+    {
+        return extension switch
+        {
+            ".exe" => "/SILENT /CLOSEAPPLICATIONS",
+            ".msi" => $"/i \"{installerPath}\" /quiet /qn /norestart",
+            _ => throw new NotSupportedException($"Installer type '{extension}' is not supported.")
+        };
+    }
+
+    private async Task LaunchInstallerAfterCurrentProcessExitsAsync(string installerPath, string extension)
+    {
+        var installerArguments = GetInstallerArguments(extension, installerPath);
+        var bootstrapScriptPath = Path.Combine(
+            Path.GetTempPath(),
+            "PackTracker",
+            $"launch-installer-{Guid.NewGuid():N}.cmd");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(bootstrapScriptPath)!);
+
+        var bootstrapScript = BuildInstallerBootstrapScript(
+            installerPath,
+            installerArguments,
+            Environment.ProcessId);
+
+        await File.WriteAllTextAsync(bootstrapScriptPath, bootstrapScript);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = $"/c \"{bootstrapScriptPath}\"",
+            UseShellExecute = true,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+        });
+
+        _logger.LogInformation(
+            "Queued installer bootstrapper at {Path} for extension {Extension}.",
+            bootstrapScriptPath,
+            extension);
+    }
+
     private static string ResolveDownloadFileName(string downloadUrl)
     {
         if (Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri))
@@ -317,6 +358,12 @@ public class UpdateService : IUpdateService
 
         return $"packtracker-update-{Guid.NewGuid():N}.bin";
     }
+
+    private static string EscapeForDoubleQuotedBatchArgument(string value) =>
+        value.Replace("\"", "\"\"", StringComparison.Ordinal);
+
+    private static string EscapeForPowerShellSingleQuotedString(string value) =>
+        value.Replace("'", "''", StringComparison.Ordinal);
 
     private static bool IsNewerVersion(string currentVersion, string newVersion)
     {

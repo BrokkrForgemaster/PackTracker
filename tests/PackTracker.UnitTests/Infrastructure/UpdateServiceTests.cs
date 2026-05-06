@@ -60,6 +60,37 @@ public sealed class UpdateServiceTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public void GetInstallerArguments_ReturnsSilentFlags_ForExeInstallers()
+    {
+        var arguments = UpdateService.GetInstallerArguments(".exe", @"C:\Temp\PackTrackerSetup.exe");
+
+        Assert.Equal("/SILENT /CLOSEAPPLICATIONS", arguments);
+    }
+
+    [Fact]
+    public void GetInstallerArguments_ReturnsMsiexecArguments_ForMsiInstallers()
+    {
+        var arguments = UpdateService.GetInstallerArguments(".msi", @"C:\Temp\PackTrackerSetup.msi");
+
+        Assert.Equal("/i \"C:\\Temp\\PackTrackerSetup.msi\" /quiet /qn /norestart", arguments);
+    }
+
+    [Fact]
+    public void BuildInstallerBootstrapScript_WaitsForCurrentProcessBeforeLaunchingInstaller()
+    {
+        var script = UpdateService.BuildInstallerBootstrapScript(
+            @"C:\Temp\PackTrackerSetup.exe",
+            "/SILENT /CLOSEAPPLICATIONS",
+            4242);
+
+        Assert.Contains("set \"TARGET_PID=4242\"", script);
+        Assert.Contains("goto wait_for_packtracker_exit", script);
+        Assert.Contains("Start-Process -FilePath 'C:\\Temp\\PackTrackerSetup.exe'", script);
+        Assert.Contains("-ArgumentList '/SILENT /CLOSEAPPLICATIONS'", script);
+        Assert.Contains("del \"%~f0\"", script);
+    }
+
     private static UpdateService CreateSubject(string responseContent, string currentVersion)
     {
         var client = new HttpClient(new StubHttpMessageHandler(responseContent))

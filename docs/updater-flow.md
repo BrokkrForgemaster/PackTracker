@@ -22,15 +22,22 @@ Configurable values:
 - `Updates:AllowedAssetExtensions`
 - `Updates:UserAgent`
 - `Updates:RestartExecutableName`
+- `Updates:InitialDelaySeconds`
+- `Updates:CheckIntervalHours`
+- `Updates:AutoCheckEnabled`
+- `Updates:AutoDownload`
+- `Updates:RemindLaterHours`
 
 ## Flow
 
-1. Desktop starts and checks GitHub Releases.
-2. The updater compares the current version with the latest release tag.
-3. The updater selects the first supported asset extension.
-4. The user chooses whether to download/install.
-5. `.exe` and `.msi` packages are launched elevated.
-6. `.zip` packages are extracted by a replacement script that restarts the app afterward.
+1. Desktop starts and begins the background update monitor.
+2. After the configured initial delay, the monitor checks GitHub Releases.
+3. While the app remains open, the monitor keeps polling at the configured interval so a newly-published release can be detected without restarting the app.
+4. The updater compares the current version with the latest release tag.
+5. The updater selects the first supported asset extension.
+6. The user chooses whether to download/install.
+7. `.exe` and `.msi` packages are launched only after the current app process exits cleanly.
+8. `.zip` packages are extracted by a replacement script that restarts the app afterward.
 
 ## Logging
 

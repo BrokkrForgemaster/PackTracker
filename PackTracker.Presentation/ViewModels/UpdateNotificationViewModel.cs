@@ -170,10 +170,6 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         try
         {
             await _updateService.LaunchInstallerAsync(path);
-
-            // Give Inno a beat to attach to the running process before we shut down,
-            // so /CLOSEAPPLICATIONS can hook us cleanly.
-            await System.Threading.Tasks.Task.Delay(800);
             System.Windows.Application.Current?.Shutdown();
         }
         catch (Exception ex)
