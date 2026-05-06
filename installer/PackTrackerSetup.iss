@@ -15,7 +15,7 @@
 #ifndef AppVersion
   ; Local builds default to this. Keep in sync with Directory.Build.props
   ; (scripts\bump-version.ps1 updates both atomically).
-  #define AppVersion "0.7.4"
+  #define AppVersion "0.7.5"
 #endif
 
 #define AppName        "PackTracker"
@@ -149,7 +149,7 @@ var
 begin
   Result := True;
 
-  ; Force-close PackTracker if Windows/Inno cannot close it cleanly.
+  // Force-close PackTracker if Windows/Inno cannot close it cleanly.
   Exec(
     'taskkill.exe',
     '/IM "{#AppExeName}" /F',
