@@ -14,7 +14,32 @@
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+        <Style x:Key="UltraThinScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="6" />
+                            </Grid.ColumnDefinitions>
 
+                            <ScrollContentPresenter Grid.Column="0" />
+
+                            <ScrollBar Grid.Column="1"
+                                       Width="6"
+                                       Orientation="Vertical"
+                                       Value="{TemplateBinding VerticalOffset}"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                       Background="Transparent"
+                                       Foreground="#6E5A46"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="DarkMenuItemStyle" TargetType="MenuItem">
             <Setter Property="Foreground" Value="#C8A96E" />
             <Setter Property="Background" Value="Transparent" />
@@ -990,6 +1015,7 @@
                             </Border>
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          Style="{StaticResource UltraThinScrollViewerStyle}"
                                           HorizontalScrollBarVisibility="Disabled">
                                 <ItemsControl ItemsSource="{Binding AvailableChatChannels}">
                                     <ItemsControl.ItemTemplate>
@@ -1152,6 +1178,7 @@
 
                                         <!-- Messages -->
                                         <ScrollViewer Grid.Row="1"
+                                                      Style="{StaticResource UltraThinScrollViewerStyle}"
                                                       behaviors:AutoScrollBehavior.AutoScrollSource="{Binding Messages}"
                                                       VerticalScrollBarVisibility="Auto"
                                                       HorizontalScrollBarVisibility="Disabled"
@@ -1431,6 +1458,7 @@
 
                     <!-- Members list -->
                     <ScrollViewer Grid.Row="1"
+                                  Style="{StaticResource UltraThinScrollViewerStyle}"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl ItemsSource="{Binding AllMembers}">

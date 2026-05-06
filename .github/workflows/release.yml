@@ -44,21 +44,34 @@ jobs:
             echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── Verify Directory.Build.props matches the tag/input version ─
-      # Catches the common failure mode of pushing a tag without bumping the file.
-      - name: Verify version matches Directory.Build.props
+      # ── Verify version files match the tag/input version ─
+      # Catches the common failure mode of pushing a tag without bumping the files.
+      # Both Directory.Build.props AND PackTracker.Presentation.csproj must match,
+      # since the .csproj <Version> overrides Directory.Build.props for the WPF host.
+      - name: Verify version files match tag
         shell: pwsh
         run: |
           $expected = "${{ steps.version.outputs.VERSION }}"
-          [xml]$props = Get-Content Directory.Build.props
-          $declared = $props.Project.PropertyGroup.Version
-          if ($declared -is [System.Array]) { $declared = $declared | Where-Object { $_ } | Select-Object -First 1 }
-          $declared = "$declared".Trim()
-          if ($declared -ne $expected) {
-            Write-Error "Version mismatch: tag/input='$expected' but Directory.Build.props='$declared'. Run scripts/bump-version.ps1 $expected before tagging."
+
+          function Get-XmlVersion($path, $node) {
+            [xml]$xml = Get-Content $path
+            $value = $xml.Project.PropertyGroup.$node
+            if ($value -is [System.Array]) { $value = $value | Where-Object { $_ } | Select-Object -First 1 }
+            return "$value".Trim()
+          }
+
+          $propsVersion = Get-XmlVersion 'Directory.Build.props' 'Version'
+          $csprojVersion = Get-XmlVersion 'PackTracker.Presentation/PackTracker.Presentation.csproj' 'Version'
+
+          $mismatches = @()
+          if ($propsVersion  -ne $expected) { $mismatches += "Directory.Build.props=$propsVersion" }
+          if ($csprojVersion -ne $expected) { $mismatches += "PackTracker.Presentation.csproj=$csprojVersion" }
+
+          if ($mismatches.Count -gt 0) {
+            Write-Error "Version mismatch: tag/input='$expected' but $($mismatches -join ', '). Run scripts/bump-version.ps1 $expected before tagging."
             exit 1
           }
-          Write-Host "Version gate passed: $declared"
+          Write-Host "Version gate passed: $expected (props + csproj in sync)"
 
       # ── Restore ───────────────────────────────────────────────────
       - name: Restore
