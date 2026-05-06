@@ -15,7 +15,7 @@
 #ifndef AppVersion
   ; Local builds default to this. Keep in sync with Directory.Build.props
   ; (scripts\bump-version.ps1 updates both atomically).
-  #define AppVersion "0.7.10"
+  #define AppVersion "0.8.0"
 #endif
 
 #define AppName        "PackTracker"
@@ -63,8 +63,11 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 RestartIfNeededByRun=no
 
-; Close the running app before replacing locked .NET/WebView files
-CloseApplications=yes
+; Close the running app before replacing locked .NET/WebView files.
+; "force" skips the Abort/Retry/Ignore prompt if RestartManager can't
+; shut something down — InitializeSetup already taskkills the process,
+; so any remaining holders get queued for rename-on-reboot silently.
+CloseApplications=force
 CloseApplicationsFilter={#AppExeName}
 RestartApplications=no
 
@@ -146,18 +149,38 @@ Type: dirifempty; Name: "{app}\Assets"
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
+  Attempts: Integer;
 begin
   Result := True;
 
-  // Force-close PackTracker if Windows/Inno cannot close it cleanly.
+  // Force-close PackTracker (and any child processes — WebView2 spawns
+  // msedgewebview2.exe which holds WebView2Loader.dll) before Inno's
+  // RestartManager check runs. taskkill returns as soon as the kill is
+  // queued, but Windows takes a moment to release file handles, so retry
+  // briefly to give the OS time to finalize termination.
+  for Attempts := 1 to 5 do
+  begin
+    Exec(
+      'taskkill.exe',
+      '/IM "{#AppExeName}" /F /T',
+      '',
+      SW_HIDE,
+      ewWaitUntilTerminated,
+      ResultCode
+    );
+    Sleep(300);
+  end;
+
+  // Catch any orphaned WebView2 child processes that outlived the parent.
   Exec(
     'taskkill.exe',
-    '/IM "{#AppExeName}" /F',
+    '/IM "msedgewebview2.exe" /F',
     '',
     SW_HIDE,
     ewWaitUntilTerminated,
     ResultCode
   );
+  Sleep(200);
 end;
 
 procedure InitializeWizard;
