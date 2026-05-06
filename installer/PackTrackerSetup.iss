@@ -15,7 +15,7 @@
 #ifndef AppVersion
   ; Local builds default to this. Keep in sync with Directory.Build.props
   ; (scripts\bump-version.ps1 updates both atomically).
-  #define AppVersion "0.7.3"
+  #define AppVersion "0.7.4"
 #endif
 
 #define AppName        "PackTracker"
@@ -36,23 +36,19 @@ AppSupportURL={#AppURL}/issues
 AppUpdatesURL={#AppURL}/releases
 AppCopyright=Copyright (C) House Wolf
 
-; Cleaner Windows metadata
 VersionInfoVersion={#AppVersion}
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription={#AppName} Installer
 VersionInfoProductName={#AppName}
 VersionInfoCopyright=Copyright (C) House Wolf
 
-; Install location
 DefaultDirName={autopf}\HouseWolf\PackTracker
 DefaultGroupName=House Wolf\PackTracker
 AllowNoIcons=yes
 
-; Output
 OutputDir=output
 OutputBaseFilename=PackTrackerSetup-{#AppVersion}
 
-; Branding
 SetupIconFile={#AppIconFile}
 WizardStyle=modern
 WizardImageFile=..\PackTracker.Presentation\Assets\HousewolfBanner_installer.bmp
@@ -60,7 +56,6 @@ WizardSmallImageFile=..\PackTracker.Presentation\Assets\Pack_Tracker_installer.b
 WizardImageStretch=yes
 WizardImageBackColor=$10141A
 
-; Installer behavior
 Compression=lzma2/ultra64
 SolidCompression=yes
 PrivilegesRequired=admin
@@ -68,11 +63,11 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 RestartIfNeededByRun=no
 
-; Helps with upgrades/uninstalls when app is still running
+; Close the running app before replacing locked .NET/WebView files
 CloseApplications=yes
+CloseApplicationsFilter={#AppExeName}
 RestartApplications=no
 
-; These do not remove SmartScreen, but help installer quality/reputation signals
 SetupLogging=yes
 DisableDirPage=no
 DisableProgramGroupPage=yes
@@ -80,9 +75,6 @@ UsePreviousAppDir=yes
 UsePreviousGroup=yes
 UninstallDisplayIcon={app}\housewolf2.ico
 UninstallDisplayName={#AppName} - {#AppDescription}
-
-; Enable this once you are code-signing the installer/uninstaller
-; SignedUninstaller=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -127,10 +119,10 @@ Name: "{autodesktop}\{#AppName}"; \
   Tasks: desktopicon
 
 [Run]
-; Offer to launch after install
+; Auto-launch PackTracker after install/update
 Filename: "{app}\{#AppExeName}"; \
   Description: "Launch {#AppName}"; \
-  Flags: nowait postinstall skipifsilent
+  Flags: nowait postinstall skipifsilent runascurrentuser
 
 [UninstallDelete]
 ; Remove common runtime leftovers in install directory
@@ -151,6 +143,23 @@ Type: dirifempty; Name: "{app}\Assets"
 ; Type: filesandordirs; Name: "{localappdata}\PackTracker\Cache"
 
 [Code]
+function InitializeSetup(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+
+  ; Force-close PackTracker if Windows/Inno cannot close it cleanly.
+  Exec(
+    'taskkill.exe',
+    '/IM "{#AppExeName}" /F',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
 procedure InitializeWizard;
 begin
   WizardForm.WelcomeLabel1.Caption :=
@@ -160,11 +169,9 @@ begin
     'PackTracker is the House Wolf operations shell for Star Citizen - ' +
     'your unified hub for blueprint ops, trade intel, crafting logistics, and fleet coordination.' + #13#10 + #13#10 +
     'Version ' + ExpandConstant('{#AppVersion}') + #13#10 + #13#10 +
-    'Close other applications before continuing, then click Next.';
+    'If PackTracker is running, Setup will close it before updating.';
 
   WizardForm.FinishedLabel.Caption :=
-    'PackTracker has been installed on your computer.' + #13#10 + #13#10 +
-    'The application may require PostgreSQL, Discord authentication, and user-specific API settings ' +
-    'to be configured after first launch.' + #13#10 + #13#10 +
+    'PackTracker has been installed and will restart automatically.' + #13#10 + #13#10 +
     'Click Finish to close Setup.';
 end;
