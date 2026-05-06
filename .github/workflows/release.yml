@@ -78,12 +78,43 @@ jobs:
         run: dotnet restore PackTracker.sln
 
       # ── Test (gate: release is rejected if any test fails) ────────
-      - name: Test
-        run: >
-          dotnet test PackTracker.sln
-          --no-restore
-          --configuration Release
-          --logger "console;verbosity=normal"
+      - name: Test Integration
+        shell: pwsh
+        run: |
+          dotnet test tests/PackTracker.IntegrationTests/PackTracker.IntegrationTests.csproj `
+            --no-restore `
+            --configuration Release `
+            --logger "console;verbosity=normal" `
+            --logger "trx;LogFileName=integration-results.trx"
+
+      - name: Test API
+        shell: pwsh
+        run: |
+          dotnet test tests/PackTracker.ApiTests/PackTracker.ApiTests.csproj `
+            --no-restore `
+            --configuration Release `
+            --logger "console;verbosity=normal" `
+            --logger "trx;LogFileName=api-results.trx"
+
+      - name: Test Unit
+        shell: pwsh
+        run: |
+          dotnet test tests/PackTracker.UnitTests/PackTracker.UnitTests.csproj `
+            --no-restore `
+            --configuration Release `
+            --logger "console;verbosity=normal" `
+            --logger "trx;LogFileName=unit-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-test-results-${{ steps.version.outputs.VERSION }}
+          path: |
+            tests/PackTracker.IntegrationTests/TestResults/*.trx
+            tests/PackTracker.ApiTests/TestResults/*.trx
+            tests/PackTracker.UnitTests/TestResults/*.trx
+          if-no-files-found: warn
 
       # ── Inject production secrets into appsettings.json ───────────
       # These values are stored as GitHub Actions secrets and are never
