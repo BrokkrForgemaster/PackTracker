@@ -8,8 +8,15 @@ public sealed class ImagePathToPackUriConverterTests
     [Fact]
     public void TrimTransparentBounds_CropsMineOrDieRibbonPadding()
     {
+        var imagePath = Path.Combine(
+            GetRepositoryRoot(),
+            "PackTracker.Presentation",
+            "Assets",
+            "ribbons",
+            "mineordiemissionribbon.png");
+
         var source = new BitmapImage(new Uri(
-            @"C:\dev\PackTracker\PackTracker.Presentation\Assets\ribbons\mineordiemissionribbon.png",
+            imagePath,
             UriKind.Absolute));
 
         var trimmed = ImagePathToPackUriConverter.TrimTransparentBounds(source);
@@ -26,5 +33,22 @@ public sealed class ImagePathToPackUriConverterTests
         var normalized = ImagePathToPackUriConverter.NormalizePath(@"..\Assets\ribbons\mineordiemissionribbon.png");
 
         Assert.Equal("Assets/ribbons/mineordiemissionribbon.png", normalized);
+    }
+
+    private static string GetRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "Directory.Build.props")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repository root from test base directory.");
     }
 }
