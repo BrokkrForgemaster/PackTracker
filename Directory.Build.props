@@ -5,9 +5,9 @@
         <!-- Single source of truth for the application version.
              scripts\bump-version.ps1 keeps installer\PackTrackerSetup.iss in sync
              and the release.yml gate fails if a git tag doesn't match this value. -->
-        <Version>0.7.5</Version>
-        <FileVersion>0.7.5</FileVersion>
-        <AssemblyVersion>0.7.5</AssemblyVersion>
+        <Version>0.7.6</Version>
+        <FileVersion>0.7.6</FileVersion>
+        <AssemblyVersion>0.7.6</AssemblyVersion>
         <Authors>House Wolf</Authors>
         <Company>House Wolf</Company>
         <Copyright>Copyright Â© House Wolf</Copyright>

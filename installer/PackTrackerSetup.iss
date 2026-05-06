@@ -15,7 +15,7 @@
 #ifndef AppVersion
   ; Local builds default to this. Keep in sync with Directory.Build.props
   ; (scripts\bump-version.ps1 updates both atomically).
-  #define AppVersion "0.7.5"
+  #define AppVersion "0.7.6"
 #endif
 
 #define AppName        "PackTracker"
@@ -122,7 +122,7 @@ Name: "{autodesktop}\{#AppName}"; \
 ; Auto-launch PackTracker after install/update
 Filename: "{app}\{#AppExeName}"; \
   Description: "Launch {#AppName}"; \
-  Flags: nowait postinstall skipifsilent runascurrentuser
+  Flags: nowait runasoriginaluser
 
 [UninstallDelete]
 ; Remove common runtime leftovers in install directory
