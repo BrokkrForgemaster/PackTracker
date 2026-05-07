@@ -108,14 +108,32 @@ public sealed class UpdateNotificationState : IUpdateNotificationState
         Status = UpdateLifecycleStatus.ReadyToInstall;
     }
 
+    private bool _hasShownUpdatedThisSession;
+
     public void ReportFailed(string message)
     {
         FailureMessage = message;
         Status = UpdateLifecycleStatus.Failed;
     }
 
+    public void ReportUpdated(string version)
+    {
+        if (_hasShownUpdatedThisSession) return;
+
+        AvailableUpdate = new UpdateInfo 
+        { 
+            Version = version,
+            DownloadUrl = "about:blank" // Required property, though unused in 'Updated' state
+        };
+        Status = UpdateLifecycleStatus.Updated;
+        _hasShownUpdatedThisSession = true;
+    }
+
     public void ReportIdle()
     {
+        // Don't clear "Updated" status automatically if it was just set.
+        if (Status == UpdateLifecycleStatus.Updated) return;
+
         AvailableUpdate = null;
         StagedInstallerPath = null;
         DownloadProgress = 0;

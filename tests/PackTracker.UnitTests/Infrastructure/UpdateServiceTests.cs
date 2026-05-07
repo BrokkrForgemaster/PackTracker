@@ -61,19 +61,19 @@ public sealed class UpdateServiceTests
     }
 
     [Fact]
-    public void GetInstallerArguments_ReturnsSilentFlags_ForExeInstallers()
+    public void GetInstallerArgumentsList_ReturnsSilentFlags_ForExeInstallers()
     {
-        var arguments = UpdateService.GetInstallerArguments(".exe", @"C:\Temp\PackTrackerSetup.exe");
+        var arguments = UpdateService.GetInstallerArgumentsList(".exe", @"C:\Temp\PackTrackerSetup.exe");
 
-        Assert.Equal("/SILENT /CLOSEAPPLICATIONS", arguments);
+        Assert.Equal(new[] { "/SILENT", "/CLOSEAPPLICATIONS" }, arguments);
     }
 
     [Fact]
-    public void GetInstallerArguments_ReturnsMsiexecArguments_ForMsiInstallers()
+    public void GetInstallerArgumentsList_ReturnsMsiexecArguments_ForMsiInstallers()
     {
-        var arguments = UpdateService.GetInstallerArguments(".msi", @"C:\Temp\PackTrackerSetup.msi");
+        var arguments = UpdateService.GetInstallerArgumentsList(".msi", @"C:\Temp\PackTrackerSetup.msi");
 
-        Assert.Equal("/i \"C:\\Temp\\PackTrackerSetup.msi\" /quiet /qn /norestart", arguments);
+        Assert.Equal(new[] { "/i", @"C:\Temp\PackTrackerSetup.msi", "/quiet", "/qn", "/norestart" }, arguments);
     }
 
     [Fact]
@@ -81,13 +81,13 @@ public sealed class UpdateServiceTests
     {
         var script = UpdateService.BuildInstallerBootstrapScript(
             @"C:\Temp\PackTrackerSetup.exe",
-            "/SILENT /CLOSEAPPLICATIONS",
+            ".exe",
             4242);
 
         Assert.Contains("set \"TARGET_PID=4242\"", script);
         Assert.Contains("goto wait_for_packtracker_exit", script);
         Assert.Contains("Start-Process -FilePath 'C:\\Temp\\PackTrackerSetup.exe'", script);
-        Assert.Contains("-ArgumentList '/SILENT /CLOSEAPPLICATIONS'", script);
+        Assert.Contains("-ArgumentList '/SILENT', '/CLOSEAPPLICATIONS'", script);
         Assert.Contains("del \"%~f0\"", script);
     }
 

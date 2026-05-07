@@ -22,6 +22,7 @@ public interface IUpdateNotificationState : INotifyPropertyChanged
     void ReportDownloading(int percent);
     void ReportReadyToInstall(UpdateInfo info, string installerPath);
     void ReportFailed(string message);
+    void ReportUpdated(string version);
     void ReportIdle();
 
     void RemindLater(TimeSpan delay);
@@ -35,5 +36,6 @@ public enum UpdateLifecycleStatus
     UpdateAvailable,
     Downloading,
     ReadyToInstall,
+    Updated,
     Failed
 }

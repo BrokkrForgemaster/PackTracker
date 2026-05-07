@@ -283,46 +283,62 @@ public class UpdateService : IUpdateService
     private string GetLatestReleaseApiUrl() =>
         $"https://api.github.com/repos/{_options.GitHubOwner}/{_options.GitHubRepository}/releases/latest";
 
-    internal static string BuildInstallerBootstrapScript(string installerPath, string installerArguments, int processId)
+    internal static string BuildInstallerBootstrapScript(string installerPath, string extension, int processId)
     {
-        // Path goes inside PowerShell single quotes, so escape `'` not `"`.
+        // Path and arguments go inside PowerShell single quotes, so escape `'` not `"`.
         var escapedInstallerPath = EscapeForPowerShellSingleQuotedString(installerPath);
-        var escapedInstallerArguments = EscapeForPowerShellSingleQuotedString(installerArguments);
+        var argumentsList = GetInstallerArgumentsList(extension, escapedInstallerPath);
+        var joinedArguments = string.Join(", ", argumentsList.Select(a => $"'{a}'"));
+        
         var logPath = Path.Combine(Path.GetTempPath(), "PackTracker", "installer-bootstrap.log");
         var escapedLogPath = EscapeForDoubleQuotedBatchArgument(logPath);
 
-        return $"""
+        // For .msi, we launch msiexec.exe explicitly to ensure /i works correctly.
+        var targetFilePath = extension == ".msi" ? "msiexec.exe" : escapedInstallerPath;
+
+        return $$"""
                 @echo off
                 setlocal
-                set "LOG={escapedLogPath}"
-                set "TARGET_PID={processId}"
-                >>"%LOG%" echo [%date% %time%] bootstrap start, pid=%TARGET_PID%
+                set "LOG={{escapedLogPath}}"
+                set "TARGET_PID={{processId}}"
+                if not exist "{{Path.GetDirectoryName(logPath)}}" mkdir "{{Path.GetDirectoryName(logPath)}}"
+                >>"%LOG%" echo [%date% %time%] bootstrap start, pid=%TARGET_PID%, extension={{extension}}
+                
                 :wait_for_packtracker_exit
                 tasklist /FI "PID eq %TARGET_PID%" 2>NUL | find /I "%TARGET_PID%" >NUL
                 if not errorlevel 1 (
                     timeout /t 1 /nobreak >NUL
                     goto wait_for_packtracker_exit
                 )
+                
                 >>"%LOG%" echo [%date% %time%] target exited, invoking PowerShell to launch installer
-                powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Start-Process -FilePath '{escapedInstallerPath}' -ArgumentList '{escapedInstallerArguments}' -Verb RunAs -ErrorAction Stop"
-                >>"%LOG%" echo [%date% %time%] powershell exited with errorlevel %errorlevel%
+                >>"%LOG%" echo [%date% %time%] command: Start-Process -FilePath '{{targetFilePath}}' -ArgumentList {{joinedArguments}}
+                
+                powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "$p = Start-Process -FilePath '{{targetFilePath}}' -ArgumentList {{joinedArguments}} -Verb RunAs -PassThru -ErrorAction SilentlyContinue; if ($p) { exit 0 } else { exit 1 }"
+                
+                set "PS_EXIT=%errorlevel%"
+                >>"%LOG%" echo [%date% %time%] powershell finished with exit code %PS_EXIT%
+                
+                if %PS_EXIT% neq 0 (
+                    >>"%LOG%" echo [%date% %time%] ERROR: Failed to launch installer (UAC declined or process failed).
+                )
+                
                 del "%~f0"
                 """;
     }
 
-    internal static string GetInstallerArguments(string extension, string installerPath)
+    internal static string[] GetInstallerArgumentsList(string extension, string escapedInstallerPath)
     {
         return extension switch
         {
-            ".exe" => "/SILENT /CLOSEAPPLICATIONS",
-            ".msi" => $"/i \"{installerPath}\" /quiet /qn /norestart",
+            ".exe" => new[] { "/SILENT", "/CLOSEAPPLICATIONS" },
+            ".msi" => new[] { "/i", escapedInstallerPath, "/quiet", "/qn", "/norestart" },
             _ => throw new NotSupportedException($"Installer type '{extension}' is not supported.")
         };
     }
 
     private async Task LaunchInstallerAfterCurrentProcessExitsAsync(string installerPath, string extension)
     {
-        var installerArguments = GetInstallerArguments(extension, installerPath);
         var bootstrapScriptPath = Path.Combine(
             Path.GetTempPath(),
             "PackTracker",
@@ -332,7 +348,7 @@ public class UpdateService : IUpdateService
 
         var bootstrapScript = BuildInstallerBootstrapScript(
             installerPath,
-            installerArguments,
+            extension,
             Environment.ProcessId);
 
         await File.WriteAllTextAsync(bootstrapScriptPath, bootstrapScript);

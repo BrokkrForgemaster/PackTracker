@@ -18,6 +18,7 @@
         <!-- Status accent dot color, swapped by status via DataTriggers below -->
         <SolidColorBrush x:Key="BannerAccentBrush" Color="#C2A23A"/>
         <SolidColorBrush x:Key="BannerReadyBrush"  Color="#4CAF50"/>
+        <SolidColorBrush x:Key="BannerUpdatedBrush" Color="#2ECC71"/>
         <SolidColorBrush x:Key="BannerErrorBrush"  Color="#DC3545"/>
 
         <Style x:Key="BannerActionButton" TargetType="Button">
@@ -50,6 +51,30 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style TargetType="Button" x:Key="ActionButtonStyle" BasedOn="{StaticResource BannerActionButton}">
+            <Setter Property="Command" Value="{Binding OpenDialogCommand}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsUpdated}" Value="True">
+                    <Setter Property="Command" Value="{Binding DismissUpdateCommand}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Border" x:Key="InnerDotStyle">
+            <Setter Property="Background" Value="{StaticResource BannerAccentBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsReadyToInstall}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource BannerReadyBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsUpdated}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource BannerUpdatedBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsFailed}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource BannerErrorBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <!-- Click-anywhere-on-banner opens the dialog -->
@@ -69,7 +94,8 @@
             <DropShadowEffect Color="#C2A23A"
                               BlurRadius="14"
                               ShadowDepth="0"
-                              Opacity="0.35"/>
+                              Opacity="0.35"
+                              x:Name="BannerGlow"/>
         </Border.Effect>
 
         <Grid>
@@ -86,10 +112,10 @@
                     CornerRadius="5"
                     VerticalAlignment="Center"
                     Margin="0,0,12,0"
-                    Background="{StaticResource BannerAccentBrush}"
+                    Style="{StaticResource InnerDotStyle}"
                     x:Name="StatusDot">
                 <Border.Effect>
-                    <DropShadowEffect Color="#C2A23A"
+                    <DropShadowEffect Color="{Binding Background.Color, ElementName=StatusDot}"
                                       BlurRadius="8"
                                       ShadowDepth="0"
                                       Opacity="0.9"/>
@@ -133,9 +159,8 @@
                     </Grid>
                 </Border>
 
-                <Button Style="{StaticResource BannerActionButton}"
-                        Content="{Binding PrimaryActionLabel}"
-                        Command="{Binding OpenDialogCommand}"/>
+                <Button Style="{StaticResource ActionButtonStyle}"
+                        Content="{Binding PrimaryActionLabel}"/>
             </StackPanel>
         </Grid>
 
@@ -152,6 +177,17 @@
                         <Setter Property="Effect">
                             <Setter.Value>
                                 <DropShadowEffect Color="#4CAF50"
+                                                  BlurRadius="14"
+                                                  ShadowDepth="0"
+                                                  Opacity="0.45"/>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsUpdated}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource BannerUpdatedBrush}"/>
+                        <Setter Property="Effect">
+                            <Setter.Value>
+                                <DropShadowEffect Color="#2ECC71"
                                                   BlurRadius="14"
                                                   ShadowDepth="0"
                                                   Opacity="0.45"/>

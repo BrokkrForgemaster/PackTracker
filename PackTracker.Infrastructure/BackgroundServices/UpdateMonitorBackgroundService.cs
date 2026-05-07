@@ -98,13 +98,43 @@ public sealed class UpdateMonitorBackgroundService : BackgroundService
             return;
         }
 
+        var currentVersion = _updateService.GetCurrentVersion();
+        
+        // Check for recent successful update via bootstrap log
+        var logPath = Path.Combine(Path.GetTempPath(), "PackTracker", "installer-bootstrap.log");
+        if (File.Exists(logPath))
+        {
+            try
+            {
+                var logContent = await File.ReadAllTextAsync(logPath, cancellationToken);
+                // Simple heuristic: if log exists and last check was today, and version is current.
+                // We'll just show it once per session if the version matches.
+                if (logContent.Contains("powershell finished with exit code 0", StringComparison.OrdinalIgnoreCase))
+                {
+                    // If we've already shown "Updated" this session, don't keep doing it.
+                    // But we'll let the service decide based on state.
+                }
+            }
+            catch { /* Ignore log read errors */ }
+        }
+
         _state.ReportChecking();
 
         var info = await _updateService.CheckForUpdateAsync(cancellationToken);
 
         if (info is null)
         {
+            // If we are at the "latest" version, and we haven't shown "Updated" yet,
+            // we can potentially show a "You are on the latest version" if triggered manually,
+            // but for background polling, we'll just go idle.
             _state.ReportIdle();
+            return;
+        }
+
+        // If the version we just found is the same as current, we might have just updated.
+        if (string.Equals(currentVersion, info.Version, StringComparison.OrdinalIgnoreCase))
+        {
+            _state.ReportUpdated(info.Version);
             return;
         }
 

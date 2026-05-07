@@ -15,7 +15,7 @@
 #ifndef AppVersion
   ; Local builds default to this. Keep in sync with Directory.Build.props
   ; (scripts\bump-version.ps1 updates both atomically).
-  #define AppVersion "0.8.1"
+  #define AppVersion "0.8.2"
 #endif
 
 #define AppName        "PackTracker"
@@ -153,12 +153,10 @@ var
 begin
   Result := True;
 
-  // Force-close PackTracker (and any child processes — WebView2 spawns
-  // msedgewebview2.exe which holds WebView2Loader.dll) before Inno's
-  // RestartManager check runs. taskkill returns as soon as the kill is
-  // queued, but Windows takes a moment to release file handles, so retry
-  // briefly to give the OS time to finalize termination.
-  for Attempts := 1 to 5 do
+  // The app should already be closed by the bootstrapper script.
+  // We perform a brief retry loop here as a safety measure to ensure
+  // file handles are released by the OS before installation begins.
+  for Attempts := 1 to 3 do
   begin
     Exec(
       'taskkill.exe',
@@ -168,19 +166,13 @@ begin
       ewWaitUntilTerminated,
       ResultCode
     );
-    Sleep(300);
+    
+    // If taskkill returns 128, the process wasn't found (already closed).
+    if ResultCode = 128 then
+      Break;
+      
+    Sleep(500);
   end;
-
-  // Catch any orphaned WebView2 child processes that outlived the parent.
-  Exec(
-    'taskkill.exe',
-    '/IM "msedgewebview2.exe" /F',
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ResultCode
-  );
-  Sleep(200);
 end;
 
 procedure InitializeWizard;

@@ -45,6 +45,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         RestartNowCommand    = new RelayCommand(RestartNow,    () => CanRestartNow);
         RemindLaterCommand   = new RelayCommand(RemindLater,   () => HasActiveUpdate);
         SkipVersionCommand   = new RelayCommand(SkipVersion,   () => HasActiveUpdate);
+        DismissUpdateCommand = new RelayCommand(DismissUpdate);
     }
 
     public ICommand OpenDialogCommand { get; }
@@ -52,6 +53,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
     public ICommand RestartNowCommand { get; }
     public ICommand RemindLaterCommand { get; }
     public ICommand SkipVersionCommand { get; }
+    public ICommand DismissUpdateCommand { get; }
 
     public UpdateLifecycleStatus Status => _state.Status;
 
@@ -59,6 +61,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         Status is UpdateLifecycleStatus.UpdateAvailable
                 or UpdateLifecycleStatus.Downloading
                 or UpdateLifecycleStatus.ReadyToInstall
+                or UpdateLifecycleStatus.Updated
                 or UpdateLifecycleStatus.Failed;
 
     public bool IsDialogOpen
@@ -71,6 +74,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
 
     public bool IsDownloading => Status == UpdateLifecycleStatus.Downloading;
     public bool IsReadyToInstall => Status == UpdateLifecycleStatus.ReadyToInstall;
+    public bool IsUpdated => Status == UpdateLifecycleStatus.Updated;
     public bool IsFailed => Status == UpdateLifecycleStatus.Failed;
     public bool CanRestartNow => IsReadyToInstall && !_isLaunchingInstaller;
 
@@ -105,6 +109,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         UpdateLifecycleStatus.UpdateAvailable => $"Update available · v{_state.AvailableUpdate?.Version}",
         UpdateLifecycleStatus.Downloading     => $"Downloading update · {_state.DownloadProgress}%",
         UpdateLifecycleStatus.ReadyToInstall  => $"Ready to install · v{_state.AvailableUpdate?.Version}",
+        UpdateLifecycleStatus.Updated         => "Update successful!",
         UpdateLifecycleStatus.Failed          => "Update check failed",
         _ => string.Empty
     };
@@ -114,11 +119,17 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         UpdateLifecycleStatus.UpdateAvailable => "Click for release notes",
         UpdateLifecycleStatus.Downloading     => "You can keep working — we'll notify you when it's ready",
         UpdateLifecycleStatus.ReadyToInstall  => "Restart when you're ready",
+        UpdateLifecycleStatus.Updated         => $"You are now running the latest version (v{_state.AvailableUpdate?.Version})",
         UpdateLifecycleStatus.Failed          => _state.FailureMessage ?? "See logs for details",
         _ => string.Empty
     };
 
-    public string PrimaryActionLabel => IsReadyToInstall ? "RESTART NOW" : "VIEW DETAILS";
+    public string PrimaryActionLabel => Status switch
+    {
+        UpdateLifecycleStatus.ReadyToInstall => "RESTART NOW",
+        UpdateLifecycleStatus.Updated        => "DISMISS",
+        _                                    => "VIEW DETAILS"
+    };
 
     private void OnStateChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -135,6 +146,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasActiveUpdate));
         OnPropertyChanged(nameof(IsDownloading));
         OnPropertyChanged(nameof(IsReadyToInstall));
+        OnPropertyChanged(nameof(IsUpdated));
         OnPropertyChanged(nameof(IsFailed));
         OnPropertyChanged(nameof(CanRestartNow));
         OnPropertyChanged(nameof(DownloadProgress));
@@ -148,6 +160,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         (RestartNowCommand    as RelayCommand)?.RaiseCanExecuteChanged();
         (RemindLaterCommand   as RelayCommand)?.RaiseCanExecuteChanged();
         (SkipVersionCommand   as RelayCommand)?.RaiseCanExecuteChanged();
+        (DismissUpdateCommand as RelayCommand)?.RaiseCanExecuteChanged();
 
         // Auto-open the dialog the first time an update is announced so the user sees it.
         if (Status == UpdateLifecycleStatus.ReadyToInstall && !IsDialogOpen)
@@ -197,6 +210,12 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
         }
 
         _state.SkipVersion(version);
+        IsDialogOpen = false;
+    }
+
+    private void DismissUpdate()
+    {
+        _state.ReportIdle();
         IsDialogOpen = false;
     }
 
