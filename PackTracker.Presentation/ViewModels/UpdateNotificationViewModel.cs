@@ -182,8 +182,7 @@ public sealed class UpdateNotificationViewModel : ViewModelBase, IDisposable
 
         try
         {
-            await _updateService.LaunchInstallerAsync(path);
-            System.Windows.Application.Current?.Shutdown();
+            await _updateService.InstallAndRestartAsync(path);
         }
         catch (Exception ex)
         {
