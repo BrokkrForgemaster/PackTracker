@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" fill="#1F1712"/>
-  <text x="50" y="65" font-size="48" text-anchor="middle" fill="#D6A04B">PT</text>
+  <!-- Stylized Wolf Silhouette -->
+  <path d="M50 15 L35 40 L20 45 L35 55 L30 85 L50 70 L70 85 L65 55 L80 45 L65 40 Z" fill="#D6A04B" />
+  <path d="M50 15 L55 35 L75 30 L60 45 L70 65 L50 55 L30 65 L40 45 L25 30 L45 35 Z" fill="#1F1712" opacity="0.5"/>
 </svg>

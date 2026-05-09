@@ -50,9 +50,10 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') {
 $repoRoot     = Resolve-Path (Join-Path $PSScriptRoot '..')
 $propsPath    = Join-Path $repoRoot 'Directory.Build.props'
 $presentation = Join-Path $repoRoot 'PackTracker.Presentation\PackTracker.Presentation.csproj'
+$mobile       = Join-Path $repoRoot 'PackTracker.Mobile\PackTracker.Mobile.csproj'
 $issPath      = Join-Path $repoRoot 'installer\PackTrackerSetup.iss'
 
-foreach ($p in @($propsPath, $presentation, $issPath)) {
+foreach ($p in @($propsPath, $presentation, $mobile, $issPath)) {
     if (-not (Test-Path $p)) { Write-Error "Not found: $p"; exit 1 }
 }
 
@@ -72,6 +73,16 @@ $csproj = [regex]::Replace($csproj, '<FileVersion>[^<]+</FileVersion>',         
 $csproj = [regex]::Replace($csproj, '<InformationalVersion>[^<]+</InformationalVersion>',   "<InformationalVersion>$Version</InformationalVersion>")
 Set-Content -Path $presentation -Value $csproj -Encoding utf8 -NoNewline
 Write-Host "Updated PackTracker.Presentation\PackTracker.Presentation.csproj -> $Version"
+
+# --- PackTracker.Mobile.csproj (MAUI specific versioning) ---
+$mobileCsproj = Get-Content $mobile -Raw
+$mobileCsproj = [regex]::Replace($mobileCsproj, '<ApplicationDisplayVersion>[^<]+</ApplicationDisplayVersion>', "<ApplicationDisplayVersion>$Version</ApplicationDisplayVersion>")
+# ApplicationVersion must be an integer for Android. We derive a simple version code: (Major * 10000) + (Minor * 100) + Patch
+$vParts = $Version.Split('.')
+$vCode = [int]$vParts[0] * 10000 + [int]$vParts[1] * 100 + [int]$vParts[2]
+$mobileCsproj = [regex]::Replace($mobileCsproj, '<ApplicationVersion>[^<]+</ApplicationVersion>',               "<ApplicationVersion>$vCode</ApplicationVersion>")
+Set-Content -Path $mobile -Value $mobileCsproj -Encoding utf8 -NoNewline
+Write-Host "Updated PackTracker.Mobile\PackTracker.Mobile.csproj -> $Version (Code: $vCode)"
 
 # --- installer/PackTrackerSetup.iss ---
 $issText = Get-Content $issPath -Raw
@@ -94,7 +105,7 @@ if ($Tag) {
 } else {
     Write-Host ""
     Write-Host "Files updated. Commit them, then create the tag with:"
-    Write-Host "  git add Directory.Build.props PackTracker.Presentation\PackTracker.Presentation.csproj installer\PackTrackerSetup.iss"
+    Write-Host "  git add Directory.Build.props PackTracker.Presentation\PackTracker.Presentation.csproj PackTracker.Mobile\PackTracker.Mobile.csproj installer\PackTrackerSetup.iss"
     Write-Host "  git commit -m `"chore: bump version to $Version`""
     Write-Host "  git tag -a v$Version -m `"PackTracker v$Version`""
     Write-Host "  git push && git push origin v$Version"

@@ -3,7 +3,9 @@ using Microsoft.Maui.Controls;
 
 namespace PackTracker.Mobile;
 
+#pragma warning disable CA1724 // The type name conflicts in whole or in part with the namespace name
 public partial class App : Microsoft.Maui.Controls.Application
+#pragma warning restore CA1724
 {
     private readonly AppShell _shell;
 
