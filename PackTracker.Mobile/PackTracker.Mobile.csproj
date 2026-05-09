@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0-android</TargetFramework>
@@ -14,8 +14,8 @@
 
     <ApplicationTitle>PackTracker</ApplicationTitle>
     <ApplicationId>com.housewolf.packtracker</ApplicationId>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.9.0</ApplicationDisplayVersion>
+    <ApplicationVersion>900</ApplicationVersion>
   </PropertyGroup>
 
   <ItemGroup>
