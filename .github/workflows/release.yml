@@ -32,6 +32,9 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Install MAUI workload
+        run: dotnet workload install maui --ignore-failed-sources
+
       # ── Resolve version ───────────────────────────────────────────
       - name: Resolve version
         id: version
@@ -62,16 +65,18 @@ jobs:
 
           $propsVersion = Get-XmlVersion 'Directory.Build.props' 'Version'
           $csprojVersion = Get-XmlVersion 'PackTracker.Presentation/PackTracker.Presentation.csproj' 'Version'
+          $mobileVersion = Get-XmlVersion 'PackTracker.Mobile/PackTracker.Mobile.csproj' 'ApplicationDisplayVersion'
 
           $mismatches = @()
           if ($propsVersion  -ne $expected) { $mismatches += "Directory.Build.props=$propsVersion" }
           if ($csprojVersion -ne $expected) { $mismatches += "PackTracker.Presentation.csproj=$csprojVersion" }
+          if ($mobileVersion -ne $expected) { $mismatches += "PackTracker.Mobile.csproj=$mobileVersion" }
 
           if ($mismatches.Count -gt 0) {
             Write-Error "Version mismatch: tag/input='$expected' but $($mismatches -join ', '). Run scripts/bump-version.ps1 $expected before tagging."
             exit 1
           }
-          Write-Host "Version gate passed: $expected (props + csproj in sync)"
+          Write-Host "Version gate passed: $expected (props + csproj + mobile in sync)"
 
       # ── Restore ───────────────────────────────────────────────────
       - name: Restore
