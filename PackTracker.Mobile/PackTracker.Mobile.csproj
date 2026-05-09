@@ -14,8 +14,8 @@
 
     <ApplicationTitle>PackTracker</ApplicationTitle>
     <ApplicationId>com.housewolf.packtracker</ApplicationId>
-    <ApplicationDisplayVersion>0.9.1</ApplicationDisplayVersion>
-    <ApplicationVersion>901</ApplicationVersion>
+    <ApplicationDisplayVersion>0.8.9</ApplicationDisplayVersion>
+    <ApplicationVersion>809</ApplicationVersion>
   </PropertyGroup>
 
   <ItemGroup>
