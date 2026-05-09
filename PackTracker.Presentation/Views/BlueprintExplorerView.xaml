@@ -248,7 +248,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="280" MinWidth="220" MaxWidth="340" />
             <ColumnDefinition Width="16" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
@@ -502,7 +502,7 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="200" />
+                                    <ColumnDefinition Width="Auto" MinWidth="140" MaxWidth="220" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
@@ -587,8 +587,8 @@
                                         Padding="12,10"
                                         Margin="8,0,8,0"
                                         VerticalAlignment="Top"
-                                        HorizontalAlignment="Left"
-                                        Width="190">
+                                        HorizontalAlignment="Stretch"
+                                        MaxWidth="220">
                                     <StackPanel>
                                         <TextBlock HorizontalAlignment="Left"
                                                    FontSize="11"
@@ -667,21 +667,21 @@
                         <!-- Balanced two-column workspace -->
                         <Grid HorizontalAlignment="Center">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="540" />
+                                <ColumnDefinition Width="*" MinWidth="280" />
                                 <ColumnDefinition Width="32" />
-                                <ColumnDefinition Width="540" />
+                                <ColumnDefinition Width="*" MinWidth="280" />
                             </Grid.ColumnDefinitions>
 
                             <!-- Left cards -->
-                            <StackPanel Grid.Column="0" HorizontalAlignment="Left">
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Stretch">
                                 <ItemsControl ItemsSource="{Binding Components}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:ComponentViewModel}">
                                             <Border Style="{StaticResource OpPanelBorderStyle}"
                                                     Padding="12,10"
                                                     Margin="0,0,0,10"
-                                                    Width="540"
-                                                    HorizontalAlignment="Left">
+                                                    MaxWidth="600"
+                                                    HorizontalAlignment="Stretch">
                                                 <StackPanel>
 
                                                     <Grid Margin="0,0,0,8">
@@ -861,14 +861,14 @@
                             </StackPanel>
 
                             <!-- Right cards -->
-                            <StackPanel Grid.Column="2" HorizontalAlignment="Left">
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Stretch">
 
                                 <!-- Procurement materials -->
                                 <Border Style="{StaticResource OpPanelBorderStyle}"
                                         Padding="14"
                                         Margin="0,0,0,10"
-                                        Width="540"
-                                        HorizontalAlignment="Left">
+                                        MaxWidth="600"
+                                        HorizontalAlignment="Stretch">
                                     <StackPanel>
 
                                         <Grid Margin="0,0,0,10">
@@ -1013,8 +1013,8 @@
                                 <!-- Combined modifiers -->
                                 <Border Style="{StaticResource OpPanelBorderStyle}"
                                         Padding="14"
-                                        Width="540"
-                                        HorizontalAlignment="Left">
+                                        MaxWidth="600"
+                                        HorizontalAlignment="Stretch">
                                     <StackPanel>
                                         <TextBlock Text="COMBINED MODIFIERS"
                                                    Foreground="{StaticResource OpTextTitleBrush}"

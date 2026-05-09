@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:pages="clr-namespace:PackTracker.Mobile.Pages"
+       x:Class="PackTracker.Mobile.AppShell"
+       Shell.FlyoutBehavior="Flyout"
+       Title="PackTracker">
+
+    <Shell.Resources>
+        <Style TargetType="Shell">
+            <Setter Property="Shell.BackgroundColor" Value="{StaticResource MainBackground}" />
+            <Setter Property="Shell.ForegroundColor" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Shell.TitleColor" Value="{StaticResource TextPrimary}" />
+            <Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource SurfaceBackground}" />
+            <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource AccentGold}" />
+            <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource AccentGold}" />
+            <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource TextSecondary}" />
+        </Style>
+    </Shell.Resources>
+
+    <ShellContent Route="Login"
+                  Title="Login"
+                  ContentTemplate="{DataTemplate pages:LoginPage}"
+                  Shell.FlyoutItemIsVisible="False" />
+
+    <FlyoutItem Title="Dashboard" Route="Dashboard" Icon="dashboard.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:DashboardPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Trading Hub" Route="TradingHub" Icon="trading.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:TradingHubPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Blueprints" Route="Blueprints" Icon="blueprints.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:BlueprintsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Crafting Center" Route="CraftingQueue" Icon="crafting.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:CraftingQueuePage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Procurement Center" Route="ProcurementQueue" Icon="procurement.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:ProcurementQueuePage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Request Hub" Route="RequestHub" Icon="requests.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:RequestHubPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Profile" Route="Profile" Icon="profile.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:ProfilePage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Settings" Route="Settings" Icon="settings.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:SettingsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Admin" Route="Admin" Icon="admin.png">
+        <ShellContent ContentTemplate="{DataTemplate pages:AdminPage}" />
+    </FlyoutItem>
+</Shell>

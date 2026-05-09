@@ -5,9 +5,9 @@
         <!-- Single source of truth for the application version.
              scripts\bump-version.ps1 keeps installer\PackTrackerSetup.iss in sync
              and the release.yml gate fails if a git tag doesn't match this value. -->
-        <Version>0.8.6</Version>
-        <FileVersion>0.8.6</FileVersion>
-        <AssemblyVersion>0.8.6</AssemblyVersion>
+        <Version>0.8.8</Version>
+        <FileVersion>0.8.8</FileVersion>
+        <AssemblyVersion>0.8.8</AssemblyVersion>
         <Authors>House Wolf</Authors>
         <Company>House Wolf</Company>
         <Copyright>Copyright Â© House Wolf</Copyright>
@@ -24,10 +24,4 @@
         <Deterministic>true</Deterministic>
     </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Serilog.AspNetCore" Version="9.*" />
-        <PackageReference Include="Serilog.Exceptions" Version="8.*" />
-        <PackageReference Include="Serilog.Sinks.File" Version="7.*" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="6.*" />
-    </ItemGroup>
 </Project>

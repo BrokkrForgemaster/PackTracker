@@ -650,11 +650,11 @@
         <!-- Main Layout -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="280" MinWidth="180" MaxWidth="320" />
                 <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" MinWidth="200" />
                 <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="220" MinWidth="160" MaxWidth="260" />
             </Grid.ColumnDefinitions>
 
             <!-- LEFT SIDEBAR -->
@@ -993,7 +993,7 @@
             <Border Grid.Column="2" Style="{StaticResource OpPanelBorderStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="160" MinWidth="120" MaxWidth="200" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 

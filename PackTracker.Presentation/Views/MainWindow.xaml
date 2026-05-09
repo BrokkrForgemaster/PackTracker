@@ -4,13 +4,14 @@
         xmlns:converters="clr-namespace:PackTracker.Presentation.Converters"
         xmlns:views="clr-namespace:PackTracker.Presentation.Views"
         Title="PackTracker"
-        MinHeight="720"
-        MinWidth="1280"
+        MinHeight="480"
+        MinWidth="400"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MainBackground}"
         SizeToContent="Manual"
         ResizeMode="CanResize"
-        WindowStyle="SingleBorderWindow">
+        WindowStyle="SingleBorderWindow"
+        SizeChanged="Window_SizeChanged">
 
     <Window.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
@@ -95,292 +96,407 @@
 
     <Grid x:Name="WindowRoot">
 
-        <Grid x:Name="ScrollViewerRoot"
-              Background="#01000000">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="320" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+        <!-- ─── Main layout grid (responsive) ─── -->
+        <Grid x:Name="ScrollViewerRoot" Background="#01000000">
+            <Grid.ColumnDefinitions>
+                <!-- Sidebar: shown only in expanded mode; collapses to 0 in compact/medium -->
+                <ColumnDefinition x:Name="SidebarColumn" Width="320" />
+                <!-- Content area always fills remaining space -->
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0"
-                Margin="20"
-                Padding="18"
-                Style="{StaticResource SectionCardStyle}"
-                Background="{DynamicResource HeroGradientBrush}">
-            <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Bottom"
-                            Margin="0,20,0,0">
-                    <Border Style="{StaticResource GlassPanelStyle}"
-                            Padding="16"
-                            Margin="0,0,0,18"
-                            HorizontalAlignment="Center"
-                            Width="220">
-                        <StackPanel HorizontalAlignment="Center">
-                            <TextBlock x:Name="TxtLocalTime"
-                                       FontSize="13"
-                                       HorizontalAlignment="Center"
-                                       TextAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondaryBrush}" />
-                            <TextBlock x:Name="TxtTimeZone"
-                                       FontSize="9"
-                                       HorizontalAlignment="Center"
-                                       TextAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       Opacity="0.6"
-                                       Margin="0,2,0,0" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+            <!-- ─── Sidebar (desktop/expanded) ─── -->
+            <Border x:Name="SidebarPanel"
+                    Grid.Column="0"
+                    Margin="20"
+                    Padding="18"
+                    Style="{StaticResource SectionCardStyle}"
+                    Background="{DynamicResource HeroGradientBrush}">
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Bottom"
+                                Margin="0,20,0,0">
+                        <Border Style="{StaticResource GlassPanelStyle}"
+                                Padding="16"
+                                Margin="0,0,0,18"
+                                HorizontalAlignment="Center"
+                                Width="220">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="TxtLocalTime"
+                                           FontSize="13"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBlock x:Name="TxtTimeZone"
+                                           FontSize="9"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Opacity="0.6"
+                                           Margin="0,2,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
 
-                <Border x:Name="NavPaneBorder"
-                        Background="#1F1712"
-                        CornerRadius="8"
-                        Padding="0"
-                        Margin="0">
-                    <Grid>
-                        <ScrollViewer Style="{StaticResource UltraThinScrollViewerStyle}">
-                            <StackPanel>
-                                <Border Style="{StaticResource GlassPanelStyle}"
-                                        Padding="18"
-                                        Margin="0,0,0,18"
-                                        Effect="{x:Null}">
-                                    <StackPanel>
-                                        <Image x:Name="SidebarThemeImage"
-                                               Width="120"
-                                               Height="120"
-                                               HorizontalAlignment="Center"
-                                               Stretch="Uniform"
-                                               Margin="0,0,0,14" />
-                                        <TextBlock Text="PackTracker"
-                                                   FontSize="28"
-                                                   FontWeight="Black"
-                                                   Foreground="White"
-                                                   HorizontalAlignment="Center" />
-                                        <TextBlock Text="House Wolf Operations Center"
-                                                   FontSize="14"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                    <Border x:Name="NavPaneBorder"
+                            Background="#1F1712"
+                            CornerRadius="8"
+                            Padding="0"
+                            Margin="0">
+                        <Grid>
+                            <ScrollViewer Style="{StaticResource UltraThinScrollViewerStyle}">
+                                <StackPanel>
+                                    <Border Style="{StaticResource GlassPanelStyle}"
+                                            Padding="18"
+                                            Margin="0,0,0,18"
+                                            Effect="{x:Null}">
+                                        <StackPanel>
+                                            <Image x:Name="SidebarThemeImage"
+                                                   Width="120"
+                                                   Height="120"
                                                    HorizontalAlignment="Center"
-                                                   Margin="0,6,0,0" />
-                                    </StackPanel>
-                                </Border>
+                                                   Stretch="Uniform"
+                                                   Margin="0,0,0,14" />
+                                            <TextBlock Text="PackTracker"
+                                                       FontSize="28"
+                                                       FontWeight="Black"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center" />
+                                            <TextBlock Text="House Wolf Operations Center"
+                                                       FontSize="14"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,6,0,0" />
+                                        </StackPanel>
+                                    </Border>
 
-                                <Border Style="{StaticResource GlassPanelStyle}"
-                                        Padding="16"
-                                        Margin="0,0,0,18">
-                                    <StackPanel>
-                                        <TextBlock Text="Navigation"
-                                                   FontSize="13"
+                                    <Border Style="{StaticResource GlassPanelStyle}"
+                                            Padding="16"
+                                            Margin="0,0,0,18">
+                                        <StackPanel>
+                                            <TextBlock Text="Navigation"
+                                                       FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource AccentGoldBrush}"
+                                                       Margin="0,0,0,12" />
+
+                                            <Grid>
+                                                <StackPanel x:Name="NavButtonPanel">
+                                                    <Button Content="Dashboard"
+                                                            Tag="Dashboard"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button Content="Trading Hub"
+                                                            Tag="TradingHub"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button Content="Blueprints"
+                                                            Tag="Blueprints"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button Content="Crafting Center"
+                                                            Tag="CraftingQueue"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button Content="Procurement Center"
+                                                            Tag="ProcurementQueue"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button Content="Request Hub"
+                                                            Tag="RequestHub"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button Content="Profile"
+                                                            Tag="Profile"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button Content="Settings"
+                                                            Tag="Settings"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click" />
+                                                    <Button x:Name="AdminNavButton"
+                                                            Content="Admin"
+                                                            Tag="Admin"
+                                                            Style="{StaticResource SidebarButtonStyle}"
+                                                            Click="Navigate_Click"
+                                                            Visibility="{Binding CanAccessAdmin, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                </StackPanel>
+
+                                                <Border x:Name="NavBlocker"
+                                                        Background="Transparent"
+                                                        Visibility="Collapsed"
+                                                        IsHitTestVisible="True" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <StackPanel Margin="0,18,0,18"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Top">
+                                        <Grid Width="90"
+                                              Height="90"
+                                              Margin="0,0,0,12">
+                                            <Ellipse Width="90"
+                                                     Height="90"
+                                                     Stroke="#B15B34"
+                                                     StrokeThickness="3" />
+
+                                            <Image x:Name="SidebarAvatarImage"
+                                                   Width="84"
+                                                   Height="84"
+                                                   Stretch="UniformToFill"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Source="{Binding CurrentUserAvatar}">
+                                                <Image.Clip>
+                                                    <EllipseGeometry Center="42,42"
+                                                                     RadiusX="42"
+                                                                     RadiusY="42" />
+                                                </Image.Clip>
+                                            </Image>
+                                        </Grid>
+
+                                        <TextBlock Text="Welcome Dragoon,"
+                                                   FontSize="11"
+                                                   Foreground="#D7A56B"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,0,0,2" />
+
+                                        <TextBlock Text="{Binding DiscordDisplayName}"
+                                                   FontSize="18"
                                                    FontWeight="SemiBold"
+                                                   Foreground="White"
                                                    HorizontalAlignment="Center"
-                                                   Foreground="{DynamicResource AccentGoldBrush}"
-                                                   Margin="0,0,0,12" />
+                                                   TextAlignment="Center"
+                                                   Margin="0,0,0,4" />
 
-                                        <Grid>
-                                            <StackPanel x:Name="NavButtonPanel">
-                                                <Button Content="Dashboard"
-                                                        Tag="Dashboard"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button Content="Trading Hub"
-                                                        Tag="TradingHub"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button Content="Blueprints"
-                                                        Tag="Blueprints"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button Content="Crafting Center"
-                                                        Tag="CraftingQueue"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button Content="Procurement Center"
-                                                        Tag="ProcurementQueue"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button Content="Request Hub"
-                                                        Tag="RequestHub"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button Content="Profile"
-                                                        Tag="Profile"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button Content="Settings"
-                                                        Tag="Settings"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click" />
-                                                <Button x:Name="AdminNavButton"
-                                                        Content="Admin"
-                                                        Tag="Admin"
-                                                        Style="{StaticResource SidebarButtonStyle}"
-                                                        Click="Navigate_Click"
-                                                        Visibility="{Binding CanAccessAdmin, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        <Border Background="#223A4A5A"
+                                                CornerRadius="10"
+                                                Padding="10,4"
+                                                HorizontalAlignment="Center"
+                                                Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding DiscordRank}"
+                                                       FontSize="11"
+                                                       Foreground="#C9D6E3"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center" />
+                                        </Border>
+                                    </StackPanel>
+
+                                    <Border Style="{StaticResource GlassPanelStyle}"
+                                            Padding="16">
+                                        <StackPanel>
+                                            <TextBlock x:Name="PostureTitle"
+                                                       Text="Operational posture"
+                                                       FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AccentGoldBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,0,0,12" />
+
+                                            <StackPanel x:Name="NormalPostureContent">
+                                                <TextBlock Text="Use this to navigate between dashboard, logistics, requests, and system configuration."
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                <Button Content="Exit"
+                                                        Style="{StaticResource SecondaryActionButtonStyle}"
+                                                        Margin="0,16,0,0"
+                                                        Click="Exit_Click" />
                                             </StackPanel>
 
-                                            <Border x:Name="NavBlocker"
-                                                    Background="Transparent"
-                                                    Visibility="Collapsed"
-                                                    IsHitTestVisible="True" />
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <StackPanel Margin="0,18,0,18"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top">
-                                    <Grid Width="90"
-                                          Height="90"
-                                          Margin="0,0,0,12">
-                                        <Ellipse Width="90"
-                                                 Height="90"
-                                                 Stroke="#B15B34"
-                                                 StrokeThickness="3" />
-
-                                        <Image x:Name="SidebarAvatarImage"
-                                               Width="84"
-                                               Height="84"
-                                               Stretch="UniformToFill"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Source="{Binding CurrentUserAvatar}">
-                                            <Image.Clip>
-                                                <EllipseGeometry Center="42,42"
-                                                                 RadiusX="42"
-                                                                 RadiusY="42" />
-                                            </Image.Clip>
-                                        </Image>
-                                    </Grid>
-
-                                    <TextBlock Text="Welcome Dragoon,"
-                                               FontSize="11"
-                                               Foreground="#D7A56B"
-                                               HorizontalAlignment="Center"
-                                               Margin="0,0,0,2" />
-
-                                    <TextBlock Text="{Binding DiscordDisplayName}"
-                                               FontSize="18"
-                                               FontWeight="SemiBold"
-                                               Foreground="White"
-                                               HorizontalAlignment="Center"
-                                               TextAlignment="Center"
-                                               Margin="0,0,0,4" />
-
-                                    <Border Background="#223A4A5A"
-                                            CornerRadius="10"
-                                            Padding="10,4"
-                                            HorizontalAlignment="Center"
-                                            Margin="0,0,0,8">
-                                        <TextBlock Text="{Binding DiscordRank}"
-                                                   FontSize="11"
-                                                   Foreground="#C9D6E3"
-                                                   HorizontalAlignment="Center"
-                                                   TextAlignment="Center" />
+                                        </StackPanel>
                                     </Border>
                                 </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </DockPanel>
+            </Border>
 
-                                <Border Style="{StaticResource GlassPanelStyle}"
-                                        Padding="16">
-                                    <StackPanel>
-                                        <TextBlock x:Name="PostureTitle"
-                                                   Text="Operational posture"
-                                                   FontSize="13"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AccentGoldBrush}"
-                                                   HorizontalAlignment="Center"
-                                                   Margin="0,0,0,12" />
+            <!-- ─── Compact/Medium top bar with hamburger + nav drawer ─── -->
+            <Grid x:Name="CompactNavBar"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="2"
+                  VerticalAlignment="Top"
+                  Panel.ZIndex="50"
+                  Visibility="Collapsed"
+                  Margin="0">
+                <Border Background="{DynamicResource MainBackground}"
+                        BorderBrush="{DynamicResource GlassBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="12,8">
+                    <DockPanel LastChildFill="False">
+                        <Button x:Name="DrawerToggleButton"
+                                DockPanel.Dock="Left"
+                                Content="&#9776;"
+                                FontSize="20"
+                                Foreground="{DynamicResource AccentGoldBrush}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Padding="4,0"
+                                Click="DrawerToggle_Click" />
+                        <TextBlock Text="PackTracker"
+                                   DockPanel.Dock="Left"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"
+                                   Margin="12,0,0,0" />
+                    </DockPanel>
+                </Border>
+            </Grid>
 
-                                        <StackPanel x:Name="NormalPostureContent">
-                                            <TextBlock Text="Use this to navigate between dashboard, logistics, requests, and system configuration."
-                                                       FontSize="11"
-                                                       TextWrapping="Wrap"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}" />
-                                            <Button Content="Exit"
-                                                    Style="{StaticResource SecondaryActionButtonStyle}"
-                                                    Margin="0,16,0,0"
-                                                    Click="Exit_Click" />
-                                        </StackPanel>
+            <!-- ─── Drawer overlay (compact/medium mode) ─── -->
+            <Grid x:Name="DrawerOverlay"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="2"
+                  Visibility="Collapsed"
+                  Panel.ZIndex="200">
+                <!-- Dim background -->
+                <Border Background="#88000000"
+                        MouseLeftButtonDown="DrawerDim_Click" />
+                <!-- Drawer panel -->
+                <Border x:Name="DrawerPanel"
+                        HorizontalAlignment="Left"
+                        Width="280"
+                        Background="{DynamicResource MainBackground}"
+                        BorderBrush="{DynamicResource GlassBorderBrush}"
+                        BorderThickness="0,0,1,0">
+                    <ScrollViewer Style="{StaticResource UltraThinScrollViewerStyle}">
+                        <StackPanel Margin="0,48,0,16">
+                            <Border Style="{StaticResource GlassPanelStyle}"
+                                    Padding="16"
+                                    Margin="12,0,12,16">
+                                <StackPanel>
+                                    <TextBlock Text="Navigation"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource AccentGoldBrush}"
+                                               Margin="0,0,0,12" />
+                                    <Button Content="Dashboard"
+                                            Tag="Dashboard"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button Content="Trading Hub"
+                                            Tag="TradingHub"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button Content="Blueprints"
+                                            Tag="Blueprints"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button Content="Crafting Center"
+                                            Tag="CraftingQueue"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button Content="Procurement Center"
+                                            Tag="ProcurementQueue"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button Content="Request Hub"
+                                            Tag="RequestHub"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button Content="Profile"
+                                            Tag="Profile"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button Content="Settings"
+                                            Tag="Settings"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click" />
+                                    <Button x:Name="DrawerAdminButton"
+                                            Content="Admin"
+                                            Tag="Admin"
+                                            Style="{StaticResource SidebarButtonStyle}"
+                                            Click="DrawerNavigate_Click"
+                                            Visibility="{Binding CanAccessAdmin, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
 
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </ScrollViewer>
+            <!-- ─── Content area ─── -->
+            <Grid x:Name="ContentArea"
+                  Grid.Column="1"
+                  Margin="0,20,20,20">
+                <Image x:Name="MainBackgroundImage"
+                       Opacity="0.30"
+                       Stretch="UniformToFill"
+                       IsHitTestVisible="False"
+                       Panel.ZIndex="0" />
+
+                <Border Panel.ZIndex="1"
+                        Style="{StaticResource SectionCardStyle}"
+                        Padding="0"
+                        Background="Transparent">
+                    <Grid>
+                        <Border Background="#14000000"
+                                CornerRadius="18"
+                                Margin="0" />
+                        <Frame x:Name="ContentFrame"
+                               Margin="0"
+                               Padding="0"
+                               NavigationUIVisibility="Hidden"
+                               Background="Transparent" />
                     </Grid>
                 </Border>
-            </DockPanel>
-        </Border>
-            
-        <Grid Grid.Column="1"
-              Margin="0,20,20,20">
-            <Image x:Name="MainBackgroundImage"
-                   Opacity="0.30"
-                   Stretch="UniformToFill"
-                   IsHitTestVisible="False"
-                   Panel.ZIndex="0" />
+            </Grid>
 
-            <Border Panel.ZIndex="1"
-                    Style="{StaticResource SectionCardStyle}"
-                    Padding="0"
-                    Background="Transparent">
-                <Grid>
-                    <Border Background="#14000000"
-                            CornerRadius="18"
-                            Margin="0" />
-                    <Frame x:Name="ContentFrame"
-                           Margin="0"
-                           Padding="0"
-                           NavigationUIVisibility="Hidden"
-                           Background="Transparent" />
-                </Grid>
-            </Border>
-        </Grid>
-
-        <Border x:Name="ClaimToastPanel"
-                Grid.ColumnSpan="2"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                Margin="0,0,32,32"
-                Padding="16,12"
-                CornerRadius="10"
-                Background="#F0252525"
-                BorderBrush="#50C8A040"
-                BorderThickness="1"
-                Visibility="Collapsed"
-                Panel.ZIndex="999"
-                MaxWidth="380">
-            <StackPanel>
-                <TextBlock x:Name="ClaimToastTitle"
-                           FontSize="12"
-                           FontWeight="SemiBold"
-                           Foreground="#C8A040"
-                           Margin="0,0,0,4"
-                           TextWrapping="Wrap" />
-                <TextBlock x:Name="ClaimToastMessage"
-                           FontSize="12"
-                           Foreground="#D0D0D0"
-                           TextWrapping="Wrap" />
-            </StackPanel>
-        </Border>
-
-        <Grid x:Name="HelpOverlay"
-              Grid.ColumnSpan="2"
-              Visibility="Collapsed"
-              Panel.ZIndex="1000">
-            <Border Background="#CC000000"
-                    MouseLeftButtonDown="HelpOverlay_MouseDown" />
-            <Border x:Name="HelpPanel"
-                    Width="800"
-                    Margin="100,50"
+            <!-- ─── Toast ─── -->
+            <Border x:Name="ClaimToastPanel"
+                    Grid.ColumnSpan="2"
                     HorizontalAlignment="Right"
-                    Background="{DynamicResource MainBackground}"
-                    BorderBrush="{DynamicResource GlassBorderBrush}"
-                    BorderThickness="1,0,0,0"
-                    CornerRadius="0">
-                <ContentControl x:Name="HelpContentControl" />
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,32,32"
+                    Padding="16,12"
+                    CornerRadius="10"
+                    Background="#F0252525"
+                    BorderBrush="#50C8A040"
+                    BorderThickness="1"
+                    Visibility="Collapsed"
+                    Panel.ZIndex="999"
+                    MaxWidth="340">
+                <StackPanel>
+                    <TextBlock x:Name="ClaimToastTitle"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="#C8A040"
+                               Margin="0,0,0,4"
+                               TextWrapping="Wrap" />
+                    <TextBlock x:Name="ClaimToastMessage"
+                               FontSize="12"
+                               Foreground="#D0D0D0"
+                               TextWrapping="Wrap" />
+                </StackPanel>
             </Border>
-        </Grid>
+
+            <!-- ─── Help overlay ─── -->
+            <Grid x:Name="HelpOverlay"
+                  Grid.ColumnSpan="2"
+                  Visibility="Collapsed"
+                  Panel.ZIndex="1000">
+                <Border Background="#CC000000"
+                        MouseLeftButtonDown="HelpOverlay_MouseDown" />
+                <Border x:Name="HelpPanel"
+                        MaxWidth="800"
+                        Margin="0,50,0,0"
+                        HorizontalAlignment="Right"
+                        Background="{DynamicResource MainBackground}"
+                        BorderBrush="{DynamicResource GlassBorderBrush}"
+                        BorderThickness="1,0,0,0"
+                        CornerRadius="0">
+                    <ContentControl x:Name="HelpContentControl" />
+                </Border>
+            </Grid>
         </Grid>
 
-        <!-- ─── Update overlays (sit above all content) ─── -->
+        <!-- ─── Update overlays ─── -->
         <views:UpdateBannerView x:Name="UpdateBanner"
                                 Panel.ZIndex="100"
                                 VerticalAlignment="Top" />

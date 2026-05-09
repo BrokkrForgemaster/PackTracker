@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -29,6 +30,7 @@ using PackTracker.Presentation.Services.Admin;
 using PackTracker.Presentation.Services.Navigation;
 using PackTracker.Presentation.ViewModels;
 using PackTracker.Presentation.Views.Admin;
+using PackTracker.SharedPresentation.Responsive;
 
 namespace PackTracker.Presentation.Views
 {
@@ -79,6 +81,9 @@ namespace PackTracker.Presentation.Views
         private bool _canAccessAdmin;
         private string? _currentMainViewKey;
         private string? _currentAdminTier;
+
+        private readonly IResponsiveLayoutService _responsiveService = new ResponsiveLayoutService();
+        private bool _drawerOpen;
 
         #endregion
 
@@ -187,6 +192,7 @@ namespace PackTracker.Presentation.Views
 
             Loaded += async (_, _) =>
             {
+                ApplyResponsiveLayout(ActualWidth);
                 await RefreshSidebarProfileAsync();
                 SubscribeToClaimNotifications();
             };
@@ -609,6 +615,59 @@ namespace PackTracker.Presentation.Views
                     NavigateToDashboard();
                     break;
             }
+        }
+
+        #endregion
+
+        #region Responsive Layout
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e) =>
+            ApplyResponsiveLayout(e.NewSize.Width);
+
+        private void ApplyResponsiveLayout(double width)
+        {
+            var state = _responsiveService.Compute(width, ActualHeight);
+
+            if (state.IsExpanded)
+            {
+                SidebarColumn.Width = new GridLength(320);
+                SidebarPanel.Visibility = Visibility.Visible;
+                CompactNavBar.Visibility = Visibility.Collapsed;
+                ContentArea.Margin = new Thickness(0, 20, 20, 20);
+            }
+            else
+            {
+                SidebarColumn.Width = new GridLength(0);
+                SidebarPanel.Visibility = Visibility.Collapsed;
+                CompactNavBar.Visibility = Visibility.Visible;
+                ContentArea.Margin = new Thickness(0, 48, 8, 8);
+                CloseDrawer();
+            }
+        }
+
+        private void DrawerToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_drawerOpen) CloseDrawer(); else OpenDrawer();
+        }
+
+        private void OpenDrawer()
+        {
+            DrawerOverlay.Visibility = Visibility.Visible;
+            _drawerOpen = true;
+        }
+
+        private void CloseDrawer()
+        {
+            DrawerOverlay.Visibility = Visibility.Collapsed;
+            _drawerOpen = false;
+        }
+
+        private void DrawerDim_Click(object sender, MouseButtonEventArgs e) => CloseDrawer();
+
+        private void DrawerNavigate_Click(object sender, RoutedEventArgs e)
+        {
+            CloseDrawer();
+            Navigate_Click(sender, e);
         }
 
         #endregion

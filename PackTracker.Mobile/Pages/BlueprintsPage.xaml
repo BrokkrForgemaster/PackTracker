@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PackTracker.Mobile.Pages.BlueprintsPage"
+             Title="Blueprints">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label Text="BLUEPRINT OPERATIONS" Style="{StaticResource TitleLabelStyle}" />
+            <Label Text="Search, inspect, and dispatch blueprint workflow actions."
+                   Style="{StaticResource MutedLabelStyle}" />
+            <Entry Placeholder="Search blueprints..." Style="{StaticResource TextInputStyle}" />
+            <Button Text="SEARCH BLUEPRINTS" Style="{StaticResource PrimaryButtonStyle}" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <Label Text="No blueprints loaded." Style="{StaticResource MutedLabelStyle}" />
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

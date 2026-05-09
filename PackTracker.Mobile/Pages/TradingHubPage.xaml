@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PackTracker.Mobile.Pages.TradingHubPage"
+             Title="Trading Hub">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label Text="TRADING HUB" Style="{StaticResource TitleLabelStyle}" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <Label Text="Trading features coming soon." Style="{StaticResource MutedLabelStyle}" />
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

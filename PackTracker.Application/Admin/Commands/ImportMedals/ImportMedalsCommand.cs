@@ -69,14 +69,22 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
         var unmatchedRecipients = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var unknownMedals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var existingDefinitions = (await _db.MedalDefinitions
-                .ToListAsync(cancellationToken))
+        var allExisting = await _db.MedalDefinitions.ToListAsync(cancellationToken);
+
+        var existingDefinitions = allExisting
             .ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+
+        // Secondary index by normalized image path — used to detect renamed entries.
+        // TryAdd guards against duplicate image paths in DB (first record wins).
+        var existingByImagePath = new Dictionary<string, MedalDefinition>(StringComparer.OrdinalIgnoreCase);
+        foreach (var def in allExisting.Where(x => !string.IsNullOrWhiteSpace(x.ImagePath)))
+            existingByImagePath.TryAdd(NormalizeImagePath(def.ImagePath!), def);
 
         ImportDefinitions(
             request.AvailableMedals,
             "Medal",
             existingDefinitions,
+            existingByImagePath,
             ref medalDefinitionsCreated,
             ref medalDefinitionsUpdated,
             startDisplayOrder: 0);
@@ -85,6 +93,7 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
             request.AvailableRibbons,
             "Ribbon",
             existingDefinitions,
+            existingByImagePath,
             ref medalDefinitionsCreated,
             ref medalDefinitionsUpdated,
             startDisplayOrder: request.AvailableMedals.Count);
@@ -175,6 +184,7 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
         IReadOnlyList<ImportMedalDefinitionDto> incomingDefinitions,
         string awardType,
         Dictionary<string, MedalDefinition> existingDefinitions,
+        Dictionary<string, MedalDefinition> existingByImagePath,
         ref int medalDefinitionsCreated,
         ref int medalDefinitionsUpdated,
         int startDisplayOrder)
@@ -197,8 +207,11 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
 
             var displayOrder = startDisplayOrder + i;
 
-            if (existingDefinitions.TryGetValue(name, out var definition))
+            MedalDefinition? definition;
+
+            if (existingDefinitions.TryGetValue(name, out definition))
             {
+                // Exact name match — update fields
                 definition.Description = description;
                 definition.ImagePath = imagePath;
                 definition.PublicImageUrl = publicImageUrl;
@@ -211,6 +224,29 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
                 continue;
             }
 
+            // Fallback: match by image path to detect renamed entries
+            var normalizedIncoming = imagePath is not null ? NormalizeImagePath(imagePath) : null;
+            if (normalizedIncoming is not null
+                && existingByImagePath.TryGetValue(normalizedIncoming, out definition)
+                && !existingDefinitions.ContainsKey(definition.Name))
+            {
+                // Same image — rename and update the existing record
+                existingDefinitions.Remove(definition.Name);
+                definition.Name = name;
+                definition.Description = description;
+                definition.ImagePath = imagePath;
+                definition.PublicImageUrl = publicImageUrl;
+                definition.SourceSystem = SourceSystem;
+                definition.DisplayOrder = displayOrder;
+                definition.AwardType = awardType;
+                definition.UpdatedAt = DateTime.UtcNow;
+
+                existingDefinitions.Add(name, definition);
+                medalDefinitionsUpdated++;
+                continue;
+            }
+
+            // New entry
             definition = new MedalDefinition
             {
                 Name = name,
@@ -226,10 +262,15 @@ public sealed class ImportMedalsCommandHandler : IRequestHandler<ImportMedalsCom
 
             _db.MedalDefinitions.Add(definition);
             existingDefinitions.Add(name, definition);
+            if (imagePath is not null)
+                existingByImagePath.TryAdd(NormalizeImagePath(imagePath), definition);
 
             medalDefinitionsCreated++;
         }
     }
+
+    private static string NormalizeImagePath(string path) =>
+        path.Replace('\\', '/').TrimStart('/', '.');
 
     private static string BuildAwardKey(Guid medalDefinitionId, string recipientName)
     {

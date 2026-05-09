@@ -12,7 +12,7 @@
 
         <!-- Action button style for request workflow buttons -->
         <Style x:Key="RequestActionButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="180"/>
+            <Setter Property="MaxWidth" Value="220"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Padding" Value="12,8"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -100,18 +100,18 @@
                 Style="{StaticResource OpPanelBorderStyle}"
                 Margin="0,0,0,16"
                 Padding="12">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <WrapPanel HorizontalAlignment="Center">
                 <TextBlock Text="KIND"
                            Foreground="{StaticResource OpTextMutedBrush}"
                            FontSize="10"
                            FontWeight="Bold"
                            VerticalAlignment="Center"
-                           Margin="0,0,8,0"/>
+                           Margin="0,4,8,4"/>
                 <ComboBox Width="180"
                           ItemsSource="{Binding KindOptions}"
                           SelectedItem="{Binding SelectedKind}"
                           Style="{StaticResource OpComboBoxStyle}"
-                          Margin="0,0,24,0">
+                          Margin="0,4,24,4">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayNameConverter}}" />
@@ -124,12 +124,12 @@
                            FontSize="10"
                            FontWeight="Bold"
                            VerticalAlignment="Center"
-                           Margin="0,0,8,0"/>
+                           Margin="0,4,8,4"/>
                 <ComboBox Width="160"
                           ItemsSource="{Binding StatusOptions}"
                           SelectedItem="{Binding SelectedStatus}"
                           Style="{StaticResource OpComboBoxStyle}"
-                          Margin="0,0,24,0"/>
+                          Margin="0,4,24,4"/>
 
                 <Button Content="NEW REQUEST"
                         Command="{Binding NewRequestCommand}"
@@ -138,16 +138,17 @@
                         Background="#8B1A0F"
                         Foreground="#F4EBDD"
                         BorderBrush="#B15B34"
-                        BorderThickness="1"/>
-            </StackPanel>
+                        BorderThickness="1"
+                        Margin="0,4,0,4"/>
+            </WrapPanel>
         </Border>
 
         <!-- Main Content -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="1.2*" MinWidth="280"/>
                 <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*" MinWidth="220"/>
             </Grid.ColumnDefinitions>
 
             <!-- List -->
@@ -318,8 +319,7 @@
                                    FontSize="12"
                                    Margin="0,8,0,0"
                                    TextAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   Width="300"/>
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <Grid Margin="18">

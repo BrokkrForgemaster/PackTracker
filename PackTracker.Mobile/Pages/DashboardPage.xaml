@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PackTracker.Mobile.Pages.DashboardPage"
+             Title="Dashboard">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label Text="OPERATIONS DASHBOARD"
+                   Style="{StaticResource TitleLabelStyle}" />
+            <Label Text="Live snapshot of House Wolf readiness across squads and support teams."
+                   Style="{StaticResource MutedLabelStyle}" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout>
+                    <Label Text="MY ACTIVE TASKS" Style="{StaticResource SectionHeaderStyle}" />
+                    <Label Text="No active tasks." Style="{StaticResource MutedLabelStyle}" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout>
+                    <Label Text="MY OPEN REQUESTS" Style="{StaticResource SectionHeaderStyle}" />
+                    <Label Text="No outstanding requests." Style="{StaticResource MutedLabelStyle}" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout>
+                    <Label Text="ACTIVE REQUESTS" Style="{StaticResource SectionHeaderStyle}" />
+                    <Label Text="No active tasks." Style="{StaticResource MutedLabelStyle}" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

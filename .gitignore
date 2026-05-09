@@ -64,3 +64,8 @@ obj/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# IDE - JetBrains Rider / IntelliJ
+.idea/
+*.sln.DotSettings.user
+*.idea.PackTracker/

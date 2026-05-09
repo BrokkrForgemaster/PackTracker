@@ -5,6 +5,7 @@
     <ProjectReference Include="..\PackTracker.Infrastructure\PackTracker.Infrastructure.csproj" />
     <ProjectReference Include="..\PackTracker.Logging\PackTracker.Logging.csproj" />
     <ProjectReference Include="..\PackTracker.Api\PackTracker.Api.csproj" />
+    <ProjectReference Include="..\PackTracker.SharedPresentation\PackTracker.SharedPresentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -89,10 +90,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.8.6</Version>
-    <AssemblyVersion>0.8.6</AssemblyVersion>
-    <FileVersion>0.8.6</FileVersion>
-    <InformationalVersion>0.8.6</InformationalVersion>
+    <Version>0.8.8</Version>
+    <AssemblyVersion>0.8.8</AssemblyVersion>
+    <FileVersion>0.8.8</FileVersion>
+    <InformationalVersion>0.8.8</InformationalVersion>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>

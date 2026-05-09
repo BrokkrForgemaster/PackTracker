@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PackTracker.Mobile.Pages.RequestHubPage"
+             Title="Request Hub">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label Text="ASSISTANCE HUB" Style="{StaticResource TitleLabelStyle}" />
+            <Label Text="Coordinate materials, escorts, missions, and ad-hoc support across House Wolf."
+                   Style="{StaticResource MutedLabelStyle}" />
+            <Button Text="NEW REQUEST" Style="{StaticResource PrimaryButtonStyle}" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <Label Text="No active dispatches." Style="{StaticResource MutedLabelStyle}" />
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
