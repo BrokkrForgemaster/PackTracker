@@ -5,6 +5,7 @@ using Moq;
 using PackTracker.Application.Interfaces;
 using PackTracker.Application.Options;
 using PackTracker.Domain.Entities;
+using PackTracker.Domain.Security;
 using PackTracker.Infrastructure.Persistence;
 using PackTracker.Infrastructure.Services;
 
@@ -12,6 +13,24 @@ namespace PackTracker.UnitTests.Infrastructure;
 
 public class ProfileServiceTests
 {
+    [Fact]
+    public void ResolveHighestKnownRole_ReturnsHighestCanonicalRole_WhenExactNamesArePresent()
+    {
+        var result = ProfileService.ResolveHighestKnownRole(
+            [SecurityConstants.Roles.Foundling, SecurityConstants.Roles.WolfDragoon]);
+
+        Assert.Equal(SecurityConstants.Roles.WolfDragoon, result);
+    }
+
+    [Fact]
+    public void ResolveHighestKnownRole_HandlesDecoratedDiscordRoleNames()
+    {
+        var result = ProfileService.ResolveHighestKnownRole(
+            ["[HW] Foundling", "Wolf Dragoon | TACOPS"]);
+
+        Assert.Equal(SecurityConstants.Roles.WolfDragoon, result);
+    }
+
     [Fact]
     public async Task GetByNameAsync_FindsProfile_CaseInsensitively()
     {

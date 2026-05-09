@@ -291,22 +291,54 @@ public class ProfileService : IProfileService
     /// Given a list of role names from Discord, returns the highest-ranked name
     /// that matches the known House Wolf hierarchy, or null if none match.
     /// </summary>
-    private static string? ResolveHighestKnownRole(IEnumerable<string> roleNames)
+    internal static string? ResolveHighestKnownRole(IEnumerable<string> roleNames)
     {
         string? highest = null;
         int highestPos = -1;
 
         foreach (var name in roleNames)
         {
-            var pos = SecurityConstants.GetRolePosition(name);
+            var canonicalName = CanonicalizeKnownRoleName(name);
+            var pos = SecurityConstants.GetRolePosition(canonicalName);
             if (pos > highestPos)
             {
                 highestPos = pos;
-                highest = SecurityConstants.RoleHierarchy[pos];
+                highest = canonicalName;
             }
         }
 
         return highest;
+    }
+
+    internal static string? CanonicalizeKnownRoleName(string? roleName)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+            return null;
+
+        var normalized = NormalizeRoleKey(roleName);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        foreach (var canonical in SecurityConstants.RoleHierarchy)
+        {
+            var canonicalKey = NormalizeRoleKey(canonical);
+            if (normalized == canonicalKey || normalized.Contains(canonicalKey, StringComparison.Ordinal))
+            {
+                return canonical;
+            }
+        }
+
+        return null;
+    }
+
+    private static string NormalizeRoleKey(string value)
+    {
+        var chars = value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToUpperInvariant)
+            .ToArray();
+
+        return new string(chars);
     }
 
     /// <summary>
