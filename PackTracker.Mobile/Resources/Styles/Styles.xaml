@@ -3,66 +3,171 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
+    <!-- Page background -->
     <Style TargetType="Page" ApplyToDerivedTypes="True">
         <Setter Property="BackgroundColor" Value="{StaticResource MainBackground}" />
     </Style>
 
+    <!-- ── PAGE HEADER (the dark top banner on every page) ─────── -->
+    <Style x:Key="PageHeaderBorderStyle" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource OpBgHeader}" />
+        <Setter Property="Stroke" Value="{StaticResource OpBorderHeader}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+        <Setter Property="Padding" Value="18,14" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
+    <!-- ── PANEL CARD (generic section card) ──────────────────── -->
     <Style x:Key="CardBorderStyle" TargetType="Border">
-        <Setter Property="BackgroundColor" Value="{StaticResource CardBackground}" />
-        <Setter Property="Stroke" Value="{StaticResource BorderColor}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource OpBgPanel}" />
+        <Setter Property="Stroke" Value="{StaticResource OpBorderPanel}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <!-- ── ITEM CARD (individual list row card) ───────────────── -->
+    <Style x:Key="ItemCardStyle" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource OpBgItem}" />
+        <Setter Property="Stroke" Value="{StaticResource OpBorderItem}" />
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="StrokeShape" Value="RoundRectangle 8" />
-        <Setter Property="Padding" Value="12" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
 
-    <Style x:Key="SectionHeaderStyle" TargetType="Label">
-        <Setter Property="FontSize" Value="11" />
+    <!-- ── TYPOGRAPHY ─────────────────────────────────────────── -->
+    <Style x:Key="PageTitleStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="22" />
         <Setter Property="FontAttributes" Value="Bold" />
-        <Setter Property="TextColor" Value="{StaticResource AccentGold}" />
-        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextTitle}" />
+    </Style>
+
+    <Style x:Key="PageSubtitleStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextSecondary}" />
+        <Setter Property="Margin" Value="0,4,0,0" />
     </Style>
 
     <Style x:Key="TitleLabelStyle" TargetType="Label">
         <Setter Property="FontSize" Value="22" />
         <Setter Property="FontAttributes" Value="Bold" />
-        <Setter Property="TextColor" Value="{StaticResource TextTitle}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextTitle}" />
+    </Style>
+
+    <Style x:Key="SectionHeaderStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextMuted}" />
+        <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
 
     <Style x:Key="BodyLabelStyle" TargetType="Label">
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextPrimary}" />
+    </Style>
+
+    <Style x:Key="SecondaryLabelStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextSecondary}" />
     </Style>
 
     <Style x:Key="MutedLabelStyle" TargetType="Label">
         <Setter Property="FontSize" Value="11" />
-        <Setter Property="TextColor" Value="{StaticResource TextMuted}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextMuted}" />
     </Style>
 
+    <Style x:Key="AccentLabelStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextAccent}" />
+    </Style>
+
+    <Style x:Key="GoldLabelStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextColor" Value="{StaticResource AccentGold}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style x:Key="StatusBadgeStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource GreenActive}" />
+    </Style>
+
+    <!-- ── BUTTONS ────────────────────────────────────────────── -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button">
         <Setter Property="BackgroundColor" Value="{StaticResource AccentRed}" />
-        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextPrimary}" />
         <Setter Property="BorderColor" Value="{StaticResource AccentRedBorder}" />
         <Setter Property="BorderWidth" Value="1" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="Padding" Value="16,10" />
     </Style>
 
     <Style x:Key="SecondaryButtonStyle" TargetType="Button">
         <Setter Property="BackgroundColor" Value="{StaticResource BlueMid}" />
-        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextPrimary}" />
         <Setter Property="BorderColor" Value="{StaticResource BlueBorder}" />
         <Setter Property="BorderWidth" Value="1" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="Padding" Value="16,10" />
     </Style>
 
+    <Style x:Key="SmallButtonStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource BlueMid}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextPrimary}" />
+        <Setter Property="BorderColor" Value="{StaticResource BlueBorder}" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Padding" Value="10,6" />
+    </Style>
+
+    <!-- ── INPUTS ─────────────────────────────────────────────── -->
     <Style x:Key="TextInputStyle" TargetType="Entry">
-        <Setter Property="BackgroundColor" Value="{StaticResource InputBackground}" />
-        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
-        <Setter Property="PlaceholderColor" Value="{StaticResource TextMuted}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource OpBgInput}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextPrimary}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource OpTextMuted}" />
+    </Style>
+
+    <Style x:Key="EditorInputStyle" TargetType="Editor">
+        <Setter Property="BackgroundColor" Value="{StaticResource OpBgInput}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextPrimary}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource OpTextMuted}" />
+    </Style>
+
+    <!-- ── CHAT CHANNEL CHIPS ──────────────────────────────────── -->
+    <Style x:Key="ChannelChipStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource OpBgItem}" />
+        <Setter Property="TextColor" Value="{StaticResource OpTextSecondary}" />
+        <Setter Property="BorderColor" Value="{StaticResource OpBorderItem}" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="60" />
+    </Style>
+
+    <Style x:Key="ChannelChipActiveStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource AccentGold}" />
+        <Setter Property="TextColor" Value="{StaticResource MainBackground}" />
+        <Setter Property="BorderColor" Value="{StaticResource AccentGoldMuted}" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="60" />
     </Style>
 
 </ResourceDictionary>

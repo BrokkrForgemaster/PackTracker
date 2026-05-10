@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PackTracker.Mobile.Pages.ChatPage"
+             x:Name="ChatPageRoot"
+             Title="Chat">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="MEMBERS" Order="Primary" Clicked="MembersButton_Clicked" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Reconnecting banner -->
+        <Label x:Name="ConnectionBanner"
+               Grid.Row="0"
+               Text="&#x26A1; Reconnecting..."
+               HorizontalTextAlignment="Center"
+               Padding="8,6"
+               BackgroundColor="{StaticResource PriorityAmber}"
+               TextColor="{StaticResource MainBackground}"
+               FontSize="12"
+               FontAttributes="Bold"
+               IsVisible="False" />
+
+        <!-- Channel bar -->
+        <ScrollView Grid.Row="1"
+                    Orientation="Horizontal"
+                    BackgroundColor="{StaticResource OpBgHeader}"
+                    HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout x:Name="ChannelBar"
+                                   Padding="12,8"
+                                   Spacing="6" />
+        </ScrollView>
+
+        <!-- Messages -->
+        <CollectionView x:Name="MessageList"
+                        Grid.Row="2"
+                        SelectionMode="None"
+                        BackgroundColor="{StaticResource MainBackground}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <VerticalStackLayout Padding="14,6,14,2" Spacing="2">
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="{Binding SenderDisplayName}"
+                                   TextColor="{Binding SenderColor}"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center" />
+                            <Label Text="{Binding TimeLabel}"
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   FontSize="10"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Label Text="{Binding Content}"
+                               Style="{StaticResource BodyLabelStyle}"
+                               LineBreakMode="WordWrap" />
+                        <Label Text="{Binding IsEditedLabel}"
+                               Style="{StaticResource MutedLabelStyle}"
+                               FontSize="10"
+                               IsVisible="{Binding IsEdited}" />
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Input bar -->
+        <Border Grid.Row="3"
+                BackgroundColor="{StaticResource OpBgHeader}"
+                Stroke="{StaticResource OpBorderHeader}"
+                StrokeThickness="1"
+                StrokeShape="Rectangle"
+                Padding="10,8">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Entry x:Name="MessageEntry"
+                       Grid.Column="0"
+                       Placeholder="Message..."
+                       Style="{StaticResource TextInputStyle}"
+                       ReturnType="Send"
+                       Completed="SendButton_Clicked" />
+                <Button Grid.Column="1"
+                        Text="SEND"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Clicked="SendButton_Clicked" />
+            </Grid>
+        </Border>
+
+    </Grid>
+</ContentPage>

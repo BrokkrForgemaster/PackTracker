@@ -3,30 +3,144 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PackTracker.Mobile.Pages.DashboardPage"
              Title="Dashboard">
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
-            <Label Text="OPERATIONS DASHBOARD"
-                   Style="{StaticResource TitleLabelStyle}" />
-            <Label Text="Live snapshot of House Wolf readiness across squads and support teams."
-                   Style="{StaticResource MutedLabelStyle}" />
-            <Border Style="{StaticResource CardBorderStyle}">
-                <VerticalStackLayout>
-                    <Label Text="MY ACTIVE TASKS" Style="{StaticResource SectionHeaderStyle}" />
-                    <Label Text="No active tasks." Style="{StaticResource MutedLabelStyle}" />
-                </VerticalStackLayout>
-            </Border>
-            <Border Style="{StaticResource CardBorderStyle}">
-                <VerticalStackLayout>
-                    <Label Text="MY OPEN REQUESTS" Style="{StaticResource SectionHeaderStyle}" />
-                    <Label Text="No outstanding requests." Style="{StaticResource MutedLabelStyle}" />
-                </VerticalStackLayout>
-            </Border>
-            <Border Style="{StaticResource CardBorderStyle}">
-                <VerticalStackLayout>
-                    <Label Text="ACTIVE REQUESTS" Style="{StaticResource SectionHeaderStyle}" />
-                    <Label Text="No active tasks." Style="{StaticResource MutedLabelStyle}" />
-                </VerticalStackLayout>
-            </Border>
-        </VerticalStackLayout>
-    </ScrollView>
+
+    <RefreshView x:Name="PageRefreshView" Refreshing="RefreshView_Refreshing">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="0">
+
+                <!-- Page header -->
+                <Border Style="{StaticResource PageHeaderBorderStyle}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label x:Name="HeadingLabel"
+                                   Text="OPERATIONS DASHBOARD"
+                                   Style="{StaticResource PageTitleStyle}" />
+                            <Label Text="Active requests, your assignments, and open tasks across House Wolf."
+                                   Style="{StaticResource PageSubtitleStyle}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1"
+                               x:Name="StatusLabel"
+                               Text=""
+                               Style="{StaticResource MutedLabelStyle}"
+                               VerticalOptions="Start"
+                               Margin="12,4,0,0" />
+                    </Grid>
+                </Border>
+
+                <!-- My Active Tasks -->
+                <Label Text="MY ACTIVE TASKS"
+                       Style="{StaticResource SectionHeaderStyle}"
+                       Margin="4,0,0,8" />
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <CollectionView x:Name="MyActiveTasksView" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No active tasks assigned to you."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}">
+                                    <Grid ColumnDefinitions="4,*">
+                                        <BoxView Grid.Column="0"
+                                                 BackgroundColor="{StaticResource PriorityAmber}"
+                                                 CornerRadius="8,0,0,8" />
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Padding="12,10"
+                                                             Spacing="3">
+                                            <Label Text="{Binding Title}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold" />
+                                            <Label Text="{Binding StatusLine}"
+                                                   Style="{StaticResource MutedLabelStyle}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
+
+                <!-- My Open Requests -->
+                <Label Text="MY OPEN REQUESTS"
+                       Style="{StaticResource SectionHeaderStyle}"
+                       Margin="4,8,0,8" />
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <CollectionView x:Name="MyOpenRequestsView" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No pending requests submitted by you."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}">
+                                    <Grid ColumnDefinitions="4,*">
+                                        <BoxView Grid.Column="0"
+                                                 BackgroundColor="{StaticResource PriorityBlue}"
+                                                 CornerRadius="8,0,0,8" />
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Padding="12,10"
+                                                             Spacing="3">
+                                            <Label Text="{Binding Title}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold" />
+                                            <Label Text="{Binding StatusLine}"
+                                                   Style="{StaticResource MutedLabelStyle}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
+
+                <!-- Active Requests -->
+                <Grid ColumnDefinitions="*,Auto" Margin="4,8,4,8">
+                    <Label Grid.Column="0"
+                           Text="ACTIVE REQUESTS"
+                           Style="{StaticResource SectionHeaderStyle}"
+                           Margin="0" />
+                    <Label Grid.Column="1"
+                           x:Name="RequestCountLabel"
+                           Text=""
+                           Style="{StaticResource AccentLabelStyle}"
+                           FontSize="11" />
+                </Grid>
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <CollectionView x:Name="ActiveRequestsView" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No active requests across the org."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}">
+                                    <Grid ColumnDefinitions="4,*">
+                                        <BoxView Grid.Column="0"
+                                                 BackgroundColor="{StaticResource PriorityRed}"
+                                                 CornerRadius="8,0,0,8" />
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Padding="12,10"
+                                                             Spacing="3">
+                                            <Label Text="{Binding Title}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold"
+                                                   LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding StatusLine}"
+                                                   Style="{StaticResource SecondaryLabelStyle}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
+
+                <BoxView HeightRequest="24" BackgroundColor="Transparent" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
 </ContentPage>

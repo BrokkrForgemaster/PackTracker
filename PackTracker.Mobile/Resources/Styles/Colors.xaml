@@ -25,4 +25,23 @@
     <Color x:Key="InputBorder">#2E2218</Color>
     <Color x:Key="ErrorColor">#CC4444</Color>
 
+    <!-- Desktop design language colours -->
+    <Color x:Key="OpBgHeader">#15120F</Color>
+    <Color x:Key="OpBgPanel">#14110E</Color>
+    <Color x:Key="OpBgItem">#191510</Color>
+    <Color x:Key="OpBgInput">#1D1813</Color>
+    <Color x:Key="OpBorderHeader">#30251B</Color>
+    <Color x:Key="OpBorderPanel">#2A2118</Color>
+    <Color x:Key="OpBorderItem">#31271E</Color>
+    <Color x:Key="OpBorderInput">#3E3023</Color>
+    <Color x:Key="OpTextTitle">#E7D7B8</Color>
+    <Color x:Key="OpTextPrimary">#E6D5B6</Color>
+    <Color x:Key="OpTextSecondary">#85745E</Color>
+    <Color x:Key="OpTextMuted">#7E6B56</Color>
+    <Color x:Key="OpTextAccent">#CBB293</Color>
+    <Color x:Key="PriorityRed">#8B1A0F</Color>
+    <Color x:Key="PriorityAmber">#C47A2E</Color>
+    <Color x:Key="PriorityBlue">#4F6A84</Color>
+    <Color x:Key="PriorityGreen">#3A6A3A</Color>
+
 </ResourceDictionary>

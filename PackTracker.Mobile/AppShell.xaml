@@ -23,39 +23,47 @@
                   ContentTemplate="{DataTemplate pages:LoginPage}"
                   Shell.FlyoutItemIsVisible="False" />
 
-    <FlyoutItem Title="Dashboard" Route="Dashboard" Icon="dashboard.png">
+    <FlyoutItem Title="Dashboard" Route="Dashboard">
         <ShellContent ContentTemplate="{DataTemplate pages:DashboardPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Trading Hub" Route="TradingHub" Icon="trading.png">
+    <FlyoutItem Title="Chat" Route="Chat">
+        <ShellContent ContentTemplate="{DataTemplate pages:ChatPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Members" Route="Members">
+        <ShellContent ContentTemplate="{DataTemplate pages:MembersPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Trading Hub" Route="TradingHub">
         <ShellContent ContentTemplate="{DataTemplate pages:TradingHubPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Blueprints" Route="Blueprints" Icon="blueprints.png">
+    <FlyoutItem Title="Blueprints" Route="Blueprints">
         <ShellContent ContentTemplate="{DataTemplate pages:BlueprintsPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Crafting Center" Route="CraftingQueue" Icon="crafting.png">
+    <FlyoutItem Title="Crafting Center" Route="CraftingQueue">
         <ShellContent ContentTemplate="{DataTemplate pages:CraftingQueuePage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Procurement Center" Route="ProcurementQueue" Icon="procurement.png">
+    <FlyoutItem Title="Procurement Center" Route="ProcurementQueue">
         <ShellContent ContentTemplate="{DataTemplate pages:ProcurementQueuePage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Request Hub" Route="RequestHub" Icon="requests.png">
+    <FlyoutItem Title="Request Hub" Route="RequestHub">
         <ShellContent ContentTemplate="{DataTemplate pages:RequestHubPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Profile" Route="Profile" Icon="profile.png">
+    <FlyoutItem Title="Profile" Route="Profile">
         <ShellContent ContentTemplate="{DataTemplate pages:ProfilePage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Settings" Route="Settings" Icon="settings.png">
+    <FlyoutItem Title="Settings" Route="Settings">
         <ShellContent ContentTemplate="{DataTemplate pages:SettingsPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Admin" Route="Admin" Icon="admin.png">
+    <FlyoutItem Title="Admin" Route="Admin">
         <ShellContent ContentTemplate="{DataTemplate pages:AdminPage}" />
     </FlyoutItem>
 </Shell>

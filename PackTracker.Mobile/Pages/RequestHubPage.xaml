@@ -1,17 +1,128 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
+
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PackTracker.Mobile.Pages.RequestHubPage"
              Title="Request Hub">
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
-            <Label Text="ASSISTANCE HUB" Style="{StaticResource TitleLabelStyle}" />
-            <Label Text="Coordinate materials, escorts, missions, and ad-hoc support across House Wolf."
-                   Style="{StaticResource MutedLabelStyle}" />
-            <Button Text="NEW REQUEST" Style="{StaticResource PrimaryButtonStyle}" />
-            <Border Style="{StaticResource CardBorderStyle}">
-                <Label Text="No active dispatches." Style="{StaticResource MutedLabelStyle}" />
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Fixed header area -->
+        <VerticalStackLayout Grid.Row="0" Padding="16,16,16,0" Spacing="0">
+            <Border Style="{StaticResource PageHeaderBorderStyle}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                        <Label Text="ASSISTANCE HUB"
+                               Style="{StaticResource PageTitleStyle}" />
+                        <Label Text="Coordinate materials, escorts, and ad-hoc support across House Wolf."
+                               Style="{StaticResource PageSubtitleStyle}" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1"
+                            Text="REFRESH"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            VerticalOptions="Center"
+                            Margin="12,0,0,0"
+                            Clicked="RefreshButton_Clicked" />
+                </Grid>
             </Border>
+            <Label x:Name="StatusLabel"
+                   Text=""
+                   Style="{StaticResource MutedLabelStyle}"
+                   Margin="4,0,4,8" />
         </VerticalStackLayout>
-    </ScrollView>
+
+        <!-- Scrollable request list -->
+        <ScrollView Grid.Row="1" Padding="16,0,16,16">
+            <CollectionView x:Name="RequestsView" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label Text="No requests found."
+                           Style="{StaticResource MutedLabelStyle}"
+                           Padding="0,16" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="4,*">
+
+                                <!-- Priority bar -->
+                                <Border Grid.Column="0"
+                                        BackgroundColor="{StaticResource AccentGold}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="8,0,0,8" />
+                                    </Border.StrokeShape>
+                                </Border>
+
+                                <VerticalStackLayout Grid.Column="1" Padding="12,10" Spacing="6">
+
+                                    <!-- Type badge + title -->
+                                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+
+                                        <Border BackgroundColor="{StaticResource BlueMid}"
+                                                Stroke="{StaticResource BlueBorder}"
+                                                StrokeThickness="1"
+                                                StrokeShape="RoundRectangle 4"
+                                                Padding="6,2">
+
+                                            <Label Text="{Binding Summary}"
+                                                   FontSize="9"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{StaticResource OpTextAccent}" />
+                                        </Border>
+
+                                    </HorizontalStackLayout>
+
+                                    <Label Text="{Binding Title}"
+                                           Style="{StaticResource BodyLabelStyle}"
+                                           FontAttributes="Bold"
+                                           LineBreakMode="WordWrap" />
+
+                                    <Label Text="{Binding Description}"
+                                           Style="{StaticResource SecondaryLabelStyle}"
+                                           LineBreakMode="WordWrap" />
+
+                                    <!-- Action buttons -->
+                                    <FlexLayout Wrap="Wrap"
+                                                Direction="Row"
+                                                JustifyContent="Start">
+
+                                        <Button Text="{Binding ClaimActionLabel}"
+                                                IsVisible="{Binding CanClaimOrUnclaim}"
+                                                CommandParameter="{Binding .}"
+                                                Clicked="ClaimButton_Clicked"
+                                                Style="{StaticResource PrimaryButtonStyle}"
+                                                Margin="0,4,6,0" />
+
+                                        <Button Text="COMPLETE"
+                                                IsVisible="{Binding CanComplete}"
+                                                CommandParameter="{Binding .}"
+                                                Clicked="CompleteButton_Clicked"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                Margin="0,4,6,0" />
+
+                                        <Button Text="{Binding PinActionLabel}"
+                                                IsVisible="{Binding CanPin}"
+                                                CommandParameter="{Binding .}"
+                                                Clicked="PinButton_Clicked"
+                                                Style="{StaticResource SmallButtonStyle}"
+                                                Margin="0,4,6,0" />
+
+                                        <Button Text="CANCEL"
+                                                IsVisible="{Binding CanDelete}"
+                                                CommandParameter="{Binding .}"
+                                                Clicked="DeleteButton_Clicked"
+                                                Style="{StaticResource SmallButtonStyle}"
+                                                Margin="0,4,0,0" />
+
+                                    </FlexLayout>
+
+                                </VerticalStackLayout>
+
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </ScrollView>
+
+    </Grid>
 </ContentPage>

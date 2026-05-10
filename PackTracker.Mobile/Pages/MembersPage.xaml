@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PackTracker.Mobile.Pages.MembersPage"
+             Title="Members">
+    <Grid RowDefinitions="Auto,*">
+
+        <VerticalStackLayout Grid.Row="0" Padding="16,16,16,0" Spacing="0">
+            <Border Style="{StaticResource PageHeaderBorderStyle}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                        <Label Text="MEMBERS"
+                               Style="{StaticResource PageTitleStyle}" />
+                        <Label Text="House Wolf roster — tap DM to open a direct message."
+                               Style="{StaticResource PageSubtitleStyle}" />
+                    </VerticalStackLayout>
+                    <Label Grid.Column="1"
+                           x:Name="StatusLabel"
+                           Text=""
+                           Style="{StaticResource MutedLabelStyle}"
+                           VerticalOptions="Start"
+                           Margin="12,4,0,0" />
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
+
+        <ScrollView Grid.Row="1" Padding="16,0,16,16">
+            <CollectionView x:Name="MembersView" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label Text="No members found."
+                           Style="{StaticResource MutedLabelStyle}"
+                           Padding="0,16" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                            <Grid ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="0">
+
+                                <!-- Online status bar -->
+                                <Border Grid.Column="0"
+                                        BackgroundColor="{Binding OnlineColor}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="8,0,0,8" />
+                                    </Border.StrokeShape>
+                                </Border>
+
+                                <!-- Online dot -->
+                                <BoxView Grid.Column="1"
+                                         WidthRequest="8"
+                                         HeightRequest="8"
+                                         CornerRadius="4"
+                                         Color="{Binding OnlineColor}"
+                                         VerticalOptions="Center"
+                                         Margin="10,0,0,0" />
+
+                                <!-- Name + role -->
+                                <VerticalStackLayout Grid.Column="2"
+                                                     Padding="10,10,8,10"
+                                                     Spacing="3">
+                                    <Label Text="{Binding DisplayName}"
+                                           Style="{StaticResource BodyLabelStyle}"
+                                           FontAttributes="Bold" />
+                                    <Label Text="{Binding RoleLine}"
+                                           Style="{StaticResource MutedLabelStyle}" />
+                                </VerticalStackLayout>
+
+                                <!-- DM button -->
+                                <Button Grid.Column="3"
+                                        Text="DM"
+                                        Style="{StaticResource SmallButtonStyle}"
+                                        VerticalOptions="Center"
+                                        Margin="0,0,10,0"
+                                        CommandParameter="{Binding .}"
+                                        Clicked="DmButton_Clicked" />
+
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </ScrollView>
+
+    </Grid>
+</ContentPage>

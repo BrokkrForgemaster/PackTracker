@@ -3,16 +3,145 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PackTracker.Mobile.Pages.BlueprintsPage"
              Title="Blueprints">
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
-            <Label Text="BLUEPRINT OPERATIONS" Style="{StaticResource TitleLabelStyle}" />
-            <Label Text="Search, inspect, and dispatch blueprint workflow actions."
-                   Style="{StaticResource MutedLabelStyle}" />
-            <Entry Placeholder="Search blueprints..." Style="{StaticResource TextInputStyle}" />
-            <Button Text="SEARCH BLUEPRINTS" Style="{StaticResource PrimaryButtonStyle}" />
-            <Border Style="{StaticResource CardBorderStyle}">
-                <Label Text="No blueprints loaded." Style="{StaticResource MutedLabelStyle}" />
+    <Grid RowDefinitions="Auto,*">
+
+        <VerticalStackLayout Grid.Row="0" Padding="16,16,16,0" Spacing="0">
+            <Border Style="{StaticResource PageHeaderBorderStyle}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="BLUEPRINT OPERATIONS"
+                           Style="{StaticResource PageTitleStyle}" />
+                    <Label Text="Search Star Citizen blueprints, view recipe materials, and manage ownership."
+                           Style="{StaticResource PageSubtitleStyle}" />
+                </VerticalStackLayout>
             </Border>
+
+            <!-- Search bar -->
+            <Border BackgroundColor="{StaticResource OpBgHeader}"
+                    Stroke="{StaticResource OpBorderHeader}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 10"
+                    Padding="12"
+                    Margin="0,0,0,12">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Entry Grid.Column="0"
+                           x:Name="SearchEntry"
+                           Placeholder="Search blueprints..."
+                           Style="{StaticResource TextInputStyle}" />
+                    <Button Grid.Column="1"
+                            Text="SEARCH"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Clicked="SearchButton_Clicked" />
+                </Grid>
+            </Border>
+
+            <Label x:Name="StatusLabel"
+                   Text=""
+                   Style="{StaticResource MutedLabelStyle}"
+                   Margin="4,0,4,8" />
         </VerticalStackLayout>
-    </ScrollView>
+
+        <ScrollView Grid.Row="1" Padding="16,0,16,16">
+            <VerticalStackLayout Spacing="0">
+
+                <!-- Results list -->
+                <CollectionView x:Name="BlueprintsView"
+                                SelectionMode="Single"
+                                SelectionChanged="BlueprintsView_SelectionChanged">
+                    <CollectionView.EmptyView>
+                        <Label Text="Search for a blueprint above."
+                               Style="{StaticResource MutedLabelStyle}"
+                               Padding="0,8" />
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                <Grid ColumnDefinitions="4,*">
+
+                                    <Border Grid.Column="0"
+                                            BackgroundColor="{StaticResource PriorityGreen}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8,0,0,8" />
+                                        </Border.StrokeShape>
+                                    </Border>
+
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         Padding="12,10"
+                                                         Spacing="3">
+
+                                        <Label Text="{Binding BlueprintName}"
+                                               Style="{StaticResource BodyLabelStyle}"
+                                               FontAttributes="Bold" />
+
+                                        <Label Text="{Binding CraftedItemName}"
+                                               Style="{StaticResource SecondaryLabelStyle}" />
+
+                                        <Label Text="{Binding Summary}"
+                                               Style="{StaticResource MutedLabelStyle}" />
+
+                                    </VerticalStackLayout>
+
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Selected blueprint detail -->
+                <Label Text="SELECTED BLUEPRINT"
+                       Style="{StaticResource SectionHeaderStyle}"
+                       Margin="4,12,0,8" />
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label x:Name="DetailNameLabel"
+                               Text="No blueprint selected."
+                               Style="{StaticResource AccentLabelStyle}"
+                               FontAttributes="Bold" />
+                        <Label x:Name="DetailMetaLabel"
+                               Text=""
+                               Style="{StaticResource SecondaryLabelStyle}" />
+                        <Label x:Name="DetailDescriptionLabel"
+                               Text=""
+                               Style="{StaticResource MutedLabelStyle}"
+                               LineBreakMode="WordWrap" />
+                        <Label x:Name="DetailMaterialsLabel"
+                               Text=""
+                               Style="{StaticResource SecondaryLabelStyle}"
+                               LineBreakMode="WordWrap" />
+                        <BoxView HeightRequest="1"
+                                 BackgroundColor="{StaticResource OpBorderPanel}"
+                                 Margin="0,4" />
+                        <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start">
+                            <Button x:Name="MarkOwnedButton"
+                                    Text="MARK OWNED"
+                                    IsEnabled="False"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Clicked="MarkOwnedButton_Clicked"
+                                    Margin="0,0,8,6" />
+                            <Button x:Name="RemoveOwnedButton"
+                                    Text="REMOVE OWNED"
+                                    IsEnabled="False"
+                                    Style="{StaticResource SmallButtonStyle}"
+                                    Clicked="RemoveOwnedButton_Clicked"
+                                    Margin="0,0,8,6" />
+                            <Button x:Name="CreateCraftingButton"
+                                    Text="CREATE CRAFTING"
+                                    IsEnabled="False"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Clicked="CreateCraftingButton_Clicked"
+                                    Margin="0,0,8,6" />
+                            <Button x:Name="CreateProcurementButton"
+                                    Text="CREATE PROCUREMENT"
+                                    IsEnabled="False"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Clicked="CreateProcurementButton_Clicked"
+                                    Margin="0,0,0,6" />
+                        </FlexLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <BoxView HeightRequest="24" BackgroundColor="Transparent" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
 </ContentPage>

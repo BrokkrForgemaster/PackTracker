@@ -1,14 +1,472 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
+
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PackTracker.Mobile.Pages.AdminPage"
              Title="Admin">
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
-            <Label Text="ADMIN" Style="{StaticResource TitleLabelStyle}" />
-            <Border Style="{StaticResource CardBorderStyle}">
-                <Label Text="Admin features are restricted to authorized personnel." Style="{StaticResource MutedLabelStyle}" />
+        <VerticalStackLayout Padding="16" Spacing="0">
+
+            <!-- Page header -->
+            <Border Style="{StaticResource PageHeaderBorderStyle}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                        <Label Text="ADMIN CONTROL"
+                               Style="{StaticResource PageTitleStyle}" />
+                        <Label Text="Manage members, medals, nominations, request history, and audit logs."
+                               Style="{StaticResource PageSubtitleStyle}" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1"
+                            Text="REFRESH"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            VerticalOptions="Center"
+                            Margin="12,0,0,0"
+                            Clicked="RefreshButton_Clicked" />
+                </Grid>
             </Border>
+
+            <Label x:Name="StatusLabel"
+                   Text=""
+                   Style="{StaticResource MutedLabelStyle}"
+                   Margin="4,0,4,8" />
+
+            <!-- ACCESS -->
+            <Label Text="ACCESS"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,0,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="6">
+                    <Label x:Name="AccessLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource BodyLabelStyle}" />
+                    <Label x:Name="RolesLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource MutedLabelStyle}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- DASHBOARD -->
+            <Label Text="DASHBOARD"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="6">
+                    <Label x:Name="DashboardLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource BodyLabelStyle}" />
+                    <Label x:Name="SettingsSummaryLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource SecondaryLabelStyle}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- SETTINGS -->
+            <Label Text="SETTINGS"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0"
+                               Text="Operations"
+                               Style="{StaticResource BodyLabelStyle}"
+                               VerticalOptions="Center" />
+                        <Switch Grid.Column="1"
+                                x:Name="OperationsEnabledSwitch" />
+                    </Grid>
+                    <Entry x:Name="OperationsChannelEntry"
+                           Placeholder="Operations channel id"
+                           Style="{StaticResource TextInputStyle}" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0"
+                               Text="Medals"
+                               Style="{StaticResource BodyLabelStyle}"
+                               VerticalOptions="Center" />
+                        <Switch Grid.Column="1"
+                                x:Name="MedalAnnouncementsEnabledSwitch" />
+                    </Grid>
+                    <Entry x:Name="MedalAnnouncementsChannelEntry"
+                           Placeholder="Medal announcements channel id"
+                           Style="{StaticResource TextInputStyle}" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0"
+                               Text="Recruiting"
+                               Style="{StaticResource BodyLabelStyle}"
+                               VerticalOptions="Center" />
+                        <Switch Grid.Column="1"
+                                x:Name="RecruitingPostsEnabledSwitch" />
+                    </Grid>
+                    <Entry x:Name="RecruitingPostsChannelEntry"
+                           Placeholder="Recruiting posts channel id"
+                           Style="{StaticResource TextInputStyle}" />
+
+                    <Button Text="SAVE SETTINGS"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Clicked="SaveSettingsButton_Clicked" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- REQUEST HISTORY -->
+            <Label Text="REQUEST HISTORY"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="10">
+                    <Picker x:Name="HistoryTypePicker"
+                            Title="Select history"
+                            TextColor="{StaticResource OpTextPrimary}"
+                            TitleColor="{StaticResource OpTextMuted}"
+                            BackgroundColor="{StaticResource OpBgInput}"
+                            SelectedIndexChanged="HistoryTypePicker_SelectedIndexChanged" />
+                    <CollectionView x:Name="HistoryView"
+                                    SelectionMode="Single"
+                                    SelectionChanged="HistoryView_SelectionChanged">
+                        <CollectionView.EmptyView>
+                            <Label Text="No history loaded."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="4,*">
+
+                                        <Border Grid.Column="0"
+                                                BackgroundColor="{StaticResource PriorityRed}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8,0,0,8" />
+                                            </Border.StrokeShape>
+                                        </Border>
+
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Padding="12,8"
+                                                             Spacing="3">
+
+                                            <Label Text="{Binding Title}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold" />
+
+                                            <Label Text="{Binding Summary}"
+                                                   Style="{StaticResource MutedLabelStyle}" />
+
+                                        </VerticalStackLayout>
+
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- REQUEST DETAIL -->
+            <Label Text="REQUEST DETAIL"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="10">
+                    <Label x:Name="SelectedHistoryLabel"
+                           Text="No request selected."
+                           Style="{StaticResource MutedLabelStyle}" />
+                    <Button Text="LOAD REQUEST DETAIL"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Clicked="LoadRequestDetailButton_Clicked" />
+                    <Label x:Name="RequestDetailTitleLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource BodyLabelStyle}" />
+                    <Label x:Name="RequestDetailMetaLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource SecondaryLabelStyle}" />
+                    <Label x:Name="RequestDetailDescriptionLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource MutedLabelStyle}"
+                           LineBreakMode="WordWrap" />
+                    <Label x:Name="RequestDetailClaimsLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource MutedLabelStyle}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- MEMBERS -->
+            <Label Text="MEMBERS"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="10">
+                    <Picker x:Name="MemberPicker"
+                            Title="Select member"
+                            TextColor="{StaticResource OpTextPrimary}"
+                            TitleColor="{StaticResource OpTextMuted}"
+                            BackgroundColor="{StaticResource OpBgInput}"
+                            ItemDisplayBinding="{Binding DisplayName}"
+                            SelectedIndexChanged="MemberPicker_SelectedIndexChanged" />
+                    <Picker x:Name="RolePicker"
+                            Title="Select role"
+                            TextColor="{StaticResource OpTextPrimary}"
+                            TitleColor="{StaticResource OpTextMuted}"
+                            BackgroundColor="{StaticResource OpBgInput}"
+                            ItemDisplayBinding="{Binding DisplayName}" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0"
+                                Text="ASSIGN ROLE"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Clicked="AssignRoleButton_Clicked" />
+                        <Button Grid.Column="1"
+                                Text="REVOKE ROLE"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Clicked="RevokeRoleButton_Clicked" />
+                    </Grid>
+                    <Label x:Name="SelectedMemberLabel"
+                           Text="No member selected."
+                           Style="{StaticResource MutedLabelStyle}" />
+                    <CollectionView x:Name="MembersView" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No members loaded."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="4,*">
+                                        <Border Grid.Column="0"
+                                                BackgroundColor="{StaticResource PriorityGreen}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8,0,0,8" />
+                                            </Border.StrokeShape>
+                                        </Border>
+
+                                        <VerticalStackLayout Grid.Column="1" Padding="12,8" Spacing="3">
+                                            <Label Text="{Binding Name}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold" />
+                                            <Label Text="{Binding Summary}"
+                                                   Style="{StaticResource MutedLabelStyle}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- MEDALS -->
+            <Label Text="MEDALS"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="10">
+                    <Label x:Name="MedalSummaryLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource SecondaryLabelStyle}" />
+                    <Picker x:Name="MedalPicker"
+                            Title="Select medal to nominate"
+                            TextColor="{StaticResource OpTextPrimary}"
+                            TitleColor="{StaticResource OpTextMuted}"
+                            BackgroundColor="{StaticResource OpBgInput}"
+                            ItemDisplayBinding="{Binding DisplayName}" />
+                    <Entry x:Name="NomineeNameEntry"
+                           Placeholder="Nominee name if not selecting a member"
+                           Style="{StaticResource TextInputStyle}" />
+                    <Editor x:Name="NominationCitationEditor"
+                            Placeholder="Nomination citation"
+                            Style="{StaticResource EditorInputStyle}"
+                            AutoSize="TextChanges"
+                            MinimumHeightRequest="100" />
+                    <Button Text="SUBMIT NOMINATION"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Clicked="SubmitNominationButton_Clicked" />
+                    <CollectionView x:Name="AwardsView" SelectionMode="None" HeightRequest="220">
+                        <CollectionView.EmptyView>
+                            <Label Text="No awards loaded."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="4,*">
+                                        <Border Grid.Column="0" BackgroundColor="{StaticResource AccentGold}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8,0,0,8" />
+                                            </Border.StrokeShape>
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" Padding="12,8" Spacing="3">
+                                            <Label Text="{Binding Title}" Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold" />
+                                            <Label Text="{Binding Summary}" Style="{StaticResource MutedLabelStyle}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- RIBBONS -->
+            <Label Text="RIBBONS"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="10">
+                    <Picker x:Name="RibbonPicker"
+                            Title="Select ribbon"
+                            TextColor="{StaticResource OpTextPrimary}"
+                            TitleColor="{StaticResource OpTextMuted}"
+                            BackgroundColor="{StaticResource OpBgInput}"
+                            ItemDisplayBinding="{Binding DisplayName}" />
+                    <Editor x:Name="RibbonCitationEditor"
+                            Placeholder="Ribbon citation"
+                            Style="{StaticResource EditorInputStyle}"
+                            AutoSize="TextChanges"
+                            MinimumHeightRequest="80" />
+                    <Button Text="AWARD RIBBON TO SELECTED MEMBER"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Clicked="AwardRibbonButton_Clicked" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- NOMINATIONS -->
+            <Label Text="NOMINATIONS"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="10">
+                    <Label x:Name="NominationSummaryLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource SecondaryLabelStyle}" />
+                    <CollectionView x:Name="PendingNominationsView"
+                                    SelectionMode="Single"
+                                    SelectionChanged="PendingNominationsView_SelectionChanged"
+                                    HeightRequest="220">
+                        <CollectionView.EmptyView>
+                            <Label Text="No pending nominations."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="4,*">
+
+                                        <Border Grid.Column="0"
+                                                BackgroundColor="{StaticResource PriorityAmber}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8,0,0,8" />
+                                            </Border.StrokeShape>
+                                        </Border>
+
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Padding="12,8"
+                                                             Spacing="3">
+
+                                            <Label Text="{Binding Title}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold" />
+
+                                            <Label Text="{Binding Summary}"
+                                                   Style="{StaticResource MutedLabelStyle}" />
+
+                                        </VerticalStackLayout>
+
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Label x:Name="SelectedNominationLabel"
+                           Text="No nomination selected."
+                           Style="{StaticResource MutedLabelStyle}" />
+                    <Editor x:Name="NominationReviewNotesEditor"
+                            Placeholder="Review notes"
+                            Style="{StaticResource EditorInputStyle}"
+                            AutoSize="TextChanges"
+                            MinimumHeightRequest="80" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0"
+                                Text="APPROVE"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Clicked="ApproveNominationButton_Clicked" />
+                        <Button Grid.Column="1"
+                                Text="DENY"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Clicked="DenyNominationButton_Clicked" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- AUDIT LOGS -->
+            <Label Text="AUDIT LOGS"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="10">
+                    <Button Text="REFRESH AUDIT LOGS"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Clicked="RefreshAuditLogsButton_Clicked" />
+                    <CollectionView x:Name="AuditLogsView"
+                                    SelectionMode="Single"
+                                    SelectionChanged="AuditLogsView_SelectionChanged"
+                                    HeightRequest="220">
+                        <CollectionView.EmptyView>
+                            <Label Text="No audit logs loaded."
+                                   Style="{StaticResource MutedLabelStyle}"
+                                   Padding="0,4" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="4,*">
+
+                                        <Border Grid.Column="0"
+                                                BackgroundColor="{StaticResource PriorityRed}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8,0,0,8" />
+                                            </Border.StrokeShape>
+                                        </Border>
+
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Padding="12,8"
+                                                             Spacing="3">
+
+                                            <Label Text="{Binding Title}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold" />
+
+                                            <Label Text="{Binding Summary}"
+                                                   Style="{StaticResource MutedLabelStyle}" />
+
+                                        </VerticalStackLayout>
+
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Label x:Name="SelectedAuditLabel"
+                           Text="No audit log selected."
+                           Style="{StaticResource MutedLabelStyle}" />
+                    <Button Text="LOAD AUDIT DETAIL"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Clicked="LoadAuditDetailButton_Clicked" />
+                    <Label x:Name="AuditDetailTitleLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource BodyLabelStyle}" />
+                    <Label x:Name="AuditDetailMetaLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource SecondaryLabelStyle}" />
+                    <Label x:Name="AuditDetailExceptionLabel"
+                           Text="&#x2014;"
+                           Style="{StaticResource MutedLabelStyle}"
+                           LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Border>
+
+            <BoxView HeightRequest="24" BackgroundColor="Transparent" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

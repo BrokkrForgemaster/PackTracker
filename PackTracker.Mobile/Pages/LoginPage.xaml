@@ -2,23 +2,96 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PackTracker.Mobile.Pages.LoginPage"
-             Title="PackTracker">
-    <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
-            <Label Text="PackTracker"
-                   Style="{StaticResource TitleLabelStyle}"
-                   HorizontalOptions="Center" />
-            <Label Text="House Wolf Operations Center"
-                   Style="{StaticResource MutedLabelStyle}"
-                   HorizontalOptions="Center" />
-            <BoxView HeightRequest="1" Color="{StaticResource BorderColor}" Margin="0,8" />
-            <Label Text="Sign in with your Discord account to continue."
-                   Style="{StaticResource BodyLabelStyle}"
-                   HorizontalOptions="Center"
-                   HorizontalTextAlignment="Center" />
-            <Button Text="LOGIN WITH DISCORD"
-                    Style="{StaticResource PrimaryButtonStyle}"
-                    Clicked="LoginButton_Clicked" />
-        </VerticalStackLayout>
-    </ScrollView>
+             Title="PackTracker"
+             NavigationPage.HasNavigationBar="False">
+    <Grid>
+        <ScrollView VerticalOptions="FillAndExpand">
+            <VerticalStackLayout Padding="32,60,32,32"
+                                 Spacing="0"
+                                 VerticalOptions="Center">
+
+                <!-- Wordmark -->
+                <VerticalStackLayout HorizontalOptions="Center"
+                                     Spacing="6"
+                                     Margin="0,0,0,40">
+                    <BoxView WidthRequest="80"
+                             HeightRequest="80"
+                             CornerRadius="20"
+                             BackgroundColor="{StaticResource OpBgPanel}"
+                             HorizontalOptions="Center"
+                             Margin="0,0,0,12" />
+                    <Label Text="PackTracker"
+                           FontSize="40"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource OpTextTitle}"
+                           HorizontalOptions="Center" />
+                    <Label Text="House Wolf Operations"
+                           FontSize="16"
+                           TextColor="{StaticResource OpTextSecondary}"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+
+                <!-- Sign-in card -->
+                <Border BackgroundColor="{StaticResource OpBgPanel}"
+                        Stroke="{StaticResource OpBorderPanel}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 16"
+                        Padding="28"
+                        Margin="0,0,0,16">
+                    <VerticalStackLayout Spacing="16">
+                        <Label Text="Sign in to continue"
+                               FontSize="17"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource OpTextTitle}"
+                               HorizontalOptions="Center" />
+                        <Label Text="PackTracker uses Discord OAuth to verify your House Wolf membership."
+                               FontSize="12"
+                               TextColor="{StaticResource OpTextSecondary}"
+                               HorizontalTextAlignment="Center"
+                               HorizontalOptions="Center" />
+
+                        <Button x:Name="LoginButton"
+                                Text="CONTINUE WITH DISCORD"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Clicked="LoginButton_Clicked" />
+                        <Button x:Name="ResumeLoginButton"
+                                Text="I FINISHED LOGIN IN BROWSER"
+                                IsVisible="False"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Clicked="ResumeLoginButton_Clicked" />
+
+                        <BoxView HeightRequest="1"
+                                 BackgroundColor="{StaticResource OpBorderPanel}"
+                                 Margin="0,4" />
+
+                        <Label x:Name="StatusLabel"
+                               Text="Checking API availability..."
+                               Style="{StaticResource AccentLabelStyle}"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- API URL -->
+                <Border BackgroundColor="{StaticResource OpBgHeader}"
+                        Stroke="{StaticResource OpBorderHeader}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 10"
+                        Padding="16">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="API ENDPOINT"
+                               Style="{StaticResource SectionHeaderStyle}" />
+                        <Entry x:Name="ApiBaseUrlEntry"
+                               Placeholder="https://packtracker-yke3.onrender.com"
+                               Style="{StaticResource TextInputStyle}" />
+                        <Button Text="SAVE API URL"
+                                Style="{StaticResource SmallButtonStyle}"
+                                HorizontalOptions="End"
+                                Clicked="SaveApiUrlButton_Clicked" />
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

@@ -1,14 +1,140 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
+
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PackTracker.Mobile.Pages.TradingHubPage"
              Title="Trading Hub">
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
-            <Label Text="TRADING HUB" Style="{StaticResource TitleLabelStyle}" />
-            <Border Style="{StaticResource CardBorderStyle}">
-                <Label Text="Trading features coming soon." Style="{StaticResource MutedLabelStyle}" />
+    <Grid RowDefinitions="Auto,*">
+
+        <VerticalStackLayout Grid.Row="0" Padding="16,16,16,0" Spacing="0">
+            <Border Style="{StaticResource PageHeaderBorderStyle}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="TRADING HUB"
+                           Style="{StaticResource PageTitleStyle}" />
+                    <Label Text="Live commodity prices and optimal trade routes via UEX Corp data."
+                           Style="{StaticResource PageSubtitleStyle}" />
+                </VerticalStackLayout>
             </Border>
+
+            <!-- Search + load -->
+            <Border BackgroundColor="{StaticResource OpBgHeader}"
+                    Stroke="{StaticResource OpBorderHeader}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 10"
+                    Padding="12"
+                    Margin="0,0,0,12">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Entry Grid.Column="0"
+                           x:Name="CommoditySearchEntry"
+                           Placeholder="Filter commodity..."
+                           Style="{StaticResource TextInputStyle}" />
+                    <Button Grid.Column="1"
+                            Text="LOAD"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Clicked="LoadCommoditiesButton_Clicked" />
+                </Grid>
+            </Border>
+
+            <Label x:Name="StatusLabel"
+                   Text=""
+                   Style="{StaticResource MutedLabelStyle}"
+                   Margin="4,0,4,8" />
         </VerticalStackLayout>
-    </ScrollView>
+
+        <ScrollView Grid.Row="1" Padding="16,0,16,16">
+            <VerticalStackLayout Spacing="0">
+
+                <!-- Commodities -->
+                <CollectionView x:Name="CommodityView"
+                                SelectionMode="Single"
+                                SelectionChanged="CommodityView_SelectionChanged">
+                    <CollectionView.EmptyView>
+                        <Label Text="Tap LOAD to fetch commodity data."
+                               Style="{StaticResource MutedLabelStyle}"
+                               Padding="0,8" />
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                <Grid ColumnDefinitions="4,*">
+
+                                    <Border Grid.Column="0"
+                                            BackgroundColor="{StaticResource PriorityAmber}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8,0,0,8" />
+                                        </Border.StrokeShape>
+                                    </Border>
+
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         Padding="12,10"
+                                                         Spacing="3">
+
+                                        <Label Text="{Binding Name}"
+                                               Style="{StaticResource BodyLabelStyle}"
+                                               FontAttributes="Bold" />
+
+                                        <Label Text="{Binding Summary}"
+                                               Style="{StaticResource SecondaryLabelStyle}" />
+
+                                    </VerticalStackLayout>
+
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Trade routes for selected commodity -->
+                <Label Text="TRADE ROUTES"
+                       Style="{StaticResource SectionHeaderStyle}"
+                       Margin="4,12,0,8" />
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <VerticalStackLayout Spacing="0">
+                        <Label x:Name="SelectedCommodityLabel"
+                               Text="Select a commodity above to load trade routes."
+                               Style="{StaticResource AccentLabelStyle}"
+                               Margin="0,0,0,12" />
+                        <CollectionView x:Name="RoutesView" SelectionMode="None">
+                            <CollectionView.EmptyView>
+                                <Label Text="No routes loaded."
+                                       Style="{StaticResource MutedLabelStyle}" />
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6">
+                                        <Grid ColumnDefinitions="4,*">
+
+                                            <Border Grid.Column="0"
+                                                    BackgroundColor="{StaticResource PriorityBlue}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="8,0,0,8" />
+                                                </Border.StrokeShape>
+                                            </Border>
+
+                                            <VerticalStackLayout Grid.Column="1"
+                                                                 Padding="12,10"
+                                                                 Spacing="3">
+
+                                                <Label Text="{Binding Title}"
+                                                       Style="{StaticResource BodyLabelStyle}"
+                                                       FontAttributes="Bold" />
+
+                                                <Label Text="{Binding Summary}"
+                                                       Style="{StaticResource SecondaryLabelStyle}" />
+
+                                            </VerticalStackLayout>
+
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <BoxView HeightRequest="24" BackgroundColor="Transparent" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
 </ContentPage>

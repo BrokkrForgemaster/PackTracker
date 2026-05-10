@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using PackTracker.SharedPresentation.Responsive;
+using PackTracker.Mobile.Services;
 
 namespace PackTracker.Mobile;
 
@@ -17,9 +18,16 @@ public static class MauiProgram
             });
 
         builder.Services.AddSingleton<IResponsiveLayoutService, ResponsiveLayoutService>();
+        builder.Services.AddSingleton<ITokenStorage, SecureTokenStorage>();
+        builder.Services.AddSingleton<MobileSessionService>();
+        builder.Services.AddSingleton<MobileAuthService>();
+        builder.Services.AddSingleton<PackTrackerApiClient>();
+        builder.Services.AddSingleton<MobileChatService>();
         builder.Services.AddSingleton<AppShell>();
         builder.Services.AddTransient<Pages.LoginPage>();
         builder.Services.AddTransient<Pages.DashboardPage>();
+        builder.Services.AddTransient<Pages.ChatPage>();
+        builder.Services.AddTransient<Pages.MembersPage>();
         builder.Services.AddTransient<Pages.RequestHubPage>();
         builder.Services.AddTransient<Pages.TradingHubPage>();
         builder.Services.AddTransient<Pages.BlueprintsPage>();

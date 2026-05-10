@@ -4,14 +4,55 @@
              x:Class="PackTracker.Mobile.Pages.SettingsPage"
              Title="Settings">
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
-            <Label Text="SETTINGS" Style="{StaticResource TitleLabelStyle}" />
-            <Border Style="{StaticResource CardBorderStyle}">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="API URL" Style="{StaticResource SectionHeaderStyle}" />
-                    <Entry Placeholder="https://api.example.com" Style="{StaticResource TextInputStyle}" />
+        <VerticalStackLayout Padding="16" Spacing="0">
+
+            <Border Style="{StaticResource PageHeaderBorderStyle}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="SETTINGS"
+                           Style="{StaticResource PageTitleStyle}" />
+                    <Label Text="Configure the API endpoint and manage your session."
+                           Style="{StaticResource PageSubtitleStyle}" />
                 </VerticalStackLayout>
             </Border>
+
+            <!-- API URL -->
+            <Label Text="API ENDPOINT"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,0,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="12">
+                    <Entry x:Name="ApiBaseUrlEntry"
+                           Placeholder="https://packtracker-yke3.onrender.com"
+                           Style="{StaticResource TextInputStyle}" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0"
+                                Text="SAVE"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Clicked="SaveButton_Clicked" />
+                        <Button Grid.Column="1"
+                                Text="TEST CONNECTION"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Clicked="TestConnectionButton_Clicked" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Session -->
+            <Label Text="SESSION"
+                   Style="{StaticResource SectionHeaderStyle}"
+                   Margin="4,8,0,8" />
+            <Border Style="{StaticResource CardBorderStyle}">
+                <VerticalStackLayout Spacing="12">
+                    <Label x:Name="StatusLabel"
+                           Text="Ready."
+                           Style="{StaticResource AccentLabelStyle}" />
+                    <Button Text="LOG OUT"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Clicked="LogoutButton_Clicked" />
+                </VerticalStackLayout>
+            </Border>
+
+            <BoxView HeightRequest="24" BackgroundColor="Transparent" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
